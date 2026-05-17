@@ -17,13 +17,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Camera, Upload, X, Check, Loader2, Plus, Images } from "lucide-react";
+import { Camera, Upload, X, Check, Loader2, Plus, Images, FileText } from "lucide-react";
 
 interface QueuedFile {
   id: string;
   file: File | null;
   previewUrl: string;
   source: "camera" | "upload";
+  notes: string;
 }
 
 export default function Capture() {
@@ -36,7 +37,7 @@ export default function Capture() {
   const [patientId, setPatientId] = useState<string>(initialPatientId || "");
   const [mode, setMode] = useState<"camera" | "upload">("camera");
   const [queue, setQueue] = useState<QueuedFile[]>([]);
-  const [notes, setNotes] = useState("");
+  const [seriesNotes, setSeriesNotes] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
 
@@ -53,13 +54,13 @@ export default function Capture() {
     const res = await fetch(imageSrc);
     const blob = await res.blob();
     const file = new File([blob], `capture-${Date.now()}.jpg`, { type: "image/jpeg" });
-    const item: QueuedFile = {
+    setQueue((prev) => [...prev, {
       id: crypto.randomUUID(),
       file,
       previewUrl: imageSrc,
       source: "camera",
-    };
-    setQueue((prev) => [...prev, item]);
+      notes: "",
+    }]);
   }, [webcamRef]);
 
   const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,6 +70,7 @@ export default function Capture() {
       file,
       previewUrl: URL.createObjectURL(file),
       source: "upload" as const,
+      notes: "",
     }));
     setQueue((prev) => [...prev, ...incoming]);
     e.target.value = "";
@@ -82,9 +84,14 @@ export default function Capture() {
     });
   };
 
+  const updateItemNotes = (id: string, notes: string) => {
+    setQueue((prev) => prev.map((item) => item.id === id ? { ...item, notes } : item));
+  };
+
   const clearQueue = () => {
     queue.forEach((i) => URL.revokeObjectURL(i.previewUrl));
     setQueue([]);
+    setSeriesNotes("");
   };
 
   const handleSave = async () => {
@@ -106,10 +113,14 @@ export default function Capture() {
 
     for (const item of queue) {
       try {
+        const combined = [seriesNotes.trim(), item.notes.trim()]
+          .filter(Boolean)
+          .join("\n\n");
+
         const result = await uploadPatientImage(
           item.file!,
           parseInt(patientId, 10),
-          notes,
+          combined || undefined,
         );
         lastId = result.id;
         successCount++;
@@ -127,16 +138,16 @@ export default function Capture() {
     setUploadProgress(null);
 
     if (successCount > 0) {
-      toast({
-        title: successCount === 1 ? t("capture.imageSaved") : `${successCount} images saved`,
-        description: successCount === 1
-          ? t("capture.imageSavedDesc")
-          : `All ${successCount} images have been uploaded successfully.`,
-      });
+      const queueLength = queue.length;
       clearQueue();
-      if (queue.length === 1 && lastId) {
+      if (queueLength === 1 && lastId) {
+        toast({ title: t("capture.imageSaved"), description: t("capture.imageSavedDesc") });
         setLocation(`/editor/${lastId}`);
       } else {
+        toast({
+          title: t("capture.allSaved", { count: successCount }),
+          description: t("capture.allSavedDesc", { count: successCount }),
+        });
         setLocation(`/gallery?patientId=${patientId}`);
       }
     }
@@ -158,11 +169,7 @@ export default function Capture() {
             <Label htmlFor="patient">
               {t("capture.selectPatient")} <span className="text-destructive">*</span>
             </Label>
-            <Select
-              value={patientId}
-              onValueChange={setPatientId}
-              disabled={loadingPatients}
-            >
+            <Select value={patientId} onValueChange={setPatientId} disabled={loadingPatients}>
               <SelectTrigger id="patient">
                 <SelectValue placeholder={t("capture.selectPatientPlaceholder")} />
               </SelectTrigger>
@@ -231,9 +238,7 @@ export default function Capture() {
             >
               <Images className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-lg font-medium">{t("capture.clickToBrowse")}</p>
-              <p className="text-sm text-muted-foreground mb-4">
-                {t("capture.uploadInfo")} — select multiple files at once
-              </p>
+              <p className="text-sm text-muted-foreground mb-4">{t("capture.uploadInfo")}</p>
               <Input
                 type="file"
                 accept="image/*"
@@ -242,68 +247,105 @@ export default function Capture() {
                 id="file-upload"
                 onChange={handleFilesChange}
               />
-              <Button variant="outline" onClick={(e) => { e.stopPropagation(); document.getElementById("file-upload")?.click(); }}>
+              <Button
+                variant="outline"
+                onClick={(e) => { e.stopPropagation(); document.getElementById("file-upload")?.click(); }}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 {t("capture.selectFile")}
               </Button>
             </div>
           )}
 
-          {/* Queued photos preview */}
+          {/* Queue header */}
           {showQueue && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-muted-foreground">
-                  {queue.length} photo{queue.length !== 1 ? "s" : ""} ready to upload
-                </p>
-                <div className="flex gap-2">
-                  {mode === "upload" && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => document.getElementById("file-upload")?.click()}
-                    >
-                      <Plus className="h-3.5 w-3.5 mr-1.5" />
-                      Add more
-                    </Button>
-                  )}
-                  <Button variant="ghost" size="sm" onClick={clearQueue}>
-                    Clear all
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-muted-foreground">
+                {t("capture.photosReady", { count: queue.length })}
+              </p>
+              <div className="flex gap-2">
+                {mode === "upload" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => document.getElementById("file-upload")?.click()}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />
+                    {t("capture.addMore")}
                   </Button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                {queue.map((item) => (
-                  <div key={item.id} className="relative group aspect-square rounded-lg overflow-hidden bg-muted">
-                    <img
-                      src={item.previewUrl}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
-                    <button
-                      onClick={() => removeFromQueue(item.id)}
-                      className="absolute top-1 right-1 rounded-full bg-black/60 hover:bg-destructive text-white h-5 w-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
+                )}
+                <Button variant="ghost" size="sm" onClick={clearQueue} disabled={isUploading}>
+                  {t("capture.clearAll")}
+                </Button>
               </div>
             </div>
           )}
 
-          {/* Notes + actions */}
+          {/* Per-image cards with individual notes */}
+          {showQueue && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {queue.map((item, index) => (
+                <div
+                  key={item.id}
+                  className="border rounded-xl overflow-hidden bg-card shadow-sm"
+                >
+                  {/* Image preview */}
+                  <div className="relative aspect-video bg-muted overflow-hidden">
+                    <img
+                      src={item.previewUrl}
+                      alt={`Photo ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute top-2 left-2 bg-black/60 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                      {index + 1}
+                    </div>
+                    <button
+                      onClick={() => removeFromQueue(item.id)}
+                      disabled={isUploading}
+                      className="absolute top-2 right-2 rounded-full bg-black/60 hover:bg-destructive text-white h-6 w-6 flex items-center justify-center transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Per-image notes */}
+                  <div className="p-3 space-y-1.5">
+                    <Label className="text-xs flex items-center gap-1.5 text-muted-foreground">
+                      <FileText className="h-3 w-3" />
+                      {t("capture.imageNotes")}
+                    </Label>
+                    <Textarea
+                      placeholder={t("capture.imageNotesPlaceholder")}
+                      value={item.notes}
+                      onChange={(e) => updateItemNotes(item.id, e.target.value)}
+                      disabled={isUploading}
+                      className="resize-none text-sm h-20 min-h-0"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Series notes + actions */}
           {showQueue && (
             <>
-              <div className="space-y-2">
-                <Label htmlFor="notes">{t("capture.clinicalNotes")}</Label>
+              {/* Series-level notes */}
+              <div className="space-y-2 pt-2 border-t">
+                <Label htmlFor="series-notes" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-primary" />
+                  {t("capture.seriesNotes")}
+                  <span className="text-xs font-normal text-muted-foreground ml-1">
+                    — applies to all images above
+                  </span>
+                </Label>
                 <Textarea
-                  id="notes"
-                  placeholder={t("capture.notesPlaceholder")}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="resize-none"
+                  id="series-notes"
+                  placeholder={t("capture.seriesNotesPlaceholder")}
+                  value={seriesNotes}
+                  onChange={(e) => setSeriesNotes(e.target.value)}
+                  disabled={isUploading}
+                  className="resize-none h-24"
                 />
               </div>
 
@@ -316,7 +358,7 @@ export default function Capture() {
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       {uploadProgress
-                        ? `Uploading ${uploadProgress.done}/${uploadProgress.total}…`
+                        ? t("capture.uploadingProgress", { done: uploadProgress.done, total: uploadProgress.total })
                         : "Uploading…"}
                     </>
                   ) : (
@@ -324,7 +366,7 @@ export default function Capture() {
                       <Check className="mr-2 h-4 w-4" />
                       {queue.length === 1
                         ? t("capture.saveAndEdit")
-                        : `Upload ${queue.length} photos`}
+                        : t("capture.uploadPhotos", { count: queue.length })}
                     </>
                   )}
                 </Button>

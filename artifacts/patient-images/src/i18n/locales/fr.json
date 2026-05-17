@@ -104,7 +104,19 @@
     "patientRequiredDesc": "Veuillez sélectionner un patient avant d'enregistrer.",
     "uploadFailed": "Échec du Téléchargement",
     "imageSaved": "Image enregistrée avec succès",
-    "imageSavedDesc": "L'image a été ajoutée à la galerie du patient."
+    "imageSavedDesc": "L'image a été ajoutée à la galerie du patient.",
+    "seriesNotes": "Notes de Série",
+    "seriesNotesPlaceholder": "Notes applicables à toute la série (ex. contexte de session, position du patient, éclairage)…",
+    "imageNotes": "Notes de l'Image",
+    "imageNotesPlaceholder": "Notes spécifiques à cette image…",
+    "photosReady": "{{count}} photo prête à télécharger",
+    "photosReady_plural": "{{count}} photos prêtes à télécharger",
+    "addMore": "Ajouter plus",
+    "clearAll": "Tout effacer",
+    "uploadPhotos": "Télécharger {{count}} photos",
+    "uploadingProgress": "Téléchargement {{done}}/{{total}}…",
+    "allSaved": "{{count}} images téléchargées",
+    "allSavedDesc": "Toutes les {{count}} images ont été enregistrées dans la galerie du patient."
   },
   "gallery": {
     "title": "Galerie",

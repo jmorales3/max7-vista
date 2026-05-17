@@ -104,7 +104,19 @@
     "patientRequiredDesc": "Por favor selecione um paciente antes de salvar.",
     "uploadFailed": "Falha no Upload",
     "imageSaved": "Imagem salva com sucesso",
-    "imageSavedDesc": "A imagem foi adicionada à galeria do paciente."
+    "imageSavedDesc": "A imagem foi adicionada à galeria do paciente.",
+    "seriesNotes": "Notas da Série",
+    "seriesNotesPlaceholder": "Notas aplicáveis a toda a série (ex. contexto da sessão, posição do paciente, iluminação)…",
+    "imageNotes": "Notas da Imagem",
+    "imageNotesPlaceholder": "Notas específicas para esta imagem…",
+    "photosReady": "{{count}} foto pronta para enviar",
+    "photosReady_plural": "{{count}} fotos prontas para enviar",
+    "addMore": "Adicionar mais",
+    "clearAll": "Limpar tudo",
+    "uploadPhotos": "Enviar {{count}} fotos",
+    "uploadingProgress": "Enviando {{done}}/{{total}}…",
+    "allSaved": "{{count}} imagens enviadas",
+    "allSavedDesc": "Todas as {{count}} imagens foram salvas na galeria do paciente."
   },
   "gallery": {
     "title": "Galeria",
