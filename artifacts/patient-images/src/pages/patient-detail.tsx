@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link, useRoute } from "wouter";
-import { 
-  useGetPatient, 
+import { useTranslation } from "react-i18next";
+import {
+  useGetPatient,
   getGetPatientQueryKey,
   useListPatientImages,
   getListPatientImagesQueryKey,
@@ -11,9 +12,9 @@ import {
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
+import {
   ChevronLeft,
   Calendar,
   FileText,
@@ -25,7 +26,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ImageGrid } from "@/components/image-grid";
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -45,6 +46,7 @@ import {
 import { useLocation } from "wouter";
 
 export default function PatientDetail() {
+  const { t } = useTranslation();
   const [, params] = useRoute("/patients/:id");
   const id = parseInt(params?.id || "0", 10);
   const [, setLocation] = useLocation();
@@ -64,14 +66,14 @@ export default function PatientDetail() {
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
-        toast({ title: "Patient deleted" });
+        toast({ title: t("patients.deletePatient") });
         setLocation("/patients");
       },
       onError: (e) => {
         toast({
           variant: "destructive",
-          title: "Error deleting patient",
-          description: e instanceof Error ? e.message : "An unexpected error occurred."
+          title: t("common.error"),
+          description: e instanceof Error ? e.message : t("common.error")
         });
       }
     }
@@ -82,7 +84,7 @@ export default function PatientDetail() {
   }
 
   if (!patient) {
-    return <div>Patient not found.</div>;
+    return <div>{t("patients.notFound")}</div>;
   }
 
   return (
@@ -103,12 +105,12 @@ export default function PatientDetail() {
             {patient.dateOfBirth && (
               <div className="flex items-center gap-1.5">
                 <Calendar className="h-3.5 w-3.5" />
-                DOB: {format(new Date(patient.dateOfBirth), "MMM d, yyyy")}
+                {t("patients.dob")}: {format(new Date(patient.dateOfBirth), "MMM d, yyyy")}
               </div>
             )}
             <div className="flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5" />
-              Created {format(new Date(patient.createdAt), "MMM d, yyyy")}
+              {t("patients.created")} {format(new Date(patient.createdAt), "MMM d, yyyy")}
             </div>
           </div>
         </div>
@@ -117,7 +119,7 @@ export default function PatientDetail() {
           <Button asChild>
             <Link href={`/capture?patientId=${patient.id}`}>
               <Camera className="mr-2 h-4 w-4" />
-              Capture
+              {t("patients.captureImage")}
             </Link>
           </Button>
 
@@ -129,15 +131,15 @@ export default function PatientDetail() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
-                <Link href={`/patients/${patient.id}/edit`}>Edit Patient</Link>
+                <Link href={`/patients/${patient.id}/edit`}>{t("patients.editPatient")}</Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
                 onClick={() => setShowDeleteDialog(true)}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete Patient
+                {t("patients.deletePatient")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -147,7 +149,7 @@ export default function PatientDetail() {
       {patient.notes && (
         <Card className="bg-primary/5 border-primary/10">
           <CardContent className="p-4 text-sm">
-            <div className="font-semibold text-primary mb-1">Clinical Notes</div>
+            <div className="font-semibold text-primary mb-1">{t("patients.clinicalNotes")}</div>
             <p className="text-muted-foreground">{patient.notes}</p>
           </CardContent>
         </Card>
@@ -156,9 +158,9 @@ export default function PatientDetail() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
-            Image Gallery
+            {t("patients.imageGallery")}
             <span className="text-sm font-normal text-muted-foreground px-2 py-0.5 bg-muted rounded-full">
-              {images?.length || 0} images
+              {images?.length || 0} {t("patients.images")}
             </span>
           </h2>
 
@@ -170,9 +172,9 @@ export default function PatientDetail() {
                 size="sm"
                 className="h-7 w-8 px-0"
                 onClick={() => setGridColumns(cols as 1 | 2 | 4 | 8)}
-                title={`${cols} column${cols > 1 ? 's' : ''}`}
+                title={`${cols} column${cols > 1 ? "s" : ""}`}
               >
-                <LayoutGrid className="h-4 w-4" style={{ 
+                <LayoutGrid className="h-4 w-4" style={{
                   opacity: gridColumns === cols ? 1 : 0.5,
                   transform: `scale(${cols === 1 ? 1.2 : cols === 2 ? 1 : cols === 4 ? 0.8 : 0.6})`
                 }} />
@@ -192,14 +194,14 @@ export default function PatientDetail() {
             <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
               <Camera className="h-8 w-8 text-primary" />
             </div>
-            <h3 className="text-lg font-medium text-foreground">No images yet</h3>
+            <h3 className="text-lg font-medium text-foreground">{t("patients.noImagesYet")}</h3>
             <p className="text-muted-foreground max-w-sm mt-2 mb-6">
-              Capture or upload photos to build this patient's clinical gallery.
+              {t("patients.noImagesDesc")}
             </p>
             <Button asChild>
               <Link href={`/capture?patientId=${patient.id}`}>
                 <Camera className="mr-2 h-4 w-4" />
-                Capture First Image
+                {t("patients.captureFirst")}
               </Link>
             </Button>
           </div>
@@ -209,19 +211,18 @@ export default function PatientDetail() {
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogTitle>{t("patients.deleteConfirmTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete {patient.name}'s record and all associated images.
-              This action cannot be undone.
+              {t("patients.deleteConfirmDesc", { name: patient.name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => deletePatient.mutate({ id: patient.id })}
             >
-              Delete Patient
+              {t("patients.deletePatient")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

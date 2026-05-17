@@ -2,6 +2,7 @@ import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useTranslation } from "react-i18next";
 import { useCreatePatient, getListPatientsQueryKey } from "@workspace/api-client-react";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -22,8 +23,8 @@ import { ChevronLeft, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 
 const formSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  patientCode: z.string().min(1, "Patient ID/Code is required"),
+  name: z.string().min(1),
+  patientCode: z.string().min(1),
   dateOfBirth: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -31,24 +32,25 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function PatientNew() {
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  
+
   const createPatient = useCreatePatient({
     mutation: {
       onSuccess: (data) => {
         queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
         toast({
-          title: "Patient created",
-          description: "The patient record has been successfully created.",
+          title: t("patients.createSuccess"),
+          description: t("patients.createSuccessDesc"),
         });
         setLocation(`/patients/${data.id}`);
       },
       onError: (error) => {
         toast({
           variant: "destructive",
-          title: "Error creating patient",
-          description: error instanceof Error ? error.message : "An unexpected error occurred.",
+          title: t("patients.createError"),
+          description: error instanceof Error ? error.message : t("common.error"),
         });
       }
     }
@@ -77,15 +79,15 @@ export default function PatientNew() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-primary">New Patient</h1>
-          <p className="text-muted-foreground">Create a new patient record to store images.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-primary">{t("patients.createTitle")}</h1>
+          <p className="text-muted-foreground">{t("patients.createSubtitle")}</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Patient Details</CardTitle>
-          <CardDescription>Enter the primary details for this patient.</CardDescription>
+          <CardTitle>{t("patients.detailsTitle")}</CardTitle>
+          <CardDescription>{t("patients.detailsDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -96,7 +98,7 @@ export default function PatientNew() {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Full Name <span className="text-destructive">*</span></FormLabel>
+                      <FormLabel>{t("patients.fullName")} <span className="text-destructive">*</span></FormLabel>
                       <FormControl>
                         <Input placeholder="John Doe" {...field} />
                       </FormControl>
@@ -109,11 +111,11 @@ export default function PatientNew() {
                   name="patientCode"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Patient ID / MRN <span className="text-destructive">*</span></FormLabel>
+                      <FormLabel>{t("patients.patientCodeLabel")} <span className="text-destructive">*</span></FormLabel>
                       <FormControl>
                         <Input placeholder="e.g. PT-12345" className="font-mono" {...field} />
                       </FormControl>
-                      <FormDescription>Must be unique across the clinic.</FormDescription>
+                      <FormDescription>{t("patients.patientCodeHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -125,7 +127,7 @@ export default function PatientNew() {
                 name="dateOfBirth"
                 render={({ field }) => (
                   <FormItem className="max-w-xs">
-                    <FormLabel>Date of Birth</FormLabel>
+                    <FormLabel>{t("patients.dateOfBirth")}</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} value={field.value || ""} />
                     </FormControl>
@@ -139,12 +141,12 @@ export default function PatientNew() {
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Clinical Notes (Optional)</FormLabel>
+                    <FormLabel>{t("patients.notesOptional")}</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Add any relevant clinical context here..." 
+                      <Textarea
+                        placeholder={t("patients.addContextPlaceholder")}
                         className="resize-none h-24"
-                        {...field} 
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -154,11 +156,11 @@ export default function PatientNew() {
 
               <div className="flex justify-end gap-4 pt-4 border-t">
                 <Button variant="outline" type="button" asChild>
-                  <Link href="/patients">Cancel</Link>
+                  <Link href="/patients">{t("common.cancel")}</Link>
                 </Button>
                 <Button type="submit" disabled={createPatient.isPending}>
                   {createPatient.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create Patient Record
+                  {t("patients.savePatient")}
                 </Button>
               </div>
             </form>

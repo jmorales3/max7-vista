@@ -3,6 +3,7 @@ import { useRoute, useLocation, Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useTranslation } from "react-i18next";
 import {
   useGetPatient,
   useUpdatePatient,
@@ -28,8 +29,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { ChevronLeft, Loader2 } from "lucide-react";
 
 const formSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  patientCode: z.string().min(1, "Patient ID/Code is required"),
+  name: z.string().min(1),
+  patientCode: z.string().min(1),
   dateOfBirth: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -37,6 +38,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function PatientEdit() {
+  const { t } = useTranslation();
   const [, params] = useRoute("/patients/:id/edit");
   const id = parseInt(params?.id || "0", 10);
   const [, setLocation] = useLocation();
@@ -66,14 +68,14 @@ export default function PatientEdit() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetPatientQueryKey(id) });
-        toast({ title: "Patient updated", description: "Changes saved successfully." });
+        toast({ title: t("patients.updateSuccess"), description: t("patients.updateSuccessDesc") });
         setLocation(`/patients/${id}`);
       },
       onError: (error) => {
         toast({
           variant: "destructive",
-          title: "Error updating patient",
-          description: error instanceof Error ? error.message : "An unexpected error occurred.",
+          title: t("patients.updateError"),
+          description: error instanceof Error ? error.message : t("common.error"),
         });
       },
     },
@@ -93,7 +95,7 @@ export default function PatientEdit() {
   }
 
   if (!patient) {
-    return <div className="p-12 text-center text-muted-foreground">Patient not found</div>;
+    return <div className="p-12 text-center text-muted-foreground">{t("patients.notFound")}</div>;
   }
 
   return (
@@ -105,15 +107,15 @@ export default function PatientEdit() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-primary">Edit Patient</h1>
-          <p className="text-muted-foreground">Update the record for {patient.name}.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-primary">{t("patients.editTitle")}</h1>
+          <p className="text-muted-foreground">{t("patients.editSubtitleFor", { name: patient.name })}</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Patient Details</CardTitle>
-          <CardDescription>All changes are saved immediately on submit.</CardDescription>
+          <CardTitle>{t("patients.detailsTitle")}</CardTitle>
+          <CardDescription>{t("patients.editDetailsDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -124,7 +126,7 @@ export default function PatientEdit() {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Full Name <span className="text-destructive">*</span></FormLabel>
+                      <FormLabel>{t("patients.fullName")} <span className="text-destructive">*</span></FormLabel>
                       <FormControl>
                         <Input placeholder="John Doe" {...field} />
                       </FormControl>
@@ -137,11 +139,11 @@ export default function PatientEdit() {
                   name="patientCode"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Patient ID / MRN <span className="text-destructive">*</span></FormLabel>
+                      <FormLabel>{t("patients.patientCodeLabel")} <span className="text-destructive">*</span></FormLabel>
                       <FormControl>
                         <Input placeholder="e.g. PT-12345" className="font-mono" {...field} />
                       </FormControl>
-                      <FormDescription>Must be unique across the clinic.</FormDescription>
+                      <FormDescription>{t("patients.patientCodeHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -153,7 +155,7 @@ export default function PatientEdit() {
                 name="dateOfBirth"
                 render={({ field }) => (
                   <FormItem className="max-w-xs">
-                    <FormLabel>Date of Birth</FormLabel>
+                    <FormLabel>{t("patients.dateOfBirth")}</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} value={field.value || ""} />
                     </FormControl>
@@ -167,10 +169,10 @@ export default function PatientEdit() {
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Clinical Notes (Optional)</FormLabel>
+                    <FormLabel>{t("patients.notesOptional")}</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Add any relevant clinical context here..."
+                        placeholder={t("patients.addContextPlaceholder")}
                         className="resize-none h-24"
                         {...field}
                       />
@@ -182,11 +184,11 @@ export default function PatientEdit() {
 
               <div className="flex justify-end gap-4 pt-4 border-t">
                 <Button variant="outline" type="button" asChild>
-                  <Link href={`/patients/${id}`}>Cancel</Link>
+                  <Link href={`/patients/${id}`}>{t("common.cancel")}</Link>
                 </Button>
                 <Button type="submit" disabled={updatePatient.isPending}>
                   {updatePatient.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save Changes
+                  {t("patients.updatePatient")}
                 </Button>
               </div>
             </form>

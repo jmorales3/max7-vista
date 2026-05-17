@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
+import { useTranslation } from "react-i18next";
 import { useListPatients } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,7 @@ import { Search, Plus, Calendar, FileText, Image as ImageIcon, Users } from "luc
 import { format } from "date-fns";
 
 export default function Patients() {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const { data: patients, isLoading } = useListPatients(
     { search: search || undefined },
@@ -19,13 +21,13 @@ export default function Patients() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-primary">Patients</h1>
-          <p className="text-muted-foreground">Manage patient records and access image galleries.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-primary">{t("patients.title")}</h1>
+          <p className="text-muted-foreground">{t("patients.subtitle")}</p>
         </div>
         <Button asChild>
           <Link href="/patients/new">
             <Plus className="mr-2 h-4 w-4" />
-            New Patient
+            {t("patients.newPatient")}
           </Link>
         </Button>
       </div>
@@ -33,7 +35,7 @@ export default function Patients() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search patients by name or ID..."
+          placeholder={t("patients.searchPlaceholder")}
           className="pl-9 max-w-md bg-card"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -81,7 +83,7 @@ export default function Patients() {
                   {patient.dateOfBirth && (
                     <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-2">
                       <Calendar className="h-4 w-4 opacity-70" />
-                      DOB: {format(new Date(patient.dateOfBirth), "MMM d, yyyy")}
+                      {t("patients.dob")}: {format(new Date(patient.dateOfBirth), "MMM d, yyyy")}
                     </div>
                   )}
                   {patient.notes && (
@@ -99,21 +101,19 @@ export default function Patients() {
           <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
             <Users className="h-6 w-6 text-primary" />
           </div>
-          <h3 className="text-lg font-medium text-foreground">No patients found</h3>
+          <h3 className="text-lg font-medium text-foreground">{t("patients.noResults")}</h3>
           <p className="text-muted-foreground max-w-sm mt-2 mb-6">
-            {search
-              ? "We couldn't find any patients matching your search."
-              : "Get started by adding your first patient record."}
+            {search ? t("patients.noResultsSearch") : t("patients.noResultsEmpty")}
           </p>
           {search ? (
             <Button variant="outline" onClick={() => setSearch("")}>
-              Clear Search
+              {t("patients.clearSearch")}
             </Button>
           ) : (
             <Button asChild>
               <Link href="/patients/new">
                 <Plus className="mr-2 h-4 w-4" />
-                Add Patient
+                {t("patients.addPatient")}
               </Link>
             </Button>
           )}
