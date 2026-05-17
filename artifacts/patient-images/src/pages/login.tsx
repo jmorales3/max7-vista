@@ -36,7 +36,7 @@ export default function LoginPage() {
       }}
     >
       <div className="absolute top-4 right-4">
-        <LanguageSelector />
+        <LanguageSelector variant="dark" />
       </div>
 
       <div className="w-full max-w-sm space-y-6">

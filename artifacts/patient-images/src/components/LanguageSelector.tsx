@@ -15,7 +15,7 @@ const LANGUAGES = [
   { code: "pt", label: "Português", flag: "🇧🇷" },
 ];
 
-export function LanguageSelector() {
+export function LanguageSelector({ variant }: { variant?: "dark" }) {
   const { i18n } = useTranslation();
 
   const current = LANGUAGES.find((l) => l.code === i18n.language) ?? LANGUAGES[0];
@@ -25,10 +25,20 @@ export function LanguageSelector() {
     localStorage.setItem("max7-language", code);
   };
 
+  const isDark = variant === "dark";
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="w-full justify-start gap-2 px-2 h-8 text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent">
+        <Button
+          variant="ghost"
+          size="sm"
+          className={
+            isDark
+              ? "gap-2 px-2 h-8 text-blue-200/80 hover:text-white hover:bg-white/10"
+              : "w-full justify-start gap-2 px-2 h-8 text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+          }
+        >
           <Globe className="h-4 w-4 shrink-0" />
           <span className="text-sm">{current.flag} {current.label}</span>
         </Button>
