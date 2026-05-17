@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link, useRoute, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
+import { uploadPatientImage } from "@/lib/upload";
 import {
   useGetImage,
   getGetImageQueryKey,
@@ -31,6 +32,7 @@ import {
   ChevronLeft,
   Trash2,
   Save,
+  Copy,
   MousePointer2,
   PenTool,
   Type as TypeIcon,
@@ -184,6 +186,7 @@ export default function Editor() {
   const { toast } = useToast();
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isSavingCopy, setIsSavingCopy] = useState(false);
   const [notes, setNotes] = useState("");
   const [tool, setTool] = useState<Tool>("pointer");
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
@@ -462,6 +465,39 @@ export default function Editor() {
     updateImage.mutate({ id, data: { notes, annotation: JSON.stringify(annotations) } });
   }
 
+  async function handleSaveAsCopy() {
+    const canvas = canvasRef.current;
+    if (!canvas || !image?.patientId) {
+      toast({ variant: "destructive", title: t("editor.canvasNotReady") });
+      return;
+    }
+
+    setIsSavingCopy(true);
+    try {
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob(resolve, "image/png");
+      });
+      if (!blob) throw new Error("Failed to export canvas");
+
+      const file = new File([blob], "copy.png", { type: "image/png" });
+      const result = await uploadPatientImage(file, image.patientId, notes || undefined);
+
+      toast({
+        title: t("editor.savedAsCopy"),
+        description: t("editor.savedAsCopyDesc"),
+      });
+      setLocation(`/editor/${result.id}`);
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: t("editor.saveFailed"),
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setIsSavingCopy(false);
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="p-6 h-full flex flex-col">
@@ -601,8 +637,23 @@ export default function Editor() {
             <Trash2 className="h-4 w-4" />
           </Button>
           <Button
+            variant="outline"
+            onClick={handleSaveAsCopy}
+            disabled={isSaving || isSavingCopy || !image?.patientId}
+            size="sm"
+            className="h-8"
+            title={t("editor.saveAsCopy")}
+          >
+            {isSavingCopy ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Copy className="h-4 w-4 mr-2" />
+            )}
+            {t("editor.saveAsCopy")}
+          </Button>
+          <Button
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || isSavingCopy}
             size="sm"
             className="h-8"
           >
