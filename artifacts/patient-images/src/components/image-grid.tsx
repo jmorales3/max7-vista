@@ -26,11 +26,11 @@ export function ImageGrid({ images, columns, showPatientName = false }: ImageGri
       {images.map((image) => (
         <Link key={image.id} href={`/editor/${image.id}`}>
           <Card className="group overflow-hidden cursor-pointer hover-elevate transition-all border-muted-foreground/20 hover:border-primary/50 relative">
-            <div className="aspect-square bg-black overflow-hidden flex items-center justify-center">
+            <div className="aspect-square overflow-hidden">
               <img 
                 src={`/api/images/${image.id}/file`} 
                 alt={image.notes || "Clinical image"} 
-                className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 loading="lazy"
               />
             </div>
