@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, gte, lte, isNull, sql } from "drizzle-orm";
+import { eq, and, gte, lte, sql } from "drizzle-orm";
 import path from "path";
 import fs from "fs";
 import multer from "multer";
@@ -17,20 +17,10 @@ import { getStorageDirectory } from "../lib/storage";
 
 const router: IRouter = Router();
 
-const storage = multer.diskStorage({
-  destination: async (_req, _file, cb) => {
-    const dir = await getStorageDirectory();
-    cb(null, dir);
-  },
-  filename: (_req, file, cb) => {
-    const timestamp = Date.now();
-    const ext = path.extname(file.originalname) || ".jpg";
-    cb(null, `${timestamp}${ext}`);
-  },
-});
-
+// Use memory storage so we can place the file in the correct patient/date subfolder
+// after we know the patientId from req.body.
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   fileFilter: (_req, file, cb) => {
     if (file.mimetype.startsWith("image/")) {
       cb(null, true);
@@ -83,11 +73,11 @@ router.get("/images/stats", async (_req, res): Promise<void> => {
     .from(imagesTable)
     .where(eq(imagesTable.isUnassigned, true));
 
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const [recentRow] = await db
     .select({ count: sql<number>`cast(count(*) as integer)` })
     .from(imagesTable)
-    .where(gte(imagesTable.createdAt, sevenDaysAgo));
+    .where(gte(imagesTable.createdAt, thirtyDaysAgo));
 
   res.json({
     totalImages: totalImagesRow?.count ?? 0,
@@ -101,7 +91,7 @@ router.get("/images", async (req, res): Promise<void> => {
   const parsed = ListImagesQueryParams.safeParse(req.query);
   const params = parsed.success ? parsed.data : {};
 
-  let query = db
+  const query = db
     .select({
       id: imagesTable.id,
       patientId: imagesTable.patientId,
@@ -129,9 +119,10 @@ router.get("/images", async (req, res): Promise<void> => {
     conditions.push(lte(imagesTable.capturedAt, new Date(params.dateTo)));
   }
 
-  const rows = conditions.length > 0
-    ? await query.where(and(...conditions)).orderBy(imagesTable.capturedAt)
-    : await query.orderBy(imagesTable.capturedAt);
+  const rows =
+    conditions.length > 0
+      ? await query.where(and(...conditions)).orderBy(imagesTable.capturedAt)
+      : await query.orderBy(imagesTable.capturedAt);
 
   res.json(rows.map(buildImageRow));
 });
@@ -146,11 +137,26 @@ router.post("/images", upload.single("file"), async (req, res): Promise<void> =>
   const notes = req.body.notes ?? null;
   const capturedAt = req.body.capturedAt ? new Date(req.body.capturedAt) : new Date();
 
+  // Build subfolder: {storageDir}/{patientId}/{YYYY-MM-DD}/
+  const storageDir = await getStorageDirectory();
+  const dateStr = capturedAt.toISOString().split("T")[0]; // YYYY-MM-DD
+  const subFolder = patientId
+    ? path.join(storageDir, String(patientId), dateStr)
+    : path.join(storageDir, "unassigned", dateStr);
+
+  fs.mkdirSync(subFolder, { recursive: true });
+
+  const ext = path.extname(req.file.originalname) || ".jpg";
+  const filename = `${Date.now()}${ext}`;
+  const filePath = path.join(subFolder, filename);
+
+  fs.writeFileSync(filePath, req.file.buffer);
+
   const [image] = await db
     .insert(imagesTable)
     .values({
       patientId,
-      filePath: req.file.path,
+      filePath,
       fileName: req.file.originalname,
       notes,
       capturedAt,

@@ -13,6 +13,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   ChevronLeft,
   Trash2,
@@ -25,6 +28,8 @@ import {
   RotateCw,
   Loader2,
   Eraser,
+  Crop,
+  Check,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -36,10 +41,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
-type Tool = "pointer" | "pen" | "text" | "eraser";
+type Tool = "pointer" | "pen" | "text" | "eraser" | "crop";
 
 interface DrawLine {
   type: "line";
@@ -60,12 +63,20 @@ interface DrawText {
 
 type Annotation = DrawLine | DrawText;
 
+interface CropRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 function renderCanvas(
   canvas: HTMLCanvasElement,
   img: HTMLImageElement | null,
   annotations: Annotation[],
   scale: number,
-  rotation: number
+  rotation: number,
+  cropRect?: CropRect | null,
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -101,6 +112,62 @@ function renderCanvas(
   }
 
   ctx.restore();
+
+  // Draw crop overlay on top (in screen coordinates, not transformed)
+  if (cropRect && cropRect.w > 0 && cropRect.h > 0) {
+    ctx.save();
+    // Dim everything outside the crop
+    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Cut out the selection
+    ctx.clearRect(cropRect.x, cropRect.y, cropRect.w, cropRect.h);
+    // Re-draw the original inside the crop area (no dim)
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(cropRect.x, cropRect.y, cropRect.w, cropRect.h);
+    ctx.clip();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.scale(scale, scale);
+    if (img) ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+    for (const ann of annotations) {
+      if (ann.type === "line") {
+        if (ann.points.length < 4) continue;
+        ctx.beginPath();
+        ctx.strokeStyle = ann.color;
+        ctx.lineWidth = ann.width;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.moveTo(ann.points[0], ann.points[1]);
+        for (let i = 2; i < ann.points.length; i += 2) ctx.lineTo(ann.points[i], ann.points[i + 1]);
+        ctx.stroke();
+      } else if (ann.type === "text") {
+        ctx.font = `${ann.size}px sans-serif`;
+        ctx.fillStyle = ann.color;
+        ctx.fillText(ann.text, ann.x, ann.y);
+      }
+    }
+    ctx.restore();
+    // Draw border
+    ctx.strokeStyle = "#0ea5e9";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 3]);
+    ctx.strokeRect(cropRect.x, cropRect.y, cropRect.w, cropRect.h);
+    // Corner handles
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#0ea5e9";
+    const hs = 7;
+    const corners = [
+      [cropRect.x, cropRect.y],
+      [cropRect.x + cropRect.w, cropRect.y],
+      [cropRect.x, cropRect.y + cropRect.h],
+      [cropRect.x + cropRect.w, cropRect.y + cropRect.h],
+    ];
+    for (const [cx, cy] of corners) {
+      ctx.fillRect(cx - hs / 2, cy - hs / 2, hs, hs);
+    }
+    ctx.restore();
+  }
 }
 
 export default function Editor() {
@@ -116,6 +183,7 @@ export default function Editor() {
   const [scale, setScale] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [penColor, setPenColor] = useState("#ff0000");
+  const [cropRect, setCropRect] = useState<CropRect | null>(null);
   const [pendingText, setPendingText] = useState<{ x: number; y: number } | null>(null);
   const [textInput, setTextInput] = useState("");
 
@@ -124,12 +192,12 @@ export default function Editor() {
   const imgRef = useRef<HTMLImageElement | null>(null);
   const isDrawingRef = useRef(false);
   const currentLineRef = useRef<number[]>([]);
+  const cropStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const { data: image, isLoading } = useGetImage(id, {
     query: { enabled: !!id, queryKey: getGetImageQueryKey(id) },
   });
 
-  // Load image
   useEffect(() => {
     if (!id) return;
     const img = new Image();
@@ -141,7 +209,6 @@ export default function Editor() {
     };
   }, [id]);
 
-  // Load saved data
   useEffect(() => {
     if (image?.notes) setNotes(image.notes);
     if (image?.annotation) {
@@ -160,17 +227,15 @@ export default function Editor() {
     if (!canvas || !container) return;
     canvas.width = container.offsetWidth;
     canvas.height = container.offsetHeight;
-    renderCanvas(canvas, imgRef.current, annotations, scale, rotation);
-  }, [annotations, scale, rotation]);
+    renderCanvas(canvas, imgRef.current, annotations, scale, rotation, cropRect);
+  }, [annotations, scale, rotation, cropRect]);
 
-  // Re-render whenever state changes
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    renderCanvas(canvas, imgRef.current, annotations, scale, rotation);
-  }, [annotations, scale, rotation]);
+    renderCanvas(canvas, imgRef.current, annotations, scale, rotation, cropRect);
+  }, [annotations, scale, rotation, cropRect]);
 
-  // Resize observer
   useEffect(() => {
     const observer = new ResizeObserver(resizeCanvas);
     if (containerRef.current) observer.observe(containerRef.current);
@@ -183,9 +248,16 @@ export default function Editor() {
     const cx = (e.clientX - rect.left - canvas.width / 2) / scale;
     const cy = (e.clientY - rect.top - canvas.height / 2) / scale;
     const rad = (-rotation * Math.PI) / 180;
-    const rx = cx * Math.cos(rad) - cy * Math.sin(rad);
-    const ry = cx * Math.sin(rad) + cy * Math.cos(rad);
-    return [rx, ry];
+    return [
+      cx * Math.cos(rad) - cy * Math.sin(rad),
+      cx * Math.sin(rad) + cy * Math.cos(rad),
+    ];
+  }
+
+  function getScreenPoint(e: React.MouseEvent<HTMLCanvasElement>): [number, number] {
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    return [e.clientX - rect.left, e.clientY - rect.top];
   }
 
   function handleMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
@@ -194,14 +266,26 @@ export default function Editor() {
       const [x, y] = getCanvasPoint(e);
       currentLineRef.current = [x, y];
     } else if (tool === "text") {
-      const canvas = canvasRef.current!;
-      const rect = canvas.getBoundingClientRect();
       const [x, y] = getCanvasPoint(e);
       setPendingText({ x, y });
+    } else if (tool === "crop") {
+      const [sx, sy] = getScreenPoint(e);
+      cropStartRef.current = { x: sx, y: sy };
+      setCropRect({ x: sx, y: sy, w: 0, h: 0 });
     }
   }
 
   function handleMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
+    if (tool === "crop" && cropStartRef.current) {
+      const [sx, sy] = getScreenPoint(e);
+      const x = Math.min(cropStartRef.current.x, sx);
+      const y = Math.min(cropStartRef.current.y, sy);
+      const w = Math.abs(sx - cropStartRef.current.x);
+      const h = Math.abs(sy - cropStartRef.current.y);
+      setCropRect({ x, y, w, h });
+      return;
+    }
+
     if (!isDrawingRef.current) return;
     const [x, y] = getCanvasPoint(e);
     currentLineRef.current = [...currentLineRef.current, x, y];
@@ -230,6 +314,10 @@ export default function Editor() {
   }
 
   function handleMouseUp() {
+    if (tool === "crop") {
+      cropStartRef.current = null;
+      return;
+    }
     if (!isDrawingRef.current) return;
     isDrawingRef.current = false;
     const pts = currentLineRef.current;
@@ -243,6 +331,31 @@ export default function Editor() {
       setAnnotations((prev) => [...prev, newLine]);
     }
     currentLineRef.current = [];
+  }
+
+  function applyCrop() {
+    if (!cropRect || cropRect.w < 4 || cropRect.h < 4 || !canvasRef.current) return;
+    const offscreen = document.createElement("canvas");
+    offscreen.width = cropRect.w;
+    offscreen.height = cropRect.h;
+    const ctx2 = offscreen.getContext("2d")!;
+
+    // Draw from the current canvas (which shows the image + annotations at current scale/rotation)
+    const srcCanvas = canvasRef.current;
+    ctx2.drawImage(srcCanvas, cropRect.x, cropRect.y, cropRect.w, cropRect.h, 0, 0, cropRect.w, cropRect.h);
+
+    const newImg = new Image();
+    newImg.onload = () => {
+      imgRef.current = newImg;
+      setAnnotations([]);
+      setScale(1);
+      setRotation(0);
+      setCropRect(null);
+      cropStartRef.current = null;
+      setTool("pointer");
+      resizeCanvas();
+    };
+    newImg.src = offscreen.toDataURL("image/png");
   }
 
   function confirmText() {
@@ -315,13 +428,15 @@ export default function Editor() {
       ? "cursor-crosshair"
       : tool === "text"
       ? "cursor-text"
+      : tool === "crop"
+      ? "cursor-crosshair"
       : "cursor-default";
 
   return (
     <div className="flex flex-col h-[calc(100vh-theme(spacing.14))] -m-4 md:-m-6 lg:-m-8">
       {/* Toolbar */}
-      <div className="h-14 border-b bg-card flex items-center justify-between px-4 shrink-0 gap-2 flex-wrap">
-        <div className="flex items-center gap-2">
+      <div className="h-14 border-b bg-card flex items-center justify-between px-4 shrink-0 gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button variant="ghost" size="icon" asChild>
             <Link href={image.patientId ? `/patients/${image.patientId}` : "/gallery"}>
               <ChevronLeft className="h-4 w-4" />
@@ -338,6 +453,7 @@ export default function Editor() {
                 { t: "pen", Icon: PenTool, label: "Draw" },
                 { t: "text", Icon: TypeIcon, label: "Text" },
                 { t: "eraser", Icon: Eraser, label: "Erase" },
+                { t: "crop", Icon: Crop, label: "Crop" },
               ] as const
             ).map(({ t, Icon, label }) => (
               <Button
@@ -345,7 +461,7 @@ export default function Editor() {
                 variant={tool === t ? "secondary" : "ghost"}
                 size="icon"
                 className="h-8 w-8"
-                onClick={() => setTool(t)}
+                onClick={() => { setTool(t); if (t !== "crop") setCropRect(null); }}
                 title={label}
               >
                 <Icon className="h-4 w-4" />
@@ -353,24 +469,33 @@ export default function Editor() {
             ))}
           </div>
 
+          {tool === "crop" && cropRect && cropRect.w > 4 && (
+            <Button size="sm" className="h-8 gap-1" onClick={applyCrop} title="Apply crop">
+              <Check className="h-3.5 w-3.5" />
+              Apply Crop
+            </Button>
+          )}
+
           {/* Color picker */}
-          <div className="flex items-center gap-1.5 ml-1" title="Annotation color">
-            <div
-              className="w-5 h-5 rounded-full border-2 border-white shadow"
-              style={{ background: penColor }}
-            />
-            <input
-              type="color"
-              value={penColor}
-              onChange={(e) => setPenColor(e.target.value)}
-              className="w-6 h-6 opacity-0 absolute cursor-pointer"
-              title="Pick color"
-            />
-          </div>
+          {tool !== "crop" && tool !== "pointer" && (
+            <div className="relative flex items-center gap-1.5" title="Annotation color">
+              <div
+                className="w-5 h-5 rounded-full border-2 border-muted-foreground/40 shadow cursor-pointer"
+                style={{ background: penColor }}
+              />
+              <input
+                type="color"
+                value={penColor}
+                onChange={(e) => setPenColor(e.target.value)}
+                className="absolute inset-0 opacity-0 w-full cursor-pointer"
+                title="Pick color"
+              />
+            </div>
+          )}
 
           <div className="h-4 w-px bg-border mx-1" />
 
-          {/* Zoom / rotate */}
+          {/* Zoom */}
           <div className="flex items-center gap-0.5">
             <Button
               variant="ghost"
@@ -391,16 +516,18 @@ export default function Editor() {
             >
               <ZoomIn className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setRotation((r) => (r + 90) % 360)}
-              title="Rotate 90°"
-            >
-              <RotateCw className="h-4 w-4" />
-            </Button>
           </div>
+
+          {/* Rotate 90° step */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setRotation((r) => (r + 90) % 360)}
+            title="Rotate 90°"
+          >
+            <RotateCw className="h-4 w-4" />
+          </Button>
 
           <div className="h-4 w-px bg-border mx-1" />
 
@@ -414,13 +541,12 @@ export default function Editor() {
           </Button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Button
             variant="ghost"
             size="icon"
             className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8"
             onClick={() => setShowDeleteDialog(true)}
-            title="Delete image"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -455,7 +581,7 @@ export default function Editor() {
             onMouseLeave={handleMouseUp}
           />
 
-          {/* Inline text input overlay */}
+          {/* Text input overlay */}
           {pendingText && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/30 z-10">
               <div className="bg-card rounded-xl shadow-2xl p-6 w-80 space-y-4">
@@ -466,27 +592,13 @@ export default function Editor() {
                   onChange={(e) => setTextInput(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") confirmText();
-                    if (e.key === "Escape") {
-                      setPendingText(null);
-                      setTextInput("");
-                    }
+                    if (e.key === "Escape") { setPendingText(null); setTextInput(""); }
                   }}
                   placeholder="Type annotation..."
                 />
                 <div className="flex gap-2 justify-end">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setPendingText(null);
-                      setTextInput("");
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button size="sm" onClick={confirmText}>
-                    Add
-                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => { setPendingText(null); setTextInput(""); }}>Cancel</Button>
+                  <Button size="sm" onClick={confirmText}>Add</Button>
                 </div>
               </div>
             </div>
@@ -494,7 +606,7 @@ export default function Editor() {
         </div>
 
         {/* Sidebar */}
-        <div className="w-72 border-l bg-card flex flex-col shrink-0">
+        <div className="w-72 border-l bg-card flex flex-col shrink-0 overflow-y-auto">
           <div className="p-4 border-b">
             <h3 className="font-semibold text-sm">Image Details</h3>
             {image.patientName && (
@@ -506,10 +618,40 @@ export default function Editor() {
               </p>
             )}
           </div>
+
+          {/* Free rotation slider */}
+          <div className="p-4 border-b space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Free Rotation</Label>
+              <span className="text-xs font-mono text-muted-foreground">{rotation}°</span>
+            </div>
+            <Slider
+              min={0}
+              max={359}
+              step={1}
+              value={[rotation]}
+              onValueChange={([v]) => setRotation(v)}
+              className="w-full"
+            />
+            <div className="flex gap-1">
+              {[0, 90, 180, 270].map((deg) => (
+                <Button
+                  key={deg}
+                  variant={rotation === deg ? "secondary" : "outline"}
+                  size="sm"
+                  className="flex-1 h-7 text-xs"
+                  onClick={() => setRotation(deg)}
+                >
+                  {deg}°
+                </Button>
+              ))}
+            </div>
+          </div>
+
           <div className="p-4 flex-1 flex flex-col gap-3">
             <Label className="text-sm font-medium">Clinical Notes</Label>
             <Textarea
-              className="min-h-[180px] resize-none text-sm"
+              className="min-h-[160px] resize-none text-sm"
               placeholder="Add notes for this image..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
