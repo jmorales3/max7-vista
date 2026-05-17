@@ -43,13 +43,16 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="border-b px-4 py-3">
+      <SidebarHeader
+        className="border-b px-4 py-3"
+        style={{ background: "linear-gradient(135deg, #0a1628 0%, #0d2145 100%)" }}
+      >
         <div className="flex items-center justify-center">
           <img
             src="/max7-vista-logo.png"
             alt="Max7 Vista"
-            className="h-10 w-auto"
-            style={{ mixBlendMode: "multiply" }}
+            className="w-full max-w-[200px] h-auto"
+            style={{ mixBlendMode: "screen" }}
           />
         </div>
       </SidebarHeader>
