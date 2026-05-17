@@ -43,17 +43,17 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader
-        className="border-b px-4 py-3"
-        style={{ background: "linear-gradient(135deg, #0a1628 0%, #0d2145 100%)" }}
-      >
-        <div className="flex items-center justify-center">
+      <SidebarHeader className="border-b px-4 py-3">
+        <div className="flex items-center gap-2">
           <img
-            src="/max7-vista-logo.png"
+            src="/max7-tooth-icon.png"
             alt="Max7 Vista"
-            className="w-full max-w-[200px] h-auto"
-            style={{ mixBlendMode: "screen" }}
+            className="h-10 w-auto shrink-0"
           />
+          <div className="flex flex-col leading-tight">
+            <span className="font-extrabold text-base" style={{ color: "#1565c0" }}>Max7</span>
+            <span className="text-xs font-semibold tracking-widest uppercase" style={{ color: "#1e88e5" }}>Vista</span>
+          </div>
         </div>
       </SidebarHeader>
       <SidebarContent>
