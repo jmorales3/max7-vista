@@ -138,6 +138,18 @@ router.post("/images", upload.single("file"), async (req, res): Promise<void> =>
   const notes = req.body.notes ?? null;
   const capturedAt = req.body.capturedAt ? new Date(req.body.capturedAt) : new Date();
 
+  // Validate patientId existence to return a clean 404 instead of a DB FK error
+  if (patientId !== null) {
+    const [patient] = await db
+      .select({ id: patientsTable.id })
+      .from(patientsTable)
+      .where(eq(patientsTable.id, patientId));
+    if (!patient) {
+      res.status(404).json({ error: `Patient ${patientId} not found` });
+      return;
+    }
+  }
+
   // Build subfolder: {storageDir}/{patientId}/{YYYY-MM-DD}/
   const storageDir = await getStorageDirectory();
   const dateStr = capturedAt.toISOString().split("T")[0]; // YYYY-MM-DD
@@ -329,6 +341,17 @@ router.patch("/images/:id", async (req, res): Promise<void> => {
   if (parsed.data.notes !== undefined) updateData.notes = parsed.data.notes;
   if (parsed.data.annotation !== undefined) updateData.annotation = parsed.data.annotation;
   if (parsed.data.patientId !== undefined) {
+    // Validate patientId existence when reassigning to give a clean 404
+    if (parsed.data.patientId !== null) {
+      const [patient] = await db
+        .select({ id: patientsTable.id })
+        .from(patientsTable)
+        .where(eq(patientsTable.id, parsed.data.patientId));
+      if (!patient) {
+        res.status(404).json({ error: `Patient ${parsed.data.patientId} not found` });
+        return;
+      }
+    }
     updateData.patientId = parsed.data.patientId;
     updateData.isUnassigned = parsed.data.patientId === null;
   }

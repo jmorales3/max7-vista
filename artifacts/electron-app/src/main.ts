@@ -3,9 +3,19 @@ import path from "path";
 import { spawn, ChildProcess } from "child_process";
 
 const API_PORT = parseInt(process.env["API_PORT"] ?? "8080", 10);
-// In development, Electron loads the running Vite dev server. Set VITE_DEV_URL
-// in the environment to override (e.g. when the workspace uses a non-default port).
-const VITE_DEV_URL = process.env["VITE_DEV_URL"] ?? `http://localhost:5173`;
+// In development, Electron loads the running Vite dev server. VITE_DEV_URL must
+// be set to the actual dev-server URL — the port is assigned by the workspace
+// (e.g. the Replit workspace sets PORT per artifact, so the Vite dev server
+// may not be on 5173). Run:
+//   VITE_DEV_URL=http://localhost:<vite-port> pnpm --filter @workspace/electron-app dev
+const rawDevUrl = process.env["VITE_DEV_URL"];
+if (!rawDevUrl && process.env["NODE_ENV"] !== "production") {
+  console.warn(
+    "[electron-app] VITE_DEV_URL is not set. Defaulting to http://localhost:5173 " +
+    "— set VITE_DEV_URL to the actual Vite dev-server port if the app fails to load.",
+  );
+}
+const VITE_DEV_URL = rawDevUrl ?? "http://localhost:5173";
 // app.isPackaged is the canonical Electron check: true only in packaged builds.
 // NODE_ENV is unreliable in packaged apps (often unset → would incorrectly be "dev").
 const IS_DEV = !app.isPackaged;
