@@ -158,7 +158,8 @@ export const ListImagesResponse = zod.array(ListImagesResponseItem)
  * @summary Upload a new image (multipart/form-data with file + metadata)
  */
 export const UploadImageBody = zod.object({
-  "patientId": zod.number(),
+  "file": zod.instanceof(File).describe('The image file to upload'),
+  "patientId": zod.number().optional(),
   "notes": zod.string().optional(),
   "capturedAt": zod.string().optional()
 })
@@ -220,6 +221,32 @@ export const UpdateImageResponse = zod.object({
  */
 export const DeleteImageParams = zod.object({
   "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Replace the stored image file (persists crop/rotate/annotate edits)
+ */
+export const ReplaceImageFileParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ReplaceImageFileBody = zod.object({
+  "file": zod.instanceof(File).describe('Replacement image file (used to persist crop\/rotate\/annotate edits)')
+})
+
+export const ReplaceImageFileResponse = zod.object({
+  "id": zod.number(),
+  "patientId": zod.number(),
+  "patientName": zod.string().nullish(),
+  "patientCode": zod.string().nullish(),
+  "filePath": zod.string(),
+  "fileName": zod.string().optional(),
+  "notes": zod.string().nullish(),
+  "annotation": zod.string().nullish(),
+  "capturedAt": zod.string(),
+  "createdAt": zod.string(),
+  "isUnassigned": zod.boolean().optional()
 })
 
 

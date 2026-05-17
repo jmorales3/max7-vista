@@ -6,10 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface ImageUploadInput {
-  /** The image file to upload */
+export interface ImageFileReplaceInput {
+  /** Replacement image file (used to persist crop/rotate/annotate edits) */
   file: Blob;
-  patientId?: number;
-  notes?: string;
-  capturedAt?: string;
 }

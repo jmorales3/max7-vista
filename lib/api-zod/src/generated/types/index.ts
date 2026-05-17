@@ -8,6 +8,7 @@
 
 export * from './healthStatus';
 export * from './image';
+export * from './imageFileReplaceInput';
 export * from './imageStats';
 export * from './imageUpdate';
 export * from './imageUploadInput';

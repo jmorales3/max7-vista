@@ -257,6 +257,31 @@ paths:
           description: Deleted
 
   /images/{id}/file:
+    put:
+      operationId: replaceImageFile
+      tags: [images]
+      summary: Replace the stored image file (persists crop/rotate/annotate edits)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/ImageFileReplaceInput"
+      responses:
+        "200":
+          description: Updated image record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Image"
+        "404":
+          description: Not found
     get:
       operationId: getImageFile
       tags: [images]
@@ -365,14 +390,27 @@ components:
 
     ImageUploadInput:
       type: object
-      required: [patientId]
+      required: [file]
       properties:
+        file:
+          type: string
+          format: binary
+          description: The image file to upload
         patientId:
           type: integer
         notes:
           type: string
         capturedAt:
           type: string
+
+    ImageFileReplaceInput:
+      type: object
+      required: [file]
+      properties:
+        file:
+          type: string
+          format: binary
+          description: Replacement image file (used to persist crop/rotate/annotate edits)
 
     PatientInput:
       type: object

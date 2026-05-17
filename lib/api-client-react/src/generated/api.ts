@@ -22,6 +22,7 @@ import type {
 import type {
   HealthStatus,
   Image,
+  ImageFileReplaceInput,
   ImageStats,
   ImageUpdate,
   ImageUploadInput,
@@ -672,14 +673,25 @@ export const getUploadImageUrl = () => {
  * @summary Upload a new image (multipart/form-data with file + metadata)
  */
 export const uploadImage = async (imageUploadInput: ImageUploadInput, options?: RequestInit): Promise<Image> => {
+    const formData = new FormData();
+formData.append(`file`, imageUploadInput.file);
+if(imageUploadInput.patientId !== undefined) {
+ formData.append(`patientId`, imageUploadInput.patientId.toString())
+ }
+if(imageUploadInput.notes !== undefined) {
+ formData.append(`notes`, imageUploadInput.notes);
+ }
+if(imageUploadInput.capturedAt !== undefined) {
+ formData.append(`capturedAt`, imageUploadInput.capturedAt);
+ }
 
   return customFetch<Image>(getUploadImageUrl(),
   {
     ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      imageUploadInput,)
+    method: 'POST'
+    ,
+    body:
+      formData,
   }
 );}
 
@@ -948,6 +960,80 @@ export const useDeleteImage = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteImageMutationOptions(options));
+    }
+
+export const getReplaceImageFileUrl = (id: number,) => {
+
+
+
+
+  return `/api/images/${id}/file`
+}
+
+/**
+ * @summary Replace the stored image file (persists crop/rotate/annotate edits)
+ */
+export const replaceImageFile = async (id: number,
+    imageFileReplaceInput: ImageFileReplaceInput, options?: RequestInit): Promise<Image> => {
+    const formData = new FormData();
+formData.append(`file`, imageFileReplaceInput.file);
+
+  return customFetch<Image>(getReplaceImageFileUrl(id),
+  {
+    ...options,
+    method: 'PUT'
+    ,
+    body:
+      formData,
+  }
+);}
+
+
+
+
+export const getReplaceImageFileMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof replaceImageFile>>, TError,{id: number;data: BodyType<ImageFileReplaceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof replaceImageFile>>, TError,{id: number;data: BodyType<ImageFileReplaceInput>}, TContext> => {
+
+const mutationKey = ['replaceImageFile'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof replaceImageFile>>, {id: number;data: BodyType<ImageFileReplaceInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  replaceImageFile(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReplaceImageFileMutationResult = NonNullable<Awaited<ReturnType<typeof replaceImageFile>>>
+    export type ReplaceImageFileMutationBody = BodyType<ImageFileReplaceInput>
+    export type ReplaceImageFileMutationError = ErrorType<void>
+
+    /**
+ * @summary Replace the stored image file (persists crop/rotate/annotate edits)
+ */
+export const useReplaceImageFile = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof replaceImageFile>>, TError,{id: number;data: BodyType<ImageFileReplaceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof replaceImageFile>>,
+        TError,
+        {id: number;data: BodyType<ImageFileReplaceInput>},
+        TContext
+      > => {
+      return useMutation(getReplaceImageFileMutationOptions(options));
     }
 
 export const getGetImageFileUrl = (id: number,) => {

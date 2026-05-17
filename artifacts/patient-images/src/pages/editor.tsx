@@ -5,6 +5,7 @@ import {
   getGetImageQueryKey,
   useUpdateImage,
   useDeleteImage,
+  useReplaceImageFile,
   getListImagesQueryKey,
   getListPatientImagesQueryKey,
 } from "@workspace/api-client-react";
@@ -116,12 +117,9 @@ function renderCanvas(
   // Draw crop overlay on top (in screen coordinates, not transformed)
   if (cropRect && cropRect.w > 0 && cropRect.h > 0) {
     ctx.save();
-    // Dim everything outside the crop
     ctx.fillStyle = "rgba(0,0,0,0.45)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    // Cut out the selection
     ctx.clearRect(cropRect.x, cropRect.y, cropRect.w, cropRect.h);
-    // Re-draw the original inside the crop area (no dim)
     ctx.save();
     ctx.beginPath();
     ctx.rect(cropRect.x, cropRect.y, cropRect.w, cropRect.h);
@@ -148,16 +146,14 @@ function renderCanvas(
       }
     }
     ctx.restore();
-    // Draw border
     ctx.strokeStyle = "#0ea5e9";
     ctx.lineWidth = 2;
     ctx.setLineDash([6, 3]);
     ctx.strokeRect(cropRect.x, cropRect.y, cropRect.w, cropRect.h);
-    // Corner handles
     ctx.setLineDash([]);
     ctx.fillStyle = "#0ea5e9";
     const hs = 7;
-    const corners = [
+    const corners: [number, number][] = [
       [cropRect.x, cropRect.y],
       [cropRect.x + cropRect.w, cropRect.y],
       [cropRect.x, cropRect.y + cropRect.h],
@@ -290,7 +286,6 @@ export default function Editor() {
     const [x, y] = getCanvasPoint(e);
     currentLineRef.current = [...currentLineRef.current, x, y];
 
-    // Live preview
     const canvas = canvasRef.current;
     if (!canvas) return;
     renderCanvas(canvas, imgRef.current, annotations, scale, rotation);
@@ -339,10 +334,7 @@ export default function Editor() {
     offscreen.width = cropRect.w;
     offscreen.height = cropRect.h;
     const ctx2 = offscreen.getContext("2d")!;
-
-    // Draw from the current canvas (which shows the image + annotations at current scale/rotation)
-    const srcCanvas = canvasRef.current;
-    ctx2.drawImage(srcCanvas, cropRect.x, cropRect.y, cropRect.w, cropRect.h, 0, 0, cropRect.w, cropRect.h);
+    ctx2.drawImage(canvasRef.current, cropRect.x, cropRect.y, cropRect.w, cropRect.h, 0, 0, cropRect.w, cropRect.h);
 
     const newImg = new Image();
     newImg.onload = () => {
@@ -379,6 +371,14 @@ export default function Editor() {
     setTool("pointer");
   }
 
+  const replaceFile = useReplaceImageFile({
+    mutation: {
+      onError: (e) => {
+        toast({ variant: "destructive", title: "Image file save failed", description: String(e) });
+      },
+    },
+  });
+
   const updateImage = useUpdateImage({
     mutation: {
       onSuccess: () => {
@@ -410,6 +410,28 @@ export default function Editor() {
     },
   });
 
+  async function handleSave() {
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      toast({ variant: "destructive", title: "Canvas not ready" });
+      return;
+    }
+
+    // Export the current canvas state (image + annotations + crop/rotate) as PNG.
+    // This persists all visual edits to the file on disk, not just the annotation JSON.
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, "image/png");
+    });
+
+    if (blob) {
+      const file = new File([blob], "edited.png", { type: "image/png" });
+      replaceFile.mutate({ id, data: { file } });
+    }
+
+    // Also persist notes and annotation metadata
+    updateImage.mutate({ id, data: { notes, annotation: JSON.stringify(annotations) } });
+  }
+
   if (isLoading) {
     return (
       <div className="p-6 h-full flex flex-col">
@@ -422,6 +444,8 @@ export default function Editor() {
   if (!image) {
     return <div className="p-12 text-center text-muted-foreground">Image not found</div>;
   }
+
+  const isSaving = replaceFile.isPending || updateImage.isPending;
 
   const cursorClass =
     tool === "pen" || tool === "eraser"
@@ -445,7 +469,6 @@ export default function Editor() {
 
           <div className="h-4 w-px bg-border mx-1" />
 
-          {/* Drawing tools */}
           <div className="flex bg-muted/50 p-1 rounded-md gap-0.5">
             {(
               [
@@ -476,7 +499,6 @@ export default function Editor() {
             </Button>
           )}
 
-          {/* Color picker */}
           {tool !== "crop" && tool !== "pointer" && (
             <div className="relative flex items-center gap-1.5" title="Annotation color">
               <div
@@ -495,7 +517,6 @@ export default function Editor() {
 
           <div className="h-4 w-px bg-border mx-1" />
 
-          {/* Zoom */}
           <div className="flex items-center gap-0.5">
             <Button
               variant="ghost"
@@ -518,7 +539,6 @@ export default function Editor() {
             </Button>
           </div>
 
-          {/* Rotate 90° step */}
           <Button
             variant="ghost"
             size="icon"
@@ -551,14 +571,12 @@ export default function Editor() {
             <Trash2 className="h-4 w-4" />
           </Button>
           <Button
-            onClick={() =>
-              updateImage.mutate({ id, data: { notes, annotation: JSON.stringify(annotations) } })
-            }
-            disabled={updateImage.isPending}
+            onClick={handleSave}
+            disabled={isSaving}
             size="sm"
             className="h-8"
           >
-            {updateImage.isPending ? (
+            {isSaving ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
             ) : (
               <Save className="h-4 w-4 mr-2" />
@@ -570,7 +588,6 @@ export default function Editor() {
 
       {/* Main area */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Canvas */}
         <div className="flex-1 bg-muted/30 relative overflow-hidden" ref={containerRef}>
           <canvas
             ref={canvasRef}
@@ -581,7 +598,6 @@ export default function Editor() {
             onMouseLeave={handleMouseUp}
           />
 
-          {/* Text input overlay */}
           {pendingText && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/30 z-10">
               <div className="bg-card rounded-xl shadow-2xl p-6 w-80 space-y-4">

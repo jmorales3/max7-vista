@@ -2,8 +2,10 @@ import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import path from "path";
 import { spawn, ChildProcess } from "child_process";
 
-const API_PORT = 8080;
-const VITE_PORT = 5173;
+const API_PORT = parseInt(process.env["API_PORT"] ?? "8080", 10);
+// In development, Electron loads the running Vite dev server. Set VITE_DEV_URL
+// in the environment to override (e.g. when the workspace uses a non-default port).
+const VITE_DEV_URL = process.env["VITE_DEV_URL"] ?? `http://localhost:5173`;
 const IS_DEV = process.env["NODE_ENV"] !== "production";
 
 let mainWindow: BrowserWindow | null = null;
@@ -57,10 +59,10 @@ function createWindow(): void {
   });
 
   // In dev, load the Vite dev server; in production, load from the API server
-  // which can serve the bundled frontend as static files.
-  const appUrl = IS_DEV
-    ? `http://localhost:${VITE_PORT}`
-    : `http://localhost:${API_PORT}`;
+  // which serves the bundled frontend as static files at its root.
+  // VITE_DEV_URL must be set to the Vite dev server URL when running locally
+  // (e.g. http://localhost:19156 if the workspace uses a non-default Vite port).
+  const appUrl = IS_DEV ? VITE_DEV_URL : `http://localhost:${API_PORT}`;
 
   // Wait briefly for the server to be ready then load
   setTimeout(() => {

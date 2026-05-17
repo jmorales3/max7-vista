@@ -22,9 +22,16 @@ export interface Patient {
 }
 
 export interface ImageUploadInput {
-  patientId: number;
+  /** The image file to upload */
+  file: Blob;
+  patientId?: number;
   notes?: string;
   capturedAt?: string;
+}
+
+export interface ImageFileReplaceInput {
+  /** Replacement image file (used to persist crop/rotate/annotate edits) */
+  file: Blob;
 }
 
 export interface PatientInput {

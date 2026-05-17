@@ -12,6 +12,7 @@ import {
   DeleteImageParams,
   GetImageFileParams,
   ListPatientImagesParams,
+  ReplaceImageFileParams,
 } from "@workspace/api-zod";
 import { getStorageDirectory } from "../lib/storage";
 
@@ -176,6 +177,52 @@ router.post("/images", upload.single("file"), async (req, res): Promise<void> =>
   }
 
   res.status(201).json(buildImageRow({ ...image, patientName, patientCode }));
+});
+
+router.put("/images/:id/file", upload.single("file"), async (req, res): Promise<void> => {
+  const params = ReplaceImageFileParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  if (!req.file) {
+    res.status(400).json({ error: "No file provided" });
+    return;
+  }
+
+  const [existingImage] = await db
+    .select()
+    .from(imagesTable)
+    .where(eq(imagesTable.id, params.data.id));
+
+  if (!existingImage) {
+    res.status(404).json({ error: "Image not found" });
+    return;
+  }
+
+  // Overwrite the existing file on disk (preserving the same path)
+  fs.writeFileSync(existingImage.filePath, req.file.buffer);
+
+  const rows = await db
+    .select({
+      id: imagesTable.id,
+      patientId: imagesTable.patientId,
+      filePath: imagesTable.filePath,
+      fileName: imagesTable.fileName,
+      notes: imagesTable.notes,
+      annotation: imagesTable.annotation,
+      capturedAt: imagesTable.capturedAt,
+      isUnassigned: imagesTable.isUnassigned,
+      createdAt: imagesTable.createdAt,
+      patientName: patientsTable.name,
+      patientCode: patientsTable.patientCode,
+    })
+    .from(imagesTable)
+    .leftJoin(patientsTable, eq(patientsTable.id, imagesTable.patientId))
+    .where(eq(imagesTable.id, params.data.id));
+
+  res.json(buildImageRow(rows[0] ?? { ...existingImage, patientName: null, patientCode: null }));
 });
 
 router.get("/images/:id/file", async (req, res): Promise<void> => {
