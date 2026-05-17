@@ -39,7 +39,7 @@
         "filter": ["**/*"]
       },
       {
-        "from": "../../artifacts/patient-images/dist",
+        "from": "../../artifacts/patient-images/dist/public",
         "to": "api-server/dist-frontend",
         "filter": ["**/*"]
       }

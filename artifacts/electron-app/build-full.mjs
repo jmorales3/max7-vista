@@ -19,13 +19,19 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "../..");
 
-function run(cmd, cwd = root) {
+function run(cmd, cwd = root, extraEnv = {}) {
   console.log(`\n▶ ${cmd}`);
-  execSync(cmd, { cwd, stdio: "inherit" });
+  execSync(cmd, { cwd, stdio: "inherit", env: { ...process.env, ...extraEnv } });
 }
 
-// 1. Frontend
-run("pnpm --filter @workspace/patient-images run build");
+// 1. Frontend — PORT is required by vite.config.ts (dev-server config);
+//    during a production build it is only validated, never used for listening.
+//    BASE_PATH is "/" for the Electron desktop shell (served at root by Express).
+run("pnpm --filter @workspace/patient-images run build", root, {
+  PORT: "8080",
+  BASE_PATH: "/",
+  NODE_ENV: "production",
+});
 
 // 2. API server
 run("pnpm --filter @workspace/api-server run build");

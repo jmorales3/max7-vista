@@ -39,9 +39,11 @@ app.use("/api", router);
 
 // Serve bundled frontend static assets (used by the Electron desktop shell in
 // production, where Electron loads http://localhost:<PORT> from this server).
-// The frontend build output should be placed at dist-frontend/ relative to the
-// server's working directory (populated by the Electron packager build step).
-const frontendDist = path.join(__dirname, "..", "dist-frontend");
+// The frontend build output lives at dist-frontend/ alongside this bundle.
+// In packaged Electron: __dirname = resources/api-server/ and electron-builder
+// copies the frontend dist into resources/api-server/dist-frontend/ via extraResources.
+// In development: place the frontend build at artifacts/api-server/dist/dist-frontend/.
+const frontendDist = path.join(__dirname, "dist-frontend");
 if (fs.existsSync(frontendDist)) {
   app.use(express.static(frontendDist));
   // SPA fallback: any non-API route returns index.html so client-side routing works
