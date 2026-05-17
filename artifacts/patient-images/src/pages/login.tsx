@@ -37,15 +37,12 @@ export default function LoginPage() {
 
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center space-y-3">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary text-primary-foreground text-2xl font-bold shadow-lg">
-            M7
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-primary">
-              {t("app.name")}
-            </h1>
-            <p className="text-muted-foreground mt-1">{t("auth.subtitle")}</p>
-          </div>
+          <img
+            src="/max7-vista-logo.png"
+            alt="Max7 Vista"
+            className="mx-auto w-72 max-w-full drop-shadow-lg"
+          />
+          <p className="text-muted-foreground">{t("auth.subtitle")}</p>
         </div>
 
         <Card className="shadow-xl border-border/50">
