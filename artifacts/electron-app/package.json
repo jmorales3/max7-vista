@@ -1,0 +1,41 @@
+{
+  "name": "@workspace/electron-app",
+  "version": "0.0.0",
+  "private": true,
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "electron .",
+    "dev": "tsc -p tsconfig.json && electron .",
+    "package": "electron-builder --dir"
+  },
+  "dependencies": {
+    "@workspace/api-server": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "electron": "^35.3.0",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.8.3"
+  },
+  "build": {
+    "appId": "com.workspace.patient-image-manager",
+    "productName": "Patient Image Manager",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**",
+      "node_modules/**"
+    ],
+    "mac": {
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}

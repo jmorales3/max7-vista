@@ -149,15 +149,31 @@ export default function Settings() {
             {loadingSettings ? (
               <Skeleton className="h-10 w-full" />
             ) : (
-              <Input 
-                id="storageDirectory" 
-                value={storageDirectory} 
-                onChange={(e) => setStorageDirectory(e.target.value)} 
-                className="font-mono"
-              />
+              <div className="flex gap-2">
+                <Input 
+                  id="storageDirectory" 
+                  value={storageDirectory} 
+                  onChange={(e) => setStorageDirectory(e.target.value)} 
+                  className="font-mono flex-1"
+                  placeholder="/path/to/image/storage"
+                />
+                {window.electronAPI && (
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      const selected = await window.electronAPI!.selectFolder();
+                      if (selected) setStorageDirectory(selected);
+                    }}
+                    title="Browse for folder (desktop app only)"
+                  >
+                    Browse…
+                  </Button>
+                )}
+              </div>
             )}
             <p className="text-sm text-muted-foreground">
-              Images will be saved to this directory, organized by patient ID.
+              Images will be saved to subfolders organised by patient ID and date:
+              {" "}<code className="text-xs bg-muted px-1 py-0.5 rounded">&lt;root&gt;/&lt;patientId&gt;/YYYY-MM-DD/</code>
             </p>
           </div>
         </CardContent>
@@ -189,7 +205,7 @@ export default function Settings() {
             </div>
             <Button 
               variant="outline" 
-              onClick={() => scanDirectory.mutate({})} 
+              onClick={() => scanDirectory.mutate()} 
               disabled={scanDirectory.isPending}
             >
               {scanDirectory.isPending ? (

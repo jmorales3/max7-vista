@@ -5,14 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Plus, Calendar, FileText, Image as ImageIcon } from "lucide-react";
+import { Search, Plus, Calendar, FileText, Image as ImageIcon, Users } from "lucide-react";
 import { format } from "date-fns";
 
 export default function Patients() {
   const [search, setSearch] = useState("");
   const { data: patients, isLoading } = useListPatients(
     { search: search || undefined },
-    { query: { keepPreviousData: true } }
+    {}
   );
 
   return (
