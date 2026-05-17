@@ -49,6 +49,7 @@ export function AppSidebar() {
             src="/max7-vista-logo.png"
             alt="Max7 Vista"
             className="h-10 w-auto"
+            style={{ mixBlendMode: "multiply" }}
           />
         </div>
       </SidebarHeader>

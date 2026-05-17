@@ -45,6 +45,7 @@ export default function LoginPage() {
             src="/max7-vista-logo.png"
             alt="Max7 Vista"
             className="mx-auto w-full max-w-xs"
+            style={{ mixBlendMode: "screen" }}
           />
           <p className="text-blue-200/70 text-sm mt-1">{t("auth.subtitle")}</p>
         </div>
