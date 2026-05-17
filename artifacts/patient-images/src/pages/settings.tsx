@@ -194,9 +194,7 @@ export default function Settings() {
             <HardDrive className="h-5 w-5" />
             {t("settings.storageConfig")}
           </CardTitle>
-          <CardDescription>
-            Configure where patient images are stored on the server.
-          </CardDescription>
+          <CardDescription>{t("settings.storageConfigDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -227,7 +225,7 @@ export default function Settings() {
               </div>
             )}
             <p className="text-sm text-muted-foreground">
-              Images will be saved to subfolders organised by patient ID and date:
+              {t("settings.rootDirectoryHint")}
               {" "}<code className="text-xs bg-muted px-1 py-0.5 rounded">&lt;root&gt;/&lt;patientId&gt;/YYYY-MM-DD/</code>
             </p>
           </div>
@@ -246,9 +244,7 @@ export default function Settings() {
             <RefreshCw className="h-5 w-5" />
             {t("settings.dirIndexing")}
           </CardTitle>
-          <CardDescription>
-            Scan the storage directory to index legacy files or recover out-of-sync images.
-          </CardDescription>
+          <CardDescription>{t("settings.dirIndexingDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="bg-muted/50 p-4 rounded-lg border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
