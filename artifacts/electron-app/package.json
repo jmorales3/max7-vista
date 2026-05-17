@@ -7,7 +7,11 @@
     "build": "tsc -p tsconfig.json",
     "start": "electron .",
     "dev": "tsc -p tsconfig.json && electron .",
-    "package": "electron-builder --dir"
+    "build:full": "node build-full.mjs",
+    "package": "pnpm run build:full && electron-builder --dir",
+    "package:mac": "pnpm run build:full && electron-builder --mac",
+    "package:win": "pnpm run build:full && electron-builder --win",
+    "package:linux": "pnpm run build:full && electron-builder --linux"
   },
   "dependencies": {
     "@workspace/api-server": "workspace:*"
@@ -27,6 +31,18 @@
     "files": [
       "dist/**",
       "node_modules/**"
+    ],
+    "extraResources": [
+      {
+        "from": "../../artifacts/api-server/dist",
+        "to": "api-server",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../../artifacts/patient-images/dist",
+        "to": "api-server/dist-frontend",
+        "filter": ["**/*"]
+      }
     ],
     "mac": {
       "target": "dmg"

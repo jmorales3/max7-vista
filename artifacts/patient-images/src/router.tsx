@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Patients from "@/pages/patients";
 import PatientNew from "@/pages/patient-new";
 import PatientDetail from "@/pages/patient-detail";
+import PatientEdit from "@/pages/patient-edit";
 import Capture from "@/pages/capture";
 import Gallery from "@/pages/gallery";
 import Editor from "@/pages/editor";
@@ -19,6 +20,7 @@ function Router() {
         <Route path="/" component={() => <Redirect to="/patients" />} />
         <Route path="/patients" component={Patients} />
         <Route path="/patients/new" component={PatientNew} />
+        <Route path="/patients/:id/edit" component={PatientEdit} />
         <Route path="/patients/:id" component={PatientDetail} />
         <Route path="/capture" component={Capture} />
         <Route path="/gallery" component={Gallery} />
