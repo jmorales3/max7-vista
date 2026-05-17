@@ -8,7 +8,8 @@
 
 export interface Image {
   id: number;
-  patientId: number;
+  /** @nullable */
+  patientId?: number | null;
   /** @nullable */
   patientName?: string | null;
   /** @nullable */

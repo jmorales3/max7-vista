@@ -6,7 +6,9 @@ const API_PORT = parseInt(process.env["API_PORT"] ?? "8080", 10);
 // In development, Electron loads the running Vite dev server. Set VITE_DEV_URL
 // in the environment to override (e.g. when the workspace uses a non-default port).
 const VITE_DEV_URL = process.env["VITE_DEV_URL"] ?? `http://localhost:5173`;
-const IS_DEV = process.env["NODE_ENV"] !== "production";
+// app.isPackaged is the canonical Electron check: true only in packaged builds.
+// NODE_ENV is unreliable in packaged apps (often unset → would incorrectly be "dev").
+const IS_DEV = !app.isPackaged;
 
 let mainWindow: BrowserWindow | null = null;
 let apiServerProcess: ChildProcess | null = null;

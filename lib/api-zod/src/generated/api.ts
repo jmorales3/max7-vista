@@ -115,7 +115,7 @@ export const ListPatientImagesParams = zod.object({
 
 export const ListPatientImagesResponseItem = zod.object({
   "id": zod.number(),
-  "patientId": zod.number(),
+  "patientId": zod.number().nullish(),
   "patientName": zod.string().nullish(),
   "patientCode": zod.string().nullish(),
   "filePath": zod.string(),
@@ -140,7 +140,7 @@ export const ListImagesQueryParams = zod.object({
 
 export const ListImagesResponseItem = zod.object({
   "id": zod.number(),
-  "patientId": zod.number(),
+  "patientId": zod.number().nullish(),
   "patientName": zod.string().nullish(),
   "patientCode": zod.string().nullish(),
   "filePath": zod.string(),
@@ -174,7 +174,7 @@ export const GetImageParams = zod.object({
 
 export const GetImageResponse = zod.object({
   "id": zod.number(),
-  "patientId": zod.number(),
+  "patientId": zod.number().nullish(),
   "patientName": zod.string().nullish(),
   "patientCode": zod.string().nullish(),
   "filePath": zod.string(),
@@ -203,7 +203,7 @@ export const UpdateImageBody = zod.object({
 
 export const UpdateImageResponse = zod.object({
   "id": zod.number(),
-  "patientId": zod.number(),
+  "patientId": zod.number().nullish(),
   "patientName": zod.string().nullish(),
   "patientCode": zod.string().nullish(),
   "filePath": zod.string(),
@@ -237,7 +237,7 @@ export const ReplaceImageFileBody = zod.object({
 
 export const ReplaceImageFileResponse = zod.object({
   "id": zod.number(),
-  "patientId": zod.number(),
+  "patientId": zod.number().nullish(),
   "patientName": zod.string().nullish(),
   "patientCode": zod.string().nullish(),
   "filePath": zod.string(),

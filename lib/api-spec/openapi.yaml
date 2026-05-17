@@ -443,12 +443,12 @@ components:
 
     Image:
       type: object
-      required: [id, patientId, filePath, capturedAt, createdAt]
+      required: [id, filePath, capturedAt, createdAt]
       properties:
         id:
           type: integer
         patientId:
-          type: integer
+          type: ["integer", "null"]
         patientName:
           type: ["string", "null"]
         patientCode:

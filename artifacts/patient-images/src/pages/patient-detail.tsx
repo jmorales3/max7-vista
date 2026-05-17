@@ -170,7 +170,7 @@ export default function PatientDetail() {
                 variant={gridColumns === cols ? "secondary" : "ghost"}
                 size="sm"
                 className="h-7 w-8 px-0"
-                onClick={() => setGridColumns(cols as any)}
+                onClick={() => setGridColumns(cols as 1 | 2 | 4 | 8)}
                 title={`${cols} column${cols > 1 ? 's' : ''}`}
               >
                 <LayoutGrid className="h-4 w-4" style={{ 
