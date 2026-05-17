@@ -1,8 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { getStorageDirectory, getSetting, setSetting } from "./lib/storage";
-import { db, imagesTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { getStorageDirectory, getSetting } from "./lib/storage";
 import path from "path";
 import fs from "fs";
 

@@ -16,15 +16,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { 
-  Camera, 
-  Upload, 
-  RefreshCw, 
-  X, 
-  Check, 
-  Loader2,
-  Video
-} from "lucide-react";
+import { Camera, Upload, X, Check, Loader2 } from "lucide-react";
 
 export default function Capture() {
   const [searchParams] = useState(new URLSearchParams(window.location.search));

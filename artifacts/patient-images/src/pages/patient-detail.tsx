@@ -14,12 +14,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
-  ChevronLeft, 
-  Calendar, 
-  FileText, 
-  Camera, 
-  LayoutGrid, 
-  Settings2,
+  ChevronLeft,
+  Calendar,
+  FileText,
+  Camera,
+  LayoutGrid,
   Trash2,
   Clock,
   MoreVertical

@@ -30,7 +30,7 @@ router.get("/patients", async (req, res): Promise<void> => {
     .leftJoin(imagesTable, eq(imagesTable.patientId, patientsTable.id))
     .where(
       search
-        ? like(patientsTable.name, `%${search}%`)
+        ? sql`(${like(patientsTable.name, `%${search}%`)} OR ${like(patientsTable.patientCode, `%${search}%`)})`
         : undefined
     )
     .groupBy(patientsTable.id)
