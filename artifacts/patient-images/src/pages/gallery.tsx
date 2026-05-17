@@ -16,7 +16,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LayoutGrid, ImageIcon, Camera, Calendar } from "lucide-react";
+import { LayoutGrid, ImageIcon, Camera } from "lucide-react";
 import { ImageGrid } from "@/components/image-grid";
 
 export default function Gallery() {
@@ -27,10 +27,19 @@ export default function Gallery() {
     query: { queryKey: getListPatientsQueryKey() }
   });
 
-  const { data: images, isLoading } = useListImages(
-    { patientId: patientFilter !== "all" ? parseInt(patientFilter, 10) : undefined },
-    { query: { queryKey: getListImagesQueryKey({ patientId: patientFilter !== "all" ? parseInt(patientFilter, 10) : undefined }) } }
+  const isUnassignedFilter = patientFilter === "unassigned";
+  const patientIdParam = !isUnassignedFilter && patientFilter !== "all"
+    ? parseInt(patientFilter, 10)
+    : undefined;
+
+  const { data: allImages, isLoading } = useListImages(
+    { patientId: patientIdParam },
+    { query: { queryKey: getListImagesQueryKey({ patientId: patientIdParam }) } }
   );
+
+  const images = isUnassignedFilter
+    ? allImages?.filter((img) => img.isUnassigned)
+    : allImages;
 
   return (
     <div className="space-y-6">
@@ -47,6 +56,7 @@ export default function Gallery() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Patients</SelectItem>
+              <SelectItem value="unassigned">Unassigned Images</SelectItem>
               {patients?.map(p => (
                 <SelectItem key={p.id} value={p.id.toString()}>
                   {p.name}

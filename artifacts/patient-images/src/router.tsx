@@ -1,7 +1,5 @@
-import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { AppLayout } from "@/components/layout";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
 
 import Patients from "@/pages/patients";
 import PatientNew from "@/pages/patient-new";

@@ -6,9 +6,18 @@ import {
   useUpdateImage,
   useDeleteImage,
   useReplaceImageFile,
+  useListPatients,
   getListImagesQueryKey,
   getListPatientImagesQueryKey,
+  getListPatientsQueryKey,
 } from "@workspace/api-client-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -192,6 +201,10 @@ export default function Editor() {
 
   const { data: image, isLoading } = useGetImage(id, {
     query: { enabled: !!id, queryKey: getGetImageQueryKey(id) },
+  });
+
+  const { data: patients } = useListPatients({}, {
+    query: { queryKey: getListPatientsQueryKey() },
   });
 
   useEffect(() => {
@@ -623,16 +636,53 @@ export default function Editor() {
 
         {/* Sidebar */}
         <div className="w-72 border-l bg-card flex flex-col shrink-0 overflow-y-auto">
-          <div className="p-4 border-b">
+          <div className="p-4 border-b space-y-3">
             <h3 className="font-semibold text-sm">Image Details</h3>
-            {image.patientName && (
-              <p className="text-sm text-muted-foreground mt-0.5">{image.patientName}</p>
-            )}
             {image.capturedAt && (
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground">
                 {new Date(image.capturedAt).toLocaleDateString()}
               </p>
             )}
+
+            {/* Patient assignment — shown for all images; required for unassigned ones */}
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">
+                {image.isUnassigned ? (
+                  <span className="text-amber-600 font-medium">Unassigned — select patient to link</span>
+                ) : (
+                  "Patient"
+                )}
+              </Label>
+              <Select
+                value={image.patientId != null ? String(image.patientId) : ""}
+                onValueChange={(val) => {
+                  const patientId = parseInt(val, 10);
+                  updateImage.mutate(
+                    { id, data: { patientId } },
+                    {
+                      onSuccess: () => {
+                        queryClient.invalidateQueries({ queryKey: getGetImageQueryKey(id) });
+                        queryClient.invalidateQueries({ queryKey: getListImagesQueryKey() });
+                        queryClient.invalidateQueries({ queryKey: getListPatientImagesQueryKey(patientId) });
+                        toast({ title: "Image assigned to patient" });
+                      },
+                    },
+                  );
+                }}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="Select patient…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {patients?.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.name}
+                      <span className="ml-1.5 text-muted-foreground text-xs">({p.patientCode})</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Free rotation slider */}
