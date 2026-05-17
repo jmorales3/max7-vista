@@ -22,7 +22,8 @@ import {
   LayoutGrid,
   Trash2,
   Clock,
-  MoreVertical
+  MoreVertical,
+  Monitor,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ImageGrid } from "@/components/image-grid";
@@ -116,6 +117,12 @@ export default function PatientDetail() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          <Button variant="outline" asChild>
+            <Link href={`/presentation/${patient.id}`}>
+              <Monitor className="mr-2 h-4 w-4" />
+              {t("presentation.createPresentation")}
+            </Link>
+          </Button>
           <Button asChild>
             <Link href={`/capture?patientId=${patient.id}`}>
               <Camera className="mr-2 h-4 w-4" />

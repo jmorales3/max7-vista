@@ -118,6 +118,23 @@
     "allSaved": "{{count}} imágenes subidas",
     "allSavedDesc": "Todas las {{count}} imágenes han sido guardadas en la galería del paciente."
   },
+  "presentation": {
+    "title": "Constructor de Presentación",
+    "createPresentation": "Presentación",
+    "selectImages": "1 — Seleccionar y Ordenar Imágenes",
+    "slideOrder": "2 — Orden de Diapositivas",
+    "noSlides": "Haga clic en las imágenes a la izquierda para agregar diapositivas",
+    "noImages": "No hay imágenes disponibles para este paciente",
+    "present": "Presentar",
+    "addCompare": "Agregar comparación Antes / Después",
+    "removeCompare": "Eliminar comparación",
+    "compareSlide": "Antes / Después",
+    "imageSlide": "Imagen",
+    "before": "Antes",
+    "after": "Después",
+    "selectAfterImage": "Seleccione la imagen \"Después\" para comparar",
+    "noImagesForPair": "No hay imágenes disponibles para comparar"
+  },
   "gallery": {
     "title": "Galería",
     "subtitle": "Explore todas las imágenes clínicas de los pacientes.",

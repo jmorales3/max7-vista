@@ -118,6 +118,23 @@
     "allSaved": "{{count}} images uploaded",
     "allSavedDesc": "All {{count}} images have been saved to the patient's gallery."
   },
+  "presentation": {
+    "title": "Presentation Builder",
+    "createPresentation": "Presentation",
+    "selectImages": "1 — Select & Order Images",
+    "slideOrder": "2 — Slide Order",
+    "noSlides": "Click images on the left to add slides to your presentation",
+    "noImages": "No images available for this patient",
+    "present": "Present",
+    "addCompare": "Add Before / After comparison",
+    "removeCompare": "Remove comparison",
+    "compareSlide": "Before / After",
+    "imageSlide": "Image",
+    "before": "Before",
+    "after": "After",
+    "selectAfterImage": "Select the \"After\" image to compare with",
+    "noImagesForPair": "No available images to pair with"
+  },
   "gallery": {
     "title": "Gallery",
     "subtitle": "Browse all clinical images across patients.",

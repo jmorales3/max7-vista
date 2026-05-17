@@ -8,6 +8,7 @@ import PatientEdit from "@/pages/patient-edit";
 import Capture from "@/pages/capture";
 import Gallery from "@/pages/gallery";
 import Editor from "@/pages/editor";
+import Presentation from "@/pages/presentation";
 import Settings from "@/pages/settings";
 import Manual from "@/pages/manual";
 import NotFound from "@/pages/not-found";
@@ -24,6 +25,7 @@ function Router() {
         <Route path="/capture" component={Capture} />
         <Route path="/gallery" component={Gallery} />
         <Route path="/editor/:id" component={Editor} />
+        <Route path="/presentation/:id" component={Presentation} />
         <Route path="/settings" component={Settings} />
         <Route path="/manual" component={Manual} />
         <Route component={NotFound} />
