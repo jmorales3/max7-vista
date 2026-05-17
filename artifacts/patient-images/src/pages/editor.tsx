@@ -354,13 +354,28 @@ export default function Editor() {
     const newImg = new Image();
     newImg.onload = () => {
       imgRef.current = newImg;
+      // Scale the cropped image to fill the canvas instead of resetting to 1
+      const canvas = canvasRef.current;
+      const container = containerRef.current;
+      const fitScale =
+        canvas && container && newImg.naturalWidth > 0 && newImg.naturalHeight > 0
+          ? Math.min(
+              container.offsetWidth / newImg.naturalWidth,
+              container.offsetHeight / newImg.naturalHeight,
+            )
+          : 1;
       setAnnotations([]);
-      setScale(1);
+      setScale(fitScale);
       setRotation(0);
       setCropRect(null);
       cropStartRef.current = null;
       setTool("pointer");
-      resizeCanvas();
+      // Render immediately with the computed scale so there's no flash
+      if (canvas && container) {
+        canvas.width = container.offsetWidth;
+        canvas.height = container.offsetHeight;
+        renderCanvas(canvas, newImg, [], fitScale, 0, null);
+      }
     };
     newImg.src = offscreen.toDataURL("image/png");
   }
