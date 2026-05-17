@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link, useRoute, useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import {
   useGetImage,
   getGetImageQueryKey,
@@ -176,6 +177,7 @@ function renderCanvas(
 }
 
 export default function Editor() {
+  const { t } = useTranslation();
   const [, params] = useRoute("/editor/:id");
   const id = parseInt(params?.id || "0", 10);
   const [, setLocation] = useLocation();
@@ -399,7 +401,7 @@ export default function Editor() {
         if (image?.patientId) {
           queryClient.invalidateQueries({ queryKey: getListPatientImagesQueryKey(image.patientId) });
         }
-        toast({ title: "Image saved successfully" });
+        toast({ title: t("editor.imageSaved") });
       },
       onError: (e) => {
         toast({ variant: "destructive", title: "Save failed", description: String(e) });
@@ -414,7 +416,7 @@ export default function Editor() {
         if (image?.patientId) {
           queryClient.invalidateQueries({ queryKey: getListPatientImagesQueryKey(image.patientId) });
         }
-        toast({ title: "Image deleted" });
+        toast({ title: t("editor.imageDeleted") });
         setLocation(image?.patientId ? `/patients/${image.patientId}` : "/gallery");
       },
       onError: (e) => {
@@ -455,7 +457,7 @@ export default function Editor() {
   }
 
   if (!image) {
-    return <div className="p-12 text-center text-muted-foreground">Image not found</div>;
+    return <div className="p-12 text-center text-muted-foreground">{t("editor.notFound")}</div>;
   }
 
   const isSaving = replaceFile.isPending || updateImage.isPending;
@@ -485,19 +487,19 @@ export default function Editor() {
           <div className="flex bg-muted/50 p-1 rounded-md gap-0.5">
             {(
               [
-                { t: "pointer", Icon: MousePointer2, label: "Pointer" },
-                { t: "pen", Icon: PenTool, label: "Draw" },
-                { t: "text", Icon: TypeIcon, label: "Text" },
-                { t: "eraser", Icon: Eraser, label: "Erase" },
-                { t: "crop", Icon: Crop, label: "Crop" },
-              ] as const
-            ).map(({ t, Icon, label }) => (
+                { id: "pointer" as typeof tool, Icon: MousePointer2, label: t("editor.pointer") },
+                { id: "pen" as typeof tool, Icon: PenTool, label: t("editor.draw") },
+                { id: "text" as typeof tool, Icon: TypeIcon, label: t("editor.text") },
+                { id: "eraser" as typeof tool, Icon: Eraser, label: t("editor.erase") },
+                { id: "crop" as typeof tool, Icon: Crop, label: t("editor.crop") },
+              ]
+            ).map(({ id, Icon, label }) => (
               <Button
-                key={t}
-                variant={tool === t ? "secondary" : "ghost"}
+                key={id}
+                variant={tool === id ? "secondary" : "ghost"}
                 size="icon"
                 className="h-8 w-8"
-                onClick={() => { setTool(t); if (t !== "crop") setCropRect(null); }}
+                onClick={() => { setTool(id); if (id !== "crop") setCropRect(null); }}
                 title={label}
               >
                 <Icon className="h-4 w-4" />
@@ -508,7 +510,7 @@ export default function Editor() {
           {tool === "crop" && cropRect && cropRect.w > 4 && (
             <Button size="sm" className="h-8 gap-1" onClick={applyCrop} title="Apply crop">
               <Check className="h-3.5 w-3.5" />
-              Apply Crop
+              {t("editor.applyCrop")}
             </Button>
           )}
 
@@ -594,7 +596,7 @@ export default function Editor() {
             ) : (
               <Save className="h-4 w-4 mr-2" />
             )}
-            Save
+            {t("common.save")}
           </Button>
         </div>
       </div>
@@ -614,7 +616,7 @@ export default function Editor() {
           {pendingText && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/30 z-10">
               <div className="bg-card rounded-xl shadow-2xl p-6 w-80 space-y-4">
-                <Label className="font-semibold">Add annotation text</Label>
+                <Label className="font-semibold">{t("editor.addText")}</Label>
                 <Input
                   autoFocus
                   value={textInput}
@@ -623,11 +625,11 @@ export default function Editor() {
                     if (e.key === "Enter") confirmText();
                     if (e.key === "Escape") { setPendingText(null); setTextInput(""); }
                   }}
-                  placeholder="Type annotation..."
+                  placeholder={t("editor.typeAnnotation")}
                 />
                 <div className="flex gap-2 justify-end">
-                  <Button variant="outline" size="sm" onClick={() => { setPendingText(null); setTextInput(""); }}>Cancel</Button>
-                  <Button size="sm" onClick={confirmText}>Add</Button>
+                  <Button variant="outline" size="sm" onClick={() => { setPendingText(null); setTextInput(""); }}>{t("common.cancel")}</Button>
+                  <Button size="sm" onClick={confirmText}>{t("common.add")}</Button>
                 </div>
               </div>
             </div>
@@ -637,7 +639,7 @@ export default function Editor() {
         {/* Sidebar */}
         <div className="w-72 border-l bg-card flex flex-col shrink-0 overflow-y-auto">
           <div className="p-4 border-b space-y-3">
-            <h3 className="font-semibold text-sm">Image Details</h3>
+            <h3 className="font-semibold text-sm">{t("editor.imageDetails")}</h3>
             {image.capturedAt && (
               <p className="text-xs text-muted-foreground">
                 {new Date(image.capturedAt).toLocaleDateString()}
@@ -648,9 +650,9 @@ export default function Editor() {
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">
                 {image.isUnassigned ? (
-                  <span className="text-amber-600 font-medium">Unassigned — select patient to link</span>
+                  <span className="text-amber-600 font-medium">{t("editor.unassigned")}</span>
                 ) : (
-                  "Patient"
+                  t("editor.patient")
                 )}
               </Label>
               <Select
@@ -664,7 +666,7 @@ export default function Editor() {
                         queryClient.invalidateQueries({ queryKey: getGetImageQueryKey(id) });
                         queryClient.invalidateQueries({ queryKey: getListImagesQueryKey() });
                         queryClient.invalidateQueries({ queryKey: getListPatientImagesQueryKey(patientId) });
-                        toast({ title: "Image assigned to patient" });
+                        toast({ title: t("editor.imageAssigned") });
                       },
                     },
                   );
@@ -688,7 +690,7 @@ export default function Editor() {
           {/* Free rotation slider */}
           <div className="p-4 border-b space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Free Rotation</Label>
+              <Label className="text-sm font-medium">{t("editor.freeRotation")}</Label>
               <span className="text-xs font-mono text-muted-foreground">{rotation}°</span>
             </div>
             <Slider
@@ -715,15 +717,15 @@ export default function Editor() {
           </div>
 
           <div className="p-4 flex-1 flex flex-col gap-3">
-            <Label className="text-sm font-medium">Clinical Notes</Label>
+            <Label className="text-sm font-medium">{t("editor.clinicalNotes")}</Label>
             <Textarea
               className="min-h-[160px] resize-none text-sm"
-              placeholder="Add notes for this image..."
+              placeholder={t("editor.notesPlaceholder")}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              {annotations.length} annotation{annotations.length !== 1 ? "s" : ""}
+              {t("editor.annotations", { count: annotations.length })}
             </p>
           </div>
         </div>
@@ -732,18 +734,18 @@ export default function Editor() {
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Image</AlertDialogTitle>
+            <AlertDialogTitle>{t("editor.deleteImage")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this image? This action cannot be undone.
+              {t("editor.deleteConfirm")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteImage.mutate({ id })}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              {t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

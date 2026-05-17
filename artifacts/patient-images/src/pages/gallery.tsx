@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
+import { useTranslation } from "react-i18next";
 import { 
   useListImages, 
   getListImagesQueryKey,
@@ -19,6 +20,7 @@ import { LayoutGrid, ImageIcon, Camera } from "lucide-react";
 import { ImageGrid } from "@/components/image-grid";
 
 export default function Gallery() {
+  const { t } = useTranslation();
   const [patientFilter, setPatientFilter] = useState<string>("all");
   const [gridColumns, setGridColumns] = useState<1 | 2 | 4 | 8>(4);
 
@@ -44,8 +46,8 @@ export default function Gallery() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-primary">Gallery</h1>
-          <p className="text-muted-foreground">Browse all clinical images across patients.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-primary">{t("gallery.title")}</h1>
+          <p className="text-muted-foreground">{t("gallery.subtitle")}</p>
         </div>
         
         <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -54,8 +56,8 @@ export default function Gallery() {
               <SelectValue placeholder="All Patients" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Patients</SelectItem>
-              <SelectItem value="unassigned">Unassigned Images</SelectItem>
+              <SelectItem value="all">{t("gallery.allPatients")}</SelectItem>
+              <SelectItem value="unassigned">{t("gallery.unassigned")}</SelectItem>
               {patients?.map(p => (
                 <SelectItem key={p.id} value={p.id.toString()}>
                   {p.name}
@@ -95,16 +97,16 @@ export default function Gallery() {
           <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
             <ImageIcon className="h-8 w-8 text-primary" />
           </div>
-          <h3 className="text-lg font-medium text-foreground">No images found</h3>
+          <h3 className="text-lg font-medium text-foreground">{t("gallery.noImages")}</h3>
           <p className="text-muted-foreground max-w-sm mt-2 mb-6">
             {patientFilter !== "all" 
-              ? "This patient doesn't have any images yet." 
-              : "Your gallery is empty. Start by capturing some photos."}
+              ? t("gallery.noImagesPatient")
+              : t("gallery.noImagesEmpty")}
           </p>
           <Button asChild>
             <Link href={patientFilter !== "all" ? `/capture?patientId=${patientFilter}` : "/capture"}>
               <Camera className="mr-2 h-4 w-4" />
-              Capture Image
+              {t("gallery.captureImage")}
             </Link>
           </Button>
         </div>

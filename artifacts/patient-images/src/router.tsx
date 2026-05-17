@@ -9,6 +9,7 @@ import Capture from "@/pages/capture";
 import Gallery from "@/pages/gallery";
 import Editor from "@/pages/editor";
 import Settings from "@/pages/settings";
+import Manual from "@/pages/manual";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -24,6 +25,7 @@ function Router() {
         <Route path="/gallery" component={Gallery} />
         <Route path="/editor/:id" component={Editor} />
         <Route path="/settings" component={Settings} />
+        <Route path="/manual" component={Manual} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>

@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import Webcam from "react-webcam";
 import { useListPatients, getListPatientsQueryKey } from "@workspace/api-client-react";
 import { uploadPatientImage } from "@/lib/upload";
@@ -19,6 +20,7 @@ import {
 import { Camera, Upload, X, Check, Loader2 } from "lucide-react";
 
 export default function Capture() {
+  const { t } = useTranslation();
   const [searchParams] = useState(new URLSearchParams(window.location.search));
   const initialPatientId = searchParams.get("patientId");
   const [, setLocation] = useLocation();
@@ -62,8 +64,8 @@ export default function Capture() {
     if (!patientId) {
       toast({
         variant: "destructive",
-        title: "Patient Required",
-        description: "Please select a patient before saving."
+        title: t("capture.patientRequired"),
+        description: t("capture.patientRequiredDesc")
       });
       return;
     }
@@ -88,16 +90,16 @@ export default function Capture() {
       const result = await uploadPatientImage(fileToUpload, parseInt(patientId, 10), notes);
       
       toast({
-        title: "Image saved successfully",
-        description: "The image has been added to the patient's gallery."
+        title: t("capture.imageSaved"),
+        description: t("capture.imageSavedDesc")
       });
       
       setLocation(`/editor/${result.id}`);
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Upload Failed",
-        description: error instanceof Error ? error.message : "An unexpected error occurred."
+        title: t("capture.uploadFailed"),
+        description: error instanceof Error ? error.message : t("common.error")
       });
       setIsUploading(false);
     }
@@ -106,21 +108,21 @@ export default function Capture() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-primary">Capture Image</h1>
-        <p className="text-muted-foreground">Acquire photos from webcam or upload from device.</p>
+        <h1 className="text-3xl font-bold tracking-tight text-primary">{t("capture.title")}</h1>
+        <p className="text-muted-foreground">{t("capture.subtitle")}</p>
       </div>
 
       <Card>
         <CardContent className="p-6 space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="patient">Select Patient <span className="text-destructive">*</span></Label>
+            <Label htmlFor="patient">{t("capture.selectPatient")} <span className="text-destructive">*</span></Label>
             <Select 
               value={patientId} 
               onValueChange={setPatientId}
               disabled={loadingPatients}
             >
               <SelectTrigger id="patient">
-                <SelectValue placeholder="Select a patient..." />
+                <SelectValue placeholder={t("capture.selectPatientPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {patients?.map(p => (
@@ -141,7 +143,7 @@ export default function Capture() {
                   onClick={() => setMode("camera")}
                 >
                   <Camera className="h-4 w-4 mr-2" />
-                  Camera
+                  {t("capture.camera")}
                 </Button>
                 <Button 
                   variant={mode === "upload" ? "secondary" : "ghost"} 
@@ -149,7 +151,7 @@ export default function Capture() {
                   onClick={() => setMode("upload")}
                 >
                   <Upload className="h-4 w-4 mr-2" />
-                  Upload
+                  {t("capture.upload")}
                 </Button>
               </div>
 
@@ -175,8 +177,8 @@ export default function Capture() {
               ) : (
                 <div className="border-2 border-dashed border-muted-foreground/25 rounded-xl aspect-video flex flex-col items-center justify-center p-6 hover:bg-muted/50 transition-colors">
                   <Upload className="h-12 w-12 text-muted-foreground mb-4" />
-                  <p className="text-lg font-medium">Click to browse or drag image here</p>
-                  <p className="text-sm text-muted-foreground mb-6">Supports JPEG, PNG up to 10MB</p>
+                  <p className="text-lg font-medium">{t("capture.clickToBrowse")}</p>
+                  <p className="text-sm text-muted-foreground mb-6">{t("capture.uploadInfo")}</p>
                   <Input 
                     type="file" 
                     accept="image/*" 
@@ -186,7 +188,7 @@ export default function Capture() {
                   />
                   <Button asChild>
                     <Label htmlFor="file-upload" className="cursor-pointer">
-                      Select File
+                      {t("capture.selectFile")}
                     </Label>
                   </Button>
                 </div>
@@ -211,10 +213,10 @@ export default function Capture() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="notes">Clinical Notes</Label>
+                <Label htmlFor="notes">{t("capture.clinicalNotes")}</Label>
                 <Textarea 
                   id="notes"
-                  placeholder="Enter any context about this image..." 
+                  placeholder={t("capture.notesPlaceholder")}
                   value={notes}
                   onChange={e => setNotes(e.target.value)}
                   className="resize-none"
@@ -223,7 +225,7 @@ export default function Capture() {
 
               <div className="flex justify-end gap-4">
                 <Button variant="outline" onClick={clearSelection}>
-                  Discard
+                  {t("common.discard")}
                 </Button>
                 <Button onClick={handleSave} disabled={isUploading || !patientId}>
                   {isUploading ? (
@@ -231,7 +233,7 @@ export default function Capture() {
                   ) : (
                     <Check className="mr-2 h-4 w-4" />
                   )}
-                  Save & Open Editor
+                  {t("capture.saveAndEdit")}
                 </Button>
               </div>
             </div>

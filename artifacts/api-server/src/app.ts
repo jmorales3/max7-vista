@@ -4,6 +4,8 @@ import pinoHttp from "pino-http";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import session from "express-session";
+import connectPg from "connect-pg-simple";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
@@ -31,22 +33,36 @@ app.use(
     },
   }),
 );
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+const PgSession = connectPg(session);
+
+app.use(
+  session({
+    store: new PgSession({
+      conString: process.env["DATABASE_URL"],
+      tableName: "sessions",
+    }),
+    name: "max7.sid",
+    secret: process.env["SESSION_SECRET"] || "max7-vista-dev-secret-change-in-prod",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: process.env["NODE_ENV"] === "production",
+      sameSite: "lax",
+      maxAge: 8 * 60 * 60 * 1000,
+    },
+  }),
+);
+
 app.use("/api", router);
 
-// Serve bundled frontend static assets (used by the Electron desktop shell in
-// production, where Electron loads http://localhost:<PORT> from this server).
-// The frontend build output lives at dist-frontend/ alongside this bundle.
-// In packaged Electron: __dirname = resources/api-server/ and electron-builder
-// copies the frontend dist into resources/api-server/dist-frontend/ via extraResources.
-// In development: place the frontend build at artifacts/api-server/dist/dist-frontend/.
 const frontendDist = path.join(__dirname, "dist-frontend");
 if (fs.existsSync(frontendDist)) {
   app.use(express.static(frontendDist));
-  // SPA fallback: any non-API route returns index.html so client-side routing works
   app.get(/^(?!\/api).*/, (_req, res) => {
     res.sendFile(path.join(frontendDist, "index.html"));
   });

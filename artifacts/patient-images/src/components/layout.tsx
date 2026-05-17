@@ -1,53 +1,73 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { 
-  Users, 
-  Image as ImageIcon, 
-  Camera, 
+import { useTranslation } from "react-i18next";
+import {
+  Users,
+  Image as ImageIcon,
+  Camera,
   Settings,
-  Menu,
-  Activity,
+  BookOpen,
+  LogOut,
 } from "lucide-react";
-import { 
-  Sidebar, 
-  SidebarContent, 
-  SidebarGroup, 
-  SidebarGroupContent, 
-  SidebarGroupLabel, 
-  SidebarHeader, 
-  SidebarMenu, 
-  SidebarMenuButton, 
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-  SidebarTrigger
+  SidebarTrigger,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
+import { LanguageSelector } from "./LanguageSelector";
+import { ChatBot } from "./ChatBot";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 
 export function AppSidebar() {
   const [location] = useLocation();
+  const { t } = useTranslation();
+  const { user, logout } = useAuth();
 
   const navItems = [
-    { title: "Patients", url: "/patients", icon: Users },
-    { title: "Capture", url: "/capture", icon: Camera },
-    { title: "Gallery", url: "/gallery", icon: ImageIcon },
-    { title: "Settings", url: "/settings", icon: Settings },
+    { title: t("nav.patients"), url: "/patients", icon: Users },
+    { title: t("nav.capture"), url: "/capture", icon: Camera },
+    { title: t("nav.gallery"), url: "/gallery", icon: ImageIcon },
+    { title: t("nav.settings"), url: "/settings", icon: Settings },
+    { title: t("nav.manual"), url: "/manual", icon: BookOpen },
   ];
 
   return (
     <Sidebar>
       <SidebarHeader className="border-b px-4 py-3">
-        <div className="flex items-center gap-2 font-semibold text-sidebar-primary">
-          <Activity className="h-5 w-5" />
-          <span>ImageManager</span>
+        <div className="flex items-center gap-2">
+          <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center shrink-0">
+            <span className="text-primary-foreground font-bold text-xs">M7</span>
+          </div>
+          <div className="flex flex-col leading-tight">
+            <span className="font-bold text-sidebar-primary text-sm">{t("app.name")}</span>
+            <span className="text-[10px] text-sidebar-foreground/50 font-normal">{t("app.tagline")}</span>
+          </div>
         </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Menu</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("nav.menu")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location.startsWith(item.url) || (location === "/" && item.url === "/patients")}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={
+                      location.startsWith(item.url) ||
+                      (location === "/" && item.url === "/patients")
+                    }
+                  >
                     <Link href={item.url}>
                       <item.icon />
                       <span>{item.title}</span>
@@ -59,6 +79,26 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="border-t px-2 py-2 space-y-2">
+        {user && (
+          <div className="flex items-center justify-between px-2 py-1 rounded-lg bg-sidebar-accent/30">
+            <div className="flex flex-col leading-tight min-w-0">
+              <span className="text-xs font-medium text-sidebar-foreground truncate">{user.username}</span>
+              <span className="text-[10px] text-sidebar-foreground/50 capitalize">{user.role}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0 text-sidebar-foreground/60 hover:text-destructive"
+              onClick={() => logout()}
+              title={t("auth.logout")}
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
+        <LanguageSelector />
+      </SidebarFooter>
     </Sidebar>
   );
 }
@@ -77,6 +117,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </main>
         </div>
       </div>
+      <ChatBot />
     </SidebarProvider>
   );
 }

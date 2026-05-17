@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useGetSettings, getGetSettingsQueryKey, useUpdateSettings, useScanDirectory, useGetImageStats, getGetImageStatsQueryKey } from "@workspace/api-client-react";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -11,6 +12,7 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 
 export default function Settings() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [storageDirectory, setStorageDirectory] = useState("");
 
@@ -32,12 +34,12 @@ export default function Settings() {
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
-        toast({ title: "Settings saved successfully" });
+        toast({ title: t("settings.settingsSaved") });
       },
       onError: (e) => {
         toast({
           variant: "destructive",
-          title: "Save failed",
+          title: t("settings.saveFailed"),
           description: e instanceof Error ? e.message : "An unexpected error occurred."
         });
       }
@@ -50,14 +52,14 @@ export default function Settings() {
         queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetImageStatsQueryKey() });
         toast({ 
-          title: "Scan Complete", 
-          description: `Scanned ${data.scanned} files. Indexed ${data.indexed} new images.` 
+          title: t("settings.scanComplete"), 
+          description: t("settings.scanCompleteDesc", { scanned: data.scanned, indexed: data.indexed })
         });
       },
       onError: (e) => {
         toast({
           variant: "destructive",
-          title: "Scan failed",
+          title: t("settings.scanFailed"),
           description: e instanceof Error ? e.message : "An unexpected error occurred."
         });
       }
@@ -71,8 +73,8 @@ export default function Settings() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-primary">Settings</h1>
-        <p className="text-muted-foreground">Manage system configuration and storage.</p>
+        <h1 className="text-3xl font-bold tracking-tight text-primary">{t("settings.title")}</h1>
+        <p className="text-muted-foreground">{t("settings.subtitle")}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -82,7 +84,7 @@ export default function Settings() {
               <Database className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Total Images</p>
+              <p className="text-sm font-medium text-muted-foreground">{t("settings.totalImages")}</p>
               {loadingStats ? <Skeleton className="h-8 w-16 mt-1" /> : (
                 <h3 className="text-2xl font-bold">{stats?.totalImages || 0}</h3>
               )}
@@ -96,7 +98,7 @@ export default function Settings() {
               <Users className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Total Patients</p>
+              <p className="text-sm font-medium text-muted-foreground">{t("settings.totalPatients")}</p>
               {loadingStats ? <Skeleton className="h-8 w-16 mt-1" /> : (
                 <h3 className="text-2xl font-bold">{stats?.totalPatients || 0}</h3>
               )}
@@ -110,7 +112,7 @@ export default function Settings() {
               <AlertCircle className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Unassigned</p>
+              <p className="text-sm font-medium text-muted-foreground">{t("settings.unassigned")}</p>
               {loadingStats ? <Skeleton className="h-8 w-16 mt-1" /> : (
                 <h3 className="text-2xl font-bold">{stats?.unassignedImages || 0}</h3>
               )}
@@ -124,7 +126,7 @@ export default function Settings() {
               <ImageIcon className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Recent (30d)</p>
+              <p className="text-sm font-medium text-muted-foreground">{t("settings.recent30d")}</p>
               {loadingStats ? <Skeleton className="h-8 w-16 mt-1" /> : (
                 <h3 className="text-2xl font-bold">{stats?.recentUploads || 0}</h3>
               )}
@@ -137,7 +139,7 @@ export default function Settings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <HardDrive className="h-5 w-5" />
-            Storage Configuration
+            {t("settings.storageConfig")}
           </CardTitle>
           <CardDescription>
             Configure where patient images are stored on the server.
@@ -145,7 +147,7 @@ export default function Settings() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="storageDirectory">Root Directory Path</Label>
+            <Label htmlFor="storageDirectory">{t("settings.rootDirectory")}</Label>
             {loadingSettings ? (
               <Skeleton className="h-10 w-full" />
             ) : (
@@ -166,7 +168,7 @@ export default function Settings() {
                     }}
                     title="Browse for folder (desktop app only)"
                   >
-                    Browse…
+                    {t("settings.browseFolders")}
                   </Button>
                 )}
               </div>
@@ -180,7 +182,7 @@ export default function Settings() {
         <CardFooter className="border-t pt-6">
           <Button onClick={handleSave} disabled={updateSettings.isPending || loadingSettings}>
             {updateSettings.isPending ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            Save Settings
+            {t("settings.saveSettings")}
           </Button>
         </CardFooter>
       </Card>
@@ -189,7 +191,7 @@ export default function Settings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <RefreshCw className="h-5 w-5" />
-            Directory Indexing
+            {t("settings.dirIndexing")}
           </CardTitle>
           <CardDescription>
             Scan the storage directory to index legacy files or recover out-of-sync images.
@@ -198,9 +200,9 @@ export default function Settings() {
         <CardContent>
           <div className="bg-muted/50 p-4 rounded-lg border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h4 className="font-medium">Scan Legacy Directory</h4>
+              <h4 className="font-medium">{t("settings.scanLegacy")}</h4>
               <p className="text-sm text-muted-foreground mt-1">
-                Last scan: {settings?.lastScanAt ? format(new Date(settings.lastScanAt), "MMM d, yyyy h:mm a") : "Never"}
+                {t("settings.lastScan")}: {settings?.lastScanAt ? format(new Date(settings.lastScanAt), "MMM d, yyyy h:mm a") : t("settings.neverScanned")}
               </p>
             </div>
             <Button 
@@ -211,12 +213,12 @@ export default function Settings() {
               {scanDirectory.isPending ? (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Scanning...
+                  {t("settings.scanning")}
                 </>
               ) : (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  Run Scan Now
+                  {t("settings.runScan")}
                 </>
               )}
             </Button>
