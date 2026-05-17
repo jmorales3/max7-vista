@@ -4,8 +4,13 @@ import pinoHttp from "pino-http";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
-import session from "express-session";
-import connectPg from "connect-pg-simple";
+import { clerkMiddleware } from "@clerk/express";
+import { publishableKeyFromHost } from "@clerk/shared/keys";
+import {
+  CLERK_PROXY_PATH,
+  clerkProxyMiddleware,
+  getClerkProxyHost,
+} from "./middlewares/clerkProxyMiddleware";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
@@ -33,29 +38,53 @@ app.use(
     },
   }),
 );
-app.use(cors({ origin: true, credentials: true }));
+
+app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
+
+// Restrict CORS to explicitly allowed origins for credential-bearing requests.
+// CORS_ALLOWED_ORIGINS is a comma-separated list of trusted frontend origins
+// (e.g. "https://myapp.replit.app"). Falls back to the Replit dev domain in
+// development so the Vite dev server can reach the API.
+const rawAllowedOrigins = process.env.CORS_ALLOWED_ORIGINS;
+const replitDevDomain = process.env.REPLIT_DEV_DOMAIN
+  ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+  : undefined;
+
+const allowedOrigins: string[] = rawAllowedOrigins
+  ? rawAllowedOrigins.split(",").map((o) => o.trim()).filter(Boolean)
+  : replitDevDomain
+    ? [replitDevDomain]
+    : [];
+
+app.use(
+  cors({
+    credentials: true,
+    origin: (origin, callback) => {
+      // Allow same-origin (no Origin header) and server-to-server requests
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      // Allow localhost variants in development for convenience
+      if (
+        process.env.NODE_ENV !== "production" &&
+        /^https?:\/\/localhost(:\d+)?$/.test(origin)
+      ) {
+        return callback(null, true);
+      }
+      callback(new Error(`CORS: origin '${origin}' is not allowed`));
+    },
+  }),
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const PgSession = connectPg(session);
-
 app.use(
-  session({
-    store: new PgSession({
-      conString: process.env["DATABASE_URL"],
-      tableName: "sessions",
-    }),
-    name: "max7.sid",
-    secret: process.env["SESSION_SECRET"] || "max7-vista-dev-secret-change-in-prod",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      secure: process.env["NODE_ENV"] === "production",
-      sameSite: "lax",
-      maxAge: 8 * 60 * 60 * 1000,
-    },
-  }),
+  clerkMiddleware((req) => ({
+    publishableKey: publishableKeyFromHost(
+      getClerkProxyHost(req) ?? "",
+      process.env.CLERK_PUBLISHABLE_KEY,
+    ),
+  })),
 );
 
 app.use("/api", router);

@@ -25,13 +25,14 @@ import {
 } from "@/components/ui/sidebar";
 import { LanguageSelector } from "./LanguageSelector";
 import { ChatBot } from "./ChatBot";
-import { useAuth } from "@/contexts/AuthContext";
+import { useClerk, useUser } from "@clerk/react";
 import { Button } from "@/components/ui/button";
 
 export function AppSidebar() {
   const [location] = useLocation();
   const { t } = useTranslation();
-  const { user, logout } = useAuth();
+  const { signOut } = useClerk();
+  const { user } = useUser();
 
   const navItems = [
     { title: t("nav.patients"), url: "/patients", icon: Users },
@@ -40,6 +41,8 @@ export function AppSidebar() {
     { title: t("nav.settings"), url: "/settings", icon: Settings },
     { title: t("nav.manual"), url: "/manual", icon: BookOpen },
   ];
+
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
   return (
     <Sidebar>
@@ -83,14 +86,20 @@ export function AppSidebar() {
         {user && (
           <div className="flex items-center justify-between px-2 py-1 rounded-lg bg-sidebar-accent/30">
             <div className="flex flex-col leading-tight min-w-0">
-              <span className="text-xs font-medium text-sidebar-foreground truncate">{user.username}</span>
-              <span className="text-[10px] text-sidebar-foreground/50 capitalize">{user.role}</span>
+              <span className="text-xs font-medium text-sidebar-foreground truncate">
+                {user.fullName || user.primaryEmailAddress?.emailAddress}
+              </span>
+              {user.fullName && user.primaryEmailAddress?.emailAddress && (
+                <span className="text-[10px] text-sidebar-foreground/50 truncate">
+                  {user.primaryEmailAddress.emailAddress}
+                </span>
+              )}
             </div>
             <Button
               variant="ghost"
               size="icon"
               className="h-7 w-7 shrink-0 text-sidebar-foreground/60 hover:text-destructive"
-              onClick={() => logout()}
+              onClick={() => signOut({ redirectUrl: basePath || "/" })}
               title={t("auth.logout")}
             >
               <LogOut className="h-3.5 w-3.5" />

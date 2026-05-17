@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40" fill="none">
+  <rect x="2" y="8" width="24" height="24" rx="6" fill="hsl(185,65%,35%)"/>
+  <path d="M8 20 Q14 13 20 20 Q17 24 14 22 Q11 20 8 20Z" fill="white" opacity="0.9"/>
+  <circle cx="18" cy="15" r="3" fill="white"/>
+  <text x="34" y="26" font-family="Inter, sans-serif" font-size="16" font-weight="600" fill="hsl(222.2,84%,4.9%)">ImageManager</text>
+</svg>

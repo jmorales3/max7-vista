@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { getStorageDirectory, getSetting } from "./lib/storage";
+import { scanDirectory } from "./lib/scanDirectory";
 import path from "path";
 import fs from "fs";
 
@@ -52,25 +53,8 @@ app.listen(port, async (err) => {
 
       if (hasImages(storageDir)) {
         logger.info({ storageDir }, "First run: unscanned image files found — triggering auto-scan");
-
-        // Call the scan endpoint internally via a lightweight HTTP request
-        // so we reuse all the existing scan logic (path inference, dedup, etc.)
-        const http = await import("http");
-        const scanReq = http.request(
-          { hostname: "127.0.0.1", port, path: "/api/settings/scan-directory", method: "POST" },
-          (scanRes) => {
-            let body = "";
-            scanRes.on("data", (chunk: Buffer) => { body += chunk.toString(); });
-            scanRes.on("end", () => {
-              try {
-                const result = JSON.parse(body) as { indexed: number; scanned: number };
-                logger.info({ scanned: result.scanned, indexed: result.indexed }, "First-run auto-scan complete");
-              } catch { /* ignore parse errors */ }
-            });
-          },
-        );
-        scanReq.on("error", (e) => logger.warn({ err: e }, "First-run auto-scan request failed"));
-        scanReq.end();
+        const result = await scanDirectory(storageDir);
+        logger.info({ scanned: result.scanned, indexed: result.indexed }, "First-run auto-scan complete");
       }
     }
   } catch (e) {
