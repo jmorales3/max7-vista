@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Patient Image Manager"
+version = "1.0.0"
+id = "artifacts/patient-images"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19156
+
+[services.development]
+run = "pnpm --filter @workspace/patient-images run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/patient-images", "run", "build" ]
+publicDir = "artifacts/patient-images/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19156"
+BASE_PATH = "/"

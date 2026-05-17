@@ -3,13 +3,19 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Patient Image Management API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: patients
+    description: Patient operations
+  - name: images
+    description: Image operations
+  - name: settings
+    description: App settings operations
 paths:
   /healthz:
     get:
@@ -24,6 +30,310 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /patients:
+    get:
+      operationId: listPatients
+      tags: [patients]
+      summary: List all patients
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of patients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Patient"
+    post:
+      operationId: createPatient
+      tags: [patients]
+      summary: Create a new patient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientInput"
+      responses:
+        "201":
+          description: Created patient
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+
+  /patients/{id}:
+    get:
+      operationId: getPatient
+      tags: [patients]
+      summary: Get a patient by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Patient record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+        "404":
+          description: Not found
+    patch:
+      operationId: updatePatient
+      tags: [patients]
+      summary: Update a patient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientUpdate"
+      responses:
+        "200":
+          description: Updated patient
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+        "404":
+          description: Not found
+    delete:
+      operationId: deletePatient
+      tags: [patients]
+      summary: Delete a patient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /patients/{id}/images:
+    get:
+      operationId: listPatientImages
+      tags: [images]
+      summary: List images for a patient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of images
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Image"
+
+  /images:
+    get:
+      operationId: listImages
+      tags: [images]
+      summary: List all images with optional patient filter
+      parameters:
+        - name: patientId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: dateFrom
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: dateTo
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of images
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Image"
+    post:
+      operationId: uploadImage
+      tags: [images]
+      summary: Upload a new image (multipart/form-data with file + metadata)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImageUploadInput"
+      responses:
+        "201":
+          description: Uploaded image record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Image"
+
+  /images/{id}:
+    get:
+      operationId: getImage
+      tags: [images]
+      summary: Get image metadata
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Image record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Image"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateImage
+      tags: [images]
+      summary: Update image metadata or annotation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImageUpdate"
+      responses:
+        "200":
+          description: Updated image record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Image"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteImage
+      tags: [images]
+      summary: Delete an image
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /images/{id}/file:
+    get:
+      operationId: getImageFile
+      tags: [images]
+      summary: Serve the raw image file
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Image binary
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Not found
+
+  /images/stats:
+    get:
+      operationId: getImageStats
+      tags: [images]
+      summary: Get image statistics summary
+      responses:
+        "200":
+          description: Stats summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImageStats"
+
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get app settings
+      responses:
+        "200":
+          description: Current settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+    put:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update app settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettingsUpdate"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+
+  /settings/scan-directory:
+    post:
+      operationId: scanDirectory
+      tags: [settings]
+      summary: Scan storage directory and index untracked images
+      responses:
+        "200":
+          description: Scan results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScanResult"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +344,143 @@ components:
       required:
         - status
 
+    Patient:
+      type: object
+      required: [id, name, patientCode, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        patientCode:
+          type: string
+        dateOfBirth:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        imageCount:
+          type: integer
+
+    ImageUploadInput:
+      type: object
+      required: [patientId]
+      properties:
+        patientId:
+          type: integer
+        notes:
+          type: string
+        capturedAt:
+          type: string
+
+    PatientInput:
+      type: object
+      required: [name, patientCode]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        patientCode:
+          type: string
+          minLength: 1
+        dateOfBirth:
+          type: string
+        notes:
+          type: string
+
+    PatientUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        patientCode:
+          type: string
+          minLength: 1
+        dateOfBirth:
+          type: string
+        notes:
+          type: string
+
+    Image:
+      type: object
+      required: [id, patientId, filePath, capturedAt, createdAt]
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: integer
+        patientName:
+          type: ["string", "null"]
+        patientCode:
+          type: ["string", "null"]
+        filePath:
+          type: string
+        fileName:
+          type: string
+        notes:
+          type: ["string", "null"]
+        annotation:
+          type: ["string", "null"]
+        capturedAt:
+          type: string
+        createdAt:
+          type: string
+        isUnassigned:
+          type: boolean
+
+    ImageUpdate:
+      type: object
+      properties:
+        notes:
+          type: string
+        annotation:
+          type: string
+        patientId:
+          type: integer
+        capturedAt:
+          type: string
+
+    ImageStats:
+      type: object
+      required: [totalImages, totalPatients, unassignedImages, recentUploads]
+      properties:
+        totalImages:
+          type: integer
+        totalPatients:
+          type: integer
+        unassignedImages:
+          type: integer
+        recentUploads:
+          type: integer
+
+    Settings:
+      type: object
+      required: [storageDirectory]
+      properties:
+        storageDirectory:
+          type: string
+        lastScanAt:
+          type: ["string", "null"]
+
+    SettingsUpdate:
+      type: object
+      properties:
+        storageDirectory:
+          type: string
+
+    ScanResult:
+      type: object
+      required: [scanned, indexed, skipped]
+      properties:
+        scanned:
+          type: integer
+        indexed:
+          type: integer
+        skipped:
+          type: integer
+        errors:
+          type: integer
+        message:
+          type: string
