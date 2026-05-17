@@ -10,6 +10,8 @@ globalThis.require = createRequire(import.meta.url);
 
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
 
+const IS_ELECTRON_BUILD = process.env["ELECTRON_BUILD"] === "true";
+
 async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
   await rm(distDir, { recursive: true, force: true });
@@ -22,6 +24,11 @@ async function buildAll() {
     outdir: distDir,
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
+    alias: IS_ELECTRON_BUILD
+      ? {
+          "@workspace/db": path.resolve(artifactDir, "../../lib/db/src/sqlite-compat.ts"),
+        }
+      : undefined,
     // Some packages may not be bundleable, so we externalize them, we can add more here as needed.
     // Some of the packages below may not be imported or installed, but we're adding them in case they are in the future.
     // Examples of unbundleable packages:

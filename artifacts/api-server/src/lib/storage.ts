@@ -3,7 +3,8 @@ import fs from "fs";
 import { db, settingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
-const DEFAULT_STORAGE_DIR = path.join(process.cwd(), "uploads");
+const DEFAULT_STORAGE_DIR =
+  process.env["STORAGE_DIRECTORY"] ?? path.join(process.cwd(), "uploads");
 
 export async function getStorageDirectory(): Promise<string> {
   const [row] = await db

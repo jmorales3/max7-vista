@@ -33,8 +33,10 @@ run("pnpm --filter @workspace/patient-images run build", root, {
   NODE_ENV: "production",
 });
 
-// 2. API server
-run("pnpm --filter @workspace/api-server run build");
+// 2. API server — ELECTRON_BUILD=true enables the @workspace/db → SQLite alias
+run("pnpm --filter @workspace/api-server run build", root, {
+  ELECTRON_BUILD: "true",
+});
 
 // 3. Electron main process
 run("tsc -p tsconfig.json", __dirname);

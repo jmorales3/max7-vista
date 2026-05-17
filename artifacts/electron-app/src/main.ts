@@ -1,13 +1,9 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import path from "path";
 import { spawn, ChildProcess } from "child_process";
+import fs from "fs";
 
 const API_PORT = parseInt(process.env["API_PORT"] ?? "8080", 10);
-// In development, Electron loads the running Vite dev server. VITE_DEV_URL must
-// be set to the actual dev-server URL — the port is assigned by the workspace
-// (e.g. the Replit workspace sets PORT per artifact, so the Vite dev server
-// may not be on 5173). Run:
-//   VITE_DEV_URL=http://localhost:<vite-port> pnpm --filter @workspace/electron-app dev
 const rawDevUrl = process.env["VITE_DEV_URL"];
 if (!rawDevUrl && process.env["NODE_ENV"] !== "production") {
   console.warn(
@@ -16,22 +12,70 @@ if (!rawDevUrl && process.env["NODE_ENV"] !== "production") {
   );
 }
 const VITE_DEV_URL = rawDevUrl ?? "http://localhost:5173";
-// app.isPackaged is the canonical Electron check: true only in packaged builds.
-// NODE_ENV is unreliable in packaged apps (often unset → would incorrectly be "dev").
 const IS_DEV = !app.isPackaged;
 
 let mainWindow: BrowserWindow | null = null;
 let apiServerProcess: ChildProcess | null = null;
 
-// ─── API Server Lifecycle ───────────────────────────────────────────────────
+// ─── Database Path ───────────────────────────────────────────────────────────
+
+function getDbPath(): string {
+  const userDataDir = app.getPath("userData");
+  if (!fs.existsSync(userDataDir)) {
+    fs.mkdirSync(userDataDir, { recursive: true });
+  }
+  return path.join(userDataDir, "patient-images.db");
+}
+
+function getUploadsDir(): string {
+  const userDataDir = app.getPath("userData");
+  const uploadsDir = path.join(userDataDir, "uploads");
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+  return uploadsDir;
+}
+
+// ─── Node path for native modules (better-sqlite3) ──────────────────────────
+
+function getNodeModulesPath(): string {
+  if (IS_DEV) {
+    // In dev, use the electron-app's own node_modules (has better-sqlite3)
+    return path.resolve(__dirname, "../node_modules");
+  }
+  // In packaged app, electron-builder puts node_modules inside the app.
+  // Native modules (.node files) are in app.asar.unpacked due to asarUnpack config.
+  const appPath = app.getAppPath();
+  const regularModules = path.join(appPath, "node_modules");
+  const unpackedModules = path.join(
+    appPath.replace("app.asar", "app.asar.unpacked"),
+    "node_modules",
+  );
+  return [regularModules, unpackedModules].join(path.delimiter);
+}
+
+// ─── API Server Lifecycle ────────────────────────────────────────────────────
 
 function startApiServer(): void {
   const serverEntry = IS_DEV
     ? path.resolve(__dirname, "../../api-server/dist/index.mjs")
     : path.join(process.resourcesPath, "api-server", "index.mjs");
 
+  const dbPath = getDbPath();
+  const uploadsDir = getUploadsDir();
+  const nodeModulesPath = getNodeModulesPath();
+
   apiServerProcess = spawn("node", ["--enable-source-maps", serverEntry], {
-    env: { ...process.env, PORT: String(API_PORT), NODE_ENV: "production" },
+    env: {
+      ...process.env,
+      PORT: String(API_PORT),
+      NODE_ENV: "production",
+      ELECTRON_MODE: "true",
+      DATABASE_TYPE: "sqlite",
+      DATABASE_PATH: dbPath,
+      STORAGE_DIRECTORY: uploadsDir,
+      NODE_PATH: nodeModulesPath,
+    },
     stdio: "pipe",
   });
 
@@ -53,7 +97,7 @@ function stopApiServer(): void {
   }
 }
 
-// ─── Window ─────────────────────────────────────────────────────────────────
+// ─── Window ──────────────────────────────────────────────────────────────────
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -70,20 +114,15 @@ function createWindow(): void {
     },
   });
 
-  // In dev, load the Vite dev server; in production, load from the API server
-  // which serves the bundled frontend as static files at its root.
-  // VITE_DEV_URL must be set to the Vite dev server URL when running locally
-  // (e.g. http://localhost:19156 if the workspace uses a non-default Vite port).
   const appUrl = IS_DEV ? VITE_DEV_URL : `http://localhost:${API_PORT}`;
 
-  // Wait briefly for the server to be ready then load
+  // Give the embedded API server a moment to start, then load the UI
   setTimeout(() => {
     mainWindow?.loadURL(appUrl).catch((err) => {
       console.error("Failed to load app URL:", err);
     });
-  }, IS_DEV ? 0 : 1500);
+  }, IS_DEV ? 0 : 2000);
 
-  // Open external links in the default browser instead of a new Electron window
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: "deny" };
@@ -94,7 +133,7 @@ function createWindow(): void {
   });
 }
 
-// ─── IPC Handlers ───────────────────────────────────────────────────────────
+// ─── IPC Handlers ────────────────────────────────────────────────────────────
 
 ipcMain.handle("dialog:openDirectory", async (): Promise<string | null> => {
   if (!mainWindow) return null;
@@ -108,10 +147,10 @@ ipcMain.handle("dialog:openDirectory", async (): Promise<string | null> => {
     : result.filePaths[0];
 });
 
-// ─── App Lifecycle ───────────────────────────────────────────────────────────
+// ─── App Lifecycle ────────────────────────────────────────────────────────────
 
 app.whenReady().then(() => {
-  if (!IS_DEV) startApiServer();
+  startApiServer();
   createWindow();
 
   app.on("activate", () => {

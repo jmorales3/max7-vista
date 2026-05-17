@@ -12,6 +12,8 @@ import { logger } from "./lib/logger";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const IS_ELECTRON = process.env["ELECTRON_MODE"] === "true";
+
 const app: Express = express();
 
 app.use(
@@ -37,32 +39,67 @@ app.use(
 app.use(
   cors({
     credentials: true,
-    origin: true,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (IS_ELECTRON) return callback(null, true);
+      const rawAllowedOrigins = process.env.CORS_ALLOWED_ORIGINS;
+      const replitDevDomain = process.env.REPLIT_DEV_DOMAIN
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : undefined;
+      const allowedOrigins: string[] = rawAllowedOrigins
+        ? rawAllowedOrigins.split(",").map((o) => o.trim()).filter(Boolean)
+        : replitDevDomain
+          ? [replitDevDomain]
+          : [];
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      if (
+        process.env.NODE_ENV !== "production" &&
+        /^https?:\/\/localhost(:\d+)?$/.test(origin)
+      ) {
+        return callback(null, true);
+      }
+      callback(new Error(`CORS: origin '${origin}' is not allowed`));
+    },
   }),
 );
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const PgSession = connectPg(session);
-
-app.use(
-  session({
-    store: new PgSession({
-      conString: process.env["DATABASE_URL"],
-      tableName: "sessions",
+if (IS_ELECTRON) {
+  app.use(
+    session({
+      name: "max7.sid",
+      secret: process.env["SESSION_SECRET"] || "max7-vista-dev-secret-change-in-prod",
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        httpOnly: true,
+        sameSite: "lax",
+        maxAge: 8 * 60 * 60 * 1000,
+      },
     }),
-    name: "max7.sid",
-    secret: process.env["SESSION_SECRET"] || "max7-vista-dev-secret-change-in-prod",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      sameSite: "lax",
-      maxAge: 8 * 60 * 60 * 1000,
-    },
-  }),
-);
+  );
+} else {
+  const PgSession = connectPg(session);
+  app.use(
+    session({
+      store: new PgSession({
+        conString: process.env["DATABASE_URL"],
+        tableName: "sessions",
+      }),
+      name: "max7.sid",
+      secret: process.env["SESSION_SECRET"] || "max7-vista-dev-secret-change-in-prod",
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        httpOnly: true,
+        sameSite: "lax",
+        maxAge: 8 * 60 * 60 * 1000,
+      },
+    }),
+  );
+}
 
 app.use("/api", router);
 

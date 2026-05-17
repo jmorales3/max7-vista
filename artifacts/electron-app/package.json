@@ -14,9 +14,11 @@
     "package:linux": "pnpm run build:full && electron-builder --linux"
   },
   "dependencies": {
-    "@workspace/api-server": "workspace:*"
+    "@workspace/api-server": "workspace:*",
+    "better-sqlite3": "^11.10.0"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "catalog:",
     "electron": "^35.3.0",
     "electron-builder": "^25.1.8",
@@ -32,6 +34,9 @@
       "dist/**",
       "node_modules/**"
     ],
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**"
+    ],
     "extraResources": [
       {
         "from": "../../artifacts/api-server/dist",
@@ -45,7 +50,8 @@
       }
     ],
     "mac": {
-      "target": "dmg"
+      "target": "dmg",
+      "category": "public.app-category.medical"
     },
     "win": {
       "target": "nsis"
