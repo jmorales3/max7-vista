@@ -1,5 +1,11 @@
 import { useTranslation } from "react-i18next";
-import { useGetSettings, getGetSettingsQueryKey, useUpdateSettings, useScanDirectory, useGetImageStats, getGetImageStatsQueryKey } from "@workspace/api-client-react";
+import {
+  useGetSettings, getGetSettingsQueryKey,
+  useUpdateSettings, useScanDirectory,
+  useGetImageStats, getGetImageStatsQueryKey,
+  useListTags, getListTagsQueryKey,
+  useCreateTag, useDeleteTag,
+} from "@workspace/api-client-react";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -7,14 +13,22 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
-import { RefreshCw, Save, HardDrive, Database, Users, ImageIcon, AlertCircle } from "lucide-react";
+import {
+  RefreshCw, Save, HardDrive, Database, Users, ImageIcon,
+  AlertCircle, Tag, Plus, X,
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Settings() {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [storageDirectory, setStorageDirectory] = useState("");
+  const [newTagName, setNewTagName] = useState("");
+
+  const isAdmin = user?.role === "superadmin" || user?.role === "admin";
 
   const { data: settings, isLoading: loadingSettings } = useGetSettings({
     query: { queryKey: getGetSettingsQueryKey() }
@@ -22,6 +36,10 @@ export default function Settings() {
 
   const { data: stats, isLoading: loadingStats } = useGetImageStats({
     query: { queryKey: getGetImageStatsQueryKey() }
+  });
+
+  const { data: allTags, isLoading: loadingTags } = useListTags({
+    query: { queryKey: getListTagsQueryKey(), enabled: isAdmin }
   });
 
   useEffect(() => {
@@ -51,8 +69,8 @@ export default function Settings() {
       onSuccess: (data) => {
         queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetImageStatsQueryKey() });
-        toast({ 
-          title: t("settings.scanComplete"), 
+        toast({
+          title: t("settings.scanComplete"),
           description: t("settings.scanCompleteDesc", { scanned: data.scanned, indexed: data.indexed })
         });
       },
@@ -66,8 +84,43 @@ export default function Settings() {
     }
   });
 
+  const createTag = useCreateTag({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListTagsQueryKey() });
+        setNewTagName("");
+        toast({ title: t("tags.tagCreated") });
+      },
+      onError: (e: any) => {
+        toast({
+          variant: "destructive",
+          title: t("common.error"),
+          description: e?.response?.data?.error ?? t("tags.tagExists"),
+        });
+      }
+    }
+  });
+
+  const deleteTag = useDeleteTag({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListTagsQueryKey() });
+        toast({ title: t("tags.tagDeleted") });
+      },
+      onError: () => {
+        toast({ variant: "destructive", title: t("common.error") });
+      }
+    }
+  });
+
   const handleSave = () => {
     updateSettings.mutate({ data: { storageDirectory } });
+  };
+
+  const handleCreateTag = () => {
+    const name = newTagName.trim();
+    if (!name) return;
+    createTag.mutate({ data: { name } });
   };
 
   return (
@@ -91,7 +144,7 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6 flex items-center gap-4">
             <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -105,7 +158,7 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6 flex items-center gap-4">
             <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -119,7 +172,7 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6 flex items-center gap-4">
             <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -152,10 +205,10 @@ export default function Settings() {
               <Skeleton className="h-10 w-full" />
             ) : (
               <div className="flex gap-2">
-                <Input 
-                  id="storageDirectory" 
-                  value={storageDirectory} 
-                  onChange={(e) => setStorageDirectory(e.target.value)} 
+                <Input
+                  id="storageDirectory"
+                  value={storageDirectory}
+                  onChange={(e) => setStorageDirectory(e.target.value)}
                   className="font-mono flex-1"
                   placeholder="/path/to/image/storage"
                 />
@@ -205,9 +258,9 @@ export default function Settings() {
                 {t("settings.lastScan")}: {settings?.lastScanAt ? format(new Date(settings.lastScanAt), "MMM d, yyyy h:mm a") : t("settings.neverScanned")}
               </p>
             </div>
-            <Button 
-              variant="outline" 
-              onClick={() => scanDirectory.mutate()} 
+            <Button
+              variant="outline"
+              onClick={() => scanDirectory.mutate()}
               disabled={scanDirectory.isPending}
             >
               {scanDirectory.isPending ? (
@@ -225,6 +278,66 @@ export default function Settings() {
           </div>
         </CardContent>
       </Card>
+
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Tag className="h-5 w-5" />
+              {t("tags.manageTags")}
+            </CardTitle>
+            <CardDescription>{t("tags.manageTagsDesc")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {loadingTags ? (
+              <div className="flex gap-2">
+                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-8 w-20 rounded-full" />)}
+              </div>
+            ) : allTags && allTags.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {allTags.map((tag) => (
+                  <div
+                    key={tag.id}
+                    className="flex items-center gap-1.5 bg-primary/10 text-primary border border-primary/20 rounded-full px-3 py-1.5 text-sm font-medium"
+                  >
+                    <Tag className="h-3.5 w-3.5" />
+                    {tag.name}
+                    <button
+                      onClick={() => deleteTag.mutate({ id: tag.id })}
+                      className="ml-1 text-primary/60 hover:text-destructive transition-colors"
+                      title={t("tags.deleteTag")}
+                      disabled={deleteTag.isPending}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">{t("tags.noTags")}</p>
+            )}
+
+            <div className="flex gap-2 pt-2 border-t">
+              <Input
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                placeholder={t("tags.newTag")}
+                className="max-w-sm"
+                onKeyDown={(e) => { if (e.key === "Enter") handleCreateTag(); }}
+              />
+              <Button
+                onClick={handleCreateTag}
+                disabled={!newTagName.trim() || createTag.isPending}
+              >
+                {createTag.isPending
+                  ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  : <Plus className="mr-2 h-4 w-4" />}
+                {t("tags.addTag")}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

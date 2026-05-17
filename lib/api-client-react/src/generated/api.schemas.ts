@@ -95,6 +95,21 @@ export interface SettingsUpdate {
   storageDirectory?: string;
 }
 
+export interface Tag {
+  id: number;
+  name: string;
+  createdAt: string;
+}
+
+export interface TagInput {
+  /** @minLength 1 */
+  name: string;
+}
+
+export interface PatientTagInput {
+  tagId: number;
+}
+
 export interface ScanResult {
   scanned: number;
   indexed: number;

@@ -118,6 +118,23 @@
     "allSaved": "{{count}} images téléchargées",
     "allSavedDesc": "Toutes les {{count}} images ont été enregistrées dans la galerie du patient."
   },
+  "tags": {
+    "manageTags": "Gestion des Étiquettes",
+    "manageTagsDesc": "Créez et gérez des étiquettes pour catégoriser et regrouper des cas similaires.",
+    "newTag": "Nom de la nouvelle étiquette",
+    "addTag": "Ajouter une Étiquette",
+    "deleteTag": "Supprimer l'étiquette",
+    "removeTag": "Retirer l'étiquette",
+    "noTags": "Aucune étiquette définie. Ajoutez-en ci-dessous.",
+    "tagCreated": "Étiquette créée",
+    "tagDeleted": "Étiquette supprimée",
+    "tagAdded": "Étiquette ajoutée au patient",
+    "tagRemoved": "Étiquette retirée du patient",
+    "tagExists": "Une étiquette avec ce nom existe déjà",
+    "patientTags": "Étiquettes",
+    "noPatientTags": "Aucune étiquette assignée",
+    "selectTag": "Sélectionner une étiquette..."
+  },
   "presentation": {
     "title": "Créateur de Présentation",
     "createPresentation": "Présentation",

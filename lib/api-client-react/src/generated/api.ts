@@ -30,10 +30,13 @@ import type {
   ListPatientsParams,
   Patient,
   PatientInput,
+  PatientTagInput,
   PatientUpdate,
   ScanResult,
   Settings,
-  SettingsUpdate
+  SettingsUpdate,
+  Tag,
+  TagInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -498,6 +501,445 @@ export const useDeletePatient = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeletePatientMutationOptions(options));
+    }
+
+export const getListPatientTagsUrl = (id: number,) => {
+
+
+
+
+  return `/api/patients/${id}/tags`
+}
+
+/**
+ * @summary List tags for a patient
+ */
+export const listPatientTags = async (id: number, options?: RequestInit): Promise<Tag[]> => {
+
+  return customFetch<Tag[]>(getListPatientTagsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPatientTagsQueryKey = (id: number,) => {
+    return [
+    `/api/patients/${id}/tags`
+    ] as const;
+    }
+
+
+export const getListPatientTagsQueryOptions = <TData = Awaited<ReturnType<typeof listPatientTags>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPatientTags>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPatientTagsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPatientTags>>> = ({ signal }) => listPatientTags(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPatientTags>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPatientTagsQueryResult = NonNullable<Awaited<ReturnType<typeof listPatientTags>>>
+export type ListPatientTagsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List tags for a patient
+ */
+
+export function useListPatientTags<TData = Awaited<ReturnType<typeof listPatientTags>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPatientTags>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPatientTagsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getAddPatientTagUrl = (id: number,) => {
+
+
+
+
+  return `/api/patients/${id}/tags`
+}
+
+/**
+ * @summary Add a tag to a patient
+ */
+export const addPatientTag = async (id: number,
+    patientTagInput: PatientTagInput, options?: RequestInit): Promise<Tag> => {
+
+  return customFetch<Tag>(getAddPatientTagUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      patientTagInput,)
+  }
+);}
+
+
+
+
+export const getAddPatientTagMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addPatientTag>>, TError,{id: number;data: BodyType<PatientTagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addPatientTag>>, TError,{id: number;data: BodyType<PatientTagInput>}, TContext> => {
+
+const mutationKey = ['addPatientTag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addPatientTag>>, {id: number;data: BodyType<PatientTagInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  addPatientTag(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddPatientTagMutationResult = NonNullable<Awaited<ReturnType<typeof addPatientTag>>>
+    export type AddPatientTagMutationBody = BodyType<PatientTagInput>
+    export type AddPatientTagMutationError = ErrorType<void>
+
+    /**
+ * @summary Add a tag to a patient
+ */
+export const useAddPatientTag = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addPatientTag>>, TError,{id: number;data: BodyType<PatientTagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addPatientTag>>,
+        TError,
+        {id: number;data: BodyType<PatientTagInput>},
+        TContext
+      > => {
+      return useMutation(getAddPatientTagMutationOptions(options));
+    }
+
+export const getRemovePatientTagUrl = (id: number,
+    tagId: number,) => {
+
+
+
+
+  return `/api/patients/${id}/tags/${tagId}`
+}
+
+/**
+ * @summary Remove a tag from a patient
+ */
+export const removePatientTag = async (id: number,
+    tagId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getRemovePatientTagUrl(id,tagId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getRemovePatientTagMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removePatientTag>>, TError,{id: number;tagId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removePatientTag>>, TError,{id: number;tagId: number}, TContext> => {
+
+const mutationKey = ['removePatientTag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removePatientTag>>, {id: number;tagId: number}> = (props) => {
+          const {id,tagId} = props ?? {};
+
+          return  removePatientTag(id,tagId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemovePatientTagMutationResult = NonNullable<Awaited<ReturnType<typeof removePatientTag>>>
+
+    export type RemovePatientTagMutationError = ErrorType<void>
+
+    /**
+ * @summary Remove a tag from a patient
+ */
+export const useRemovePatientTag = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removePatientTag>>, TError,{id: number;tagId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof removePatientTag>>,
+        TError,
+        {id: number;tagId: number},
+        TContext
+      > => {
+      return useMutation(getRemovePatientTagMutationOptions(options));
+    }
+
+export const getListTagsUrl = () => {
+
+
+
+
+  return `/api/tags`
+}
+
+/**
+ * @summary List all available tags
+ */
+export const listTags = async ( options?: RequestInit): Promise<Tag[]> => {
+
+  return customFetch<Tag[]>(getListTagsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListTagsQueryKey = () => {
+    return [
+    `/api/tags`
+    ] as const;
+    }
+
+
+export const getListTagsQueryOptions = <TData = Awaited<ReturnType<typeof listTags>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTags>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListTagsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTags>>> = ({ signal }) => listTags({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTags>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListTagsQueryResult = NonNullable<Awaited<ReturnType<typeof listTags>>>
+export type ListTagsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all available tags
+ */
+
+export function useListTags<TData = Awaited<ReturnType<typeof listTags>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTags>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListTagsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateTagUrl = () => {
+
+
+
+
+  return `/api/tags`
+}
+
+/**
+ * @summary Create a new tag (admin only)
+ */
+export const createTag = async (tagInput: TagInput, options?: RequestInit): Promise<Tag> => {
+
+  return customFetch<Tag>(getCreateTagUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      tagInput,)
+  }
+);}
+
+
+
+
+export const getCreateTagMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTag>>, TError,{data: BodyType<TagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createTag>>, TError,{data: BodyType<TagInput>}, TContext> => {
+
+const mutationKey = ['createTag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTag>>, {data: BodyType<TagInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createTag(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateTagMutationResult = NonNullable<Awaited<ReturnType<typeof createTag>>>
+    export type CreateTagMutationBody = BodyType<TagInput>
+    export type CreateTagMutationError = ErrorType<void>
+
+    /**
+ * @summary Create a new tag (admin only)
+ */
+export const useCreateTag = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTag>>, TError,{data: BodyType<TagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createTag>>,
+        TError,
+        {data: BodyType<TagInput>},
+        TContext
+      > => {
+      return useMutation(getCreateTagMutationOptions(options));
+    }
+
+export const getDeleteTagUrl = (id: number,) => {
+
+
+
+
+  return `/api/tags/${id}`
+}
+
+/**
+ * @summary Delete a tag (admin only)
+ */
+export const deleteTag = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteTagUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteTagMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTag>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteTag>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteTag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteTag>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteTag(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteTagMutationResult = NonNullable<Awaited<ReturnType<typeof deleteTag>>>
+
+    export type DeleteTagMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete a tag (admin only)
+ */
+export const useDeleteTag = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTag>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteTag>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteTagMutationOptions(options));
     }
 
 export const getListPatientImagesUrl = (id: number,) => {

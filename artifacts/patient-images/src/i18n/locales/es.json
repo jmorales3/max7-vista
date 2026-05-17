@@ -118,6 +118,23 @@
     "allSaved": "{{count}} imágenes subidas",
     "allSavedDesc": "Todas las {{count}} imágenes han sido guardadas en la galería del paciente."
   },
+  "tags": {
+    "manageTags": "Gestión de Etiquetas",
+    "manageTagsDesc": "Cree y gestione etiquetas para categorizar y agrupar casos de pacientes similares.",
+    "newTag": "Nombre de nueva etiqueta",
+    "addTag": "Agregar Etiqueta",
+    "deleteTag": "Eliminar etiqueta",
+    "removeTag": "Quitar etiqueta",
+    "noTags": "No hay etiquetas definidas aún. Agréguelas a continuación.",
+    "tagCreated": "Etiqueta creada",
+    "tagDeleted": "Etiqueta eliminada",
+    "tagAdded": "Etiqueta agregada al paciente",
+    "tagRemoved": "Etiqueta eliminada del paciente",
+    "tagExists": "Ya existe una etiqueta con ese nombre",
+    "patientTags": "Etiquetas",
+    "noPatientTags": "Sin etiquetas asignadas",
+    "selectTag": "Seleccionar etiqueta..."
+  },
   "presentation": {
     "title": "Constructor de Presentación",
     "createPresentation": "Presentación",

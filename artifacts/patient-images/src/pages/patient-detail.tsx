@@ -7,13 +7,27 @@ import {
   useListPatientImages,
   getListPatientImagesQueryKey,
   useDeletePatient,
-  getListPatientsQueryKey
+  getListPatientsQueryKey,
+  useListTags,
+  getListTagsQueryKey,
+  useListPatientTags,
+  getListPatientTagsQueryKey,
+  useAddPatientTag,
+  useRemovePatientTag,
 } from "@workspace/api-client-react";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   ChevronLeft,
   Calendar,
@@ -24,6 +38,9 @@ import {
   Clock,
   MoreVertical,
   Monitor,
+  Tag,
+  Plus,
+  X,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ImageGrid } from "@/components/image-grid";
@@ -54,6 +71,7 @@ export default function PatientDetail() {
   const { toast } = useToast();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [gridColumns, setGridColumns] = useState<1 | 2 | 4 | 8>(4);
+  const [selectedTagId, setSelectedTagId] = useState("");
 
   const { data: patient, isLoading: patientLoading } = useGetPatient(id, {
     query: { enabled: !!id, queryKey: getGetPatientQueryKey(id) }
@@ -61,6 +79,42 @@ export default function PatientDetail() {
 
   const { data: images, isLoading: imagesLoading } = useListPatientImages(id, {
     query: { enabled: !!id, queryKey: getListPatientImagesQueryKey(id) }
+  });
+
+  const { data: allTags = [] } = useListTags({
+    query: { queryKey: getListTagsQueryKey() }
+  });
+
+  const { data: patientTags = [] } = useListPatientTags(id, {
+    query: { enabled: !!id, queryKey: getListPatientTagsQueryKey(id) }
+  });
+
+  const assignedTagIds = new Set(patientTags.map((t) => t.id));
+  const availableTags = allTags.filter((t) => !assignedTagIds.has(t.id));
+
+  const addTag = useAddPatientTag({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListPatientTagsQueryKey(id) });
+        setSelectedTagId("");
+        toast({ title: t("tags.tagAdded") });
+      },
+      onError: () => {
+        toast({ variant: "destructive", title: t("common.error") });
+      }
+    }
+  });
+
+  const removeTag = useRemovePatientTag({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListPatientTagsQueryKey(id) });
+        toast({ title: t("tags.tagRemoved") });
+      },
+      onError: () => {
+        toast({ variant: "destructive", title: t("common.error") });
+      }
+    }
   });
 
   const deletePatient = useDeletePatient({
@@ -79,6 +133,11 @@ export default function PatientDetail() {
       }
     }
   });
+
+  const handleAddTag = () => {
+    if (!selectedTagId) return;
+    addTag.mutate({ id, data: { tagId: parseInt(selectedTagId, 10) } });
+  };
 
   if (patientLoading) {
     return <div className="p-8"><Skeleton className="h-12 w-64 mb-8" /><Skeleton className="h-64 w-full" /></div>;
@@ -161,6 +220,61 @@ export default function PatientDetail() {
           </CardContent>
         </Card>
       )}
+
+      {/* Tags */}
+      <div className="flex flex-wrap items-center gap-2 py-1">
+        <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider shrink-0">
+          <Tag className="h-3.5 w-3.5" />
+          {t("tags.patientTags")}:
+        </span>
+
+        {patientTags.length > 0 ? (
+          patientTags.map((tag) => (
+            <Badge
+              key={tag.id}
+              variant="secondary"
+              className="gap-1 pr-1 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/15"
+            >
+              {tag.name}
+              <button
+                onClick={() => removeTag.mutate({ id, tagId: tag.id })}
+                className="ml-0.5 rounded-full p-0.5 hover:bg-destructive/20 hover:text-destructive transition-colors"
+                title={t("tags.removeTag")}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))
+        ) : (
+          <span className="text-sm text-muted-foreground">{t("tags.noPatientTags")}</span>
+        )}
+
+        {availableTags.length > 0 && (
+          <div className="flex items-center gap-1.5 ml-1">
+            <Select value={selectedTagId} onValueChange={setSelectedTagId}>
+              <SelectTrigger className="h-7 text-xs w-36 border-dashed">
+                <SelectValue placeholder={t("tags.selectTag")} />
+              </SelectTrigger>
+              <SelectContent>
+                {availableTags.map((tag) => (
+                  <SelectItem key={tag.id} value={String(tag.id)}>
+                    {tag.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs px-2 border-dashed"
+              onClick={handleAddTag}
+              disabled={!selectedTagId || addTag.isPending}
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
+      </div>
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">

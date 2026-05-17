@@ -118,6 +118,23 @@
     "allSaved": "{{count}} imagens enviadas",
     "allSavedDesc": "Todas as {{count}} imagens foram salvas na galeria do paciente."
   },
+  "tags": {
+    "manageTags": "Gerenciamento de Tags",
+    "manageTagsDesc": "Crie e gerencie tags para categorizar e agrupar casos de pacientes semelhantes.",
+    "newTag": "Nome da nova tag",
+    "addTag": "Adicionar Tag",
+    "deleteTag": "Excluir tag",
+    "removeTag": "Remover tag",
+    "noTags": "Nenhuma tag definida. Adicione abaixo.",
+    "tagCreated": "Tag criada",
+    "tagDeleted": "Tag excluída",
+    "tagAdded": "Tag adicionada ao paciente",
+    "tagRemoved": "Tag removida do paciente",
+    "tagExists": "Já existe uma tag com esse nome",
+    "patientTags": "Tags",
+    "noPatientTags": "Nenhuma tag atribuída",
+    "selectTag": "Selecionar uma tag..."
+  },
   "presentation": {
     "title": "Criador de Apresentação",
     "createPresentation": "Apresentação",

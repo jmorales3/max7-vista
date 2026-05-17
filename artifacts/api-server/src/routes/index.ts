@@ -4,6 +4,7 @@ import healthRouter from "./health";
 import authRouter from "./auth";
 import patientsRouter from "./patients";
 import imagesRouter from "./images";
+import tagsRouter from "./tags";
 import settingsRouter from "./settings";
 import chatRouter from "./chat";
 
@@ -14,6 +15,7 @@ router.use(authRouter);
 router.use(requireAuth);
 router.use(patientsRouter);
 router.use(imagesRouter);
+router.use(tagsRouter);
 router.use(settingsRouter);
 router.use(chatRouter);
 

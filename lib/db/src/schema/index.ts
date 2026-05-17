@@ -1,5 +1,7 @@
 export * from "./patients";
 export * from "./images";
+export * from "./tags";
+export * from "./patient-tags";
 export * from "./settings";
 export * from "./conversations";
 export * from "./messages";

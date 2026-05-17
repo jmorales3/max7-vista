@@ -14,6 +14,8 @@ tags:
     description: Patient operations
   - name: images
     description: Image operations
+  - name: tags
+    description: Tag management operations
   - name: settings
     description: App settings operations
 paths:
@@ -127,6 +129,127 @@ paths:
       responses:
         "204":
           description: Deleted
+
+  /patients/{id}/tags:
+    get:
+      operationId: listPatientTags
+      tags: [patients]
+      summary: List tags for a patient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of tags
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tag"
+    post:
+      operationId: addPatientTag
+      tags: [patients]
+      summary: Add a tag to a patient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientTagInput"
+      responses:
+        "201":
+          description: Tag added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tag"
+        "404":
+          description: Patient or tag not found
+        "409":
+          description: Tag already assigned
+
+  /patients/{id}/tags/{tagId}:
+    delete:
+      operationId: removePatientTag
+      tags: [patients]
+      summary: Remove a tag from a patient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: tagId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Tag removed
+        "404":
+          description: Not found
+
+  /tags:
+    get:
+      operationId: listTags
+      tags: [tags]
+      summary: List all available tags
+      responses:
+        "200":
+          description: List of tags
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tag"
+    post:
+      operationId: createTag
+      tags: [tags]
+      summary: Create a new tag (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TagInput"
+      responses:
+        "201":
+          description: Created tag
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tag"
+        "409":
+          description: Tag name already exists
+
+  /tags/{id}:
+    delete:
+      operationId: deleteTag
+      tags: [tags]
+      summary: Delete a tag (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
 
   /patients/{id}/images:
     get:
@@ -507,6 +630,32 @@ components:
       properties:
         storageDirectory:
           type: string
+
+    Tag:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        createdAt:
+          type: string
+
+    TagInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+
+    PatientTagInput:
+      type: object
+      required: [tagId]
+      properties:
+        tagId:
+          type: integer
 
     ScanResult:
       type: object

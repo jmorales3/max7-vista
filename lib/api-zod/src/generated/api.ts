@@ -107,6 +107,72 @@ export const DeletePatientParams = zod.object({
 
 
 /**
+ * @summary List tags for a patient
+ */
+export const ListPatientTagsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListPatientTagsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "createdAt": zod.string()
+})
+export const ListPatientTagsResponse = zod.array(ListPatientTagsResponseItem)
+
+
+/**
+ * @summary Add a tag to a patient
+ */
+export const AddPatientTagParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AddPatientTagBody = zod.object({
+  "tagId": zod.number()
+})
+
+
+/**
+ * @summary Remove a tag from a patient
+ */
+export const RemovePatientTagParams = zod.object({
+  "id": zod.coerce.number(),
+  "tagId": zod.coerce.number()
+})
+
+
+/**
+ * @summary List all available tags
+ */
+export const ListTagsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "createdAt": zod.string()
+})
+export const ListTagsResponse = zod.array(ListTagsResponseItem)
+
+
+/**
+ * @summary Create a new tag (admin only)
+ */
+
+
+
+export const CreateTagBody = zod.object({
+  "name": zod.string().min(1)
+})
+
+
+/**
+ * @summary Delete a tag (admin only)
+ */
+export const DeleteTagParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
  * @summary List images for a patient
  */
 export const ListPatientImagesParams = zod.object({
