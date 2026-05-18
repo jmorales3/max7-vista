@@ -34,13 +34,14 @@ export default function CameraScreen() {
   const [patientSearch, setPatientSearch] = useState("");
   const [uploadState, setUploadState] = useState<UploadState>("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [imageNotes, setImageNotes] = useState("");
 
   const { data: patients } = useListPatients(
     patientSearch ? { search: patientSearch } : {},
   );
 
   const { mutate: uploadImage } = useMutation({
-    mutationFn: async ({ uri, patientId }: { uri: string; patientId?: number }) => {
+    mutationFn: async ({ uri, patientId, notes }: { uri: string; patientId?: number; notes?: string }) => {
       const formData = new FormData();
       const filename = uri.split("/").pop() ?? "image.jpg";
       const match = /\.(\w+)$/.exec(filename);
@@ -52,9 +53,11 @@ export default function CameraScreen() {
       if (patientId) {
         formData.append("patientId", String(patientId));
       }
+      if (notes?.trim()) {
+        formData.append("notes", notes.trim());
+      }
       formData.append("capturedAt", new Date().toISOString());
 
-      // customFetch automatically attaches the session cookie set by AuthContext
       return customFetch("/api/images", { method: "POST", body: formData });
     },
     onSuccess: () => {
@@ -112,7 +115,7 @@ export default function CameraScreen() {
     setErrorMsg(null);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     uploadImage(
-      { uri: capturedUri, patientId: selectedPatient?.id },
+      { uri: capturedUri, patientId: selectedPatient?.id, notes: imageNotes },
       {
         onSuccess: () => {
           setUploadState("done");
@@ -120,6 +123,7 @@ export default function CameraScreen() {
           setTimeout(() => {
             setCapturedUri(null);
             setSelectedPatient(null);
+            setImageNotes("");
             setUploadState("idle");
           }, 1800);
         },
@@ -212,6 +216,22 @@ export default function CameraScreen() {
     },
     patientSection: {
       gap: 8,
+    },
+    notesSection: {
+      gap: 8,
+    },
+    notesInput: {
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: colors.radius,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontSize: 15,
+      fontFamily: "Inter_400Regular",
+      color: colors.foreground,
+      minHeight: 80,
+      textAlignVertical: "top",
     },
     sectionLabel: {
       fontSize: 13,
@@ -420,6 +440,20 @@ export default function CameraScreen() {
                 </Text>
                 <Ionicons name="chevron-down" size={16} color={colors.mutedForeground} />
               </TouchableOpacity>
+            </View>
+
+            <View style={s.notesSection}>
+              <Text style={s.sectionLabel}>Image Description</Text>
+              <TextInput
+                style={s.notesInput}
+                placeholder="e.g. Pre-op left knee, lateral view…"
+                placeholderTextColor={colors.mutedForeground}
+                value={imageNotes}
+                onChangeText={setImageNotes}
+                multiline
+                numberOfLines={3}
+                editable={uploadState !== "uploading"}
+              />
             </View>
 
             <View style={s.actions}>

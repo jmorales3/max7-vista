@@ -920,7 +920,7 @@ export default function Editor() {
             </div>
           )}
 
-          {tool === "pointer" && (
+          {tool === "pointer" && annotations.some((a) => a.type === "text") && (
             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-none">
               <span className="bg-black/50 text-white text-xs px-2 py-1 rounded-full">
                 {t("editor.pointerHint")}
