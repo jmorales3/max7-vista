@@ -1,7 +1,17 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
+import crypto from "node:crypto";
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+
+function buildMobileSessionCookie(sessionId: string, secret: string): string {
+  const signature = crypto
+    .createHmac("sha256", secret)
+    .update(sessionId)
+    .digest("base64")
+    .replace(/=+$/, "");
+  return `max7.sid=${encodeURIComponent("s:" + sessionId + "." + signature)}`;
+}
 
 const router: IRouter = Router();
 
@@ -71,11 +81,19 @@ router.post("/auth/login", async (req, res) => {
     req.session.role = user.role;
     req.session.tenantId = user.tenantId ?? undefined;
 
+    await new Promise<void>((resolve, reject) => {
+      req.session.save((err) => (err ? reject(err) : resolve()));
+    });
+
+    const secret = process.env["SESSION_SECRET"] ?? "max7-vista-dev-secret-change-in-prod";
+    const sessionCookie = buildMobileSessionCookie(req.sessionID, secret);
+
     return res.json({
       id: user.id,
       username: user.username,
       role: user.role,
       tenantId: user.tenantId,
+      sessionCookie,
     });
   } catch (err) {
     return res.status(500).json({ error: "Internal server error" });

@@ -68,14 +68,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error(data.error ?? "Login failed");
     }
 
-    const userData = (await resp.json()) as AuthUser;
+    const userData = (await resp.json()) as AuthUser & { sessionCookie?: string };
 
-    const rawCookie = resp.headers.get("set-cookie");
-    let sessionCookie = "";
-    if (rawCookie) {
-      const parts = rawCookie.split(";");
-      sessionCookie = parts[0] ?? "";
-    }
+    const sessionCookie = userData.sessionCookie ?? "";
 
     setSessionCookie(sessionCookie || null);
     await AsyncStorage.setItem(SESSION_KEY, sessionCookie);
