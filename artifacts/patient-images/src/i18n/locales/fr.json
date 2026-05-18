@@ -219,7 +219,10 @@
     "imageFileSaveFailed": "Échec de l'enregistrement du fichier image",
     "imageAssigned": "Image assignée au patient",
     "annotationColor": "Couleur d'annotation",
-    "pickColor": "Choisir une couleur"
+    "pickColor": "Choisir une couleur",
+    "arrow": "Flèche",
+    "circle": "Cercle",
+    "pointerHint": "Cliquez et faites glisser les étiquettes de texte pour les repositionner"
   },
   "settings": {
     "title": "Paramètres",
@@ -285,7 +288,7 @@
     },
     "editor": {
       "heading": "Édition d'Images",
-      "body": "L'Éditeur d'Images fournit des outils pour recadrer, zoomer, pivoter, dessiner des annotations, ajouter des étiquettes de texte et effacer. Utilisez le sélecteur de couleur pour changer la couleur d'annotation. Une fois terminé, cliquez sur Enregistrer pour persister toutes les modifications sur disque."
+      "body": "L'Éditeur d'Images fournit des outils pour recadrer, zoomer, pivoter, dessiner à main levée et effacer. Utilisez l'outil Flèche pour tracer des flèches indiquant des structures cliniques. Utilisez l'outil Cercle pour marquer des zones d'intérêt. Ajoutez des étiquettes de texte n'importe où sur l'image — plusieurs annotations de tout type sont prises en charge. Passez en mode Pointeur pour cliquer et faire glisser n'importe quelle étiquette de texte vers une nouvelle position. Utilisez le sélecteur de couleur pour changer la couleur d'annotation. Une fois terminé, cliquez sur Enregistrer pour persister toutes les modifications sur disque."
     },
     "settings": {
       "heading": "Paramètres et Stockage",

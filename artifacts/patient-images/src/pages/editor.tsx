@@ -43,6 +43,8 @@ import {
   Eraser,
   Crop,
   Check,
+  MoveRight,
+  Circle as CircleIcon,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -55,7 +57,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type Tool = "pointer" | "pen" | "text" | "eraser" | "crop";
+type Tool = "pointer" | "pen" | "text" | "eraser" | "crop" | "arrow" | "circle";
 
 interface DrawLine {
   type: "line";
@@ -74,13 +76,93 @@ interface DrawText {
   id: string;
 }
 
-type Annotation = DrawLine | DrawText;
+interface DrawArrow {
+  type: "arrow";
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  color: string;
+  width: number;
+  id: string;
+}
+
+interface DrawCircle {
+  type: "circle";
+  cx: number;
+  cy: number;
+  r: number;
+  color: string;
+  width: number;
+  id: string;
+}
+
+type Annotation = DrawLine | DrawText | DrawArrow | DrawCircle;
 
 interface CropRect {
   x: number;
   y: number;
   w: number;
   h: number;
+}
+
+function drawArrow(
+  ctx: CanvasRenderingContext2D,
+  x1: number, y1: number,
+  x2: number, y2: number,
+  color: string,
+  width: number,
+) {
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  const headLen = Math.max(14, width * 5);
+  ctx.beginPath();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = "round";
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(
+    x2 - headLen * Math.cos(angle - Math.PI / 6),
+    y2 - headLen * Math.sin(angle - Math.PI / 6),
+  );
+  ctx.lineTo(
+    x2 - headLen * Math.cos(angle + Math.PI / 6),
+    y2 - headLen * Math.sin(angle + Math.PI / 6),
+  );
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation) {
+  if (ann.type === "line") {
+    if (ann.points.length < 4) return;
+    ctx.beginPath();
+    ctx.strokeStyle = ann.color;
+    ctx.lineWidth = ann.width;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.moveTo(ann.points[0], ann.points[1]);
+    for (let i = 2; i < ann.points.length; i += 2) {
+      ctx.lineTo(ann.points[i], ann.points[i + 1]);
+    }
+    ctx.stroke();
+  } else if (ann.type === "text") {
+    ctx.font = `bold ${ann.size}px sans-serif`;
+    ctx.fillStyle = ann.color;
+    ctx.fillText(ann.text, ann.x, ann.y);
+  } else if (ann.type === "arrow") {
+    drawArrow(ctx, ann.x1, ann.y1, ann.x2, ann.y2, ann.color, ann.width);
+  } else if (ann.type === "circle") {
+    ctx.beginPath();
+    ctx.strokeStyle = ann.color;
+    ctx.lineWidth = ann.width;
+    ctx.arc(ann.cx, ann.cy, ann.r, 0, 2 * Math.PI);
+    ctx.stroke();
+  }
 }
 
 function renderCanvas(
@@ -90,6 +172,7 @@ function renderCanvas(
   scale: number,
   rotation: number,
   cropRect?: CropRect | null,
+  previewAnn?: Annotation | null,
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -104,29 +187,13 @@ function renderCanvas(
     ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
   }
 
-  for (const ann of annotations) {
-    if (ann.type === "line") {
-      if (ann.points.length < 4) continue;
-      ctx.beginPath();
-      ctx.strokeStyle = ann.color;
-      ctx.lineWidth = ann.width;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      ctx.moveTo(ann.points[0], ann.points[1]);
-      for (let i = 2; i < ann.points.length; i += 2) {
-        ctx.lineTo(ann.points[i], ann.points[i + 1]);
-      }
-      ctx.stroke();
-    } else if (ann.type === "text") {
-      ctx.font = `${ann.size}px sans-serif`;
-      ctx.fillStyle = ann.color;
-      ctx.fillText(ann.text, ann.x, ann.y);
-    }
+  const allAnns: Annotation[] = previewAnn ? [...annotations, previewAnn] : annotations;
+  for (const ann of allAnns) {
+    drawAnnotation(ctx, ann);
   }
 
   ctx.restore();
 
-  // Draw crop overlay on top (in screen coordinates, not transformed)
   if (cropRect && cropRect.w > 0 && cropRect.h > 0) {
     ctx.save();
     ctx.fillStyle = "rgba(0,0,0,0.45)";
@@ -140,23 +207,7 @@ function renderCanvas(
     ctx.rotate((rotation * Math.PI) / 180);
     ctx.scale(scale, scale);
     if (img) ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
-    for (const ann of annotations) {
-      if (ann.type === "line") {
-        if (ann.points.length < 4) continue;
-        ctx.beginPath();
-        ctx.strokeStyle = ann.color;
-        ctx.lineWidth = ann.width;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.moveTo(ann.points[0], ann.points[1]);
-        for (let i = 2; i < ann.points.length; i += 2) ctx.lineTo(ann.points[i], ann.points[i + 1]);
-        ctx.stroke();
-      } else if (ann.type === "text") {
-        ctx.font = `${ann.size}px sans-serif`;
-        ctx.fillStyle = ann.color;
-        ctx.fillText(ann.text, ann.x, ann.y);
-      }
-    }
+    for (const ann of allAnns) drawAnnotation(ctx, ann);
     ctx.restore();
     ctx.strokeStyle = "#0ea5e9";
     ctx.lineWidth = 2;
@@ -200,9 +251,24 @@ export default function Editor() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
+
   const isDrawingRef = useRef(false);
   const currentLineRef = useRef<number[]>([]);
   const cropStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  const arrowStartRef = useRef<[number, number] | null>(null);
+  const circleStartRef = useRef<[number, number] | null>(null);
+
+  const draggingTextRef = useRef<{
+    id: string;
+    origX: number;
+    origY: number;
+    mouseStartX: number;
+    mouseStartY: number;
+  } | null>(null);
+
+  const annotationsRef = useRef<Annotation[]>([]);
+  useEffect(() => { annotationsRef.current = annotations; }, [annotations]);
 
   const { data: image, isLoading } = useGetImage(id, {
     query: { enabled: !!id, queryKey: getGetImageQueryKey(id) },
@@ -241,8 +307,8 @@ export default function Editor() {
     if (!canvas || !container) return;
     canvas.width = container.offsetWidth;
     canvas.height = container.offsetHeight;
-    renderCanvas(canvas, imgRef.current, annotations, scale, rotation, cropRect);
-  }, [annotations, scale, rotation, cropRect]);
+    renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, cropRect);
+  }, [scale, rotation, cropRect]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -274,6 +340,25 @@ export default function Editor() {
     return [e.clientX - rect.left, e.clientY - rect.top];
   }
 
+  function findTextAt(x: number, y: number): DrawText | null {
+    const anns = annotationsRef.current;
+    for (let i = anns.length - 1; i >= 0; i--) {
+      const ann = anns[i];
+      if (ann.type !== "text") continue;
+      const approxWidth = ann.size * 0.55 * ann.text.length;
+      const pad = 8;
+      if (
+        x >= ann.x - pad &&
+        x <= ann.x + approxWidth + pad &&
+        y >= ann.y - ann.size - pad &&
+        y <= ann.y + pad
+      ) {
+        return ann;
+      }
+    }
+    return null;
+  }
+
   function handleMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
     if (tool === "pen" || tool === "eraser") {
       isDrawingRef.current = true;
@@ -286,10 +371,29 @@ export default function Editor() {
       const [sx, sy] = getScreenPoint(e);
       cropStartRef.current = { x: sx, y: sy };
       setCropRect({ x: sx, y: sy, w: 0, h: 0 });
+    } else if (tool === "arrow") {
+      arrowStartRef.current = getCanvasPoint(e);
+    } else if (tool === "circle") {
+      circleStartRef.current = getCanvasPoint(e);
+    } else if (tool === "pointer") {
+      const [x, y] = getCanvasPoint(e);
+      const hit = findTextAt(x, y);
+      if (hit) {
+        draggingTextRef.current = {
+          id: hit.id,
+          origX: hit.x,
+          origY: hit.y,
+          mouseStartX: x,
+          mouseStartY: y,
+        };
+      }
     }
   }
 
   function handleMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
     if (tool === "crop" && cropStartRef.current) {
       const [sx, sy] = getScreenPoint(e);
       const x = Math.min(cropStartRef.current.x, sx);
@@ -300,12 +404,41 @@ export default function Editor() {
       return;
     }
 
+    if (tool === "arrow" && arrowStartRef.current) {
+      const [x2, y2] = getCanvasPoint(e);
+      const [x1, y1] = arrowStartRef.current;
+      const preview: DrawArrow = { type: "arrow", x1, y1, x2, y2, color: penColor, width: 3, id: "__preview__" };
+      renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview);
+      return;
+    }
+
+    if (tool === "circle" && circleStartRef.current) {
+      const [cx, cy] = circleStartRef.current;
+      const [mx, my] = getCanvasPoint(e);
+      const r = Math.hypot(mx - cx, my - cy);
+      const preview: DrawCircle = { type: "circle", cx, cy, r, color: penColor, width: 3, id: "__preview__" };
+      renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview);
+      return;
+    }
+
+    if (tool === "pointer" && draggingTextRef.current) {
+      const [mx, my] = getCanvasPoint(e);
+      const { id, origX, origY, mouseStartX, mouseStartY } = draggingTextRef.current;
+      const dx = mx - mouseStartX;
+      const dy = my - mouseStartY;
+      const updated = annotationsRef.current.map((ann) =>
+        ann.type === "text" && ann.id === id
+          ? { ...ann, x: origX + dx, y: origY + dy }
+          : ann,
+      );
+      renderCanvas(canvas, imgRef.current, updated, scale, rotation, null);
+      return;
+    }
+
     if (!isDrawingRef.current) return;
     const [x, y] = getCanvasPoint(e);
     currentLineRef.current = [...currentLineRef.current, x, y];
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
     renderCanvas(canvas, imgRef.current, annotations, scale, rotation);
     const ctx = canvas.getContext("2d")!;
     ctx.save();
@@ -326,11 +459,63 @@ export default function Editor() {
     ctx.restore();
   }
 
-  function handleMouseUp() {
+  function handleMouseUp(e: React.MouseEvent<HTMLCanvasElement>) {
     if (tool === "crop") {
       cropStartRef.current = null;
       return;
     }
+
+    if (tool === "arrow" && arrowStartRef.current) {
+      const [x2, y2] = getCanvasPoint(e);
+      const [x1, y1] = arrowStartRef.current;
+      arrowStartRef.current = null;
+      if (Math.hypot(x2 - x1, y2 - y1) > 5) {
+        const newArrow: DrawArrow = {
+          type: "arrow",
+          x1, y1, x2, y2,
+          color: penColor,
+          width: 3,
+          id: Date.now().toString(),
+        };
+        setAnnotations((prev) => [...prev, newArrow]);
+      }
+      return;
+    }
+
+    if (tool === "circle" && circleStartRef.current) {
+      const [cx, cy] = circleStartRef.current;
+      const [mx, my] = getCanvasPoint(e);
+      circleStartRef.current = null;
+      const r = Math.hypot(mx - cx, my - cy);
+      if (r > 5) {
+        const newCircle: DrawCircle = {
+          type: "circle",
+          cx, cy, r,
+          color: penColor,
+          width: 3,
+          id: Date.now().toString(),
+        };
+        setAnnotations((prev) => [...prev, newCircle]);
+      }
+      return;
+    }
+
+    if (tool === "pointer" && draggingTextRef.current) {
+      const [mx, my] = getCanvasPoint(e);
+      const { id, origX, origY, mouseStartX, mouseStartY } = draggingTextRef.current;
+      draggingTextRef.current = null;
+      const dx = mx - mouseStartX;
+      const dy = my - mouseStartY;
+      setAnnotations((prev) =>
+        prev.map((ann) =>
+          ann.type === "text" && ann.id === id
+            ? { ...ann, x: origX + dx, y: origY + dy }
+            : ann,
+        ),
+      );
+      return;
+    }
+
     if (!isDrawingRef.current) return;
     isDrawingRef.current = false;
     const pts = currentLineRef.current;
@@ -357,7 +542,6 @@ export default function Editor() {
     const newImg = new Image();
     newImg.onload = () => {
       imgRef.current = newImg;
-      // Scale the cropped image to fill the canvas instead of resetting to 1
       const canvas = canvasRef.current;
       const container = containerRef.current;
       const fitScale =
@@ -373,7 +557,6 @@ export default function Editor() {
       setCropRect(null);
       cropStartRef.current = null;
       setTool("pointer");
-      // Render immediately with the computed scale so there's no flash
       if (canvas && container) {
         canvas.width = container.offsetWidth;
         canvas.height = container.offsetHeight;
@@ -401,13 +584,13 @@ export default function Editor() {
     setAnnotations((prev) => [...prev, newText]);
     setPendingText(null);
     setTextInput("");
-    setTool("pointer");
+    // Stay in text mode so the user can keep adding more text annotations
   }
 
   const replaceFile = useReplaceImageFile({
     mutation: {
       onError: (e) => {
-        toast({ variant: "destructive", title: "Image file save failed", description: String(e) });
+        toast({ variant: "destructive", title: t("editor.imageFileSaveFailed"), description: String(e) });
       },
     },
   });
@@ -422,7 +605,7 @@ export default function Editor() {
         toast({ title: t("editor.imageSaved") });
       },
       onError: (e) => {
-        toast({ variant: "destructive", title: "Save failed", description: String(e) });
+        toast({ variant: "destructive", title: t("editor.saveFailed"), description: String(e) });
       },
     },
   });
@@ -438,7 +621,7 @@ export default function Editor() {
         setLocation(image?.patientId ? `/patients/${image.patientId}` : "/gallery");
       },
       onError: (e) => {
-        toast({ variant: "destructive", title: "Delete failed", description: String(e) });
+        toast({ variant: "destructive", title: t("editor.deleteFailed"), description: String(e) });
       },
     },
   });
@@ -446,12 +629,10 @@ export default function Editor() {
   async function handleSave() {
     const canvas = canvasRef.current;
     if (!canvas) {
-      toast({ variant: "destructive", title: "Canvas not ready" });
+      toast({ variant: "destructive", title: t("editor.canvasNotReady") });
       return;
     }
 
-    // Export the current canvas state (image + annotations + crop/rotate) as PNG.
-    // This persists all visual edits to the file on disk, not just the annotation JSON.
     const blob = await new Promise<Blob | null>((resolve) => {
       canvas.toBlob(resolve, "image/png");
     });
@@ -461,7 +642,6 @@ export default function Editor() {
       replaceFile.mutate({ id, data: { file } });
     }
 
-    // Also persist notes and annotation metadata
     updateImage.mutate({ id, data: { notes, annotation: JSON.stringify(annotations) } });
   }
 
@@ -514,13 +694,23 @@ export default function Editor() {
   const isSaving = replaceFile.isPending || updateImage.isPending;
 
   const cursorClass =
-    tool === "pen" || tool === "eraser"
+    tool === "pen" || tool === "eraser" || tool === "arrow" || tool === "circle"
       ? "cursor-crosshair"
       : tool === "text"
       ? "cursor-text"
       : tool === "crop"
       ? "cursor-crosshair"
       : "cursor-default";
+
+  const tools: { id: Tool; Icon: React.ElementType; label: string }[] = [
+    { id: "pointer", Icon: MousePointer2, label: t("editor.pointer") },
+    { id: "pen",     Icon: PenTool,       label: t("editor.draw") },
+    { id: "arrow",   Icon: MoveRight,     label: t("editor.arrow") },
+    { id: "circle",  Icon: CircleIcon,    label: t("editor.circle") },
+    { id: "text",    Icon: TypeIcon,      label: t("editor.text") },
+    { id: "eraser",  Icon: Eraser,        label: t("editor.erase") },
+    { id: "crop",    Icon: Crop,          label: t("editor.crop") },
+  ];
 
   return (
     <div className="flex flex-col h-[calc(100vh-theme(spacing.14))] -m-4 md:-m-6 lg:-m-8">
@@ -536,15 +726,7 @@ export default function Editor() {
           <div className="h-4 w-px bg-border mx-1" />
 
           <div className="flex bg-muted/50 p-1 rounded-md gap-0.5">
-            {(
-              [
-                { id: "pointer" as typeof tool, Icon: MousePointer2, label: t("editor.pointer") },
-                { id: "pen" as typeof tool, Icon: PenTool, label: t("editor.draw") },
-                { id: "text" as typeof tool, Icon: TypeIcon, label: t("editor.text") },
-                { id: "eraser" as typeof tool, Icon: Eraser, label: t("editor.erase") },
-                { id: "crop" as typeof tool, Icon: Crop, label: t("editor.crop") },
-              ]
-            ).map(({ id, Icon, label }) => (
+            {tools.map(({ id, Icon, label }) => (
               <Button
                 key={id}
                 variant={tool === id ? "secondary" : "ghost"}
@@ -559,14 +741,14 @@ export default function Editor() {
           </div>
 
           {tool === "crop" && cropRect && cropRect.w > 4 && (
-            <Button size="sm" className="h-8 gap-1" onClick={applyCrop} title="Apply crop">
+            <Button size="sm" className="h-8 gap-1" onClick={applyCrop}>
               <Check className="h-3.5 w-3.5" />
               {t("editor.applyCrop")}
             </Button>
           )}
 
           {tool !== "crop" && tool !== "pointer" && (
-            <div className="relative flex items-center gap-1.5" title="Annotation color">
+            <div className="relative flex items-center gap-1.5" title={t("editor.annotationColor")}>
               <div
                 className="w-5 h-5 rounded-full border-2 border-muted-foreground/40 shadow cursor-pointer"
                 style={{ background: penColor }}
@@ -576,7 +758,7 @@ export default function Editor() {
                 value={penColor}
                 onChange={(e) => setPenColor(e.target.value)}
                 className="absolute inset-0 opacity-0 w-full cursor-pointer"
-                title="Pick color"
+                title={t("editor.pickColor")}
               />
             </div>
           )}
@@ -589,7 +771,7 @@ export default function Editor() {
               size="icon"
               className="h-8 w-8"
               onClick={() => setScale((s) => Math.max(0.1, +(s - 0.1).toFixed(1)))}
-              title="Zoom out"
+              title={t("editor.zoomOut")}
             >
               <ZoomOut className="h-4 w-4" />
             </Button>
@@ -599,7 +781,7 @@ export default function Editor() {
               size="icon"
               className="h-8 w-8"
               onClick={() => setScale((s) => Math.min(5, +(s + 0.1).toFixed(1)))}
-              title="Zoom in"
+              title={t("editor.zoomIn")}
             >
               <ZoomIn className="h-4 w-4" />
             </Button>
@@ -610,7 +792,7 @@ export default function Editor() {
             size="icon"
             className="h-8 w-8"
             onClick={() => setRotation((r) => (r + 90) % 360)}
-            title="Rotate 90°"
+            title={t("editor.rotate")}
           >
             <RotateCw className="h-4 w-4" />
           </Button>
@@ -622,8 +804,9 @@ export default function Editor() {
             size="sm"
             className="h-8 text-xs"
             onClick={() => setAnnotations([])}
+            title={t("editor.clearAnnotations")}
           >
-            Clear
+            {t("editor.clearAnnotations")}
           </Button>
         </div>
 
@@ -694,10 +877,22 @@ export default function Editor() {
                   placeholder={t("editor.typeAnnotation")}
                 />
                 <div className="flex gap-2 justify-end">
-                  <Button variant="outline" size="sm" onClick={() => { setPendingText(null); setTextInput(""); }}>{t("common.cancel")}</Button>
-                  <Button size="sm" onClick={confirmText}>{t("common.add")}</Button>
+                  <Button variant="outline" size="sm" onClick={() => { setPendingText(null); setTextInput(""); }}>
+                    {t("common.cancel")}
+                  </Button>
+                  <Button size="sm" onClick={confirmText}>
+                    {t("common.add")}
+                  </Button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {tool === "pointer" && (
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-none">
+              <span className="bg-black/50 text-white text-xs px-2 py-1 rounded-full">
+                {t("editor.pointerHint")}
+              </span>
             </div>
           )}
         </div>
@@ -712,7 +907,6 @@ export default function Editor() {
               </p>
             )}
 
-            {/* Patient assignment — shown for all images; required for unassigned ones */}
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">
                 {image.isUnassigned ? (
@@ -739,7 +933,7 @@ export default function Editor() {
                 }}
               >
                 <SelectTrigger className="h-8 text-sm">
-                  <SelectValue placeholder="Select patient…" />
+                  <SelectValue placeholder={t("editor.selectPatient")} />
                 </SelectTrigger>
                 <SelectContent>
                   {patients?.map((p) => (

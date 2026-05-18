@@ -219,7 +219,10 @@
     "imageFileSaveFailed": "Image file save failed",
     "imageAssigned": "Image assigned to patient",
     "annotationColor": "Annotation color",
-    "pickColor": "Pick color"
+    "pickColor": "Pick color",
+    "arrow": "Arrow",
+    "circle": "Circle",
+    "pointerHint": "Click & drag text labels to reposition them"
   },
   "settings": {
     "title": "Settings",
@@ -285,7 +288,7 @@
     },
     "editor": {
       "heading": "Image Editing",
-      "body": "The Image Editor provides tools for cropping, zooming, rotating, drawing annotations, adding text labels, and erasing. Use the colour picker to change annotation colour. When done, click Save to persist all edits to disk."
+      "body": "The Image Editor provides tools for cropping, zooming, rotating, freehand drawing, and erasing. Use the Arrow tool to draw directional arrows highlighting clinical structures. Use the Circle tool to draw circles marking areas of interest. Add text labels anywhere on the image — multiple annotations of any type are supported. Switch to the Pointer tool to click and drag any text label to reposition it. Use the colour picker to change annotation colour. When done, click Save to persist all edits to disk."
     },
     "settings": {
       "heading": "Settings & Storage",

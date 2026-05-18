@@ -219,7 +219,10 @@
     "imageFileSaveFailed": "Falha ao salvar arquivo de imagem",
     "imageAssigned": "Imagem atribuída ao paciente",
     "annotationColor": "Cor da anotação",
-    "pickColor": "Escolher cor"
+    "pickColor": "Escolher cor",
+    "arrow": "Seta",
+    "circle": "Círculo",
+    "pointerHint": "Clique e arraste os rótulos de texto para reposicioná-los"
   },
   "settings": {
     "title": "Configurações",
@@ -285,7 +288,7 @@
     },
     "editor": {
       "heading": "Edição de Imagens",
-      "body": "O Editor de Imagens fornece ferramentas para recortar, ampliar, girar, desenhar anotações, adicionar rótulos de texto e apagar. Use o seletor de cor para alterar a cor da anotação. Quando terminar, clique em Salvar para persistir todas as edições no disco."
+      "body": "O Editor de Imagens fornece ferramentas para recortar, ampliar, girar, desenho livre e apagar. Use a ferramenta Seta para traçar setas apontando estruturas clínicas. Use a ferramenta Círculo para marcar áreas de interesse. Adicione rótulos de texto em qualquer parte da imagem — múltiplas anotações de qualquer tipo são suportadas. Mude para o modo Ponteiro para clicar e arrastar qualquer rótulo de texto para uma nova posição. Use o seletor de cor para alterar a cor da anotação. Quando terminar, clique em Salvar para persistir todas as edições no disco."
     },
     "settings": {
       "heading": "Configurações e Armazenamento",

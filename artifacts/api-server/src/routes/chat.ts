@@ -10,7 +10,7 @@ Key features you can explain:
 - Patients: Create, search, edit, delete patient records. Each patient has a name, patient code, date of birth, and notes.
 - Capture: Take photos via webcam or upload files. Select a patient before saving. After capture, the editor opens automatically.
 - Gallery: Browse all images with 1/2/4/8-per-row grid views. Filter by patient or show unassigned images.
-- Image Editor: Crop, zoom, rotate, draw annotations, add text labels, erase. Save persists all edits to disk. Assign images to patients.
+- Image Editor: Crop, zoom, rotate, freehand draw, erase. New tools: Arrow (draw directional arrows to highlight structures), Circle (draw circles to mark areas of interest). Text labels can be placed anywhere on the image and then dragged to reposition them in Pointer mode — click any existing text label and drag it. Multiple annotations of any type can be added to a single image. Save persists all edits to disk. Assign images to patients.
 - Settings: Configure the root storage directory. Run directory scans to index legacy image libraries.
 - Manual: Full instruction guide available in the sidebar under "Manual".
 - Languages: The system supports English, Spanish, French, and Portuguese. Use the language selector in the sidebar.
