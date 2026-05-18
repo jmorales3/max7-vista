@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { setSessionCookie } from "@workspace/api-client-react";
+import { setAuthTokenGetter } from "@workspace/api-client-react";
 
 interface AuthUser {
   id: number;
@@ -17,7 +17,7 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const SESSION_KEY = "auth_session_cookie";
+const TOKEN_KEY = "auth_token";
 const USER_KEY = "auth_user";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -27,22 +27,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function restore() {
       try {
-        const cookie = await AsyncStorage.getItem(SESSION_KEY);
+        const token = await AsyncStorage.getItem(TOKEN_KEY);
         const userJson = await AsyncStorage.getItem(USER_KEY);
-        if (cookie && userJson) {
-          setSessionCookie(cookie);
-          const savedUser = JSON.parse(userJson) as AuthUser;
+        if (token && userJson) {
+          setAuthTokenGetter(() => token);
           const baseUrl = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
           const resp = await fetch(`${baseUrl}/api/auth/session`, {
-            headers: { Cookie: cookie },
+            headers: { Authorization: `Bearer ${token}` },
           });
           if (resp.ok) {
             const fresh = (await resp.json()) as AuthUser;
             setUser(fresh);
           } else {
-            await AsyncStorage.removeItem(SESSION_KEY);
+            await AsyncStorage.removeItem(TOKEN_KEY);
             await AsyncStorage.removeItem(USER_KEY);
-            setSessionCookie(null);
+            setAuthTokenGetter(null);
             setUser(null);
           }
         }
@@ -68,29 +67,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error(data.error ?? "Login failed");
     }
 
-    const userData = (await resp.json()) as AuthUser & { sessionCookie?: string };
+    const userData = (await resp.json()) as AuthUser & { authToken?: string };
+    const token = userData.authToken ?? "";
 
-    const sessionCookie = userData.sessionCookie ?? "";
-
-    setSessionCookie(sessionCookie || null);
-    await AsyncStorage.setItem(SESSION_KEY, sessionCookie);
+    setAuthTokenGetter(token ? () => token : null);
+    await AsyncStorage.setItem(TOKEN_KEY, token);
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(userData));
     setUser(userData);
   }, []);
 
   const logout = useCallback(async () => {
     const baseUrl = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
-    const cookie = await AsyncStorage.getItem(SESSION_KEY);
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
     try {
       await fetch(`${baseUrl}/api/auth/logout`, {
         method: "POST",
-        headers: cookie ? { Cookie: cookie } : {},
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
     } catch {
       // best effort
     }
-    setSessionCookie(null);
-    await AsyncStorage.removeItem(SESSION_KEY);
+    setAuthTokenGetter(null);
+    await AsyncStorage.removeItem(TOKEN_KEY);
     await AsyncStorage.removeItem(USER_KEY);
     setUser(null);
   }, []);

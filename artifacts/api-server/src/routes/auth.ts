@@ -85,15 +85,12 @@ router.post("/auth/login", async (req, res) => {
       req.session.save((err) => (err ? reject(err) : resolve()));
     });
 
-    const secret = process.env["SESSION_SECRET"] ?? "max7-vista-dev-secret-change-in-prod";
-    const sessionCookie = buildMobileSessionCookie(req.sessionID, secret);
-
     return res.json({
       id: user.id,
       username: user.username,
       role: user.role,
       tenantId: user.tenantId,
-      sessionCookie,
+      authToken: req.sessionID,
     });
   } catch (err) {
     return res.status(500).json({ error: "Internal server error" });

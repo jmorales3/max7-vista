@@ -103,6 +103,26 @@ if (IS_ELECTRON) {
   );
 }
 
+// Bearer-token auth for mobile clients: load session from store when an
+// Authorization: Bearer <sessionId> header is present and no cookie session
+// has already been established.
+app.use((req, _res, next) => {
+  if (req.session?.userId) return next();
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith("Bearer ")) return next();
+  const token = auth.slice(7).trim();
+  if (!token) return next();
+  req.sessionStore.get(token, (err, sessionData) => {
+    if (!err && sessionData?.userId) {
+      req.session.userId = sessionData.userId;
+      req.session.username = sessionData.username;
+      req.session.role = sessionData.role;
+      req.session.tenantId = sessionData.tenantId;
+    }
+    next();
+  });
+});
+
 app.use("/api", router);
 
 const frontendDist = path.join(__dirname, "dist-frontend");
