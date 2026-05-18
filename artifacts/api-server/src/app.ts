@@ -6,6 +6,7 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
+import { SqliteSessionStore } from "./lib/sqliteSessionStore";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
@@ -68,9 +69,15 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Authentication note: this server uses express-session with a custom
+// username/password flow (see routes/auth.ts and middlewares/requireAuth.ts).
+// Clerk JWT middleware is NOT active in the request pipeline — clerkMiddleware
+// from @clerk/express is fully stateless and requires no server-side store, but
+// it is unused here. Sessions are managed entirely by express-session below.
 if (IS_ELECTRON) {
   app.use(
     session({
+      store: new SqliteSessionStore(),
       name: "max7.sid",
       secret: process.env["SESSION_SECRET"] || "max7-vista-dev-secret-change-in-prod",
       resave: false,

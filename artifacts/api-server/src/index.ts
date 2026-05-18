@@ -141,6 +141,8 @@ async function start() {
 
         if (hasImages(storageDir)) {
           logger.info({ storageDir }, "First run: unscanned image files found — triggering auto-scan");
+          // scanDirectory() is called directly (not via HTTP), so it bypasses
+          // auth middleware entirely — no token or service credential required.
           const result = await scanDirectory(storageDir);
           logger.info({ scanned: result.scanned, indexed: result.indexed }, "First-run auto-scan complete");
         }
