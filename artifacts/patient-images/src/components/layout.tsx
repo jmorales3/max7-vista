@@ -8,6 +8,7 @@ import {
   Settings,
   BookOpen,
   LogOut,
+  MonitorPlay,
 } from "lucide-react";
 import {
   Sidebar,
@@ -37,6 +38,7 @@ export function AppSidebar() {
     { title: t("nav.patients"), url: "/patients", icon: Users },
     { title: t("nav.capture"), url: "/capture", icon: Camera },
     { title: t("nav.gallery"), url: "/gallery", icon: ImageIcon },
+    { title: t("nav.presentations"), url: "/presentations", icon: MonitorPlay },
     { title: t("nav.settings"), url: "/settings", icon: Settings },
     { title: t("nav.manual"), url: "/manual", icon: BookOpen },
   ];

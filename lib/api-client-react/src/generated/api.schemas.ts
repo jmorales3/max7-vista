@@ -110,6 +110,29 @@ export interface PatientTagInput {
   tagId: number;
 }
 
+export interface Presentation {
+  id: number;
+  /** @nullable */
+  patientId?: number | null;
+  title: string;
+  slides: unknown[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PresentationInput {
+  patientId?: number;
+  /** @minLength 1 */
+  title: string;
+  slides: unknown[];
+}
+
+export interface PresentationUpdate {
+  /** @minLength 1 */
+  title?: string;
+  slides?: unknown[];
+}
+
 export interface ScanResult {
   scanned: number;
   indexed: number;
@@ -120,6 +143,10 @@ export interface ScanResult {
 
 export type ListPatientsParams = {
 search?: string;
+};
+
+export type ListPresentationsParams = {
+patientId?: number;
 };
 
 export type ListImagesParams = {

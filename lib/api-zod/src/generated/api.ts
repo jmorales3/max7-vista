@@ -173,6 +173,87 @@ export const DeleteTagParams = zod.object({
 
 
 /**
+ * @summary List presentations, optionally filtered by patient
+ */
+export const ListPresentationsQueryParams = zod.object({
+  "patientId": zod.coerce.number().optional()
+})
+
+export const ListPresentationsResponseItem = zod.object({
+  "id": zod.number(),
+  "patientId": zod.number().nullish(),
+  "title": zod.string(),
+  "slides": zod.array(zod.unknown()),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+export const ListPresentationsResponse = zod.array(ListPresentationsResponseItem)
+
+
+/**
+ * @summary Create a new presentation
+ */
+
+
+
+export const CreatePresentationBody = zod.object({
+  "patientId": zod.number().optional(),
+  "title": zod.string().min(1),
+  "slides": zod.array(zod.unknown())
+})
+
+
+/**
+ * @summary Get a presentation by ID
+ */
+export const GetPresentationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetPresentationResponse = zod.object({
+  "id": zod.number(),
+  "patientId": zod.number().nullish(),
+  "title": zod.string(),
+  "slides": zod.array(zod.unknown()),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Update a presentation
+ */
+export const UpdatePresentationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const UpdatePresentationBody = zod.object({
+  "title": zod.string().min(1).optional(),
+  "slides": zod.array(zod.unknown()).optional()
+})
+
+export const UpdatePresentationResponse = zod.object({
+  "id": zod.number(),
+  "patientId": zod.number().nullish(),
+  "title": zod.string(),
+  "slides": zod.array(zod.unknown()),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a presentation
+ */
+export const DeletePresentationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
  * @summary List images for a patient
  */
 export const ListPatientImagesParams = zod.object({

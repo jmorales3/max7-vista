@@ -16,6 +16,8 @@ tags:
     description: Image operations
   - name: tags
     description: Tag management operations
+  - name: presentations
+    description: Presentation management operations
   - name: settings
     description: App settings operations
 paths:
@@ -239,6 +241,105 @@ paths:
       operationId: deleteTag
       tags: [tags]
       summary: Delete a tag (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /presentations:
+    get:
+      operationId: listPresentations
+      tags: [presentations]
+      summary: List presentations, optionally filtered by patient
+      parameters:
+        - name: patientId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of presentations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Presentation"
+    post:
+      operationId: createPresentation
+      tags: [presentations]
+      summary: Create a new presentation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PresentationInput"
+      responses:
+        "201":
+          description: Created presentation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Presentation"
+
+  /presentations/{id}:
+    get:
+      operationId: getPresentation
+      tags: [presentations]
+      summary: Get a presentation by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Presentation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Presentation"
+        "404":
+          description: Not found
+    put:
+      operationId: updatePresentation
+      tags: [presentations]
+      summary: Update a presentation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PresentationUpdate"
+      responses:
+        "200":
+          description: Updated presentation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Presentation"
+        "404":
+          description: Not found
+    delete:
+      operationId: deletePresentation
+      tags: [presentations]
+      summary: Delete a presentation
       parameters:
         - name: id
           in: path
@@ -656,6 +757,47 @@ components:
       properties:
         tagId:
           type: integer
+
+    Presentation:
+      type: object
+      required: [id, title, slides, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: ["integer", "null"]
+        title:
+          type: string
+        slides:
+          type: array
+          items: {}
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    PresentationInput:
+      type: object
+      required: [title, slides]
+      properties:
+        patientId:
+          type: integer
+        title:
+          type: string
+          minLength: 1
+        slides:
+          type: array
+          items: {}
+
+    PresentationUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        slides:
+          type: array
+          items: {}
 
     ScanResult:
       type: object
