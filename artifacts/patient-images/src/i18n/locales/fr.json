@@ -222,7 +222,9 @@
     "pickColor": "Choisir une couleur",
     "arrow": "Flèche",
     "circle": "Cercle",
-    "pointerHint": "Cliquez et faites glisser les étiquettes de texte pour les repositionner"
+    "pointerHint": "Cliquez et faites glisser les étiquettes de texte pour les repositionner",
+    "strokeWidth": "Épaisseur",
+    "textSize": "Taille"
   },
   "settings": {
     "title": "Paramètres",

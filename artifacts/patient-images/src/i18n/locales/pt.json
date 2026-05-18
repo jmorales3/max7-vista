@@ -222,7 +222,9 @@
     "pickColor": "Escolher cor",
     "arrow": "Seta",
     "circle": "Círculo",
-    "pointerHint": "Clique e arraste os rótulos de texto para reposicioná-los"
+    "pointerHint": "Clique e arraste os rótulos de texto para reposicioná-los",
+    "strokeWidth": "Espessura",
+    "textSize": "Tamanho"
   },
   "settings": {
     "title": "Configurações",

@@ -244,6 +244,8 @@ export default function Editor() {
   const [scale, setScale] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [penColor, setPenColor] = useState("#ff0000");
+  const [strokeWidth, setStrokeWidth] = useState(4);
+  const [textSize, setTextSize] = useState(36);
   const [cropRect, setCropRect] = useState<CropRect | null>(null);
   const [pendingText, setPendingText] = useState<{ x: number; y: number } | null>(null);
   const [textInput, setTextInput] = useState("");
@@ -407,7 +409,7 @@ export default function Editor() {
     if (tool === "arrow" && arrowStartRef.current) {
       const [x2, y2] = getCanvasPoint(e);
       const [x1, y1] = arrowStartRef.current;
-      const preview: DrawArrow = { type: "arrow", x1, y1, x2, y2, color: penColor, width: 3, id: "__preview__" };
+      const preview: DrawArrow = { type: "arrow", x1, y1, x2, y2, color: penColor, width: strokeWidth, id: "__preview__" };
       renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview);
       return;
     }
@@ -416,7 +418,7 @@ export default function Editor() {
       const [cx, cy] = circleStartRef.current;
       const [mx, my] = getCanvasPoint(e);
       const r = Math.hypot(mx - cx, my - cy);
-      const preview: DrawCircle = { type: "circle", cx, cy, r, color: penColor, width: 3, id: "__preview__" };
+      const preview: DrawCircle = { type: "circle", cx, cy, r, color: penColor, width: strokeWidth, id: "__preview__" };
       renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview);
       return;
     }
@@ -449,7 +451,7 @@ export default function Editor() {
     if (pts.length >= 4) {
       ctx.beginPath();
       ctx.strokeStyle = tool === "eraser" ? "#ffffff" : penColor;
-      ctx.lineWidth = tool === "eraser" ? 20 : 4;
+      ctx.lineWidth = tool === "eraser" ? 20 : strokeWidth;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.moveTo(pts[0], pts[1]);
@@ -474,7 +476,7 @@ export default function Editor() {
           type: "arrow",
           x1, y1, x2, y2,
           color: penColor,
-          width: 3,
+          width: strokeWidth,
           id: Date.now().toString(),
         };
         setAnnotations((prev) => [...prev, newArrow]);
@@ -492,7 +494,7 @@ export default function Editor() {
           type: "circle",
           cx, cy, r,
           color: penColor,
-          width: 3,
+          width: strokeWidth,
           id: Date.now().toString(),
         };
         setAnnotations((prev) => [...prev, newCircle]);
@@ -524,7 +526,7 @@ export default function Editor() {
         type: "line",
         points: pts,
         color: tool === "eraser" ? "#ffffff" : penColor,
-        width: tool === "eraser" ? 20 : 4,
+        width: tool === "eraser" ? 20 : strokeWidth,
       };
       setAnnotations((prev) => [...prev, newLine]);
     }
@@ -578,7 +580,7 @@ export default function Editor() {
       y: pendingText.y,
       text: textInput,
       color: penColor,
-      size: 24,
+      size: textSize,
       id: Date.now().toString(),
     };
     setAnnotations((prev) => [...prev, newText]);
@@ -760,6 +762,36 @@ export default function Editor() {
                 className="absolute inset-0 opacity-0 w-full cursor-pointer"
                 title={t("editor.pickColor")}
               />
+            </div>
+          )}
+
+          {(tool === "pen" || tool === "arrow" || tool === "circle" || tool === "eraser") && (
+            <div className="flex items-center gap-1" title={t("editor.strokeWidth")}>
+              <span className="text-xs text-muted-foreground">{t("editor.strokeWidth")}</span>
+              <Button
+                variant="ghost" size="icon" className="h-6 w-6 text-base"
+                onClick={() => setStrokeWidth((w) => Math.max(1, w - 1))}
+              >−</Button>
+              <span className="text-xs font-mono w-5 text-center">{strokeWidth}</span>
+              <Button
+                variant="ghost" size="icon" className="h-6 w-6 text-base"
+                onClick={() => setStrokeWidth((w) => Math.min(30, w + 1))}
+              >+</Button>
+            </div>
+          )}
+
+          {tool === "text" && (
+            <div className="flex items-center gap-1" title={t("editor.textSize")}>
+              <span className="text-xs text-muted-foreground">{t("editor.textSize")}</span>
+              <Button
+                variant="ghost" size="icon" className="h-6 w-6 text-base"
+                onClick={() => setTextSize((s) => Math.max(10, s - 4))}
+              >−</Button>
+              <span className="text-xs font-mono w-7 text-center">{textSize}px</span>
+              <Button
+                variant="ghost" size="icon" className="h-6 w-6 text-base"
+                onClick={() => setTextSize((s) => Math.min(120, s + 4))}
+              >+</Button>
             </div>
           )}
 

@@ -222,7 +222,9 @@
     "pickColor": "Pick color",
     "arrow": "Arrow",
     "circle": "Circle",
-    "pointerHint": "Click & drag text labels to reposition them"
+    "pointerHint": "Click & drag text labels to reposition them",
+    "strokeWidth": "Width",
+    "textSize": "Size"
   },
   "settings": {
     "title": "Settings",
