@@ -1,0 +1,26 @@
+kind = "mobile"
+previewPath = "/mobile/"
+title = "Patient Image Manager Mobile"
+version = "1.0.0"
+id = "artifacts/patient-images-mobile"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+name = "expo"
+paths = [ "/mobile/" ]
+localPort = 8081
+
+[services.development]
+run = "pnpm --filter @workspace/patient-images-mobile run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/patient-images-mobile", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/patient-images-mobile", "run", "serve" ]
+
+[services.env]
+PORT = "8081"
+BASE_PATH = "/mobile/"

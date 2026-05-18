@@ -46,11 +46,13 @@ app.use(
       const replitDevDomain = process.env.REPLIT_DEV_DOMAIN
         ? `https://${process.env.REPLIT_DEV_DOMAIN}`
         : undefined;
+      const replitExpoDevDomain = process.env.REPLIT_EXPO_DEV_DOMAIN
+        ? `https://${process.env.REPLIT_EXPO_DEV_DOMAIN}`
+        : undefined;
+      const defaultOrigins = [replitDevDomain, replitExpoDevDomain].filter(Boolean) as string[];
       const allowedOrigins: string[] = rawAllowedOrigins
         ? rawAllowedOrigins.split(",").map((o) => o.trim()).filter(Boolean)
-        : replitDevDomain
-          ? [replitDevDomain]
-          : [];
+        : defaultOrigins;
       if (allowedOrigins.includes(origin)) return callback(null, true);
       if (
         process.env.NODE_ENV !== "production" &&

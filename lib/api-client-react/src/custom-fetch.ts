@@ -17,6 +17,18 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
+let _sessionCookie: string | null = null;
+
+/**
+ * Set a raw session cookie string to be sent with every request via the
+ * `Cookie` header. Useful in React Native where the native HTTP client
+ * does not automatically persist session cookies across requests.
+ *
+ * Pass `null` to clear the stored cookie.
+ */
+export function setSessionCookie(cookie: string | null): void {
+  _sessionCookie = cookie || null;
+}
 
 /**
  * Set a base URL that is prepended to every relative request URL
@@ -356,6 +368,12 @@ export async function customFetch<T = unknown>(
     if (token) {
       headers.set("authorization", `Bearer ${token}`);
     }
+  }
+
+  // Attach session cookie for React Native mobile clients that cannot rely
+  // on the browser's native cookie jar.
+  if (_sessionCookie && !headers.has("cookie")) {
+    headers.set("cookie", _sessionCookie);
   }
 
   const requestInfo = { method, url: resolveUrl(input) };
