@@ -15,6 +15,7 @@ import {
   ReplaceImageFileParams,
 } from "@workspace/api-zod";
 import { getStorageDirectory } from "../lib/storage";
+import { logAudit } from "../lib/audit";
 
 const router: IRouter = Router();
 
@@ -188,6 +189,7 @@ router.post("/images", upload.single("file"), async (req, res): Promise<void> =>
     patientCode = patient?.patientCode ?? null;
   }
 
+  await logAudit(req, "upload", "image", image.id, JSON.stringify({ fileName: req.file.originalname, patientId }));
   res.status(201).json(buildImageRow({ ...image, patientName, patientCode }));
 });
 
@@ -234,6 +236,7 @@ router.put("/images/:id/file", upload.single("file"), async (req, res): Promise<
     .leftJoin(patientsTable, eq(patientsTable.id, imagesTable.patientId))
     .where(eq(imagesTable.id, params.data.id));
 
+  await logAudit(req, "replace_file", "image", params.data.id, JSON.stringify({ fileName: req.file.originalname }));
   res.json(buildImageRow(rows[0] ?? { ...existingImage, patientName: null, patientCode: null }));
 });
 
@@ -259,6 +262,7 @@ router.get("/images/:id/file", async (req, res): Promise<void> => {
     return;
   }
 
+  await logAudit(req, "view", "image", params.data.id);
   res.sendFile(path.resolve(image.filePath));
 });
 
@@ -388,6 +392,7 @@ router.patch("/images/:id", async (req, res): Promise<void> => {
     .leftJoin(patientsTable, eq(patientsTable.id, imagesTable.patientId))
     .where(eq(imagesTable.id, params.data.id));
 
+  await logAudit(req, "edit", "image", params.data.id, JSON.stringify(parsed.data));
   res.json(buildImageRow(rows[0] ?? { ...image, patientName: null, patientCode: null }));
 });
 
@@ -412,6 +417,7 @@ router.delete("/images/:id", async (req, res): Promise<void> => {
     fs.unlinkSync(image.filePath);
   }
 
+  await logAudit(req, "delete", "image", params.data.id, JSON.stringify({ fileName: image.fileName, patientId: image.patientId }));
   res.sendStatus(204);
 });
 

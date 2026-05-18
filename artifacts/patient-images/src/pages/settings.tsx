@@ -13,13 +13,44 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   RefreshCw, Save, HardDrive, Database, Users, ImageIcon,
-  AlertCircle, Tag, Plus, X,
+  AlertCircle, Tag, Plus, X, ClipboardList,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
+
+interface AuditLogEntry {
+  id: number;
+  userId: number | null;
+  username: string | null;
+  action: string;
+  entityType: string;
+  entityId: number | null;
+  details: string | null;
+  createdAt: string;
+}
+
+const ACTION_LABELS: Record<string, string> = {
+  upload: "Uploaded",
+  view: "Viewed",
+  edit: "Edited",
+  delete: "Deleted",
+  replace_file: "Replaced File",
+  create: "Created",
+};
+
+const ACTION_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  upload: "default",
+  view: "secondary",
+  edit: "outline",
+  delete: "destructive",
+  replace_file: "outline",
+  create: "default",
+};
 
 export default function Settings() {
   const { t } = useTranslation();
@@ -29,6 +60,16 @@ export default function Settings() {
   const [newTagName, setNewTagName] = useState("");
 
   const isAdmin = user?.role === "superadmin" || user?.role === "admin";
+
+  const { data: auditLogs, isLoading: loadingAudit } = useQuery<AuditLogEntry[]>({
+    queryKey: ["audit-log"],
+    queryFn: async () => {
+      const res = await fetch("/api/audit-log", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch audit log");
+      return res.json();
+    },
+    enabled: isAdmin,
+  });
 
   const { data: settings, isLoading: loadingSettings } = useGetSettings({
     query: { queryKey: getGetSettingsQueryKey() }
@@ -331,6 +372,71 @@ export default function Settings() {
                 {t("tags.addTag")}
               </Button>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardList className="h-5 w-5" />
+              Audit Log
+            </CardTitle>
+            <CardDescription>
+              A record of who viewed, uploaded, edited, or deleted patient images and records.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingAudit ? (
+              <div className="space-y-2">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : !auditLogs || auditLogs.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">
+                No audit log entries yet. Actions on images and patients will appear here.
+              </p>
+            ) : (
+              <div className="divide-y rounded-md border overflow-hidden">
+                {auditLogs.map((entry) => (
+                  <div key={entry.id} className="flex items-start gap-3 px-4 py-3 text-sm bg-background hover:bg-muted/30 transition-colors">
+                    <Badge
+                      variant={ACTION_VARIANTS[entry.action] ?? "outline"}
+                      className="mt-0.5 shrink-0 capitalize"
+                    >
+                      {ACTION_LABELS[entry.action] ?? entry.action}
+                    </Badge>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-medium">
+                          {entry.username ?? "System"}
+                        </span>
+                        <span className="text-muted-foreground">·</span>
+                        <span className="text-muted-foreground capitalize">
+                          {entry.entityType} {entry.entityId ? `#${entry.entityId}` : ""}
+                        </span>
+                      </div>
+                      {entry.details && (() => {
+                        try {
+                          const parsed = JSON.parse(entry.details);
+                          const label = parsed.fileName ?? parsed.name ?? parsed.patientCode ?? null;
+                          return label ? (
+                            <p className="text-muted-foreground text-xs mt-0.5 truncate">{label}</p>
+                          ) : null;
+                        } catch {
+                          return null;
+                        }
+                      })()}
+                    </div>
+                    <span className="text-xs text-muted-foreground shrink-0 mt-0.5">
+                      {format(new Date(entry.createdAt), "MMM d, yyyy h:mm a")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

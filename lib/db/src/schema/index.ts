@@ -9,3 +9,4 @@ export * from "./messages";
 export * from "./tenants";
 export * from "./user-roles";
 export * from "./users";
+export * from "./audit-log";

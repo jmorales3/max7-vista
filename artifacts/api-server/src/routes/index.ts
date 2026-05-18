@@ -9,6 +9,7 @@ import presentationsRouter from "./presentations";
 import settingsRouter from "./settings";
 import chatRouter from "./chat";
 import adminRouter from "./admin";
+import auditRouter from "./audit";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(presentationsRouter);
 router.use(settingsRouter);
 router.use(chatRouter);
 router.use(adminRouter);
+router.use(auditRouter);
 
 export default router;
