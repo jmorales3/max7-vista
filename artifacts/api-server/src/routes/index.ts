@@ -8,6 +8,7 @@ import tagsRouter from "./tags";
 import presentationsRouter from "./presentations";
 import settingsRouter from "./settings";
 import chatRouter from "./chat";
+import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(tagsRouter);
 router.use(presentationsRouter);
 router.use(settingsRouter);
 router.use(chatRouter);
+router.use(adminRouter);
 
 export default router;

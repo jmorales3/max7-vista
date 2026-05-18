@@ -1,9 +1,10 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
-import { getSession, login as apiLogin, logout as apiLogout, type AuthUser } from "@/lib/auth";
+import { getSession, login as apiLogin, logout as apiLogout, type AuthUser, PendingApprovalError } from "@/lib/auth";
 
 interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
+  pendingApproval: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -13,6 +14,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pendingApproval, setPendingApproval] = useState(false);
 
   useEffect(() => {
     getSession()
@@ -21,17 +23,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function login(username: string, password: string) {
-    const u = await apiLogin(username, password);
-    setUser(u);
+    try {
+      const u = await apiLogin(username, password);
+      setPendingApproval(false);
+      setUser(u);
+    } catch (err) {
+      if (err instanceof PendingApprovalError) {
+        setPendingApproval(true);
+        throw err;
+      }
+      throw err;
+    }
   }
 
   async function logout() {
     await apiLogout();
     setUser(null);
+    setPendingApproval(false);
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, pendingApproval, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

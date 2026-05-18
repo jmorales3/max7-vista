@@ -5,13 +5,14 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Router from "./router";
 import LoginPage from "@/pages/login";
+import PendingApprovalPage from "@/pages/pending-approval";
 import { queryClient } from "@/lib/queryClient";
 import { Loader2 } from "lucide-react";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 function AppInner() {
-  const { user, loading } = useAuth();
+  const { user, loading, pendingApproval } = useAuth();
 
   if (loading) {
     return (
@@ -19,6 +20,10 @@ function AppInner() {
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
+  }
+
+  if (pendingApproval) {
+    return <PendingApprovalPage />;
   }
 
   if (!user) {

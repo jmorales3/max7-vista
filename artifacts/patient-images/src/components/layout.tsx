@@ -9,6 +9,7 @@ import {
   BookOpen,
   LogOut,
   MonitorPlay,
+  ShieldCheck,
 } from "lucide-react";
 import {
   Sidebar,
@@ -33,6 +34,8 @@ export function AppSidebar() {
   const [location] = useLocation();
   const { t } = useTranslation();
   const { user, logout } = useAuth();
+
+  const isAdmin = user?.role === "admin" || user?.role === "superadmin";
 
   const navItems = [
     { title: t("nav.patients"), url: "/patients", icon: Users },
@@ -91,6 +94,27 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Administration</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.startsWith("/admin")}
+                  >
+                    <Link href="/admin/users">
+                      <ShieldCheck />
+                      <span>User Management</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
       <SidebarFooter className="border-t px-2 py-2 space-y-2">
         {user && (

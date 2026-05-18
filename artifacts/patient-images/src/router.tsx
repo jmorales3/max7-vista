@@ -1,5 +1,6 @@
 import { Switch, Route, Redirect } from "wouter";
 import { AppLayout } from "@/components/layout";
+import { useAuth } from "@/contexts/AuthContext";
 
 import Patients from "@/pages/patients";
 import PatientNew from "@/pages/patient-new";
@@ -13,8 +14,21 @@ import Presentations from "@/pages/presentations";
 import Settings from "@/pages/settings";
 import Manual from "@/pages/manual";
 import NotFound from "@/pages/not-found";
+import AdminUsers from "@/pages/admin/users";
+
+function NotAuthorized() {
+  return (
+    <div className="flex flex-col items-center justify-center h-64 text-center space-y-3">
+      <p className="text-xl font-semibold">Access Denied</p>
+      <p className="text-muted-foreground text-sm">You do not have permission to view this page.</p>
+    </div>
+  );
+}
 
 function Router() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin" || user?.role === "superadmin";
+
   return (
     <AppLayout>
       <Switch>
@@ -30,6 +44,7 @@ function Router() {
         <Route path="/presentations" component={Presentations} />
         <Route path="/settings" component={Settings} />
         <Route path="/manual" component={Manual} />
+        <Route path="/admin/users" component={isAdmin ? AdminUsers : NotAuthorized} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>
