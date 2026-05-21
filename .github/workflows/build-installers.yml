@@ -1,0 +1,139 @@
+name: Build and Release Installers
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-mac:
+    name: macOS DMG
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Set version and publish coordinates from tag and repo
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          GH_OWNER="${GITHUB_REPOSITORY%%/*}"
+          GH_REPO="${GITHUB_REPOSITORY##*/}"
+          pnpm --filter @workspace/electron-app exec node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '$TAG';
+            pkg.build.publish.owner = '$GH_OWNER';
+            pkg.build.publish.repo = '$GH_REPO';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+      - name: Build and release macOS DMG
+        run: pnpm --filter @workspace/electron-app run release:mac
+        env:
+          NODE_ENV: production
+          PORT: "8080"
+          # GH_TOKEN (custom secret) is preferred; GITHUB_TOKEN is the automatic fallback.
+          # Prefer adding GH_TOKEN as a repo secret with "Contents: write" permission so
+          # electron-builder can create and upload release assets. If GH_TOKEN is absent,
+          # the workflow falls back to the built-in GITHUB_TOKEN.
+          GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          # Code-signing — set these secrets in GitHub repo settings to enable signing:
+          # CSC_LINK:                    base64-encoded Apple .p12 Developer ID certificate
+          # CSC_KEY_PASSWORD:            password protecting the .p12
+          # APPLE_ID:                    Apple ID email used for notarization
+          # APPLE_APP_SPECIFIC_PASSWORD: app-specific password for the Apple ID
+          # APPLE_TEAM_ID:               10-character Apple Developer Team ID
+
+  build-win:
+    name: Windows NSIS Installer
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Set version and publish coordinates from tag and repo
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          GH_OWNER="${GITHUB_REPOSITORY%%/*}"
+          GH_REPO="${GITHUB_REPOSITORY##*/}"
+          pnpm --filter @workspace/electron-app exec node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '$TAG';
+            pkg.build.publish.owner = '$GH_OWNER';
+            pkg.build.publish.repo = '$GH_REPO';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+      - name: Build and release Windows NSIS installer
+        run: pnpm --filter @workspace/electron-app run release:win
+        env:
+          NODE_ENV: production
+          PORT: "8080"
+          # GH_TOKEN (custom secret) is preferred; GITHUB_TOKEN is the automatic fallback.
+          # Prefer adding GH_TOKEN as a repo secret with "Contents: write" permission so
+          # electron-builder can create and upload release assets. If GH_TOKEN is absent,
+          # the workflow falls back to the built-in GITHUB_TOKEN.
+          GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          # Code-signing — set these secrets in GitHub repo settings to enable signing:
+          # WIN_CSC_LINK:         base64-encoded .p12 or .pfx EV certificate
+          # WIN_CSC_KEY_PASSWORD: password protecting the certificate

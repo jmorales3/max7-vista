@@ -3,6 +3,7 @@ import path from "path";
 import { spawn, ChildProcess } from "child_process";
 import fs from "fs";
 import os from "os";
+import { autoUpdater } from "electron-updater";
 
 const API_PORT = parseInt(process.env["API_PORT"] ?? "8080", 10);
 const rawDevUrl = process.env["VITE_DEV_URL"];
@@ -174,11 +175,57 @@ ipcMain.handle("dialog:openDirectory", async (): Promise<string | null> => {
     : result.filePaths[0];
 });
 
+// ─── Auto-Updater ─────────────────────────────────────────────────────────────
+
+function setupAutoUpdater(): void {
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on("checking-for-update", () => {
+    console.log("[updater] Checking for updates…");
+  });
+
+  autoUpdater.on("update-available", (info) => {
+    console.log(`[updater] Update available: ${info.version}`);
+    mainWindow?.webContents.send("update:available", info.version);
+  });
+
+  autoUpdater.on("update-not-available", () => {
+    console.log("[updater] App is up-to-date.");
+  });
+
+  autoUpdater.on("download-progress", (progress) => {
+    console.log(`[updater] Download progress: ${Math.round(progress.percent)}%`);
+    mainWindow?.webContents.send("update:download-progress", Math.round(progress.percent));
+  });
+
+  autoUpdater.on("update-downloaded", (info) => {
+    console.log(`[updater] Update downloaded: ${info.version}`);
+    mainWindow?.webContents.send("update:downloaded", info.version);
+  });
+
+  autoUpdater.on("error", (err) => {
+    console.error("[updater] Auto-update error:", err.message);
+  });
+
+  autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+    console.error("[updater] Failed to check for updates:", err.message);
+  });
+}
+
+ipcMain.handle("updater:install-now", () => {
+  autoUpdater.quitAndInstall(false, true);
+});
+
 // ─── App Lifecycle ────────────────────────────────────────────────────────────
 
 app.whenReady().then(() => {
   startApiServer();
   createWindow();
+
+  if (app.isPackaged) {
+    setupAutoUpdater();
+  }
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

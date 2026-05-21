@@ -17,4 +17,19 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   /** Return the platform string so the renderer can adjust UI accordingly. */
   platform: process.platform,
+
+  /** Auto-updater: listen for update events from the main process. */
+  onUpdateAvailable: (cb: (version: string) => void) => {
+    ipcRenderer.on("update:available", (_event, version) => cb(version));
+  },
+  onUpdateDownloadProgress: (cb: (percent: number) => void) => {
+    ipcRenderer.on("update:download-progress", (_event, percent) => cb(percent));
+  },
+  onUpdateDownloaded: (cb: (version: string) => void) => {
+    ipcRenderer.on("update:downloaded", (_event, version) => cb(version));
+  },
+
+  /** Tell the main process to quit and install the downloaded update immediately. */
+  installUpdate: (): Promise<void> =>
+    ipcRenderer.invoke("updater:install-now"),
 });

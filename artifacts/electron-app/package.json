@@ -9,13 +9,16 @@
     "dev": "tsc -p tsconfig.json && electron .",
     "build:full": "node build-full.mjs",
     "package": "pnpm run build:full && electron-builder --dir",
-    "package:mac": "pnpm run build:full && electron-builder --mac",
-    "package:win": "pnpm run build:full && electron-builder --win",
-    "package:linux": "pnpm run build:full && electron-builder --linux"
+    "package:mac": "pnpm run build:full && electron-builder --mac --publish never",
+    "package:win": "pnpm run build:full && electron-builder --win --publish never",
+    "package:linux": "pnpm run build:full && electron-builder --linux --publish never",
+    "release:mac": "pnpm run build:full && electron-builder --mac --publish always",
+    "release:win": "pnpm run build:full && electron-builder --win --publish always"
   },
   "dependencies": {
     "@workspace/api-server": "workspace:*",
-    "better-sqlite3": "^11.10.0"
+    "better-sqlite3": "^11.10.0",
+    "electron-updater": "^6.8.3"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
@@ -30,6 +33,12 @@
     "directories": {
       "output": "release"
     },
+    "publish": {
+      "provider": "github",
+      "owner": "YOUR_GITHUB_ORG",
+      "repo": "YOUR_REPO",
+      "releaseType": "release"
+    },
     "files": [
       "dist/**",
       "node_modules/**"
@@ -41,20 +50,72 @@
       {
         "from": "../../artifacts/api-server/dist",
         "to": "api-server",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "../../artifacts/patient-images/dist/public",
         "to": "api-server/dist-frontend",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "mac": {
-      "target": "dmg",
-      "category": "public.app-category.medical"
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.medical",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ],
+      "window": {
+        "width": 540,
+        "height": 380
+      }
     },
     "win": {
-      "target": "nsis"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signingHashAlgorithms": [
+        "sha256"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Patient Image Manager"
     },
     "linux": {
       "target": "AppImage"

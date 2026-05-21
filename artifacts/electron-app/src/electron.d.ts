@@ -14,6 +14,15 @@ declare global {
       getLanAddresses(): Promise<string[]>;
       /** e.g. "darwin" | "win32" | "linux" */
       platform: string;
+
+      /** Called when an update is available; receives the new version string. */
+      onUpdateAvailable(cb: (version: string) => void): void;
+      /** Called periodically during download with percent 0-100. */
+      onUpdateDownloadProgress(cb: (percent: number) => void): void;
+      /** Called when the update has finished downloading; receives the new version string. */
+      onUpdateDownloaded(cb: (version: string) => void): void;
+      /** Quit the app and immediately install the downloaded update. */
+      installUpdate(): Promise<void>;
     };
   }
 }
