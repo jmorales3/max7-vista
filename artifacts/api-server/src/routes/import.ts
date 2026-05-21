@@ -150,13 +150,31 @@ router.post(
 
     const storageDir = await getStorageDirectory();
 
-    // Group ZIP entries by top-level folder (= patient code)
+    // Detect whether the ZIP has a single root wrapper folder (e.g. foto/2116/img.jpg)
+    // vs. patient folders directly at the root (e.g. 2116/img.jpg).
+    // Strategy: collect all unique top-level folder names from image entries.
+    // If every image entry shares the SAME top-level folder name, that folder is
+    // just a wrapper — peel it off and use the next level as the patient code.
+    const topLevelNames = new Set<string>();
+    for (const entry of zip.getEntries()) {
+      if (entry.isDirectory) continue;
+      const parts = entry.entryName.replace(/\\/g, "/").split("/");
+      if (parts.length < 2) continue;
+      const ext = path.extname(parts[parts.length - 1]).toLowerCase();
+      if (!IMAGE_EXTENSIONS.has(ext)) continue;
+      topLevelNames.add(parts[0]);
+    }
+    // patientDepth: 0 = top-level folders are patient codes (2116/img.jpg)
+    //               1 = one wrapper folder exists (foto/2116/img.jpg)
+    const patientDepth = topLevelNames.size === 1 ? 1 : 0;
+
+    // Group ZIP entries by patient code
     const byPatient = new Map<string, AdmZip.IZipEntry[]>();
     for (const entry of zip.getEntries()) {
       if (entry.isDirectory) continue;
       const parts = entry.entryName.replace(/\\/g, "/").split("/");
-      if (parts.length < 2) continue; // root-level file — skip
-      const patientCode = parts[0];
+      if (parts.length < patientDepth + 2) continue; // not deep enough to have a patient folder + file
+      const patientCode = parts[patientDepth];
       const ext = path.extname(parts[parts.length - 1]).toLowerCase();
       if (!IMAGE_EXTENSIONS.has(ext)) continue;
       if (!byPatient.has(patientCode)) byPatient.set(patientCode, []);
