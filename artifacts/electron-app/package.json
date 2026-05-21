@@ -42,6 +42,7 @@
     "files": [
       "dist/**",
       "node_modules/**",
+      "!node_modules/@workspace/**",
       "!**/.replit-artifact/**",
       "!**/.replit-artifact"
     ],
