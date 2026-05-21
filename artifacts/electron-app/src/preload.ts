@@ -11,6 +11,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   selectFolder: (): Promise<string | null> =>
     ipcRenderer.invoke("dialog:openDirectory"),
 
+  /** Return the LAN addresses the embedded server is reachable on. */
+  getLanAddresses: (): Promise<string[]> =>
+    ipcRenderer.invoke("get-lan-addresses"),
+
   /** Return the platform string so the renderer can adjust UI accordingly. */
   platform: process.platform,
 });

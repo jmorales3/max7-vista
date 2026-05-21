@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import path from "path";
 import { spawn, ChildProcess } from "child_process";
 import fs from "fs";
+import os from "os";
 
 const API_PORT = parseInt(process.env["API_PORT"] ?? "8080", 10);
 const rawDevUrl = process.env["VITE_DEV_URL"];
@@ -52,6 +53,21 @@ function getNodeModulesPath(): string {
     "node_modules",
   );
   return [regularModules, unpackedModules].join(path.delimiter);
+}
+
+// ─── LAN Addresses ───────────────────────────────────────────────────────────
+
+function getLanAddresses(): string[] {
+  const nets = os.networkInterfaces();
+  const addresses: string[] = [];
+  for (const ifaces of Object.values(nets)) {
+    for (const iface of ifaces ?? []) {
+      if (iface.family === "IPv4" && !iface.internal) {
+        addresses.push(`http://${iface.address}:${API_PORT}`);
+      }
+    }
+  }
+  return addresses;
 }
 
 // ─── API Server Lifecycle ────────────────────────────────────────────────────
@@ -131,9 +147,20 @@ function createWindow(): void {
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
+
+  // Update window title with LAN address(es) so clinic staff can see
+  // exactly what URL to type into the mobile app's Server Setup screen.
+  mainWindow.webContents.once("did-finish-load", () => {
+    const addresses = getLanAddresses();
+    if (addresses.length > 0) {
+      mainWindow?.setTitle(`Patient Image Manager — LAN: ${addresses[0]}`);
+    }
+  });
 }
 
 // ─── IPC Handlers ────────────────────────────────────────────────────────────
+
+ipcMain.handle("get-lan-addresses", (): string[] => getLanAddresses());
 
 ipcMain.handle("dialog:openDirectory", async (): Promise<string | null> => {
   if (!mainWindow) return null;

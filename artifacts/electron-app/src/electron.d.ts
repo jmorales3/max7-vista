@@ -10,6 +10,8 @@ declare global {
     electronAPI?: {
       /** Opens a native folder-picker dialog. Returns the chosen path or null. */
       selectFolder(): Promise<string | null>;
+      /** Returns the LAN addresses the embedded server is reachable on. */
+      getLanAddresses(): Promise<string[]>;
       /** e.g. "darwin" | "win32" | "linux" */
       platform: string;
     };
