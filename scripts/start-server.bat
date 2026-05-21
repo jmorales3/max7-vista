@@ -95,12 +95,6 @@ echo [max7] Building web frontend...
 set BASE_PATH=/
 call pnpm --filter @workspace/patient-images run build
 
-if exist "artifacts\patient-images\dist\public" (
-    if exist "artifacts\api-server\dist-frontend" rd /s /q "artifacts\api-server\dist-frontend"
-    xcopy "artifacts\patient-images\dist\public" "artifacts\api-server\dist-frontend" /E /I /Q
-    echo [max7] Frontend copied to api-server
-)
-
 REM ── 7. Build API server ─────────────────────────
 echo [max7] Building API server...
 if "%USE_SQLITE%"=="true" (
@@ -110,6 +104,18 @@ if "%USE_SQLITE%"=="true" (
     set ELECTRON_BUILD=
 ) else (
     pnpm --filter @workspace/api-server run build
+)
+
+REM Copy web frontend into the API dist directory.
+REM app.ts serves static files from __dirname/dist-frontend at runtime.
+REM __dirname for dist\index.mjs = artifacts\api-server\dist, so the correct
+REM destination is artifacts\api-server\dist\dist-frontend (NOT api-server\dist-frontend).
+if exist "artifacts\patient-images\dist\public" (
+    if exist "artifacts\api-server\dist\dist-frontend" rd /s /q "artifacts\api-server\dist\dist-frontend"
+    xcopy "artifacts\patient-images\dist\public" "artifacts\api-server\dist\dist-frontend" /E /I /Q
+    echo [max7] Frontend copied to api-server\dist\dist-frontend
+) else (
+    echo [WARN] Frontend dist not found -- web UI will not be served
 )
 
 REM ── 8. Detect LAN IP ───────────────────────────

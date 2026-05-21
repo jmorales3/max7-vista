@@ -92,16 +92,6 @@ fi
 log "Building web frontend..."
 BASE_PATH=/ PORT=3000 pnpm --filter @workspace/patient-images run build
 
-# Copy built frontend into api-server dist-frontend so it is served from
-# the same port as the API (static-file middleware in app.ts picks it up).
-FRONTEND_DIST="artifacts/patient-images/dist/public"
-API_DIST="artifacts/api-server/dist-frontend"
-if [ -d "$FRONTEND_DIST" ]; then
-  rm -rf "$API_DIST"
-  cp -r "$FRONTEND_DIST" "$API_DIST"
-  log "Frontend copied to api-server ✓"
-fi
-
 # ── 7. Build the API server ──────────────────────
 log "Building API server..."
 if [ "$USE_SQLITE" = "true" ]; then
@@ -109,6 +99,20 @@ if [ "$USE_SQLITE" = "true" ]; then
   ELECTRON_BUILD=true pnpm --filter @workspace/api-server run build
 else
   pnpm --filter @workspace/api-server run build
+fi
+
+# Copy web frontend into the API server dist directory.
+# app.ts serves static files from path.join(__dirname, "dist-frontend"),
+# where __dirname at runtime = artifacts/api-server/dist — so the target is
+# artifacts/api-server/dist/dist-frontend (NOT artifacts/api-server/dist-frontend).
+FRONTEND_DIST="artifacts/patient-images/dist/public"
+API_STATIC="artifacts/api-server/dist/dist-frontend"
+if [ -d "$FRONTEND_DIST" ]; then
+  rm -rf "$API_STATIC"
+  cp -r "$FRONTEND_DIST" "$API_STATIC"
+  log "Frontend copied to api-server/dist/dist-frontend ✓"
+else
+  warn "Frontend dist not found at $FRONTEND_DIST — web UI will not be served"
 fi
 
 # ── 8. Detect LAN IP ─────────────────────────────
