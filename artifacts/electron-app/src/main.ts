@@ -17,6 +17,7 @@ const VITE_DEV_URL = rawDevUrl ?? "http://localhost:5173";
 const IS_DEV = !app.isPackaged;
 
 let mainWindow: BrowserWindow | null = null;
+let splashWindow: BrowserWindow | null = null;
 let apiServerProcess: ChildProcess | null = null;
 
 // ─── Database Path ───────────────────────────────────────────────────────────
@@ -114,6 +115,47 @@ function stopApiServer(): void {
   }
 }
 
+// ─── Splash Window ───────────────────────────────────────────────────────────
+
+function createSplashWindow(): void {
+  splashWindow = new BrowserWindow({
+    width: 380,
+    height: 280,
+    resizable: false,
+    frame: false,
+    transparent: false,
+    alwaysOnTop: true,
+    center: true,
+    show: false,
+    title: "Patient Image Manager",
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  const splashPath = path.join(__dirname, "splash.html");
+  splashWindow.loadFile(splashPath).catch((err) => {
+    console.error("Failed to load splash screen:", err);
+  });
+
+  splashWindow.once("ready-to-show", () => {
+    splashWindow?.show();
+  });
+
+  splashWindow.on("closed", () => {
+    splashWindow = null;
+  });
+}
+
+function closeSplashWindow(): void {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.close();
+    splashWindow = null;
+  }
+}
+
 // ─── Window ──────────────────────────────────────────────────────────────────
 
 function createWindow(): void {
@@ -123,6 +165,7 @@ function createWindow(): void {
     minWidth: 900,
     minHeight: 600,
     title: "Patient Image Manager",
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -137,6 +180,8 @@ function createWindow(): void {
   setTimeout(() => {
     mainWindow?.loadURL(appUrl).catch((err) => {
       console.error("Failed to load app URL:", err);
+      closeSplashWindow();
+      mainWindow?.show();
     });
   }, IS_DEV ? 0 : 2000);
 
@@ -149,9 +194,13 @@ function createWindow(): void {
     mainWindow = null;
   });
 
-  // Update window title with LAN address(es) so clinic staff can see
-  // exactly what URL to type into the mobile app's Server Setup screen.
+  // Once the UI finishes loading, close the splash and reveal the main window.
   mainWindow.webContents.once("did-finish-load", () => {
+    closeSplashWindow();
+    mainWindow?.show();
+
+    // Update window title with LAN address(es) so clinic staff can see
+    // exactly what URL to type into the mobile app's Server Setup screen.
     const addresses = getLanAddresses();
     if (addresses.length > 0) {
       mainWindow?.setTitle(`Patient Image Manager — LAN: ${addresses[0]}`);
@@ -220,6 +269,7 @@ ipcMain.handle("updater:install-now", () => {
 // ─── App Lifecycle ────────────────────────────────────────────────────────────
 
 app.whenReady().then(() => {
+  createSplashWindow();
   startApiServer();
   createWindow();
 

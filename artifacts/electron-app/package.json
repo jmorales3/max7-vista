@@ -4,7 +4,7 @@
   "private": true,
   "main": "dist/main.js",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node -e \"require('fs').copyFileSync('src/splash.html','dist/splash.html')\"",
     "start": "electron .",
     "dev": "tsc -p tsconfig.json && electron .",
     "build:full": "node build-full.mjs",

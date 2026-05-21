@@ -15,6 +15,7 @@
 import { execSync } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "../..");
@@ -40,5 +41,12 @@ run("pnpm --filter @workspace/api-server run build", root, {
 
 // 3. Electron main process
 run("tsc -p tsconfig.json", __dirname);
+
+// 4. Copy static assets that TypeScript doesn't include
+fs.copyFileSync(
+  path.join(__dirname, "src", "splash.html"),
+  path.join(__dirname, "dist", "splash.html"),
+);
+console.log("▶ Copied splash.html → dist/splash.html");
 
 console.log("\n✅ Full build complete — ready for electron-builder packaging.");
