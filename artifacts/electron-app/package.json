@@ -16,7 +16,6 @@
     "release:win": "pnpm run build:full && electron-builder --win --publish always"
   },
   "dependencies": {
-    "@workspace/api-server": "workspace:*",
     "better-sqlite3": "^11.10.0",
     "electron-updater": "^6.8.3"
   },

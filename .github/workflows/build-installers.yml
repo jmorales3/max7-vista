@@ -69,6 +69,9 @@ jobs:
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
           "
 
+      - name: Remove workspace symlinks before packaging
+        run: rm -rf artifacts/electron-app/node_modules/@workspace
+
       - name: Build and release macOS DMG
         run: pnpm --filter @workspace/electron-app run release:mac
         env:
@@ -147,6 +150,10 @@ jobs:
             pkg.build.publish.repo = '$GH_REPO';
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
           "
+
+      - name: Remove workspace symlinks before packaging
+        shell: bash
+        run: rm -rf artifacts/electron-app/node_modules/@workspace
 
       - name: Build and release Windows NSIS installer
         run: pnpm --filter @workspace/electron-app run release:win
