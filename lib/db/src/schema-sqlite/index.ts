@@ -6,3 +6,7 @@ export * from "./messages";
 export * from "./tenants";
 export * from "./user-roles";
 export * from "./users";
+export * from "./audit-log";
+export * from "./tags";
+export * from "./patient-tags";
+export * from "./presentations";
