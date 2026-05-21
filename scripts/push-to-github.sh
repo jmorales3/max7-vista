@@ -36,21 +36,16 @@ fi
 echo "Pushing main branch..."
 git push -u origin main
 
-# Only push the tag if it hasn't been pushed yet
-if ! git ls-remote --tags origin v1.0.0 | grep -q v1.0.0; then
-  echo "Pushing tag v1.0.0..."
-  git tag v1.0.0 2>/dev/null || true
-  git push origin v1.0.0
-else
-  echo "Tag v1.0.0 already on remote — skipping tag push."
-  echo "To trigger a new release build, delete the old tag and re-push:"
-  echo "  git push origin :refs/tags/v1.0.0"
-  echo "  git tag -d v1.0.0"
-  echo "  git tag v1.0.0"
-  echo "  git push origin v1.0.0"
-fi
+echo "Re-tagging v1.0.0 to trigger a fresh release build..."
+# Delete remote tag if it exists
+git push origin :refs/tags/v1.0.0 2>/dev/null || true
+# Delete local tag if it exists
+git tag -d v1.0.0 2>/dev/null || true
+# Re-create and push
+git tag v1.0.0
+git push origin v1.0.0
 
 echo ""
-echo "Done!"
+echo "Done! A new release build has been triggered."
 echo "Track build : https://github.com/jmorales3/max7-vista/actions"
 echo "Download    : https://github.com/jmorales3/max7-vista/releases"
