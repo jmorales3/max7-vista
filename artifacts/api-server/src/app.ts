@@ -13,7 +13,13 @@ import { logger } from "./lib/logger";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const IS_ELECTRON = process.env["ELECTRON_MODE"] === "true";
+// IS_SQLITE is true for the Electron desktop app AND for standalone self-host
+// mode (SELF_HOST_SQLITE=true).  Both use SqliteSessionStore + better-sqlite3
+// instead of PostgreSQL, and the esbuild step resolves @workspace/db to
+// lib/db/src/sqlite-compat.ts via the ELECTRON_BUILD=true alias.
+const IS_SQLITE =
+  process.env["ELECTRON_MODE"] === "true" ||
+  process.env["SELF_HOST_SQLITE"] === "true";
 
 const app: Express = express();
 
@@ -42,7 +48,7 @@ app.use(
     credentials: true,
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
-      if (IS_ELECTRON) return callback(null, true);
+      if (IS_SQLITE) return callback(null, true);
       const rawAllowedOrigins = process.env.CORS_ALLOWED_ORIGINS;
       const replitDevDomain = process.env.REPLIT_DEV_DOMAIN
         ? `https://${process.env.REPLIT_DEV_DOMAIN}`
@@ -74,7 +80,7 @@ app.use(express.urlencoded({ extended: true }));
 // Clerk JWT middleware is NOT active in the request pipeline — clerkMiddleware
 // from @clerk/express is fully stateless and requires no server-side store, but
 // it is unused here. Sessions are managed entirely by express-session below.
-if (IS_ELECTRON) {
+if (IS_SQLITE) {
   app.use(
     session({
       store: new SqliteSessionStore(),

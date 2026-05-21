@@ -37,47 +37,54 @@ if ! command -v pnpm &>/dev/null; then
 fi
 log "pnpm $(pnpm --version) ✓"
 
-# ── 3. DATABASE_URL (required) ──────────────────
-if [ -z "$DATABASE_URL" ]; then
-  error "DATABASE_URL is not set."
-  echo ""
-  echo "  Set it before running this script, for example:"
-  echo "    export DATABASE_URL=postgresql://max7:password@localhost:5432/max7vista"
-  echo ""
-  echo "  See SELF_HOSTING.md for PostgreSQL setup instructions."
-  exit 1
+# ── 3. Detect database mode ──────────────────────
+#
+# Priority:
+#   (a) DATABASE_URL is set → PostgreSQL mode
+#   (b) DATABASE_URL is absent but psql is on PATH → try to auto-create the DB,
+#       then use PostgreSQL mode
+#   (c) Neither → SQLite self-host mode (no PostgreSQL needed)
+#
+USE_SQLITE=false
+
+if [ -n "$DATABASE_URL" ]; then
+  log "DATABASE_URL found — using PostgreSQL mode"
+elif command -v psql &>/dev/null; then
+  warn "DATABASE_URL is not set, but psql is available — attempting to auto-create database"
+  # Default to a local database named max7vista
+  export DATABASE_URL="postgresql://localhost/max7vista"
+  # Build a connection to the maintenance DB to create max7vista if needed
+  DB_BASE="postgresql://localhost/postgres"
+  EXISTS=$(psql "$DB_BASE" -tAc "SELECT 1 FROM pg_database WHERE datname='max7vista'" 2>/dev/null || echo "")
+  if [ "$EXISTS" != "1" ]; then
+    log "Creating database 'max7vista'..."
+    psql "$DB_BASE" -c "CREATE DATABASE max7vista;" 2>/dev/null && log "Database created ✓" || {
+      warn "Could not auto-create database — falling back to SQLite mode"
+      USE_SQLITE=true
+      unset DATABASE_URL
+    }
+  else
+    log "Database 'max7vista' exists ✓"
+  fi
+else
+  warn "DATABASE_URL is not set and psql is not found — using SQLite self-host mode"
+  warn "Data will be stored in ./max7-vista.db (not suitable for multi-user setups)"
+  USE_SQLITE=true
 fi
-log "DATABASE_URL ✓"
 
 # ── 4. Install dependencies ──────────────────────
 log "Installing dependencies..."
 pnpm install --frozen-lockfile 2>&1 | tail -5
 
-# ── 5. Bootstrap the database ───────────────────
-# Parse the DB name from DATABASE_URL and create it if it doesn't exist.
-# psql is optional: if absent we skip creation and just try the push.
-DB_NAME=$(node -e "try { const u = new URL(process.env.DATABASE_URL); process.stdout.write(u.pathname.replace(/^\\//, '')); } catch { process.stdout.write(''); }")
-if [ -n "$DB_NAME" ] && command -v psql &>/dev/null; then
-  # Build a connection string that targets the maintenance 'postgres' DB
-  DB_BASE=$(node -e "try { const u = new URL(process.env.DATABASE_URL); u.pathname = '/postgres'; process.stdout.write(u.toString()); } catch { process.stdout.write(''); }")
-  if [ -n "$DB_BASE" ]; then
-    EXISTS=$(psql "$DB_BASE" -tAc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" 2>/dev/null || echo "")
-    if [ "$EXISTS" != "1" ]; then
-      log "Creating database '${DB_NAME}'..."
-      psql "$DB_BASE" -c "CREATE DATABASE \"${DB_NAME}\";" 2>/dev/null && log "Database created ✓" || warn "Could not auto-create database — it may already exist"
-    else
-      log "Database '${DB_NAME}' exists ✓"
-    fi
-  fi
+# ── 5. Database schema ───────────────────────────
+if [ "$USE_SQLITE" = "false" ]; then
+  log "Applying database schema (PostgreSQL)..."
+  pnpm --filter @workspace/db exec drizzle-kit push 2>&1 | tail -10 || {
+    warn "Schema push returned non-zero — if this is a first run, ensure the database is reachable."
+  }
 else
-  warn "psql not found — skipping auto-create database. Make sure '${DB_NAME}' exists before continuing."
+  log "SQLite mode — schema will be created automatically by the server on startup"
 fi
-
-# Apply schema (Drizzle push)
-log "Applying database schema..."
-pnpm --filter @workspace/db exec drizzle-kit push 2>&1 | tail -10 || {
-  warn "Schema push returned non-zero. If this is a first run, make sure the database exists."
-}
 
 # ── 6. Build the web frontend ────────────────────
 log "Building web frontend..."
@@ -95,7 +102,12 @@ fi
 
 # ── 7. Build the API server ──────────────────────
 log "Building API server..."
-pnpm --filter @workspace/api-server run build
+if [ "$USE_SQLITE" = "true" ]; then
+  # ELECTRON_BUILD=true makes esbuild alias @workspace/db → sqlite-compat.ts
+  ELECTRON_BUILD=true pnpm --filter @workspace/api-server run build
+else
+  pnpm --filter @workspace/api-server run build
+fi
 
 # ── 8. Detect LAN IP ─────────────────────────────
 PORT="${PORT:-8080}"
@@ -113,7 +125,11 @@ LAN_IP=$(node -e "
 " 2>/dev/null)
 
 echo ""
-echo -e "${BOLD}Starting server on port ${PORT}${RESET}"
+if [ "$USE_SQLITE" = "true" ]; then
+  echo -e "${BOLD}Starting server (SQLite mode) on port ${PORT}${RESET}"
+else
+  echo -e "${BOLD}Starting server (PostgreSQL mode) on port ${PORT}${RESET}"
+fi
 if [ -n "$LAN_IP" ]; then
   echo -e "${GREEN}┌──────────────────────────────────────────────────┐${RESET}"
   echo -e "${GREEN}│  Web browser : http://${LAN_IP}:${PORT}              │${RESET}"
@@ -126,4 +142,9 @@ echo ""
 # ── 9. Start ─────────────────────────────────────
 export PORT="${PORT}"
 export SESSION_SECRET="${SESSION_SECRET:-$(node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("hex"))')}"
+if [ "$USE_SQLITE" = "true" ]; then
+  export SELF_HOST_SQLITE=true
+  export DATABASE_PATH="${DATABASE_PATH:-./max7-vista.db}"
+fi
+
 node --enable-source-maps artifacts/api-server/dist/index.mjs

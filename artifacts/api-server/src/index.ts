@@ -20,7 +20,9 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-const IS_ELECTRON = process.env["ELECTRON_MODE"] === "true";
+const IS_SQLITE =
+  process.env["ELECTRON_MODE"] === "true" ||
+  process.env["SELF_HOST_SQLITE"] === "true";
 
 async function initSqlite() {
   const { db } = await import("@workspace/db");
@@ -108,7 +110,7 @@ async function initSqlite() {
 }
 
 async function start() {
-  if (IS_ELECTRON) {
+  if (IS_SQLITE) {
     await initSqlite();
   }
 
