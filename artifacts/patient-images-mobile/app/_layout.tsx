@@ -6,9 +6,9 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack, router, usePathname } from "expo-router";
+import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -30,25 +30,41 @@ const queryClient = new QueryClient({
 function RootLayoutNav() {
   const { serverUrl, isLoading: serverLoading } = useServer();
   const { user, isLoading: authLoading } = useAuth();
-  const pathname = usePathname();
+  // Tracks whether we have already routed the user to their initial destination.
+  // Once true, in-app navigation (patient detail, settings, etc.) is never
+  // interrupted by this guard. It resets when the user logs out or the server
+  // URL is cleared so those transitions still force the correct screen.
+  const initialRouteDone = useRef(false);
 
   useEffect(() => {
     if (serverLoading) return;
+
+    // No server configured → always force Server Setup, reset route flag.
     if (!serverUrl) {
+      initialRouteDone.current = false;
       router.replace("/server-setup");
       return;
     }
-    // Allow the user to stay on the server-setup screen when editing.
-    // Without this guard the effect would redirect them back to tabs
-    // the moment the effect re-runs while they are on that screen.
-    if (pathname === "/server-setup") return;
+
     if (authLoading) return;
-    if (user) {
-      router.replace("/(tabs)");
-    } else {
+
+    // Not authenticated → force Login, reset route flag so the next successful
+    // login / session restore triggers the initial-route redirect again.
+    if (!user) {
+      initialRouteDone.current = false;
       router.replace("/login");
+      return;
     }
-  }, [serverUrl, serverLoading, user, authLoading, pathname]);
+
+    // Authenticated + server configured.
+    // Redirect to tabs exactly once (initial app start or after login).
+    // After that, leave all navigation to the user and individual screens —
+    // this prevents the guard from intercepting /patient/[id] or /server-setup?edit=true.
+    if (!initialRouteDone.current) {
+      initialRouteDone.current = true;
+      router.replace("/(tabs)");
+    }
+  }, [serverUrl, serverLoading, user, authLoading]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
