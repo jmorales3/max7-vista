@@ -10,6 +10,7 @@ import {
   LogOut,
   MonitorPlay,
   ShieldCheck,
+  FolderUp,
 } from "lucide-react";
 import {
   Sidebar,
@@ -42,6 +43,7 @@ export function AppSidebar() {
     { title: t("nav.capture"), url: "/capture", icon: Camera },
     { title: t("nav.gallery"), url: "/gallery", icon: ImageIcon },
     { title: t("nav.presentations"), url: "/presentations", icon: MonitorPlay },
+    { title: "Bulk Import", url: "/import", icon: FolderUp },
     { title: t("nav.settings"), url: "/settings", icon: Settings },
     { title: t("nav.manual"), url: "/manual", icon: BookOpen },
   ];

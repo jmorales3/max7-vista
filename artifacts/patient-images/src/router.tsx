@@ -15,6 +15,7 @@ import Settings from "@/pages/settings";
 import Manual from "@/pages/manual";
 import NotFound from "@/pages/not-found";
 import AdminUsers from "@/pages/admin/users";
+import BulkImport from "@/pages/bulk-import";
 
 function NotAuthorized() {
   return (
@@ -45,6 +46,7 @@ function Router() {
         <Route path="/settings" component={Settings} />
         <Route path="/manual" component={Manual} />
         <Route path="/admin/users" component={isAdmin ? AdminUsers : NotAuthorized} />
+        <Route path="/import" component={BulkImport} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>
