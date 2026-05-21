@@ -41,7 +41,9 @@
     },
     "files": [
       "dist/**",
-      "node_modules/**"
+      "node_modules/**",
+      "!**/.replit-artifact/**",
+      "!**/.replit-artifact"
     ],
     "asarUnpack": [
       "node_modules/better-sqlite3/**"
