@@ -4,6 +4,7 @@ import { Tabs } from "expo-router";
 import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
 import { Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 import { useColors } from "@/hooks/useColors";
@@ -18,6 +19,10 @@ function NativeTabLayout() {
       <NativeTabs.Trigger name="camera">
         <Icon sf={{ default: "camera", selected: "camera.fill" }} />
         <Label>Capture</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="settings">
+        <Icon sf={{ default: "gearshape", selected: "gearshape.fill" }} />
+        <Label>Settings</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -82,6 +87,18 @@ function ClassicTabLayout() {
               <SymbolView name="camera" tintColor={color} size={24} />
             ) : (
               <Feather name="camera" size={22} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: "Settings",
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="gearshape" tintColor={color} size={24} />
+            ) : (
+              <Ionicons name="settings-outline" size={22} color={color} />
             ),
         }}
       />

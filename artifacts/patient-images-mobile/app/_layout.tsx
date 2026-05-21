@@ -12,11 +12,9 @@ import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { setBaseUrl } from "@workspace/api-client-react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ServerProvider, useServer } from "@/contexts/ServerContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-
-setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
 
 SplashScreen.preventAutoHideAsync();
 
@@ -30,19 +28,26 @@ const queryClient = new QueryClient({
 });
 
 function RootLayoutNav() {
-  const { user, isLoading } = useAuth();
+  const { serverUrl, isLoading: serverLoading } = useServer();
+  const { user, isLoading: authLoading } = useAuth();
 
   useEffect(() => {
-    if (isLoading) return;
+    if (serverLoading) return;
+    if (!serverUrl) {
+      router.replace("/server-setup");
+      return;
+    }
+    if (authLoading) return;
     if (user) {
       router.replace("/(tabs)");
     } else {
       router.replace("/login");
     }
-  }, [user, isLoading]);
+  }, [serverUrl, serverLoading, user, authLoading]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="server-setup" />
       <Stack.Screen name="login" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="patient/[id]" />
@@ -72,9 +77,11 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <GestureHandlerRootView style={{ flex: 1 }}>
             <KeyboardProvider>
-              <AuthProvider>
-                <RootLayoutNav />
-              </AuthProvider>
+              <ServerProvider>
+                <AuthProvider>
+                  <RootLayoutNav />
+                </AuthProvider>
+              </ServerProvider>
             </KeyboardProvider>
           </GestureHandlerRootView>
         </QueryClientProvider>

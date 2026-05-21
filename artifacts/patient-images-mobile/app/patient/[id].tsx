@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, router } from "expo-router";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
-import { useGetPatient, useListPatientImages } from "@workspace/api-client-react";
+import { useGetPatient, useListPatientImages, getBaseUrl } from "@workspace/api-client-react";
 import type { Image as PatientImage } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -103,7 +103,7 @@ export default function PatientDetailScreen() {
   const [columns, setColumns] = useState<GridColumns>(2);
   const [lightboxImage, setLightboxImage] = useState<PatientImage | null>(null);
 
-  const baseUrl = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+  const baseUrl = getBaseUrl() ?? "";
 
   const { data: patient, isLoading: patientLoading } = useGetPatient(patientId);
   const {

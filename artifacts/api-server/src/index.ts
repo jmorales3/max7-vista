@@ -4,6 +4,7 @@ import { getStorageDirectory, getSetting } from "./lib/storage";
 import { scanDirectory } from "./lib/scanDirectory";
 import path from "path";
 import fs from "fs";
+import os from "os";
 
 const rawPort = process.env["PORT"];
 
@@ -111,13 +112,25 @@ async function start() {
     await initSqlite();
   }
 
-  app.listen(port, async (err) => {
-    if (err) {
-      logger.error({ err }, "Error listening on port");
-      process.exit(1);
-    }
-
+  app.listen(port, "0.0.0.0", async () => {
     logger.info({ port }, "Server listening");
+
+    // Print LAN addresses so clinic staff know what URL to use on phones/tablets
+    const nets = os.networkInterfaces();
+    const lanAddresses: string[] = [];
+    for (const ifaces of Object.values(nets)) {
+      for (const iface of ifaces ?? []) {
+        if (iface.family === "IPv4" && !iface.internal) {
+          lanAddresses.push(`http://${iface.address}:${port}`);
+        }
+      }
+    }
+    if (lanAddresses.length > 0) {
+      logger.info(
+        { addresses: lanAddresses },
+        "LAN access — enter one of these addresses in the mobile app Server Setup",
+      );
+    }
 
     try {
       const lastScanAt = await getSetting("lastScanAt");

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
+import { SERVER_URL_KEY } from "./ServerContext";
 
 interface AuthUser {
   id: number;
@@ -31,7 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userJson = await AsyncStorage.getItem(USER_KEY);
         if (token && userJson) {
           setAuthTokenGetter(() => token);
-          const baseUrl = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+          const baseUrl = (await AsyncStorage.getItem(SERVER_URL_KEY)) ?? "";
           const resp = await fetch(`${baseUrl}/api/auth/session`, {
             headers: { Authorization: `Bearer ${token}` },
           });
@@ -55,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(async (username: string, password: string) => {
-    const baseUrl = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+    const baseUrl = (await AsyncStorage.getItem(SERVER_URL_KEY)) ?? "";
     const resp = await fetch(`${baseUrl}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -77,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    const baseUrl = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+    const baseUrl = (await AsyncStorage.getItem(SERVER_URL_KEY)) ?? "";
     const token = await AsyncStorage.getItem(TOKEN_KEY);
     try {
       await fetch(`${baseUrl}/api/auth/logout`, {

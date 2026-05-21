@@ -42,6 +42,15 @@ export function setBaseUrl(url: string | null): void {
 }
 
 /**
+ * Return the currently configured base URL, or null if none is set.
+ * Useful for constructing absolute asset URLs (e.g. image `src` attributes)
+ * in React Native where relative URLs are not supported.
+ */
+export function getBaseUrl(): string | null {
+  return _baseUrl;
+}
+
+/**
  * Register a getter that supplies a bearer auth token.  Before every fetch
  * the getter is invoked; when it returns a non-null string, an
  * `Authorization: Bearer <token>` header is attached to the request.
