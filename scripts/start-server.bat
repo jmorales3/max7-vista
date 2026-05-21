@@ -57,21 +57,22 @@ if errorlevel 1 (
     goto :db_mode_done
 )
 
-REM psql found — try to auto-create database
+REM psql found — try to auto-create database.
+REM Attempt CREATE DATABASE; if it fails the DB already exists (ignore error).
+REM Then verify we can actually connect; if not, fall back to SQLite.
 echo [WARN] DATABASE_URL not set, but psql found -- trying to auto-create 'max7vista'
 set DATABASE_URL=postgresql://localhost/max7vista
-for /f "tokens=*" %%e in ('psql postgresql://localhost/postgres -tAc "SELECT 1 FROM pg_database WHERE datname='"'"'max7vista'"'"'" 2^>nul') do set DB_EXISTS=%%e
-if not defined DB_EXISTS (
-    psql postgresql://localhost/postgres -c "CREATE DATABASE max7vista;" >nul 2>&1
-    if errorlevel 1 (
-        echo [WARN] Could not auto-create database -- falling back to SQLite mode
-        set USE_SQLITE=true
-        set DATABASE_URL=
-    ) else (
-        echo [max7] Database 'max7vista' created
-    )
+
+psql postgresql://localhost/postgres -c "CREATE DATABASE max7vista;" >nul 2>&1
+REM errorlevel 1 just means DB already exists — that is fine; proceed.
+
+psql postgresql://localhost/max7vista -c "SELECT 1;" >nul 2>&1
+if errorlevel 1 (
+    echo [WARN] Could not connect to database -- falling back to SQLite mode
+    set USE_SQLITE=true
+    set DATABASE_URL=
 ) else (
-    echo [max7] Database 'max7vista' exists
+    echo [max7] Database 'max7vista' ready
 )
 
 :db_ready

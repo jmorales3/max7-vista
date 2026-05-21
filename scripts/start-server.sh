@@ -47,7 +47,9 @@ log "pnpm $(pnpm --version) ✓"
 #
 USE_SQLITE=false
 
-if [ -n "$DATABASE_URL" ]; then
+# Use ${DATABASE_URL:-} (default-empty) so that -u (nounset) doesn't abort
+# when DATABASE_URL is unset — which is the default for a fresh install.
+if [ -n "${DATABASE_URL:-}" ]; then
   log "DATABASE_URL found — using PostgreSQL mode"
 elif command -v psql &>/dev/null; then
   warn "DATABASE_URL is not set, but psql is available — attempting to auto-create database"
@@ -61,7 +63,7 @@ elif command -v psql &>/dev/null; then
     psql "$DB_BASE" -c "CREATE DATABASE max7vista;" 2>/dev/null && log "Database created ✓" || {
       warn "Could not auto-create database — falling back to SQLite mode"
       USE_SQLITE=true
-      unset DATABASE_URL
+      unset DATABASE_URL || true
     }
   else
     log "Database 'max7vista' exists ✓"
