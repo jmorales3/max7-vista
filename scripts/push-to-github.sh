@@ -2,8 +2,6 @@
 set -e
 
 TOKEN="${GITHUB_PERSONAL_ACCESS_TOKEN}"
-
-# Trim any accidental whitespace
 TOKEN="$(echo -n "$TOKEN" | tr -d '[:space:]')"
 
 if [ -z "$TOKEN" ]; then
@@ -11,7 +9,6 @@ if [ -z "$TOKEN" ]; then
   exit 1
 fi
 
-# Verify the token works before attempting a push
 echo "Verifying token..."
 HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
   -H "Authorization: Bearer $TOKEN" \
@@ -19,13 +16,12 @@ HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
   https://api.github.com/user)
 
 if [ "$HTTP_STATUS" != "200" ]; then
-  echo "ERROR: Token check failed (HTTP $HTTP_STATUS). The token may be expired or missing scopes."
+  echo "ERROR: Token check failed (HTTP $HTTP_STATUS)."
   exit 1
 fi
 
 echo "Token OK."
 
-# Use git credential helper so the token never has to be URL-encoded
 git config --global credential.helper \
   '!f() { echo username=x-access-token; echo "password='"$TOKEN"'"; }; f'
 
@@ -40,13 +36,21 @@ fi
 echo "Pushing main branch..."
 git push -u origin main
 
-echo "Tagging v1.0.0..."
-git tag v1.0.0 2>/dev/null || echo "Tag v1.0.0 already exists, skipping"
-
-echo "Pushing tag..."
-git push origin v1.0.0
+# Only push the tag if it hasn't been pushed yet
+if ! git ls-remote --tags origin v1.0.0 | grep -q v1.0.0; then
+  echo "Pushing tag v1.0.0..."
+  git tag v1.0.0 2>/dev/null || true
+  git push origin v1.0.0
+else
+  echo "Tag v1.0.0 already on remote — skipping tag push."
+  echo "To trigger a new release build, delete the old tag and re-push:"
+  echo "  git push origin :refs/tags/v1.0.0"
+  echo "  git tag -d v1.0.0"
+  echo "  git tag v1.0.0"
+  echo "  git push origin v1.0.0"
+fi
 
 echo ""
-echo "All done!"
+echo "Done!"
 echo "Track build : https://github.com/jmorales3/max7-vista/actions"
 echo "Download    : https://github.com/jmorales3/max7-vista/releases"

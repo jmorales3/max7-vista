@@ -106,6 +106,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-
 
+      - name: Enable Windows platform binaries
+        shell: python
+        run: |
+          import re
+          content = open('pnpm-workspace.yaml', encoding='utf-8').read()
+          # Remove overrides that exclude Win32 optional binaries (rollup, esbuild, lightningcss, tailwind oxide)
+          content = re.sub(r'[ \t]+"[^"]*win32[^"]*": "-"\r?\n', '', content)
+          content = re.sub(r'[ \t]+"[^"]*Win32[^"]*": "-"\r?\n', '', content)
+          # Allow electron to run its install script (pnpm v10 blocks it by default)
+          content = content.replace('onlyBuiltDependencies:', 'onlyBuiltDependencies:\n  - electron')
+          open('pnpm-workspace.yaml', 'w', encoding='utf-8').write(content)
+          print('pnpm-workspace.yaml patched for Windows build')
+
       - name: Install dependencies
         run: pnpm install
 
