@@ -5,6 +5,9 @@ REM Run this from the root of the repository.
 title Max7 Vista Server
 setlocal EnableDelayedExpansion
 
+REM ── Defaults (set early so they are available to all build steps) ───────────
+if not defined PORT set PORT=8080
+
 echo.
 echo ============================================
 echo  Max7 Vista -- LAN Server Setup (Windows)
@@ -110,8 +113,6 @@ if "%USE_SQLITE%"=="true" (
 
 REM ── 8. Detect LAN IP ───────────────────────────
 for /f "tokens=*" %%i in ('node -e "const os=require('os');const nets=os.networkInterfaces();for(const ifaces of Object.values(nets)){for(const iface of (ifaces??[])){if(iface.family==='IPv4'&&!iface.internal){process.stdout.write(iface.address);process.exit(0)}}}"') do set LAN_IP=%%i
-
-if not defined PORT set PORT=8080
 
 echo.
 if "%USE_SQLITE%"=="true" (

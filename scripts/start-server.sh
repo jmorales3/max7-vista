@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Max7 Vista — Self-Hosted LAN Server Startup Script
 # Run this from the root of the repository on macOS or Linux.
-set -e
+set -euo pipefail
 
 BOLD="\033[1m"
 GREEN="\033[0;32m"
@@ -74,7 +74,7 @@ fi
 
 # ── 4. Install dependencies ──────────────────────
 log "Installing dependencies..."
-pnpm install --frozen-lockfile 2>&1 | tail -5
+pnpm install --frozen-lockfile
 
 # ── 5. Database schema ───────────────────────────
 if [ "$USE_SQLITE" = "false" ]; then

@@ -6,7 +6,7 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack, router } from "expo-router";
+import { Stack, router, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -30,6 +30,7 @@ const queryClient = new QueryClient({
 function RootLayoutNav() {
   const { serverUrl, isLoading: serverLoading } = useServer();
   const { user, isLoading: authLoading } = useAuth();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (serverLoading) return;
@@ -37,13 +38,17 @@ function RootLayoutNav() {
       router.replace("/server-setup");
       return;
     }
+    // Allow the user to stay on the server-setup screen when editing.
+    // Without this guard the effect would redirect them back to tabs
+    // the moment the effect re-runs while they are on that screen.
+    if (pathname === "/server-setup") return;
     if (authLoading) return;
     if (user) {
       router.replace("/(tabs)");
     } else {
       router.replace("/login");
     }
-  }, [serverUrl, serverLoading, user, authLoading]);
+  }, [serverUrl, serverLoading, user, authLoading, pathname]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
