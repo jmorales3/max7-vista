@@ -40,8 +40,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-
 
+      - name: Enable macOS platform binaries
+        run: |
+          python3 - <<'EOF'
+          import re
+          content = open('pnpm-workspace.yaml', encoding='utf-8').read()
+          content = re.sub(r'[ \t]+"[^"]*darwin[^"]*": "-"\r?\n', '', content)
+          content = content.replace('onlyBuiltDependencies:', 'onlyBuiltDependencies:\n  - electron')
+          open('pnpm-workspace.yaml', 'w', encoding='utf-8').write(content)
+          print('pnpm-workspace.yaml patched for macOS build')
+          EOF
+
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
 
       - name: Set version and publish coordinates from tag and repo
         shell: bash
@@ -120,7 +131,7 @@ jobs:
           print('pnpm-workspace.yaml patched for Windows build')
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
 
       - name: Set version and publish coordinates from tag and repo
         shell: bash

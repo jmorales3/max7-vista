@@ -51,7 +51,7 @@ jobs:
           print('pnpm-workspace.yaml patched for Windows build')
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
 
       - name: Build Windows installer
         run: pnpm --filter @workspace/electron-app run package:win
