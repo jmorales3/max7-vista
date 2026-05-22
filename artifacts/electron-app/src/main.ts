@@ -105,11 +105,19 @@ async function startApiServer(): Promise<void> {
     if (!NodeModule.globalPaths.includes(p)) NodeModule.globalPaths.unshift(p);
   }
 
-  // Use a file:// URL so dynamic import works correctly on Windows paths.
+  // Use a file:// URL so dynamic import works correctly on Windows paths
+  // (handles spaces and special characters in "Program Files", etc.).
   const serverUrl = pathToFileURL(serverEntry).href;
 
+  // Wrap in new Function() to prevent TypeScript's CommonJS compiler from
+  // transforming `import(url)` into `require(url)`. require() cannot handle
+  // file:// URLs or load .mjs ES-module files — only the native import() can.
+  const nativeImport = new Function("url", "return import(url)") as (
+    url: string,
+  ) => Promise<unknown>;
+
   try {
-    await import(serverUrl);
+    await nativeImport(serverUrl);
     console.log("[api-server] Server started in-process on port", API_PORT);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
