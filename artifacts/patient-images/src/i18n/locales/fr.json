@@ -244,6 +244,7 @@
     "dirIndexing": "Indexation du Répertoire",
     "dirIndexingDesc": "Analysez le répertoire de stockage pour indexer les fichiers hérités ou récupérer les images désynchronisées.",
     "scanLegacy": "Analyser le Répertoire Hérité",
+    "scanLegacyDesc": "Parcourt l'intégralité du répertoire de stockage et enregistre dans la base de données les fichiers image qui n'y figurent pas encore. Pour chaque nouveau fichier, l'ID patient est déduit du nom du dossier (ex. {storageRoot}/42/2024-03-15/photo.jpg → patient 42, date 2024-03-15). Les images dont le dossier ne correspond à aucun patient connu sont marquées Non assignées et peuvent être liées manuellement depuis la Galerie. Les fichiers déjà enregistrés sont ignorés. À utiliser après avoir copié manuellement des images dans le répertoire de stockage ou après avoir restauré une sauvegarde.",
     "lastScan": "Dernière analyse",
     "neverScanned": "Jamais",
     "runScan": "Lancer l'Analyse Maintenant",
@@ -300,7 +301,7 @@
     },
     "settings": {
       "heading": "Paramètres et Stockage",
-      "body": "Configurez le répertoire de stockage racine pour les images patients. Dans la version bureau (Electron), un explorateur de dossiers est disponible. Lancez une analyse de répertoire pour indexer les bibliothèques d'images héritées déjà sur disque."
+      "body": "Configurez le répertoire de stockage racine pour les images patients. Dans la version bureau (Electron), un explorateur de dossiers est disponible. La section Indexation du Répertoire permet d'analyser le dossier de stockage pour enregistrer les images présentes sur disque mais pas encore dans la base de données — utile après avoir copié des fichiers manuellement ou restauré une sauvegarde. L'analyse déduit le patient à partir de la structure des dossiers ({patientId}/{date}/image.jpg). Les images ne pouvant être associées à aucun patient sont marquées Non assignées et peuvent être liées manuellement depuis la Galerie. Les fichiers déjà enregistrés sont ignorés."
     },
     "roles": {
       "heading": "Rôles Utilisateur",

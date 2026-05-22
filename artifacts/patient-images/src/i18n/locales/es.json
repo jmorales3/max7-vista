@@ -244,6 +244,7 @@
     "dirIndexing": "Indexación de Directorio",
     "dirIndexingDesc": "Escanee el directorio de almacenamiento para indexar archivos heredados o recuperar imágenes desincronizadas.",
     "scanLegacy": "Escanear Directorio Heredado",
+    "scanLegacyDesc": "Recorre todo el directorio de almacenamiento y registra en la base de datos los archivos de imagen que aún no estén indexados. Para cada archivo nuevo, el ID del paciente se infiere del nombre de la carpeta (ej. {storageRoot}/42/2024-03-15/foto.jpg → paciente 42, fecha 2024-03-15). Las imágenes cuya carpeta no coincida con ningún paciente conocido se marcan como No asignadas y pueden vincularse manualmente desde la Galería. Los archivos ya registrados se omiten. Úselo tras copiar imágenes manualmente al directorio de almacenamiento o tras restaurar una copia de seguridad.",
     "lastScan": "Último escaneo",
     "neverScanned": "Nunca",
     "runScan": "Ejecutar Escaneo Ahora",
@@ -300,7 +301,7 @@
     },
     "settings": {
       "heading": "Configuración y Almacenamiento",
-      "body": "Configure el directorio raíz de almacenamiento para las imágenes de pacientes. En la versión de escritorio (Electron), hay disponible un explorador de carpetas. Ejecute un escaneo de directorio para indexar bibliotecas de imágenes heredadas ya en disco."
+      "body": "Configure el directorio raíz de almacenamiento para las imágenes de pacientes. En la versión de escritorio (Electron), hay disponible un explorador de carpetas. La sección Indexación de Directorio permite escanear la carpeta de almacenamiento para registrar imágenes que estén en disco pero aún no en la base de datos — útil tras copiar archivos manualmente o restaurar una copia de seguridad. El escaneo infiere el paciente a partir de la estructura de carpetas ({pacienteId}/{fecha}/imagen.jpg). Las imágenes que no puedan asociarse a ningún paciente se marcan como No asignadas y pueden vincularse manualmente desde la Galería. Los archivos ya registrados se omiten."
     },
     "roles": {
       "heading": "Roles de Usuario",

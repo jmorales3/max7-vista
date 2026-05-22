@@ -288,6 +288,9 @@ export default function Settings() {
           <CardDescription>{t("settings.dirIndexingDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
+          <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+            {t("settings.scanLegacyDesc")}
+          </p>
           <div className="bg-muted/50 p-4 rounded-lg border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h4 className="font-medium">{t("settings.scanLegacy")}</h4>

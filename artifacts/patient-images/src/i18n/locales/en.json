@@ -244,6 +244,7 @@
     "dirIndexing": "Directory Indexing",
     "dirIndexingDesc": "Scan the storage directory to index legacy files or recover out-of-sync images.",
     "scanLegacy": "Scan Legacy Directory",
+    "scanLegacyDesc": "Walks the entire storage directory and registers any image files not yet in the database. For each new file the patient ID is inferred from the folder name (e.g. {storageRoot}/42/2024-03-15/photo.jpg → patient 42, date 2024-03-15). Images whose folder does not match a known patient are marked as Unassigned and can be linked manually from the Gallery. Files already in the database are skipped. Use this after manually copying images into the storage folder or after restoring a backup.",
     "lastScan": "Last scan",
     "neverScanned": "Never",
     "runScan": "Run Scan Now",
@@ -300,7 +301,7 @@
     },
     "settings": {
       "heading": "Settings & Storage",
-      "body": "Configure the root storage directory for patient images. In the desktop (Electron) version, a folder browser is available. Run a directory scan to index legacy image libraries already on disk."
+      "body": "Configure the root storage directory for patient images. In the desktop (Electron) version, a folder browser is available. The Directory Indexing section lets you scan the storage folder to register images that are on disk but not yet in the database — useful after manually copying files or restoring a backup. The scan infers the patient from the folder structure ({patientId}/{date}/image.jpg). Images that cannot be matched to a patient are marked Unassigned and can be linked manually from the Gallery. Files already in the database are skipped."
     },
     "roles": {
       "heading": "User Roles",

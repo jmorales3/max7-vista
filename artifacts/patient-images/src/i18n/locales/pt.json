@@ -244,6 +244,7 @@
     "dirIndexing": "Indexação de Diretório",
     "dirIndexingDesc": "Escaneie o diretório de armazenamento para indexar arquivos legados ou recuperar imagens fora de sincronia.",
     "scanLegacy": "Escanear Diretório Legado",
+    "scanLegacyDesc": "Percorre todo o diretório de armazenamento e registra no banco de dados os arquivos de imagem que ainda não estão indexados. Para cada novo arquivo, o ID do paciente é inferido pelo nome da pasta (ex. {storageRoot}/42/2024-03-15/foto.jpg → paciente 42, data 2024-03-15). Imagens cuja pasta não corresponda a nenhum paciente conhecido são marcadas como Não atribuídas e podem ser vinculadas manualmente pela Galeria. Arquivos já registrados são ignorados. Use após copiar imagens manualmente para o diretório de armazenamento ou após restaurar um backup.",
     "lastScan": "Último escaneamento",
     "neverScanned": "Nunca",
     "runScan": "Executar Escaneamento Agora",
@@ -300,7 +301,7 @@
     },
     "settings": {
       "heading": "Configurações e Armazenamento",
-      "body": "Configure o diretório raiz de armazenamento para imagens de pacientes. Na versão desktop (Electron), um navegador de pastas está disponível. Execute um escaneamento de diretório para indexar bibliotecas de imagens legadas já no disco."
+      "body": "Configure o diretório raiz de armazenamento para imagens de pacientes. Na versão desktop (Electron), um navegador de pastas está disponível. A seção Indexação de Diretório permite escanear a pasta de armazenamento para registrar imagens que estão no disco mas ainda não estão no banco de dados — útil após copiar arquivos manualmente ou restaurar um backup. O escaneamento infere o paciente pela estrutura de pastas ({pacienteId}/{data}/imagem.jpg). Imagens que não puderem ser associadas a nenhum paciente são marcadas como Não atribuídas e podem ser vinculadas manualmente pela Galeria. Arquivos já registrados são ignorados."
     },
     "roles": {
       "heading": "Funções de Usuário",
