@@ -62,6 +62,13 @@
         "filter": [
           "**/*"
         ]
+      },
+      {
+        "from": "node_modules/better-sqlite3",
+        "to": "api-server/node_modules/better-sqlite3",
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "mac": {
