@@ -11,6 +11,7 @@ import chatRouter from "./chat";
 import adminRouter from "./admin";
 import auditRouter from "./audit";
 import importRouter from "./import";
+import profileRouter from "./profile";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(chatRouter);
 router.use(adminRouter);
 router.use(auditRouter);
 router.use(importRouter);
+router.use(profileRouter);
 
 export default router;

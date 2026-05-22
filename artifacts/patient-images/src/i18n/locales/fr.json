@@ -253,7 +253,17 @@
     "scanCompleteDesc": "{{scanned}} fichiers analysés. {{indexed}} nouvelles images indexées.",
     "scanFailed": "Échec de l'analyse",
     "settingsSaved": "Paramètres enregistrés avec succès",
-    "saveFailed": "Échec de l'enregistrement"
+    "saveFailed": "Échec de l'enregistrement",
+    "myAccount": "Mon Compte",
+    "myAccountDesc": "Mettez à jour votre nom d'utilisateur ou mot de passe. Votre mot de passe actuel est toujours requis.",
+    "currentPassword": "Mot de passe actuel",
+    "newUsername": "Nouveau nom d'utilisateur",
+    "newPassword": "Nouveau mot de passe",
+    "confirmPassword": "Confirmer le nouveau mot de passe",
+    "passwordsDoNotMatch": "Les mots de passe ne correspondent pas",
+    "credentialsUpdated": "Identifiants mis à jour avec succès",
+    "credentialsFailed": "Échec de la mise à jour des identifiants",
+    "noChanges": "Rien à mettre à jour — saisissez un nouveau nom d'utilisateur, un nouveau mot de passe ou les deux"
   },
   "manual": {
     "title": "Manuel d'Instructions",

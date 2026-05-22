@@ -253,7 +253,17 @@
     "scanCompleteDesc": "Scanned {{scanned}} files. Indexed {{indexed}} new images.",
     "scanFailed": "Scan failed",
     "settingsSaved": "Settings saved successfully",
-    "saveFailed": "Save failed"
+    "saveFailed": "Save failed",
+    "myAccount": "My Account",
+    "myAccountDesc": "Update your username or password. Your current password is always required.",
+    "currentPassword": "Current Password",
+    "newUsername": "New Username",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm New Password",
+    "passwordsDoNotMatch": "Passwords do not match",
+    "credentialsUpdated": "Credentials updated successfully",
+    "credentialsFailed": "Failed to update credentials",
+    "noChanges": "Nothing to update — enter a new username, new password, or both"
   },
   "manual": {
     "title": "Instruction Manual",

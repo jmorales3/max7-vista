@@ -253,7 +253,17 @@
     "scanCompleteDesc": "{{scanned}} arquivos escaneados. {{indexed}} novas imagens indexadas.",
     "scanFailed": "Falha no escaneamento",
     "settingsSaved": "Configurações salvas com sucesso",
-    "saveFailed": "Falha ao salvar"
+    "saveFailed": "Falha ao salvar",
+    "myAccount": "Minha Conta",
+    "myAccountDesc": "Atualize seu nome de usuário ou senha. Sua senha atual é sempre necessária.",
+    "currentPassword": "Senha atual",
+    "newUsername": "Novo nome de usuário",
+    "newPassword": "Nova senha",
+    "confirmPassword": "Confirmar nova senha",
+    "passwordsDoNotMatch": "As senhas não coincidem",
+    "credentialsUpdated": "Credenciais atualizadas com sucesso",
+    "credentialsFailed": "Falha ao atualizar as credenciais",
+    "noChanges": "Nada a atualizar — informe um novo usuário, nova senha ou ambos"
   },
   "manual": {
     "title": "Manual de Instruções",

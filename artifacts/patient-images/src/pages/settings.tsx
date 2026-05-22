@@ -16,10 +16,10 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   RefreshCw, Save, HardDrive, Database, Users, ImageIcon,
-  AlertCircle, Tag, Plus, X, ClipboardList,
+  AlertCircle, Tag, Plus, X, ClipboardList, KeyRound,
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -58,6 +58,47 @@ export default function Settings() {
   const { user } = useAuth();
   const [storageDirectory, setStorageDirectory] = useState("");
   const [newTagName, setNewTagName] = useState("");
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newUsername, setNewUsername] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const updateCredentials = useMutation({
+    mutationFn: async () => {
+      if (newPassword && newPassword !== confirmPassword) {
+        throw new Error(t("settings.passwordsDoNotMatch"));
+      }
+      if (!newUsername && !newPassword) {
+        throw new Error(t("settings.noChanges"));
+      }
+      const res = await fetch("/api/users/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          currentPassword,
+          ...(newUsername ? { newUsername } : {}),
+          ...(newPassword ? { newPassword } : {}),
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? t("settings.credentialsFailed"));
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: t("settings.credentialsUpdated") });
+      setCurrentPassword("");
+      setNewUsername("");
+      setNewPassword("");
+      setConfirmPassword("");
+    },
+    onError: (e: Error) => {
+      toast({ variant: "destructive", title: e.message });
+    },
+  });
 
   const isAdmin = user?.role === "superadmin" || user?.role === "admin";
 
@@ -170,6 +211,73 @@ export default function Settings() {
         <h1 className="text-3xl font-bold tracking-tight text-primary">{t("settings.title")}</h1>
         <p className="text-muted-foreground">{t("settings.subtitle")}</p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <KeyRound className="h-5 w-5" />
+            {t("settings.myAccount")}
+          </CardTitle>
+          <CardDescription>{t("settings.myAccountDesc")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="currentPassword">{t("settings.currentPassword")} *</Label>
+            <Input
+              id="currentPassword"
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              autoComplete="current-password"
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="newUsername">{t("settings.newUsername")}</Label>
+              <Input
+                id="newUsername"
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.target.value)}
+                autoComplete="username"
+                placeholder={user?.username}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">{t("settings.newPassword")}</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
+          </div>
+          {newPassword && (
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">{t("settings.confirmPassword")}</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
+          )}
+        </CardContent>
+        <CardFooter className="border-t pt-6">
+          <Button
+            onClick={() => updateCredentials.mutate()}
+            disabled={!currentPassword || updateCredentials.isPending}
+          >
+            {updateCredentials.isPending
+              ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+              : <Save className="mr-2 h-4 w-4" />}
+            {t("settings.saveSettings")}
+          </Button>
+        </CardFooter>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
