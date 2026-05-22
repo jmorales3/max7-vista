@@ -15,6 +15,47 @@ function buildMobileSessionCookie(sessionId: string, secret: string): string {
 
 const router: IRouter = Router();
 
+router.get("/auth/needs-setup", async (_req, res) => {
+  try {
+    const users = await db.select({ id: usersTable.id }).from(usersTable).limit(1);
+    return res.json({ needsSetup: users.length === 0 });
+  } catch {
+    return res.json({ needsSetup: false });
+  }
+});
+
+router.post("/auth/setup", async (req, res) => {
+  try {
+    const users = await db.select({ id: usersTable.id }).from(usersTable).limit(1);
+    if (users.length > 0) {
+      return res.status(403).json({ error: "Setup already completed" });
+    }
+
+    const { username, password } = req.body as { username?: string; password?: string };
+    if (!username || !password) {
+      return res.status(400).json({ error: "Username and password are required" });
+    }
+    if (username.trim().length < 3) {
+      return res.status(400).json({ error: "Username must be at least 3 characters" });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters" });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    await db.insert(usersTable).values({
+      username: username.trim().toLowerCase(),
+      passwordHash,
+      role: "superadmin",
+      isActive: true,
+    });
+
+    return res.status(201).json({ message: "Administrator account created" });
+  } catch {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.post("/auth/register", async (req, res) => {
   const { username, password } = req.body as { username?: string; password?: string };
 

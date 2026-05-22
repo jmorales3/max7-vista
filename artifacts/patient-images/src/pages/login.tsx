@@ -1,57 +1,89 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import { register } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Lock, Clock } from "lucide-react";
+import { Loader2, Lock, Clock, ShieldCheck } from "lucide-react";
 import { LanguageSelector } from "@/components/LanguageSelector";
+
+type Mode = "login" | "register" | "setup";
 
 export default function LoginPage() {
   const { t } = useTranslation();
   const { login } = useAuth();
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [mode, setMode] = useState<Mode>("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkingSetup, setCheckingSetup] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/auth/needs-setup", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data: { needsSetup: boolean }) => {
+        if (data.needsSetup) setMode("setup");
+      })
+      .catch(() => {})
+      .finally(() => setCheckingSetup(false));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setSuccess("");
-    setLoading(true);
 
+    if (mode === "setup" && password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    setLoading(true);
     try {
       if (mode === "login") {
         await login(username.trim(), password);
-      } else {
+      } else if (mode === "register") {
         await register(username.trim(), password);
         setSuccess("Account created! An administrator will review your request before you can sign in.");
         setMode("login");
         setPassword("");
+      } else if (mode === "setup") {
+        const res = await fetch("/api/auth/setup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ username: username.trim(), password }),
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.error ?? "Setup failed");
+        setSuccess("Administrator account created! You can now sign in.");
+        setMode("login");
+        setPassword("");
+        setConfirmPassword("");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : mode === "login" ? t("auth.loginFailed") : "Registration failed");
+      setError(err instanceof Error ? err.message : mode === "login" ? t("auth.loginFailed") : "Failed");
     } finally {
       setLoading(false);
     }
   }
 
-  function switchMode() {
-    setMode((m) => (m === "login" ? "register" : "login"));
-    setError("");
-    setSuccess("");
+  if (checkingSetup) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "linear-gradient(135deg, #0a1628 0%, #0d2145 40%, #0a2d5e 70%, #061830 100%)" }}>
+        <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+      </div>
+    );
   }
 
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center p-4"
-      style={{
-        background: "linear-gradient(135deg, #0a1628 0%, #0d2145 40%, #0a2d5e 70%, #061830 100%)",
-      }}
+      style={{ background: "linear-gradient(135deg, #0a1628 0%, #0d2145 40%, #0a2d5e 70%, #061830 100%)" }}
     >
       <div className="absolute top-4 right-4">
         <LanguageSelector variant="dark" />
@@ -77,15 +109,24 @@ export default function LoginPage() {
           }}
         >
           <h2 className="text-lg font-semibold text-center text-white">
-            {mode === "login" ? t("auth.welcome") : "Request Access"}
+            {mode === "login" && t("auth.welcome")}
+            {mode === "register" && "Request Access"}
+            {mode === "setup" && "Create Administrator Account"}
           </h2>
+
+          {mode === "setup" && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-500/15 border border-blue-400/30 text-blue-200 text-xs">
+              <ShieldCheck className="h-3.5 w-3.5 mt-0.5 shrink-0 text-blue-400" />
+              <span>
+                No accounts exist yet. Create your administrator account to get started. You will have full superadmin access.
+              </span>
+            </div>
+          )}
 
           {mode === "register" && (
             <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-200 text-xs">
               <Clock className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-              <span>
-                New accounts require admin approval before you can sign in. You will be notified when access is granted.
-              </span>
+              <span>New accounts require admin approval before you can sign in.</span>
             </div>
           )}
 
@@ -114,12 +155,29 @@ export default function LoginPage() {
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={mode === "register" ? "Minimum 6 characters" : t("auth.passwordPlaceholder")}
+                placeholder={mode === "login" ? t("auth.passwordPlaceholder") : "Minimum 6 characters"}
                 disabled={loading}
                 required
                 className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus-visible:ring-blue-400"
               />
             </div>
+
+            {mode === "setup" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="confirmPassword" className="text-blue-100">Confirm Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter your password"
+                  disabled={loading}
+                  required
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus-visible:ring-blue-400"
+                />
+              </div>
+            )}
 
             {error && (
               <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/20 border border-red-500/30 text-red-200 text-sm">
@@ -130,7 +188,7 @@ export default function LoginPage() {
 
             {success && (
               <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/20 border border-green-500/30 text-green-200 text-sm">
-                <Clock className="h-4 w-4 shrink-0" />
+                <ShieldCheck className="h-4 w-4 shrink-0" />
                 {success}
               </div>
             )}
@@ -140,22 +198,24 @@ export default function LoginPage() {
               className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold"
               disabled={loading || !username || !password}
             >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              {mode === "login" ? t("auth.loginButton") : "Request Access"}
+              {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              {mode === "login" && t("auth.loginButton")}
+              {mode === "register" && "Request Access"}
+              {mode === "setup" && "Create Account & Get Started"}
             </Button>
           </form>
 
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={switchMode}
-              className="text-xs text-blue-300/60 hover:text-blue-200 transition-colors"
-            >
-              {mode === "login"
-                ? "Don't have an account? Request access"
-                : "Already have an account? Sign in"}
-            </button>
-          </div>
+          {mode !== "setup" && (
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); setSuccess(""); }}
+                className="text-xs text-blue-300/60 hover:text-blue-200 transition-colors"
+              >
+                {mode === "login" ? "Don't have an account? Request access" : "Already have an account? Sign in"}
+              </button>
+            </div>
+          )}
         </div>
 
         <p className="text-center text-xs text-blue-300/50">
