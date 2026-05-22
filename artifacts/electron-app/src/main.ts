@@ -77,8 +77,8 @@ function getLanAddresses(): string[] {
 
 async function startApiServer(): Promise<void> {
   const serverEntry = IS_DEV
-    ? path.resolve(__dirname, "../../api-server/dist/index.mjs")
-    : path.join(process.resourcesPath, "api-server", "index.mjs");
+    ? path.resolve(__dirname, "../../api-server/dist/index.js")
+    : path.join(process.resourcesPath, "api-server", "index.js");
 
   const dbPath = getDbPath();
   const uploadsDir = getUploadsDir();
