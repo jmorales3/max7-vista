@@ -22,6 +22,12 @@ Be concise, helpful, and professional. If a user asks something unrelated to Max
 Answer in the same language the user uses.`;
 
 router.post("/api/chat", async (req, res) => {
+  if (!openai) {
+    return res
+      .status(503)
+      .json({ error: "AI chat is not available in this deployment." });
+  }
+
   try {
     const { messages } = req.body as {
       messages: Array<{ role: "user" | "assistant"; content: string }>;
