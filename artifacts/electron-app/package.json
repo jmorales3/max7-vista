@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "better-sqlite3": "^11.10.0",
+    "bindings": "^1.5.0",
     "electron-updater": "^6.8.3"
   },
   "devDependencies": {
@@ -63,6 +64,16 @@
           "**/*"
         ]
       },
+      {
+        "from": "node_modules/better-sqlite3",
+        "to": "api-server/node_modules/better-sqlite3",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "node_modules/bindings",
+        "to": "api-server/node_modules/bindings",
+        "filter": ["**/*"]
+      }
     ],
     "mac": {
       "target": [
