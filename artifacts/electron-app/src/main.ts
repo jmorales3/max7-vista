@@ -290,6 +290,25 @@ ipcMain.handle("updater:install-now", () => {
 app.whenReady().then(async () => {
   createSplashWindow();
   await startApiServer();
+
+  // Show first-run credentials dialog if the server seeded a default admin
+  const credFile = path.join(app.getPath("userData"), "first-run-credentials.json");
+  if (fs.existsSync(credFile)) {
+    try {
+      const creds = JSON.parse(fs.readFileSync(credFile, "utf-8")) as { username: string; password: string };
+      fs.unlinkSync(credFile);
+      dialog.showMessageBoxSync({
+        type: "info",
+        title: "First-Time Setup — Default Account Created",
+        message: "A default administrator account was created for you.",
+        detail: `Username: ${creds.username}\nPassword: ${creds.password}\n\nPlease log in and change this password immediately from the Admin panel.`,
+        buttons: ["OK, I'll note these down"],
+      });
+    } catch {
+      // ignore — non-critical
+    }
+  }
+
   createWindow();
 
   if (app.isPackaged) {
