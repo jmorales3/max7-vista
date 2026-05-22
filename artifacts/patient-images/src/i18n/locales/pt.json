@@ -296,7 +296,7 @@
     },
     "bulkImport": {
       "heading": "Importação em Massa de Imagens",
-      "body": "A página de Importação em Massa permite migrar um arquivo de imagens existente para o Max7 Vista em uma única etapa. Selecione um arquivo ZIP cujas subpastas de primeiro nível sejam códigos de pacientes (ex.: 2116/foto1.jpg, 2117/foto2.jpg). Uma pasta raiz envolvente única é detectada e ignorada automaticamente (ex.: foto/2116/foto1.jpg funciona igualmente). Opcionalmente, anexe um arquivo CSV com colunas para ID do paciente, nome e data de nascimento para que os novos pacientes sejam criados com os dados corretos. O importador lê datas de captura dos metadados EXIF quando disponíveis, utilizando o carimbo de data/hora de modificação do arquivo como alternativa. Após a importação, um resumo mostra quantos pacientes foram criados ou encontrados, quantas imagens foram importadas e quais arquivos foram ignorados com o motivo."
+      "body": "A página de Importação em Massa permite migrar um arquivo de imagens existente para o Max7 Vista em uma única etapa. Dois modos estão disponíveis. Enviar ZIP: compacte suas imagens em um ZIP e envie de qualquer dispositivo. Pasta do Servidor: na versão LAN ou desktop, informe o caminho completo da pasta no servidor (ex.: /data/fotos) e o servidor lê as imagens diretamente — sem ZIP. Nos dois modos, as subpastas imediatas devem ter o ID do paciente como nome (ex.: 2116/, 2117/). Uma pasta raiz envolvente única é detectada e ignorada automaticamente. Opcionalmente, anexe um CSV com colunas id, name e dateOfBirth para criar os pacientes com os dados corretos; sem CSV, o nome da pasta é usado como ID e nome. As datas de captura vêm dos metadados EXIF, com a data de modificação do arquivo como alternativa. Após a importação, um resumo exibe pacientes criados, correspondências, imagens importadas e arquivos ignorados com o motivo."
     },
     "settings": {
       "heading": "Configurações e Armazenamento",
@@ -310,6 +310,12 @@
       "heading": "Configuração Multitenant",
       "body": "Cada organização que usa o Max7 Vista opera como um tenant independente. Os dados são completamente isolados entre tenants. Os Superadministradores podem criar e gerenciar tenants, enquanto os Administradores gerenciam os dados e usuários de sua própria organização."
     }
+  },
+  "bulkImport": {
+    "title": "Importação em Massa",
+    "subtitle": "Importe um arquivo de imagens existente para o sistema em uma única etapa.",
+    "tabZip": "Enviar ZIP",
+    "tabFolder": "Pasta do Servidor"
   },
   "chatbot": {
     "title": "Guia Max7 Vista",

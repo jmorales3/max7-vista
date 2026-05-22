@@ -296,7 +296,7 @@
     },
     "bulkImport": {
       "heading": "Import en Masse d'Images",
-      "body": "La page Import en Masse vous permet de migrer une archive d'images existante dans Max7 Vista en une seule étape. Sélectionnez un fichier ZIP dont les sous-dossiers de premier niveau sont des codes patients (ex. 2116/photo1.jpg, 2117/photo2.jpg). Un dossier racine enveloppant unique est détecté et ignoré automatiquement (ex. foto/2116/photo1.jpg fonctionne tout aussi bien). Joignez facultativement un fichier CSV avec des colonnes pour l'ID patient, le nom et la date de naissance afin que les nouveaux patients soient créés avec les bonnes informations. L'importateur lit les dates de capture depuis les métadonnées EXIF lorsqu'elles sont disponibles, en utilisant l'horodatage de modification du fichier comme alternative. Après l'import, un résumé indique combien de patients ont été créés ou retrouvés, combien d'images ont été importées et quels fichiers ont été ignorés avec la raison."
+      "body": "La page Import en Masse vous permet de migrer une archive d'images existante dans Max7 Vista en une seule étape. Deux modes sont disponibles. Téléverser ZIP : compressez vos images dans un ZIP et téléversez-le depuis n'importe quel appareil. Dossier Serveur : sur la version LAN ou bureau, saisissez le chemin complet du dossier sur le serveur (ex. /data/photos) et le serveur lit les images directement — sans ZIP. Dans les deux modes, les sous-dossiers immédiats doivent être nommés avec l'ID patient (ex. 2116/, 2117/). Un dossier racine enveloppant unique est détecté et ignoré automatiquement. Joignez facultativement un CSV avec les colonnes id, name et dateOfBirth pour renseigner les patients ; sans CSV, le nom du dossier sert d'ID et de nom. Les dates de capture proviennent des métadonnées EXIF, avec l'horodatage de modification comme alternative. Après l'import, un résumé affiche les patients créés, les correspondances, les images importées et les fichiers ignorés avec la raison."
     },
     "settings": {
       "heading": "Paramètres et Stockage",
@@ -310,6 +310,12 @@
       "heading": "Configuration Multi-Organisation",
       "body": "Chaque organisation utilisant Max7 Vista fonctionne comme un locataire indépendant. Les données sont entièrement isolées entre les locataires. Les Super Administrateurs peuvent créer et gérer des locataires, tandis que les Administrateurs gèrent les données et utilisateurs de leur propre organisation."
     }
+  },
+  "bulkImport": {
+    "title": "Import en Masse",
+    "subtitle": "Importez une archive d'images existante dans le système en une seule étape.",
+    "tabZip": "Téléverser ZIP",
+    "tabFolder": "Dossier Serveur"
   },
   "chatbot": {
     "title": "Guide Max7 Vista",

@@ -102,6 +102,66 @@ interface ImportSummary {
   errors: Array<{ file: string; reason: string }>;
 }
 
+async function upsertPatient(
+  req: Parameters<Parameters<IRouter["post"]>[1]>[0],
+  patientCode: string,
+  patientMap: Map<string, PatientInfo>,
+  summary: ImportSummary,
+): Promise<{ id: number }> {
+  const [existing] = await db
+    .select({ id: patientsTable.id })
+    .from(patientsTable)
+    .where(eq(patientsTable.patientCode, patientCode));
+
+  if (existing) {
+    summary.patientsMatched++;
+    return existing;
+  }
+
+  const csvInfo = patientMap.get(patientCode);
+  const [created] = await db
+    .insert(patientsTable)
+    .values({
+      patientCode,
+      name: csvInfo?.name ?? patientCode,
+      dateOfBirth: csvInfo?.dateOfBirth ?? null,
+    })
+    .returning({ id: patientsTable.id });
+  summary.patientsCreated++;
+  await logAudit(req, "create", "patient", created.id, JSON.stringify({ patientCode, source: "bulk-import" }));
+  return created;
+}
+
+async function saveImage(
+  patientId: number,
+  fileName: string,
+  buffer: Buffer,
+  capturedAt: Date,
+  storageDir: string,
+): Promise<void> {
+  const dateStr = capturedAt.toISOString().split("T")[0];
+  const subFolder = path.join(storageDir, String(patientId), dateStr);
+  fs.mkdirSync(subFolder, { recursive: true });
+
+  const ext = path.extname(fileName) || ".jpg";
+  const storedName = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}${ext}`;
+  const filePath = path.join(subFolder, storedName);
+  fs.writeFileSync(filePath, buffer);
+
+  const legend = path.basename(fileName, ext).replace(/[_-]+/g, " ").trim();
+
+  await db.insert(imagesTable).values({
+    patientId,
+    filePath,
+    fileName,
+    notes: legend || null,
+    capturedAt,
+    isUnassigned: false,
+  });
+}
+
+// ─── ZIP bulk import ─────────────────────────────────────────────────────────
+
 router.post(
   "/import/bulk",
   importUpload.fields([
@@ -117,10 +177,6 @@ router.post(
       res.status(400).json({ error: "archive file is required" });
       return;
     }
-    if (!patientsFile) {
-      res.status(400).json({ error: "patients CSV file is required" });
-      return;
-    }
 
     const summary: ImportSummary = {
       patientsCreated: 0,
@@ -129,16 +185,9 @@ router.post(
       errors: [],
     };
 
-    const csvText = patientsFile.buffer.toString("utf-8");
-    const patientMap = parseCSV(csvText);
-
-    if (patientMap.size === 0) {
-      res.status(400).json({
-        error:
-          "CSV could not be parsed. Ensure it has an 'id' column plus 'name' and optionally 'dateOfBirth'.",
-      });
-      return;
-    }
+    const patientMap = patientsFile
+      ? parseCSV(patientsFile.buffer.toString("utf-8"))
+      : new Map<string, PatientInfo>();
 
     let zip: AdmZip;
     try {
@@ -152,9 +201,6 @@ router.post(
 
     // Detect whether the ZIP has a single root wrapper folder (e.g. foto/2116/img.jpg)
     // vs. patient folders directly at the root (e.g. 2116/img.jpg).
-    // Strategy: collect all unique top-level folder names from image entries.
-    // If every image entry shares the SAME top-level folder name, that folder is
-    // just a wrapper — peel it off and use the next level as the patient code.
     const topLevelNames = new Set<string>();
     for (const entry of zip.getEntries()) {
       if (entry.isDirectory) continue;
@@ -173,7 +219,7 @@ router.post(
     for (const entry of zip.getEntries()) {
       if (entry.isDirectory) continue;
       const parts = entry.entryName.replace(/\\/g, "/").split("/");
-      if (parts.length < patientDepth + 2) continue; // not deep enough to have a patient folder + file
+      if (parts.length < patientDepth + 2) continue;
       const patientCode = parts[patientDepth];
       const ext = path.extname(parts[parts.length - 1]).toLowerCase();
       if (!IMAGE_EXTENSIONS.has(ext)) continue;
@@ -182,72 +228,19 @@ router.post(
     }
 
     for (const [patientCode, entries] of byPatient) {
-      // Upsert patient
-      let dbPatient: { id: number } | undefined;
-      const [existing] = await db
-        .select({ id: patientsTable.id })
-        .from(patientsTable)
-        .where(eq(patientsTable.patientCode, patientCode));
+      const dbPatient = await upsertPatient(req, patientCode, patientMap, summary);
 
-      if (existing) {
-        dbPatient = existing;
-        summary.patientsMatched++;
-      } else {
-        const csvInfo = patientMap.get(patientCode);
-        const [created] = await db
-          .insert(patientsTable)
-          .values({
-            patientCode,
-            name: csvInfo?.name ?? patientCode,
-            dateOfBirth: csvInfo?.dateOfBirth ?? null,
-          })
-          .returning({ id: patientsTable.id });
-        dbPatient = created;
-        summary.patientsCreated++;
-        await logAudit(
-          req,
-          "create",
-          "patient",
-          created.id,
-          JSON.stringify({ patientCode, source: "bulk-import" }),
-        );
-      }
-
-      // Import each image
       for (const entry of entries) {
         const fileName = path.basename(entry.entryName);
         try {
           const buffer = entry.getData();
-
-          // EXIF date → ZIP mod date → now
           let capturedAt = await extractExifDate(buffer);
           if (!capturedAt) {
             const zipDate = entry.header.time;
             capturedAt =
               zipDate instanceof Date && !isNaN(zipDate.getTime()) ? zipDate : new Date();
           }
-
-          const dateStr = capturedAt.toISOString().split("T")[0];
-          const subFolder = path.join(storageDir, String(dbPatient.id), dateStr);
-          fs.mkdirSync(subFolder, { recursive: true });
-
-          const ext = path.extname(fileName) || ".jpg";
-          const storedName = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}${ext}`;
-          const filePath = path.join(subFolder, storedName);
-          fs.writeFileSync(filePath, buffer);
-
-          // Legend = filename without extension
-          const legend = path.basename(fileName, ext).replace(/[_-]+/g, " ").trim();
-
-          await db.insert(imagesTable).values({
-            patientId: dbPatient.id,
-            filePath,
-            fileName,
-            notes: legend || null,
-            capturedAt,
-            isUnassigned: false,
-          });
-
+          await saveImage(dbPatient.id, fileName, buffer, capturedAt, storageDir);
           summary.imagesImported++;
         } catch (err) {
           summary.errors.push({
@@ -258,18 +251,137 @@ router.post(
       }
     }
 
-    await logAudit(
-      req,
-      "bulk_import",
-      "image",
-      0,
-      JSON.stringify({
-        patientsCreated: summary.patientsCreated,
-        patientsMatched: summary.patientsMatched,
-        imagesImported: summary.imagesImported,
-        errors: summary.errors.length,
-      }),
+    await logAudit(req, "bulk_import", "image", 0, JSON.stringify({
+      patientsCreated: summary.patientsCreated,
+      patientsMatched: summary.patientsMatched,
+      imagesImported: summary.imagesImported,
+      errors: summary.errors.length,
+      source: "zip",
+    }));
+
+    res.json(summary);
+  },
+);
+
+// ─── Server-folder import ─────────────────────────────────────────────────────
+
+function walkImageFiles(dir: string): string[] {
+  const results: string[] = [];
+  let entries: fs.Dirent[];
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return results;
+  }
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      results.push(...walkImageFiles(fullPath));
+    } else if (IMAGE_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) {
+      results.push(fullPath);
+    }
+  }
+  return results;
+}
+
+router.post(
+  "/import/folder",
+  importUpload.fields([{ name: "patients", maxCount: 1 }]),
+  async (req, res): Promise<void> => {
+    const files = req.files as Record<string, Express.Multer.File[]>;
+    const patientsFile = files?.["patients"]?.[0];
+    const folderPath = (req.body as { folderPath?: string }).folderPath?.trim();
+
+    if (!folderPath) {
+      res.status(400).json({ error: "folderPath is required" });
+      return;
+    }
+
+    if (!path.isAbsolute(folderPath)) {
+      res.status(400).json({ error: "folderPath must be an absolute path (starts with /)" });
+      return;
+    }
+
+    try {
+      const stat = fs.statSync(folderPath);
+      if (!stat.isDirectory()) {
+        res.status(400).json({ error: "The path exists but is not a folder" });
+        return;
+      }
+    } catch {
+      res.status(400).json({ error: "Folder not found or not accessible by the server" });
+      return;
+    }
+
+    const summary: ImportSummary = {
+      patientsCreated: 0,
+      patientsMatched: 0,
+      imagesImported: 0,
+      errors: [],
+    };
+
+    const patientMap = patientsFile
+      ? parseCSV(patientsFile.buffer.toString("utf-8"))
+      : new Map<string, PatientInfo>();
+
+    // Walk all image files and get paths relative to folderPath
+    const allImagePaths = walkImageFiles(folderPath);
+    const relPaths = allImagePaths.map((p) =>
+      path.relative(folderPath, p).replace(/\\/g, "/"),
     );
+
+    // Same wrapper detection as ZIP importer:
+    // if every image shares the same top-level folder, peel it off
+    const topLevelNames = new Set<string>();
+    for (const rel of relPaths) {
+      const parts = rel.split("/");
+      if (parts.length >= 2) topLevelNames.add(parts[0]);
+    }
+    const patientDepth = topLevelNames.size === 1 ? 1 : 0;
+
+    // Group by patient code
+    const byPatient = new Map<string, string[]>(); // patientCode → absolute paths
+    for (let i = 0; i < relPaths.length; i++) {
+      const parts = relPaths[i].split("/");
+      if (parts.length < patientDepth + 2) continue;
+      const patientCode = parts[patientDepth];
+      if (!byPatient.has(patientCode)) byPatient.set(patientCode, []);
+      byPatient.get(patientCode)!.push(allImagePaths[i]);
+    }
+
+    const storageDir = await getStorageDirectory();
+
+    for (const [patientCode, filePaths] of byPatient) {
+      const dbPatient = await upsertPatient(req, patientCode, patientMap, summary);
+
+      for (const srcPath of filePaths) {
+        const fileName = path.basename(srcPath);
+        try {
+          const buffer = fs.readFileSync(srcPath);
+          let capturedAt = await extractExifDate(buffer);
+          if (!capturedAt) {
+            const stat = fs.statSync(srcPath);
+            capturedAt = stat.mtime ?? new Date();
+          }
+          await saveImage(dbPatient.id, fileName, buffer, capturedAt, storageDir);
+          summary.imagesImported++;
+        } catch (err) {
+          summary.errors.push({
+            file: srcPath,
+            reason: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+    }
+
+    await logAudit(req, "bulk_import", "image", 0, JSON.stringify({
+      folderPath,
+      patientsCreated: summary.patientsCreated,
+      patientsMatched: summary.patientsMatched,
+      imagesImported: summary.imagesImported,
+      errors: summary.errors.length,
+      source: "folder",
+    }));
 
     res.json(summary);
   },

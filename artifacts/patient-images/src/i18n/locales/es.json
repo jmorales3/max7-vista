@@ -296,7 +296,7 @@
     },
     "bulkImport": {
       "heading": "Importación Masiva de Imágenes",
-      "body": "La página de Importación Masiva le permite migrar un archivo de imágenes existente a Max7 Vista en un solo paso. Seleccione un archivo ZIP cuyas subcarpetas de primer nivel sean códigos de pacientes (por ejemplo, 2116/foto1.jpg, 2117/foto2.jpg). Una carpeta raíz envolvente única se detecta y omite automáticamente (por ejemplo, foto/2116/foto1.jpg funciona igual). Opcionalmente, adjunte un archivo CSV con columnas para el ID del paciente, nombre y fecha de nacimiento para que los nuevos pacientes se creen con los datos correctos. El importador lee las fechas de captura desde los metadatos EXIF cuando están disponibles, recurriendo a la marca de tiempo de modificación del archivo. Tras la importación, un resumen muestra cuántos pacientes fueron creados o coincidieron, cuántas imágenes se importaron y qué archivos se omitieron con el motivo."
+      "body": "La página de Importación Masiva permite migrar un archivo de imágenes existente a Max7 Vista en un solo paso. Hay dos modos disponibles. Subir ZIP: empaquete sus imágenes en un ZIP y súbalo desde cualquier dispositivo. Carpeta del Servidor: en la versión LAN o de escritorio, introduzca la ruta completa de la carpeta en el servidor (ej. /data/fotos) y el servidor lee las imágenes directamente sin necesidad de ZIP. En ambos modos, las subcarpetas inmediatas deben llamarse con el ID del paciente (ej. 2116/, 2117/). Una carpeta raíz envolvente única se detecta y omite automáticamente. Adjunte opcionalmente un CSV con columnas id, name y dateOfBirth para crear los pacientes con los datos correctos; sin CSV, se usa el nombre de carpeta como ID y nombre. Las fechas de captura provienen de los metadatos EXIF, con la fecha de modificación del archivo como alternativa. Tras la importación se muestra un resumen con pacientes creados, coincidencias, imágenes importadas y archivos omitidos."
     },
     "settings": {
       "heading": "Configuración y Almacenamiento",
@@ -310,6 +310,12 @@
       "heading": "Configuración Multiempresa",
       "body": "Cada organización que usa Max7 Vista opera como un inquilino independiente. Los datos están completamente aislados entre inquilinos. Los Superadministradores pueden crear y gestionar inquilinos, mientras que los Administradores gestionan los datos y usuarios de su propia organización."
     }
+  },
+  "bulkImport": {
+    "title": "Importación Masiva",
+    "subtitle": "Importe un archivo de imágenes existente al sistema en un solo paso.",
+    "tabZip": "Subir ZIP",
+    "tabFolder": "Carpeta del Servidor"
   },
   "chatbot": {
     "title": "Guía Max7 Vista",

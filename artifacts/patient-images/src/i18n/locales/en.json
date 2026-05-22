@@ -296,7 +296,7 @@
     },
     "bulkImport": {
       "heading": "Bulk Image Import",
-      "body": "The Bulk Import page lets you migrate an existing image archive into Max7 Vista in one step. Select a ZIP file whose top-level subfolders are patient codes (e.g. 2116/photo1.jpg, 2117/photo2.jpg). A single root wrapper folder is detected and skipped automatically (e.g. foto/2116/photo1.jpg works just as well). Optionally attach a CSV file with columns for patient ID, name, and date of birth so that new patients are created with the correct details. The importer reads capture dates from EXIF metadata when available, falling back to the file's modification timestamp. After import, a summary shows how many patients were created or matched, how many images were imported, and any files that were skipped with the reason why."
+      "body": "The Bulk Import page lets you migrate an existing image archive into Max7 Vista in one step. Two modes are available. Upload ZIP: pack your images into a ZIP file and upload it from any device. Server Folder: on the LAN or desktop version, enter the full server path to the folder containing your images (e.g. /data/photos) and the server reads them directly — no ZIP required. In both modes, the immediate subfolders must be named with the patient ID (e.g. 2116/, 2117/). A single root wrapper folder is detected and skipped automatically. Optionally attach a CSV file with columns id, name, and dateOfBirth to populate patient details; without a CSV, patients are created using the folder name as both ID and name. Capture dates are read from EXIF metadata, falling back to the file modification timestamp. After import, a summary shows patients created, patients matched, images imported, and any files skipped with reasons."
     },
     "settings": {
       "heading": "Settings & Storage",
@@ -310,6 +310,12 @@
       "heading": "Multi-Tenant Setup",
       "body": "Each organization using Max7 Vista operates as an independent tenant. Data is fully isolated between tenants. Super Admins can create and manage tenants, while Admins manage their own organization's data and users."
     }
+  },
+  "bulkImport": {
+    "title": "Bulk Import",
+    "subtitle": "Import an existing image archive into the system in one step.",
+    "tabZip": "Upload ZIP",
+    "tabFolder": "Server Folder"
   },
   "chatbot": {
     "title": "Max7 Vista Guide",
