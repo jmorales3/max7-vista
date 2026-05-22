@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import path from "path";
-import { spawn, ChildProcess } from "child_process";
+import { pathToFileURL } from "url";
 import fs from "fs";
 import os from "os";
 import { autoUpdater } from "electron-updater";
@@ -18,7 +18,6 @@ const IS_DEV = !app.isPackaged;
 
 let mainWindow: BrowserWindow | null = null;
 let splashWindow: BrowserWindow | null = null;
-let apiServerProcess: ChildProcess | null = null;
 
 // ─── Database Path ───────────────────────────────────────────────────────────
 
@@ -73,8 +72,10 @@ function getLanAddresses(): string[] {
 }
 
 // ─── API Server Lifecycle ────────────────────────────────────────────────────
+// The API server runs inside Electron's own Node.js process via dynamic import.
+// No external "node" binary is required — Electron IS Node.js.
 
-function startApiServer(): void {
+async function startApiServer(): Promise<void> {
   const serverEntry = IS_DEV
     ? path.resolve(__dirname, "../../api-server/dist/index.mjs")
     : path.join(process.resourcesPath, "api-server", "index.mjs");
@@ -83,36 +84,46 @@ function startApiServer(): void {
   const uploadsDir = getUploadsDir();
   const nodeModulesPath = getNodeModulesPath();
 
-  apiServerProcess = spawn("node", ["--enable-source-maps", serverEntry], {
-    env: {
-      ...process.env,
-      PORT: String(API_PORT),
-      NODE_ENV: "production",
-      ELECTRON_MODE: "true",
-      DATABASE_TYPE: "sqlite",
-      DATABASE_PATH: dbPath,
-      STORAGE_DIRECTORY: uploadsDir,
-      NODE_PATH: nodeModulesPath,
-    },
-    stdio: "pipe",
+  // Set env vars on the shared process before importing the server bundle.
+  Object.assign(process.env, {
+    PORT: String(API_PORT),
+    NODE_ENV: "production",
+    ELECTRON_MODE: "true",
+    DATABASE_TYPE: "sqlite",
+    DATABASE_PATH: dbPath,
+    STORAGE_DIRECTORY: uploadsDir,
+    NODE_PATH: nodeModulesPath,
   });
 
-  apiServerProcess.stdout?.on("data", (d) =>
-    console.log("[api-server]", d.toString().trim()),
-  );
-  apiServerProcess.stderr?.on("data", (d) =>
-    console.error("[api-server]", d.toString().trim()),
-  );
-  apiServerProcess.on("exit", (code) =>
-    console.log(`[api-server] exited with code ${code}`),
-  );
+  // Inject the electron-app node_modules into Module.globalPaths so that
+  // require('better-sqlite3') — called via createRequire inside the ESM bundle —
+  // finds the Electron-ABI-compiled native module rather than failing with ENOENT.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const NodeModule = require("module") as { globalPaths: string[] };
+  const extraPaths = nodeModulesPath.split(path.delimiter).filter(Boolean);
+  for (const p of [...extraPaths].reverse()) {
+    if (!NodeModule.globalPaths.includes(p)) NodeModule.globalPaths.unshift(p);
+  }
+
+  // Use a file:// URL so dynamic import works correctly on Windows paths.
+  const serverUrl = pathToFileURL(serverEntry).href;
+
+  try {
+    await import(serverUrl);
+    console.log("[api-server] Server started in-process on port", API_PORT);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[api-server] Failed to start:", msg);
+    dialog.showErrorBox(
+      "Server Error",
+      `The embedded API server failed to start:\n\n${msg}\n\nThe application will exit.`,
+    );
+    app.quit();
+  }
 }
 
 function stopApiServer(): void {
-  if (apiServerProcess) {
-    apiServerProcess.kill();
-    apiServerProcess = null;
-  }
+  // Server runs in-process; it stops automatically when Electron exits.
 }
 
 // ─── Splash Window ───────────────────────────────────────────────────────────
@@ -268,9 +279,9 @@ ipcMain.handle("updater:install-now", () => {
 
 // ─── App Lifecycle ────────────────────────────────────────────────────────────
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   createSplashWindow();
-  startApiServer();
+  await startApiServer();
   createWindow();
 
   if (app.isPackaged) {
