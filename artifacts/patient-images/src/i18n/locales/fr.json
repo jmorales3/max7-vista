@@ -10,6 +10,7 @@
     "presentations": "Présentations",
     "settings": "Paramètres",
     "manual": "Manuel",
+    "bulkImport": "Import en Masse",
     "menu": "Menu"
   },
   "common": {
@@ -265,6 +266,7 @@
       "gallery": "Galerie et Vues en Grille",
       "editor": "Édition d'Images",
       "settings": "Paramètres et Stockage",
+      "bulkImport": "Import en Masse d'Images",
       "roles": "Rôles Utilisateur",
       "tenants": "Configuration Multi-Organisation"
     },
@@ -291,6 +293,10 @@
     "editor": {
       "heading": "Édition d'Images",
       "body": "L'Éditeur d'Images fournit des outils pour recadrer, zoomer, pivoter, dessiner à main levée et effacer. Utilisez l'outil Flèche pour tracer des flèches indiquant des structures cliniques. Utilisez l'outil Cercle pour marquer des zones d'intérêt. Ajoutez des étiquettes de texte n'importe où sur l'image — plusieurs annotations de tout type sont prises en charge. Passez en mode Pointeur pour cliquer et faire glisser n'importe quelle étiquette de texte vers une nouvelle position. Utilisez le sélecteur de couleur pour changer la couleur d'annotation. Une fois terminé, cliquez sur Enregistrer pour persister toutes les modifications sur disque."
+    },
+    "bulkImport": {
+      "heading": "Import en Masse d'Images",
+      "body": "La page Import en Masse vous permet de migrer une archive d'images existante dans Max7 Vista en une seule étape. Sélectionnez un fichier ZIP dont les sous-dossiers de premier niveau sont des codes patients (ex. 2116/photo1.jpg, 2117/photo2.jpg). Un dossier racine enveloppant unique est détecté et ignoré automatiquement (ex. foto/2116/photo1.jpg fonctionne tout aussi bien). Joignez facultativement un fichier CSV avec des colonnes pour l'ID patient, le nom et la date de naissance afin que les nouveaux patients soient créés avec les bonnes informations. L'importateur lit les dates de capture depuis les métadonnées EXIF lorsqu'elles sont disponibles, en utilisant l'horodatage de modification du fichier comme alternative. Après l'import, un résumé indique combien de patients ont été créés ou retrouvés, combien d'images ont été importées et quels fichiers ont été ignorés avec la raison."
     },
     "settings": {
       "heading": "Paramètres et Stockage",

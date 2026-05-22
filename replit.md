@@ -34,7 +34,7 @@ _Describe the high-level user-facing capabilities of this app once they exist._
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- **Every new feature must be reflected in three places**: (1) the chatbot system prompt (`artifacts/api-server/src/routes/chat.ts`), (2) the in-app instruction manual (`manual.sections` + `manual.<section>` keys in all four locale files), and (3) all four translation files (EN, ES, FR, PT) at `artifacts/patient-images/src/i18n/locales/`.
 
 ## Gotchas
 

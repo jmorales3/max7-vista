@@ -12,6 +12,7 @@ type SectionKey =
   | "capture"
   | "gallery"
   | "editor"
+  | "bulkImport"
   | "settings"
   | "roles"
   | "tenants";
@@ -23,6 +24,7 @@ const SECTIONS: SectionKey[] = [
   "capture",
   "gallery",
   "editor",
+  "bulkImport",
   "settings",
   "roles",
   "tenants",

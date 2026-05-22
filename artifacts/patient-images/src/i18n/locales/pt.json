@@ -10,6 +10,7 @@
     "presentations": "Apresentações",
     "settings": "Configurações",
     "manual": "Manual",
+    "bulkImport": "Importação em Massa",
     "menu": "Menu"
   },
   "common": {
@@ -265,6 +266,7 @@
       "gallery": "Galeria e Visualizações em Grade",
       "editor": "Edição de Imagens",
       "settings": "Configurações e Armazenamento",
+      "bulkImport": "Importação em Massa de Imagens",
       "roles": "Funções de Usuário",
       "tenants": "Configuração Multitenant"
     },
@@ -291,6 +293,10 @@
     "editor": {
       "heading": "Edição de Imagens",
       "body": "O Editor de Imagens fornece ferramentas para recortar, ampliar, girar, desenho livre e apagar. Use a ferramenta Seta para traçar setas apontando estruturas clínicas. Use a ferramenta Círculo para marcar áreas de interesse. Adicione rótulos de texto em qualquer parte da imagem — múltiplas anotações de qualquer tipo são suportadas. Mude para o modo Ponteiro para clicar e arrastar qualquer rótulo de texto para uma nova posição. Use o seletor de cor para alterar a cor da anotação. Quando terminar, clique em Salvar para persistir todas as edições no disco."
+    },
+    "bulkImport": {
+      "heading": "Importação em Massa de Imagens",
+      "body": "A página de Importação em Massa permite migrar um arquivo de imagens existente para o Max7 Vista em uma única etapa. Selecione um arquivo ZIP cujas subpastas de primeiro nível sejam códigos de pacientes (ex.: 2116/foto1.jpg, 2117/foto2.jpg). Uma pasta raiz envolvente única é detectada e ignorada automaticamente (ex.: foto/2116/foto1.jpg funciona igualmente). Opcionalmente, anexe um arquivo CSV com colunas para ID do paciente, nome e data de nascimento para que os novos pacientes sejam criados com os dados corretos. O importador lê datas de captura dos metadados EXIF quando disponíveis, utilizando o carimbo de data/hora de modificação do arquivo como alternativa. Após a importação, um resumo mostra quantos pacientes foram criados ou encontrados, quantas imagens foram importadas e quais arquivos foram ignorados com o motivo."
     },
     "settings": {
       "heading": "Configurações e Armazenamento",

@@ -10,6 +10,7 @@
     "presentations": "Presentaciones",
     "settings": "Configuración",
     "manual": "Manual",
+    "bulkImport": "Importación Masiva",
     "menu": "Menú"
   },
   "common": {
@@ -265,6 +266,7 @@
       "gallery": "Galería y Vistas de Cuadrícula",
       "editor": "Edición de Imágenes",
       "settings": "Configuración y Almacenamiento",
+      "bulkImport": "Importación Masiva de Imágenes",
       "roles": "Roles de Usuario",
       "tenants": "Configuración Multiempresa"
     },
@@ -291,6 +293,10 @@
     "editor": {
       "heading": "Edición de Imágenes",
       "body": "El Editor de Imágenes proporciona herramientas para recortar, hacer zoom, rotar, dibujo libre y borrar. Use la herramienta Flecha para trazar flechas que señalen estructuras clínicas. Use la herramienta Círculo para marcar áreas de interés. Agregue etiquetas de texto en cualquier parte de la imagen: se admiten múltiples anotaciones de cualquier tipo. Cambie al modo Puntero para hacer clic y arrastrar cualquier etiqueta de texto a una nueva posición. Use el selector de color para cambiar el color de anotación. Cuando termine, haga clic en Guardar para persistir todas las ediciones en disco."
+    },
+    "bulkImport": {
+      "heading": "Importación Masiva de Imágenes",
+      "body": "La página de Importación Masiva le permite migrar un archivo de imágenes existente a Max7 Vista en un solo paso. Seleccione un archivo ZIP cuyas subcarpetas de primer nivel sean códigos de pacientes (por ejemplo, 2116/foto1.jpg, 2117/foto2.jpg). Una carpeta raíz envolvente única se detecta y omite automáticamente (por ejemplo, foto/2116/foto1.jpg funciona igual). Opcionalmente, adjunte un archivo CSV con columnas para el ID del paciente, nombre y fecha de nacimiento para que los nuevos pacientes se creen con los datos correctos. El importador lee las fechas de captura desde los metadatos EXIF cuando están disponibles, recurriendo a la marca de tiempo de modificación del archivo. Tras la importación, un resumen muestra cuántos pacientes fueron creados o coincidieron, cuántas imágenes se importaron y qué archivos se omitieron con el motivo."
     },
     "settings": {
       "heading": "Configuración y Almacenamiento",
