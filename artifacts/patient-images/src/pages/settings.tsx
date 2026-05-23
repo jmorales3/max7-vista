@@ -19,12 +19,18 @@ import { Badge } from "@/components/ui/badge";
 import {
   RefreshCw, Save, HardDrive, Database, Users, ImageIcon,
   AlertCircle, Tag, Plus, X, ClipboardList, KeyRound,
-  Download, Upload, ArrowRightLeft,
+  Download, Upload, ArrowRightLeft, ShieldCheck, RotateCcw,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
+
+interface BackupEntry {
+  filename: string;
+  createdAt: string;
+  sizeBytes: number;
+}
 
 interface AuditLogEntry {
   id: number;
@@ -264,6 +270,83 @@ export default function Settings() {
     }
   });
 
+  const isElectron = typeof window !== "undefined" && !!window.electronAPI;
+
+  const { data: backupsData, isLoading: loadingBackups, refetch: refetchBackups } = useQuery<{ backups: BackupEntry[] }>({
+    queryKey: ["backups"],
+    queryFn: async () => {
+      const res = await fetch("/api/settings/backups", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch backups");
+      return res.json();
+    },
+    enabled: isElectron,
+  });
+
+  const triggerBackup = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/settings/backup", { method: "POST", credentials: "include" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? "Backup failed");
+      }
+      return res.json() as Promise<{ backup: BackupEntry }>;
+    },
+    onSuccess: (data) => {
+      refetchBackups();
+      queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
+      toast({
+        title: "Backup created",
+        description: `Saved as ${data.backup.filename}`,
+      });
+    },
+    onError: (e) => {
+      toast({
+        variant: "destructive",
+        title: "Backup failed",
+        description: e instanceof Error ? e.message : "An unexpected error occurred.",
+      });
+    },
+  });
+
+  const [restoringFile, setRestoringFile] = useState<string | null>(null);
+
+  const triggerRestore = useMutation({
+    mutationFn: async (filename: string) => {
+      const res = await fetch("/api/settings/restore", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? "Restore failed");
+      }
+      return res.json() as Promise<{ success: boolean; message: string }>;
+    },
+    onSuccess: (data) => {
+      setRestoringFile(null);
+      refetchBackups();
+      toast({
+        title: "Restore complete",
+        description: data.message,
+      });
+    },
+    onError: (e) => {
+      setRestoringFile(null);
+      toast({
+        variant: "destructive",
+        title: "Restore failed",
+        description: e instanceof Error ? e.message : "An unexpected error occurred.",
+      });
+    },
+  });
+
+  const handleRestore = (filename: string) => {
+    setRestoringFile(filename);
+    triggerRestore.mutate(filename);
+  };
+
   const handleSave = () => {
     updateSettings.mutate({ data: { storageDirectory } });
   };
@@ -495,6 +578,94 @@ export default function Settings() {
           </div>
         </CardContent>
       </Card>
+
+      {isElectron && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5" />
+              Database Backups
+            </CardTitle>
+            <CardDescription>
+              Automatic daily backups protect patient data against corruption or hardware failure. Up to 7 rolling copies are kept.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-muted/50 p-4 rounded-lg border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h4 className="font-medium">Last Backup</h4>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {(() => {
+                    const backups = backupsData?.backups ?? [];
+                    if (loadingBackups) return "Loading…";
+                    if (backups.length === 0) return "No backups yet";
+                    const last = backups[0];
+                    return `${formatDistanceToNow(new Date(last.createdAt), { addSuffix: true })} — ${(last.sizeBytes / 1024 / 1024).toFixed(1)} MB`;
+                  })()}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => triggerBackup.mutate()}
+                disabled={triggerBackup.isPending}
+              >
+                {triggerBackup.isPending ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Backing up…
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="mr-2 h-4 w-4" />
+                    Back Up Now
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {loadingBackups ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
+              </div>
+            ) : backupsData && backupsData.backups.length > 0 ? (
+              <div>
+                <h4 className="text-sm font-medium mb-2">Available Backups</h4>
+                <div className="divide-y rounded-md border overflow-hidden">
+                  {backupsData.backups.map((backup) => (
+                    <div key={backup.filename} className="flex items-center justify-between px-4 py-3 bg-background hover:bg-muted/30 transition-colors gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-mono truncate">{backup.filename}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {format(new Date(backup.createdAt), "MMM d, yyyy h:mm a")} · {(backup.sizeBytes / 1024 / 1024).toFixed(1)} MB
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRestore(backup.filename)}
+                        disabled={triggerRestore.isPending}
+                        title="Restore this backup"
+                      >
+                        {restoringFile === backup.filename && triggerRestore.isPending ? (
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <RotateCcw className="h-3.5 w-3.5" />
+                        )}
+                        <span className="ml-1.5">Restore</span>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Restoring replaces the current database. The app will need to restart afterwards.
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No backups found. Click "Back Up Now" to create the first one.</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {isAdmin && (
         <Card>

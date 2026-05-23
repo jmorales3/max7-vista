@@ -38,6 +38,15 @@ function getUploadsDir(): string {
   return uploadsDir;
 }
 
+function getBackupDir(): string {
+  const userDataDir = app.getPath("userData");
+  const backupDir = path.join(userDataDir, "backups");
+  if (!fs.existsSync(backupDir)) {
+    fs.mkdirSync(backupDir, { recursive: true });
+  }
+  return backupDir;
+}
+
 // ─── Node path for native modules (better-sqlite3) ──────────────────────────
 
 function getNodeModulesPath(): string {
@@ -82,6 +91,7 @@ async function startApiServer(): Promise<void> {
 
   const dbPath = getDbPath();
   const uploadsDir = getUploadsDir();
+  const backupDir = getBackupDir();
   const nodeModulesPath = getNodeModulesPath();
 
   // Set env vars on the shared process before importing the server bundle.
@@ -92,6 +102,7 @@ async function startApiServer(): Promise<void> {
     DATABASE_TYPE: "sqlite",
     DATABASE_PATH: dbPath,
     STORAGE_DIRECTORY: uploadsDir,
+    BACKUP_DIR: backupDir,
     NODE_PATH: nodeModulesPath,
   });
 

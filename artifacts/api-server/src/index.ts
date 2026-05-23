@@ -2,6 +2,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { getStorageDirectory, getSetting } from "./lib/storage";
 import { scanDirectory } from "./lib/scanDirectory";
+import { scheduleAutoBackup } from "./lib/backup";
 import path from "path";
 import fs from "fs";
 import os from "os";
@@ -169,6 +170,10 @@ async function start() {
         { addresses: lanAddresses },
         "LAN access — enter one of these addresses in the mobile app Server Setup",
       );
+    }
+
+    if (IS_SQLITE) {
+      scheduleAutoBackup();
     }
 
     try {
