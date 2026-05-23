@@ -232,14 +232,14 @@ export default function Capture() {
               )}
             </div>
           ) : (
-            <div
+            <label
+              htmlFor="file-upload"
               className="border-2 border-dashed border-muted-foreground/25 rounded-xl aspect-video flex flex-col items-center justify-center p-6 hover:bg-muted/50 transition-colors cursor-pointer"
-              onClick={() => document.getElementById("file-upload")?.click()}
             >
               <Images className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-lg font-medium">{t("capture.clickToBrowse")}</p>
               <p className="text-sm text-muted-foreground mb-4">{t("capture.uploadInfo")}</p>
-              <Input
+              <input
                 type="file"
                 accept="image/*"
                 multiple
@@ -247,14 +247,11 @@ export default function Capture() {
                 id="file-upload"
                 onChange={handleFilesChange}
               />
-              <Button
-                variant="outline"
-                onClick={(e) => { e.stopPropagation(); document.getElementById("file-upload")?.click(); }}
-              >
-                <Plus className="h-4 w-4 mr-2" />
+              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-input bg-background text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors">
+                <Plus className="h-4 w-4" />
                 {t("capture.selectFile")}
-              </Button>
-            </div>
+              </span>
+            </label>
           )}
 
           {/* Queue header */}
@@ -265,14 +262,12 @@ export default function Capture() {
               </p>
               <div className="flex gap-2">
                 {mode === "upload" && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => document.getElementById("file-upload")?.click()}
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-1.5" />
-                    {t("capture.addMore")}
-                  </Button>
+                  <label htmlFor="file-upload" className="cursor-pointer">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-input bg-background text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors">
+                      <Plus className="h-3.5 w-3.5" />
+                      {t("capture.addMore")}
+                    </span>
+                  </label>
                 )}
                 <Button variant="ghost" size="sm" onClick={clearQueue} disabled={isUploading}>
                   {t("capture.clearAll")}
