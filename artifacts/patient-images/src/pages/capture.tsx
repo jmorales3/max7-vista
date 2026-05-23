@@ -232,28 +232,24 @@ export default function Capture() {
               )}
             </div>
           ) : (
-            <>
+            <div className="relative border-2 border-dashed border-muted-foreground/25 rounded-xl aspect-video flex flex-col items-center justify-center p-6 hover:bg-muted/50 transition-colors">
+              <Images className="h-12 w-12 text-muted-foreground mb-4 pointer-events-none" />
+              <p className="text-lg font-medium pointer-events-none">{t("capture.clickToBrowse")}</p>
+              <p className="text-sm text-muted-foreground mb-4 pointer-events-none">{t("capture.uploadInfo")}</p>
+              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-input bg-background text-sm font-medium shadow-sm pointer-events-none">
+                <Plus className="h-4 w-4" />
+                {t("capture.selectFile")}
+              </span>
+              {/* Transparent overlay — user taps the native input directly, which is
+                  the only reliable approach on Android Chrome for triggering onChange */}
               <input
                 type="file"
                 accept="image/*"
                 multiple
-                className="sr-only"
-                id="file-upload"
                 onChange={handleFilesChange}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
-              <label
-                htmlFor="file-upload"
-                className="border-2 border-dashed border-muted-foreground/25 rounded-xl aspect-video flex flex-col items-center justify-center p-6 hover:bg-muted/50 transition-colors cursor-pointer"
-              >
-                <Images className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-lg font-medium">{t("capture.clickToBrowse")}</p>
-                <p className="text-sm text-muted-foreground mb-4">{t("capture.uploadInfo")}</p>
-                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-input bg-background text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors">
-                  <Plus className="h-4 w-4" />
-                  {t("capture.selectFile")}
-                </span>
-              </label>
-            </>
+            </div>
           )}
 
           {/* Queue header */}
@@ -264,12 +260,19 @@ export default function Capture() {
               </p>
               <div className="flex gap-2">
                 {mode === "upload" && (
-                  <label htmlFor="file-upload" className="cursor-pointer">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-input bg-background text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors">
+                  <div className="relative inline-flex">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-input bg-background text-sm font-medium shadow-sm pointer-events-none">
                       <Plus className="h-3.5 w-3.5" />
                       {t("capture.addMore")}
                     </span>
-                  </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleFilesChange}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                  </div>
                 )}
                 <Button variant="ghost" size="sm" onClick={clearQueue} disabled={isUploading}>
                   {t("capture.clearAll")}
