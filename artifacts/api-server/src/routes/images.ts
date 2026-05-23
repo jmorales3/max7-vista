@@ -160,7 +160,7 @@ router.post("/images", upload.single("file"), async (req, res): Promise<void> =>
 
   // Build subfolder: {storageDir}/{patientId}/{YYYY-MM-DD}/
   const storageDir = await getStorageDirectory();
-  const dateStr = capturedAt.toISOString().split("T")[0]; // YYYY-MM-DD
+  const dateStr = capturedAt.split("T")[0]; // YYYY-MM-DD
   const subFolder = patientId
     ? path.join(storageDir, String(patientId), dateStr)
     : path.join(storageDir, "unassigned", dateStr);
