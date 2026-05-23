@@ -150,13 +150,15 @@ async function saveImage(
 
   const legend = path.basename(fileName, ext).replace(/[_-]+/g, " ").trim();
 
+  // better-sqlite3 rejects Date objects and booleans — pass primitives that
+  // both the SQLite (text) and PostgreSQL (timestamp) adapters accept.
   await db.insert(imagesTable).values({
     patientId,
     filePath,
     fileName,
     notes: legend || null,
-    capturedAt,
-    isUnassigned: false,
+    capturedAt: capturedAt.toISOString() as unknown as Date,
+    isUnassigned: 0 as unknown as boolean,
   });
 }
 
