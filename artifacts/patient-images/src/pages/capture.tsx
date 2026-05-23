@@ -232,26 +232,28 @@ export default function Capture() {
               )}
             </div>
           ) : (
-            <label
-              htmlFor="file-upload"
-              className="border-2 border-dashed border-muted-foreground/25 rounded-xl aspect-video flex flex-col items-center justify-center p-6 hover:bg-muted/50 transition-colors cursor-pointer"
-            >
-              <Images className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-lg font-medium">{t("capture.clickToBrowse")}</p>
-              <p className="text-sm text-muted-foreground mb-4">{t("capture.uploadInfo")}</p>
+            <>
               <input
                 type="file"
                 accept="image/*"
                 multiple
-                className="hidden"
+                className="sr-only"
                 id="file-upload"
                 onChange={handleFilesChange}
               />
-              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-input bg-background text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors">
-                <Plus className="h-4 w-4" />
-                {t("capture.selectFile")}
-              </span>
-            </label>
+              <label
+                htmlFor="file-upload"
+                className="border-2 border-dashed border-muted-foreground/25 rounded-xl aspect-video flex flex-col items-center justify-center p-6 hover:bg-muted/50 transition-colors cursor-pointer"
+              >
+                <Images className="h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-lg font-medium">{t("capture.clickToBrowse")}</p>
+                <p className="text-sm text-muted-foreground mb-4">{t("capture.uploadInfo")}</p>
+                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-input bg-background text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors">
+                  <Plus className="h-4 w-4" />
+                  {t("capture.selectFile")}
+                </span>
+              </label>
+            </>
           )}
 
           {/* Queue header */}
