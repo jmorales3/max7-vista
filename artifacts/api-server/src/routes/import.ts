@@ -297,8 +297,10 @@ router.post(
       return;
     }
 
-    if (!path.isAbsolute(folderPath)) {
-      res.status(400).json({ error: "folderPath must be an absolute path (starts with /)" });
+    // Accept both Unix (/data/photos) and Windows (C:\fotos) absolute paths
+    const isAbsolute = path.isAbsolute(folderPath) || /^[a-zA-Z]:[\\\/]/.test(folderPath);
+    if (!isAbsolute) {
+      res.status(400).json({ error: "folderPath must be an absolute path (e.g. /data/photos or C:\\fotos)" });
       return;
     }
 
@@ -309,7 +311,7 @@ router.post(
         return;
       }
     } catch {
-      res.status(400).json({ error: "Folder not found or not accessible by the server" });
+      res.status(400).json({ error: `Folder not found or not accessible by the server: ${folderPath}` });
       return;
     }
 
@@ -320,70 +322,86 @@ router.post(
       errors: [],
     };
 
-    const patientMap = patientsFile
-      ? parseCSV(patientsFile.buffer.toString("utf-8"))
-      : new Map<string, PatientInfo>();
+    try {
+      const patientMap = patientsFile
+        ? parseCSV(patientsFile.buffer.toString("utf-8"))
+        : new Map<string, PatientInfo>();
 
-    // Walk all image files and get paths relative to folderPath
-    const allImagePaths = walkImageFiles(folderPath);
-    const relPaths = allImagePaths.map((p) =>
-      path.relative(folderPath, p).replace(/\\/g, "/"),
-    );
+      // Walk all image files and get paths relative to folderPath
+      const allImagePaths = walkImageFiles(folderPath);
 
-    // Same wrapper detection as ZIP importer:
-    // if every image shares the same top-level folder, peel it off
-    const topLevelNames = new Set<string>();
-    for (const rel of relPaths) {
-      const parts = rel.split("/");
-      if (parts.length >= 2) topLevelNames.add(parts[0]);
-    }
-    const patientDepth = topLevelNames.size === 1 ? 1 : 0;
+      if (allImagePaths.length === 0) {
+        res.json({ ...summary, errors: [{ file: folderPath, reason: "No image files found in this folder" }] });
+        return;
+      }
 
-    // Group by patient code
-    const byPatient = new Map<string, string[]>(); // patientCode → absolute paths
-    for (let i = 0; i < relPaths.length; i++) {
-      const parts = relPaths[i].split("/");
-      if (parts.length < patientDepth + 2) continue;
-      const patientCode = parts[patientDepth];
-      if (!byPatient.has(patientCode)) byPatient.set(patientCode, []);
-      byPatient.get(patientCode)!.push(allImagePaths[i]);
-    }
+      const relPaths = allImagePaths.map((p) =>
+        path.relative(folderPath, p).replace(/\\/g, "/"),
+      );
 
-    const storageDir = await getStorageDirectory();
+      // Same wrapper detection as ZIP importer:
+      // if every image shares the same top-level folder, peel it off
+      const topLevelNames = new Set<string>();
+      for (const rel of relPaths) {
+        const parts = rel.split("/");
+        if (parts.length >= 2) topLevelNames.add(parts[0]);
+      }
+      const patientDepth = topLevelNames.size === 1 ? 1 : 0;
 
-    for (const [patientCode, filePaths] of byPatient) {
-      const dbPatient = await upsertPatient(req, patientCode, patientMap, summary);
+      // Group by patient code
+      const byPatient = new Map<string, string[]>(); // patientCode → absolute paths
+      for (let i = 0; i < relPaths.length; i++) {
+        const parts = relPaths[i].split("/");
+        if (parts.length < patientDepth + 2) continue;
+        const patientCode = parts[patientDepth];
+        if (!byPatient.has(patientCode)) byPatient.set(patientCode, []);
+        byPatient.get(patientCode)!.push(allImagePaths[i]);
+      }
 
-      for (const srcPath of filePaths) {
-        const fileName = path.basename(srcPath);
-        try {
-          const buffer = fs.readFileSync(srcPath);
-          let capturedAt = await extractExifDate(buffer);
-          if (!capturedAt) {
-            const stat = fs.statSync(srcPath);
-            capturedAt = stat.mtime ?? new Date();
+      if (byPatient.size === 0) {
+        res.json({ ...summary, errors: [{ file: folderPath, reason: "No patient subfolders found. Images must be inside subfolders named with the patient ID (e.g. C:\\fotos\\2116\\photo.jpg)" }] });
+        return;
+      }
+
+      const storageDir = await getStorageDirectory();
+
+      for (const [patientCode, filePaths] of byPatient) {
+        const dbPatient = await upsertPatient(req, patientCode, patientMap, summary);
+
+        for (const srcPath of filePaths) {
+          const fileName = path.basename(srcPath);
+          try {
+            const buffer = fs.readFileSync(srcPath);
+            let capturedAt = await extractExifDate(buffer);
+            if (!capturedAt) {
+              const stat = fs.statSync(srcPath);
+              capturedAt = stat.mtime ?? new Date();
+            }
+            await saveImage(dbPatient.id, fileName, buffer, capturedAt, storageDir);
+            summary.imagesImported++;
+          } catch (err) {
+            summary.errors.push({
+              file: srcPath,
+              reason: err instanceof Error ? err.message : String(err),
+            });
           }
-          await saveImage(dbPatient.id, fileName, buffer, capturedAt, storageDir);
-          summary.imagesImported++;
-        } catch (err) {
-          summary.errors.push({
-            file: srcPath,
-            reason: err instanceof Error ? err.message : String(err),
-          });
         }
       }
+
+      await logAudit(req, "bulk_import", "image", 0, JSON.stringify({
+        folderPath,
+        patientsCreated: summary.patientsCreated,
+        patientsMatched: summary.patientsMatched,
+        imagesImported: summary.imagesImported,
+        errors: summary.errors.length,
+        source: "folder",
+      }));
+
+      res.json(summary);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ error: `Import failed: ${msg}` });
     }
-
-    await logAudit(req, "bulk_import", "image", 0, JSON.stringify({
-      folderPath,
-      patientsCreated: summary.patientsCreated,
-      patientsMatched: summary.patientsMatched,
-      imagesImported: summary.imagesImported,
-      errors: summary.errors.length,
-      source: "folder",
-    }));
-
-    res.json(summary);
   },
 );
 
