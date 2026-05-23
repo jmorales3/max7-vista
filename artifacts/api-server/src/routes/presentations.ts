@@ -99,7 +99,7 @@ router.put("/presentations/:id", async (req, res): Promise<void> => {
   }
 
   const updates: Partial<typeof presentationsTable.$inferInsert> = {
-    updatedAt: new Date(),
+    updatedAt: new Date().toISOString(),
   };
   if (body.data.title !== undefined) updates.title = body.data.title;
   if (body.data.slides !== undefined) updates.slides = body.data.slides as unknown[];
