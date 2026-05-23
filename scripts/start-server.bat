@@ -92,7 +92,7 @@ if errorlevel 1 (
 
 REM ── 4. Install dependencies ─────────────────────
 echo [max7] Installing dependencies...
-pnpm install --frozen-lockfile
+pnpm install --no-frozen-lockfile
 
 REM ── 5. Database schema ──────────────────────────
 if "%USE_SQLITE%"=="false" (
