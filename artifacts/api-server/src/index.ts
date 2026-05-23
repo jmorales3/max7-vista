@@ -144,26 +144,6 @@ async function initSqlite() {
   `);
 
   logger.info("SQLite tables initialized");
-
-  // Seed a default superadmin on first run (empty users table)
-  const [countRow] = raw.$client.prepare("SELECT COUNT(*) as count FROM users").all() as [{ count: number }];
-  if (countRow.count === 0) {
-    const bcrypt = await import("bcryptjs");
-    const defaultPassword = "Admin1234";
-    const hash = await bcrypt.hash(defaultPassword, 10);
-    raw.$client
-      .prepare("INSERT INTO users (username, password_hash, role, is_active) VALUES (?, ?, ?, ?)")
-      .run("admin", hash, "superadmin", 1);
-
-    // Write a hint file so Electron can show a first-run dialog with the credentials
-    const dbPath = process.env["DATABASE_PATH"] ?? "";
-    if (dbPath) {
-      const credFile = path.join(path.dirname(dbPath), "first-run-credentials.json");
-      fs.writeFileSync(credFile, JSON.stringify({ username: "admin", password: defaultPassword }));
-    }
-
-    logger.info("First-run: seeded default superadmin — username: admin, password: Admin1234");
-  }
 }
 
 async function start() {
