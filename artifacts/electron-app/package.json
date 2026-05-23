@@ -1,6 +1,6 @@
 {
   "name": "@workspace/electron-app",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "main": "dist/main.js",
   "scripts": {
@@ -29,15 +29,16 @@
     "typescript": "^5.8.3"
   },
   "build": {
-    "appId": "com.workspace.patient-image-manager",
-    "productName": "Patient Image Manager",
+    "appId": "com.max7vista.patient-image-manager",
+    "productName": "Max7 Vista",
+    "icon": "build/icon",
     "directories": {
       "output": "release"
     },
     "publish": {
       "provider": "github",
-      "owner": "YOUR_GITHUB_ORG",
-      "repo": "YOUR_REPO",
+      "owner": "jmorales3",
+      "repo": "max7-vista",
       "releaseType": "release"
     },
     "files": [
