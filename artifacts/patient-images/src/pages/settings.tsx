@@ -5,6 +5,8 @@ import {
   useGetImageStats, getGetImageStatsQueryKey,
   useListTags, getListTagsQueryKey,
   useCreateTag, useDeleteTag,
+  getListPatientsQueryKey,
+  getListImagesQueryKey,
 } from "@workspace/api-client-react";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -114,6 +116,11 @@ export default function Settings() {
       }
       const result = await res.json();
       setMigrationResult(result);
+
+      void queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: getListImagesQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: getGetImageStatsQueryKey() });
+
       toast({
         title: result.errors.length === 0 ? "Migration complete" : "Migration finished with errors",
         description: `${result.patientsImported} patients, ${result.imagesImported} images imported.`,

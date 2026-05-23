@@ -2,6 +2,12 @@ import { useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { getApiUrl } from "@/lib/apiUrl";
 import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
+import {
+  getListPatientsQueryKey,
+  getListImagesQueryKey,
+  getGetImageStatsQueryKey,
+} from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -184,6 +190,10 @@ function ZipImportTab() {
       const result: ImportSummary = await res.json();
       setSummary(result);
 
+      void queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: getListImagesQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: getGetImageStatsQueryKey() });
+
       if (result.errors.length === 0) {
         toast({
           title: "Import complete",
@@ -337,6 +347,10 @@ function FolderImportTab() {
 
       const result: ImportSummary = await res.json();
       setSummary(result);
+
+      void queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: getListImagesQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: getGetImageStatsQueryKey() });
 
       if (result.errors.length === 0) {
         toast({

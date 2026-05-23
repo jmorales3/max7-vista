@@ -40,12 +40,14 @@ function buildImageRow(row: {
   fileName: string;
   notes: string | null;
   annotation: string | null;
-  capturedAt: Date;
-  isUnassigned: boolean;
-  createdAt: Date;
+  capturedAt: Date | string;
+  isUnassigned: boolean | number;
+  createdAt: Date | string;
   patientName?: string | null;
   patientCode?: string | null;
 }) {
+  const capturedAt = new Date(row.capturedAt as string);
+  const createdAt = new Date(row.createdAt as string);
   return {
     id: row.id,
     patientId: row.patientId,
@@ -55,9 +57,9 @@ function buildImageRow(row: {
     fileName: row.fileName,
     notes: row.notes,
     annotation: row.annotation,
-    capturedAt: row.capturedAt.toISOString(),
-    isUnassigned: row.isUnassigned,
-    createdAt: row.createdAt.toISOString(),
+    capturedAt: isNaN(capturedAt.getTime()) ? new Date().toISOString() : capturedAt.toISOString(),
+    isUnassigned: Boolean(row.isUnassigned),
+    createdAt: isNaN(createdAt.getTime()) ? new Date().toISOString() : createdAt.toISOString(),
   };
 }
 
@@ -121,12 +123,17 @@ router.get("/images", async (req, res): Promise<void> => {
     conditions.push(lte(imagesTable.capturedAt, new Date(params.dateTo)));
   }
 
-  const rows =
-    conditions.length > 0
-      ? await query.where(and(...conditions)).orderBy(imagesTable.capturedAt)
-      : await query.orderBy(imagesTable.capturedAt);
+  try {
+    const rows =
+      conditions.length > 0
+        ? await query.where(and(...conditions)).orderBy(imagesTable.capturedAt)
+        : await query.orderBy(imagesTable.capturedAt);
 
-  res.json(rows.map(buildImageRow));
+    res.json(rows.map(buildImageRow));
+  } catch (err) {
+    console.error("GET /images error:", err);
+    res.status(500).json({ error: "Failed to load images", detail: String(err) });
+  }
 });
 
 router.post("/images", upload.single("file"), async (req, res): Promise<void> => {
@@ -273,26 +280,31 @@ router.get("/patients/:id/images", async (req, res): Promise<void> => {
     return;
   }
 
-  const rows = await db
-    .select({
-      id: imagesTable.id,
-      patientId: imagesTable.patientId,
-      filePath: imagesTable.filePath,
-      fileName: imagesTable.fileName,
-      notes: imagesTable.notes,
-      annotation: imagesTable.annotation,
-      capturedAt: imagesTable.capturedAt,
-      isUnassigned: imagesTable.isUnassigned,
-      createdAt: imagesTable.createdAt,
-      patientName: patientsTable.name,
-      patientCode: patientsTable.patientCode,
-    })
-    .from(imagesTable)
-    .leftJoin(patientsTable, eq(patientsTable.id, imagesTable.patientId))
-    .where(eq(imagesTable.patientId, params.data.id))
-    .orderBy(imagesTable.capturedAt);
+  try {
+    const rows = await db
+      .select({
+        id: imagesTable.id,
+        patientId: imagesTable.patientId,
+        filePath: imagesTable.filePath,
+        fileName: imagesTable.fileName,
+        notes: imagesTable.notes,
+        annotation: imagesTable.annotation,
+        capturedAt: imagesTable.capturedAt,
+        isUnassigned: imagesTable.isUnassigned,
+        createdAt: imagesTable.createdAt,
+        patientName: patientsTable.name,
+        patientCode: patientsTable.patientCode,
+      })
+      .from(imagesTable)
+      .leftJoin(patientsTable, eq(patientsTable.id, imagesTable.patientId))
+      .where(eq(imagesTable.patientId, params.data.id))
+      .orderBy(imagesTable.capturedAt);
 
-  res.json(rows.map(buildImageRow));
+    res.json(rows.map(buildImageRow));
+  } catch (err) {
+    console.error("GET /patients/:id/images error:", err);
+    res.status(500).json({ error: "Failed to load images", detail: String(err) });
+  }
 });
 
 router.get("/images/:id", async (req, res): Promise<void> => {
