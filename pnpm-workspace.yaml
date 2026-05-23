@@ -69,8 +69,10 @@ catalog:
 autoInstallPeers: false
 
 onlyBuiltDependencies:
+  - '@clerk/shared'
   - '@swc/core'
   - better-sqlite3
+  - electron
   - esbuild
   - msw
   - unrs-resolver
