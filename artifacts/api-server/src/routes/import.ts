@@ -243,10 +243,9 @@ router.post(
           await saveImage(dbPatient.id, fileName, buffer, capturedAt, storageDir);
           summary.imagesImported++;
         } catch (err) {
-          summary.errors.push({
-            file: entry.entryName,
-            reason: err instanceof Error ? err.message : String(err),
-          });
+          const reason = err instanceof Error ? err.message : String(err);
+          console.error(`[bulk-import/zip] failed to save ${entry.entryName}:`, reason);
+          summary.errors.push({ file: entry.entryName, reason });
         }
       }
     }

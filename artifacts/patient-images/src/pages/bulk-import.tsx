@@ -67,6 +67,7 @@ function FileInputCard({
         </span>
       )}
       <Button
+        type="button"
         variant="outline"
         size="sm"
         onClick={(e) => {
