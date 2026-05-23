@@ -144,7 +144,7 @@ router.post("/images", upload.single("file"), async (req, res): Promise<void> =>
 
   const patientId = req.body.patientId ? parseInt(req.body.patientId, 10) : null;
   const notes = req.body.notes ?? null;
-  const capturedAt = req.body.capturedAt ? new Date(req.body.capturedAt) : new Date();
+  const capturedAt = (req.body.capturedAt ? new Date(req.body.capturedAt) : new Date()).toISOString();
 
   // Validate patientId existence to return a clean 404 instead of a DB FK error
   if (patientId !== null) {
@@ -372,7 +372,7 @@ router.patch("/images/:id", async (req, res): Promise<void> => {
     updateData.isUnassigned = parsed.data.patientId === null;
   }
   if (parsed.data.capturedAt !== undefined) {
-    updateData.capturedAt = new Date(parsed.data.capturedAt);
+    updateData.capturedAt = new Date(parsed.data.capturedAt).toISOString();
   }
 
   const [image] = await db
