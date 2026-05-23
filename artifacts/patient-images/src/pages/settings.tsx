@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   RefreshCw, Save, HardDrive, Database, Users, ImageIcon,
   AlertCircle, Tag, Plus, X, ClipboardList, KeyRound,
+  Download, Upload, ArrowRightLeft,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -63,6 +64,67 @@ export default function Settings() {
   const [newUsername, setNewUsername] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [migrationExporting, setMigrationExporting] = useState(false);
+  const [migrationImporting, setMigrationImporting] = useState(false);
+  const [migrationFile, setMigrationFile] = useState<File | null>(null);
+  const [migrationResult, setMigrationResult] = useState<null | {
+    patientsImported: number; patientsSkipped: number;
+    imagesImported: number; imagesSkipped: number;
+    usersImported: number; usersSkipped: number;
+    settingsApplied: number;
+    errors: Array<{ item: string; reason: string }>;
+  }>(null);
+
+  async function handleMigrationExport() {
+    setMigrationExporting(true);
+    try {
+      const res = await fetch("/api/migration/export", { credentials: "include" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const dateStr = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `max7-vista-migration-${dateStr}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Export complete", description: "Migration archive downloaded." });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Export failed", description: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setMigrationExporting(false);
+    }
+  }
+
+  async function handleMigrationImport() {
+    if (!migrationFile) return;
+    setMigrationImporting(true);
+    setMigrationResult(null);
+    try {
+      const formData = new FormData();
+      formData.append("archive", migrationFile);
+      const res = await fetch("/api/migration/import", { method: "POST", body: formData, credentials: "include" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
+      }
+      const result = await res.json();
+      setMigrationResult(result);
+      toast({
+        title: result.errors.length === 0 ? "Migration complete" : "Migration finished with errors",
+        description: `${result.patientsImported} patients, ${result.imagesImported} images imported.`,
+        variant: result.errors.length > 0 ? "destructive" : "default",
+      });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Import failed", description: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setMigrationImporting(false);
+    }
+  }
 
   const updateCredentials = useMutation({
     mutationFn: async () => {
@@ -483,6 +545,108 @@ export default function Settings() {
                 {t("tags.addTag")}
               </Button>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {user?.role === "superadmin" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ArrowRightLeft className="h-5 w-5" />
+              Migration
+            </CardTitle>
+            <CardDescription>
+              Move all data (patients, images, users, settings) between the LAN desktop app and the web version. Export from the source system, then import on the destination.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Export */}
+              <div className="space-y-3 rounded-lg border p-4">
+                <div className="flex items-center gap-2">
+                  <Download className="h-4 w-4 text-primary" />
+                  <p className="font-medium text-sm">Export from this system</p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Downloads a ZIP archive containing all patients, images (files included), users, and settings. Use this on the LAN desktop app before switching to the web version.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleMigrationExport}
+                  disabled={migrationExporting}
+                  className="w-full"
+                >
+                  {migrationExporting
+                    ? <><RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Exporting…</>
+                    : <><Download className="mr-2 h-4 w-4" /> Download migration archive</>}
+                </Button>
+              </div>
+
+              {/* Import */}
+              <div className="space-y-3 rounded-lg border p-4">
+                <div className="flex items-center gap-2">
+                  <Upload className="h-4 w-4 text-primary" />
+                  <p className="font-medium text-sm">Import into this system</p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Upload a migration archive exported from another Max7 Vista instance. Existing patients and users are skipped (no duplicates).
+                </p>
+                <div className="space-y-2">
+                  <Input
+                    type="file"
+                    accept=".zip,application/zip"
+                    onChange={(e) => {
+                      setMigrationFile(e.target.files?.[0] ?? null);
+                      setMigrationResult(null);
+                    }}
+                    className="cursor-pointer"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleMigrationImport}
+                    disabled={!migrationFile || migrationImporting}
+                    className="w-full"
+                  >
+                    {migrationImporting
+                      ? <><RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Importing…</>
+                      : <><Upload className="mr-2 h-4 w-4" /> Import archive</>}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {migrationResult && (
+              <div className="rounded-lg border bg-muted/40 p-4 space-y-3">
+                <p className="text-sm font-medium">Import summary</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                  {[
+                    { label: "Patients imported", value: migrationResult.patientsImported },
+                    { label: "Patients skipped", value: migrationResult.patientsSkipped },
+                    { label: "Images imported",  value: migrationResult.imagesImported },
+                    { label: "Images skipped",   value: migrationResult.imagesSkipped },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="rounded-md bg-background border p-3">
+                      <p className="text-xl font-bold">{value}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
+                    </div>
+                  ))}
+                </div>
+                {migrationResult.errors.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-destructive">{migrationResult.errors.length} error(s):</p>
+                    <div className="max-h-32 overflow-y-auto rounded border bg-background p-2 space-y-1">
+                      {migrationResult.errors.map((e, i) => (
+                        <p key={i} className="text-xs font-mono text-muted-foreground">
+                          <span className="text-foreground">{e.item}</span>: {e.reason}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

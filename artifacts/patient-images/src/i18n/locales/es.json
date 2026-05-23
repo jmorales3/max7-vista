@@ -350,5 +350,29 @@
     "loginFailedDesc": "Por favor verifique su usuario y contraseña.",
     "welcome": "Bienvenido a Max7 Vista",
     "subtitle": "Sistema de Gestión de Imágenes Clínicas"
+  },
+  "migration": {
+    "title": "Migración",
+    "description": "Mueva todos los datos (pacientes, imágenes, usuarios, configuración) entre la app de escritorio LAN y la versión web. Exporte desde el sistema de origen e importe en el destino.",
+    "exportTitle": "Exportar desde este sistema",
+    "exportDesc": "Descarga un archivo ZIP con todos los pacientes, imágenes (archivos incluidos), usuarios y configuración. Úselo en la app de escritorio LAN antes de cambiar a la versión web.",
+    "exportButton": "Descargar archivo de migración",
+    "exporting": "Exportando…",
+    "exportComplete": "Exportación completa",
+    "exportCompleteDesc": "Archivo de migración descargado.",
+    "exportFailed": "Error al exportar",
+    "importTitle": "Importar en este sistema",
+    "importDesc": "Suba un archivo de migración exportado desde otra instancia de Max7 Vista. Los pacientes y usuarios existentes se omiten automáticamente (sin duplicados).",
+    "importButton": "Importar archivo",
+    "importing": "Importando…",
+    "importComplete": "Migración completa",
+    "importFinishedWithErrors": "Migración finalizada con errores",
+    "importSummaryDesc": "{{patients}} pacientes, {{images}} imágenes importadas.",
+    "importFailed": "Error al importar",
+    "summaryTitle": "Resumen de importación",
+    "patientsImported": "Pacientes importados",
+    "patientsSkipped": "Pacientes omitidos",
+    "imagesImported": "Imágenes importadas",
+    "imagesSkipped": "Imágenes omitidas"
   }
 }

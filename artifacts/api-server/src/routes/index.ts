@@ -12,6 +12,7 @@ import adminRouter from "./admin";
 import auditRouter from "./audit";
 import importRouter from "./import";
 import profileRouter from "./profile";
+import migrationRouter from "./migration";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(adminRouter);
 router.use(auditRouter);
 router.use(importRouter);
 router.use(profileRouter);
+router.use(migrationRouter);
 
 export default router;

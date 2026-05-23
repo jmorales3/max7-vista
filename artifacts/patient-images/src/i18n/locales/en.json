@@ -350,5 +350,29 @@
     "loginFailedDesc": "Please check your username and password.",
     "welcome": "Welcome to Max7 Vista",
     "subtitle": "Clinical Image Management System"
+  },
+  "migration": {
+    "title": "Migration",
+    "description": "Move all data (patients, images, users, settings) between the LAN desktop app and the web version. Export from the source system, then import on the destination.",
+    "exportTitle": "Export from this system",
+    "exportDesc": "Downloads a ZIP archive containing all patients, images (files included), users, and settings. Use this on the LAN desktop app before switching to the web version.",
+    "exportButton": "Download migration archive",
+    "exporting": "Exporting…",
+    "exportComplete": "Export complete",
+    "exportCompleteDesc": "Migration archive downloaded.",
+    "exportFailed": "Export failed",
+    "importTitle": "Import into this system",
+    "importDesc": "Upload a migration archive exported from another Max7 Vista instance. Existing patients and users are skipped (no duplicates).",
+    "importButton": "Import archive",
+    "importing": "Importing…",
+    "importComplete": "Migration complete",
+    "importFinishedWithErrors": "Migration finished with errors",
+    "importSummaryDesc": "{{patients}} patients, {{images}} images imported.",
+    "importFailed": "Import failed",
+    "summaryTitle": "Import summary",
+    "patientsImported": "Patients imported",
+    "patientsSkipped": "Patients skipped",
+    "imagesImported": "Images imported",
+    "imagesSkipped": "Images skipped"
   }
 }
