@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import Webcam from "react-webcam";
@@ -42,6 +42,8 @@ export default function Capture() {
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
 
   const webcamRef = useRef<Webcam>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const addMoreRef = useRef<HTMLInputElement>(null);
 
   const { data: patients, isLoading: loadingPatients } = useListPatients({}, {
     query: { queryKey: getListPatientsQueryKey() },
@@ -63,9 +65,12 @@ export default function Capture() {
     }]);
   }, [webcamRef]);
 
-  const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    const incoming: QueuedFile[] = Array.from(e.target.files).map((file) => ({
+  // processFiles is stable — does not close over queue so setQueue functional
+  // updater is safe to call from native DOM event listeners.
+  const processFiles = useCallback((input: HTMLInputElement) => {
+    const files = input.files;
+    if (!files || files.length === 0) return;
+    const incoming: QueuedFile[] = Array.from(files).map((file) => ({
       id: crypto.randomUUID(),
       file,
       previewUrl: URL.createObjectURL(file),
@@ -73,8 +78,49 @@ export default function Capture() {
       notes: "",
     }));
     setQueue((prev) => [...prev, ...incoming]);
-    e.target.value = "";
-  };
+    // reset so the same file can be selected again
+    try { input.value = ""; } catch { /* ignore */ }
+  }, []);
+
+  // Attach native DOM event listeners to both file inputs.
+  // Android Chrome often does not fire React's synthetic onChange when returning
+  // from the system file picker (the page goes to background while picker is open).
+  // Two strategies combined:
+  //   1. Native 'change' event — works on desktop + modern Android.
+  //   2. 'visibilitychange' fallback — fires when the page returns to foreground
+  //      after the picker closes; we poll input.files at that point.
+  useEffect(() => {
+    const refs = [fileInputRef, addMoreRef];
+    const cleanups: (() => void)[] = [];
+
+    for (const ref of refs) {
+      const input = ref.current;
+      if (!input) continue;
+
+      const onChange = () => processFiles(input);
+      input.addEventListener("change", onChange);
+
+      // visibilitychange fires when Android returns from the file picker.
+      // We read input.files after a short delay so the browser has time to
+      // populate the FileList.
+      let visTimer: ReturnType<typeof setTimeout> | null = null;
+      const onVisible = () => {
+        if (document.hidden) return;
+        visTimer = setTimeout(() => {
+          if (input.files && input.files.length > 0) processFiles(input);
+        }, 200);
+      };
+      document.addEventListener("visibilitychange", onVisible);
+
+      cleanups.push(() => {
+        input.removeEventListener("change", onChange);
+        document.removeEventListener("visibilitychange", onVisible);
+        if (visTimer !== null) clearTimeout(visTimer);
+      });
+    }
+
+    return () => cleanups.forEach((fn) => fn());
+  }, [processFiles]);
 
   const removeFromQueue = (id: string) => {
     setQueue((prev) => {
@@ -240,13 +286,13 @@ export default function Capture() {
                 <Plus className="h-4 w-4" />
                 {t("capture.selectFile")}
               </span>
-              {/* Transparent overlay — user taps the native input directly, which is
-                  the only reliable approach on Android Chrome for triggering onChange */}
+              {/* Transparent overlay — user taps the native input directly.
+                  ref + native listeners handle the change (see useEffect above). */}
               <input
+                ref={fileInputRef}
                 type="file"
                 accept="image/*"
                 multiple
-                onChange={handleFilesChange}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
             </div>
@@ -266,10 +312,10 @@ export default function Capture() {
                       {t("capture.addMore")}
                     </span>
                     <input
+                      ref={addMoreRef}
                       type="file"
                       accept="image/*"
                       multiple
-                      onChange={handleFilesChange}
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     />
                   </div>
