@@ -25,6 +25,18 @@ if errorlevel 1 (
 for /f "tokens=*" %%v in ('node --version') do set NODE_VERSION=%%v
 echo [max7] Node.js %NODE_VERSION% found
 
+REM Enforce minimum version (Node 20+)
+for /f "tokens=*" %%m in ('node -e "process.stdout.write(String(process.versions.node.split('.')[0]))"') do set NODE_MAJOR=%%m
+if %NODE_MAJOR% LSS 20 (
+    echo.
+    echo [ERROR] Node.js 20 or later is required.
+    echo         You have %NODE_VERSION% -- please upgrade from https://nodejs.org
+    echo         Download the "LTS" installer, run it, then re-open this window.
+    echo.
+    pause
+    exit /b 1
+)
+
 REM ── 2. pnpm ────────────────────────────────────
 where pnpm >nul 2>&1
 if errorlevel 1 (
@@ -119,7 +131,7 @@ if exist "artifacts\patient-images\dist\public" (
 )
 
 REM ── 8. Detect LAN IP ───────────────────────────
-for /f "tokens=*" %%i in ('node -e "const os=require('os');const nets=os.networkInterfaces();for(const ifaces of Object.values(nets)){for(const iface of (ifaces??[])){if(iface.family==='IPv4'&&!iface.internal){process.stdout.write(iface.address);process.exit(0)}}}"') do set LAN_IP=%%i
+for /f "tokens=*" %%i in ('node -e "var os=require('os');var nets=os.networkInterfaces();var names=Object.keys(nets);for(var i=0;i<names.length;i++){var ifaces=nets[names[i]]||[];for(var j=0;j<ifaces.length;j++){if(ifaces[j].family==='IPv4'&&!ifaces[j].internal){process.stdout.write(ifaces[j].address);process.exit(0)}}}"') do set LAN_IP=%%i
 
 echo.
 if "%USE_SQLITE%"=="true" (
