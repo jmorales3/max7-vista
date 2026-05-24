@@ -187,7 +187,7 @@ async function saveImage(
     filePath,
     fileName,
     notes: legend || null,
-    capturedAt: capturedAt.toISOString() as unknown as Date,
+    capturedAt: capturedAt,
     isUnassigned: 0 as unknown as boolean,
   });
 }

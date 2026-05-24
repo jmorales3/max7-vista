@@ -180,7 +180,7 @@ router.post("/images", upload.single("file"), async (req, res): Promise<void> =>
       filePath,
       fileName: req.file.originalname,
       notes,
-      capturedAt: capturedAt.toISOString() as unknown as Date,
+      capturedAt: capturedAt,
       isUnassigned: patientId === null,
     })
     .returning();
@@ -372,7 +372,7 @@ router.patch("/images/:id", async (req, res): Promise<void> => {
     updateData.isUnassigned = parsed.data.patientId === null;
   }
   if (parsed.data.capturedAt !== undefined) {
-    updateData.capturedAt = new Date(parsed.data.capturedAt).toISOString() as unknown as Date;
+    updateData.capturedAt = new Date(parsed.data.capturedAt);
   }
 
   const [image] = await db

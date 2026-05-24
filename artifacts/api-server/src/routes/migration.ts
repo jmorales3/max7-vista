@@ -242,7 +242,7 @@ router.post(
               filePath: fileWritten ? destPath : (img.zipPath ?? ""),
               fileName: img.fileName,
               notes: img.notes ?? null,
-              capturedAt: capturedAt.toISOString() as unknown as Date,
+              capturedAt: capturedAt,
               isUnassigned: (img.isUnassigned ? 1 : 0) as unknown as boolean,
             });
             summary.imagesImported++;
