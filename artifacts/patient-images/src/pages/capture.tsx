@@ -40,6 +40,10 @@ export default function Capture() {
   const [seriesNotes, setSeriesNotes] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
+  // Prevents ghost-click auto-capture when switching to camera mode on mobile:
+  // the 300 ms tap-delay can land on the capture button if it renders in the
+  // same position as the mode tab that was just tapped.
+  const [captureEnabled, setCaptureEnabled] = useState(false);
 
   const webcamRef = useRef<Webcam>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -81,6 +85,15 @@ export default function Capture() {
     // reset so the same file can be selected again
     try { input.value = ""; } catch { /* ignore */ }
   }, []);
+
+  // Enable capture button 600 ms after switching to camera mode to prevent
+  // the mobile ghost-click from auto-firing a photo on mode switch.
+  useEffect(() => {
+    if (mode !== "camera") return;
+    setCaptureEnabled(false);
+    const t = setTimeout(() => setCaptureEnabled(true), 600);
+    return () => clearTimeout(t);
+  }, [mode]);
 
   // Attach native DOM event listeners to both file inputs.
   // Android Chrome often does not fire React's synthetic onChange when returning
@@ -271,8 +284,9 @@ export default function Capture() {
               <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
                 <Button
                   size="lg"
-                  className="rounded-full h-16 w-16 p-0 border-4 border-white/20 hover:border-white shadow-xl bg-primary hover:bg-primary/90"
+                  className="rounded-full h-16 w-16 p-0 border-4 border-white/20 hover:border-white shadow-xl bg-primary hover:bg-primary/90 disabled:opacity-50"
                   onClick={capture}
+                  disabled={!captureEnabled}
                 >
                   <Camera className="h-8 w-8" />
                 </Button>

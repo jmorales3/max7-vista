@@ -144,7 +144,7 @@ router.post("/images", upload.single("file"), async (req, res): Promise<void> =>
 
   const patientId = req.body.patientId ? parseInt(req.body.patientId, 10) : null;
   const notes = req.body.notes ?? null;
-  const capturedAt = (req.body.capturedAt ? new Date(req.body.capturedAt) : new Date()).toISOString();
+  const capturedAt = req.body.capturedAt ? new Date(req.body.capturedAt) : new Date();
 
   // Validate patientId existence to return a clean 404 instead of a DB FK error
   if (patientId !== null) {
@@ -160,7 +160,7 @@ router.post("/images", upload.single("file"), async (req, res): Promise<void> =>
 
   // Build subfolder: {storageDir}/{patientId}/{YYYY-MM-DD}/
   const storageDir = await getStorageDirectory();
-  const dateStr = capturedAt.split("T")[0]; // YYYY-MM-DD
+  const dateStr = capturedAt.toISOString().split("T")[0]; // YYYY-MM-DD
   const subFolder = patientId
     ? path.join(storageDir, String(patientId), dateStr)
     : path.join(storageDir, "unassigned", dateStr);
@@ -180,7 +180,7 @@ router.post("/images", upload.single("file"), async (req, res): Promise<void> =>
       filePath,
       fileName: req.file.originalname,
       notes,
-      capturedAt,
+      capturedAt: capturedAt.toISOString() as unknown as Date,
       isUnassigned: patientId === null,
     })
     .returning();
@@ -372,7 +372,7 @@ router.patch("/images/:id", async (req, res): Promise<void> => {
     updateData.isUnassigned = parsed.data.patientId === null;
   }
   if (parsed.data.capturedAt !== undefined) {
-    updateData.capturedAt = new Date(parsed.data.capturedAt).toISOString();
+    updateData.capturedAt = new Date(parsed.data.capturedAt).toISOString() as unknown as Date;
   }
 
   const [image] = await db
