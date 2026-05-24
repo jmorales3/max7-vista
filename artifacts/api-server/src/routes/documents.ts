@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import path from "path";
+import fs from "fs";
 import multer from "multer";
 import { db, documentsTable, patientsTable } from "@workspace/db";
 import { uploadToGcs, streamFile, deleteFile, getSignedDownloadUrl } from "../lib/gcsStorage";
@@ -115,6 +116,22 @@ router.get("/documents/:id/signed-url", async (req, res) => {
   }
 
   try {
+    // Auto-migrate legacy disk-stored files to GCS on first view
+    if (!doc.filePath.startsWith("gcs:")) {
+      if (!fs.existsSync(doc.filePath)) {
+        res.status(404).json({ error: "File not found on disk and not in cloud storage" });
+        return;
+      }
+      const buffer = await fs.promises.readFile(doc.filePath);
+      const ext = path.extname(doc.fileName) || "";
+      const objectName = `documents/${doc.patientId}/${Date.now()}${ext}`;
+      const newPath = await uploadToGcs(buffer, objectName, doc.fileType);
+      await db
+        .update(documentsTable)
+        .set({ filePath: newPath })
+        .where(eq(documentsTable.id, doc.id));
+      doc.filePath = newPath;
+    }
     const url = await getSignedDownloadUrl(doc.filePath);
     res.json({ url, fileName: doc.fileName, fileType: doc.fileType });
   } catch (err) {
