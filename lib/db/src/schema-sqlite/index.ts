@@ -10,3 +10,4 @@ export * from "./audit-log";
 export * from "./tags";
 export * from "./patient-tags";
 export * from "./presentations";
+export * from "./documents";

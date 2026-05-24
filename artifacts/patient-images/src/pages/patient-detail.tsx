@@ -44,6 +44,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ImageGrid } from "@/components/image-grid";
+import { PatientDocuments } from "@/components/patient-documents";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -328,6 +329,8 @@ export default function PatientDetail() {
           </div>
         )}
       </div>
+
+      <PatientDocuments patientId={patient.id} />
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
