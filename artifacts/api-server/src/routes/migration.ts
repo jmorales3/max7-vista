@@ -265,12 +265,16 @@ router.post(
             if (existing) {
               summary.usersSkipped++;
             } else {
-              // Validate the stored hash looks like bcrypt before inserting
+              // Validate the stored hash looks like bcrypt before inserting.
+              // If invalid, skip — never create accounts with a fallback password.
               const isValidHash = /^\$2[aby]\$\d+\$/.test(u.passwordHash);
-              const hash = isValidHash ? u.passwordHash : await bcrypt.hash("ChangeMe123!", 10);
+              if (!isValidHash) {
+                summary.usersSkipped++;
+                continue;
+              }
               await db.insert(usersTable).values({
                 username: u.username,
-                passwordHash: hash,
+                passwordHash: u.passwordHash,
                 role: (["user", "admin", "superadmin"].includes(u.role) ? u.role : "user") as "user" | "admin" | "superadmin",
                 isActive: Boolean(u.isActive),
               });
