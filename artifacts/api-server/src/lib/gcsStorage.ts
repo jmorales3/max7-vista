@@ -115,6 +115,47 @@ export async function streamFile(
 }
 
 /**
+ * Generate a time-limited signed GET URL for a file stored in GCS.
+ * The returned URL is publicly accessible for `ttlSec` seconds (default 1 hour)
+ * and can be passed to Microsoft Office Online viewer or opened in a browser tab.
+ * Legacy local-disk paths (no "gcs:" prefix) throw — signed URLs are only for GCS.
+ */
+export async function getSignedDownloadUrl(
+  filePath: string,
+  ttlSec = 3600,
+): Promise<string> {
+  if (!isGcsPath(filePath)) {
+    throw new Error("Signed URLs are only supported for GCS-stored files");
+  }
+  const objectName = fromGcsPath(filePath);
+  const bucketName = getBucketName();
+
+  const request = {
+    bucket_name: bucketName,
+    object_name: objectName,
+    method: "GET",
+    expires_at: new Date(Date.now() + ttlSec * 1000).toISOString(),
+  };
+
+  const response = await fetch(
+    `${REPLIT_SIDECAR_ENDPOINT}/object-storage/signed-object-url`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+      signal: AbortSignal.timeout(15_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Sidecar signed-url error ${response.status}`);
+  }
+
+  const { signed_url } = await response.json();
+  return signed_url as string;
+}
+
+/**
  * Delete a file from GCS (or local disk for legacy paths).
  * Silently ignores missing files.
  */

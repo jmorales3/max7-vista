@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import path from "path";
 import multer from "multer";
 import { db, documentsTable, patientsTable } from "@workspace/db";
-import { uploadToGcs, streamFile, deleteFile } from "../lib/gcsStorage";
+import { uploadToGcs, streamFile, deleteFile, getSignedDownloadUrl } from "../lib/gcsStorage";
 
 const router: IRouter = Router();
 
@@ -94,6 +94,32 @@ router.post("/documents", upload.single("file"), async (req, res) => {
     .returning();
 
   res.status(201).json(buildDocumentRow(doc));
+});
+
+// GET /api/documents/:id/signed-url  — returns a short-lived public URL for viewing
+router.get("/documents/:id/signed-url", async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id || isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+
+  const [doc] = await db
+    .select()
+    .from(documentsTable)
+    .where(eq(documentsTable.id, id));
+
+  if (!doc) {
+    res.status(404).json({ error: "Document not found" });
+    return;
+  }
+
+  try {
+    const url = await getSignedDownloadUrl(doc.filePath);
+    res.json({ url, fileName: doc.fileName, fileType: doc.fileType });
+  } catch (err) {
+    res.status(422).json({ error: "Cannot generate view URL", detail: String(err) });
+  }
 });
 
 // GET /api/documents/:id/file  — download

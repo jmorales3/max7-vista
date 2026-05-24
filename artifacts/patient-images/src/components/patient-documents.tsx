@@ -4,6 +4,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -24,6 +30,8 @@ import {
   Download,
   Trash2,
   FolderOpen,
+  Eye,
+  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -35,6 +43,12 @@ import {
 
 interface Props {
   patientId: number;
+}
+
+interface ViewerState {
+  url: string;
+  fileName: string;
+  fileType: string;
 }
 
 function formatBytes(bytes: number): string {
@@ -63,6 +77,48 @@ function DocIcon({ mimeType }: { mimeType: string }) {
   return <File className={`${cls} text-muted-foreground`} />;
 }
 
+/**
+ * Returns true if this MIME type can be viewed in-browser without a download.
+ */
+function isViewable(mimeType: string): boolean {
+  return (
+    mimeType === "application/pdf" ||
+    mimeType.startsWith("image/") ||
+    mimeType.startsWith("video/") ||
+    mimeType.startsWith("audio/") ||
+    mimeType === "text/plain" ||
+    mimeType === "text/csv" ||
+    mimeType.includes("word") ||
+    mimeType.includes("document") ||
+    mimeType.includes("excel") ||
+    mimeType.includes("spreadsheet") ||
+    mimeType.includes("presentation") ||
+    mimeType.includes("powerpoint")
+  );
+}
+
+/**
+ * For Office files, return the Microsoft Office Online embed URL.
+ * For everything else, return the raw signed URL.
+ */
+function buildViewerUrl(signedUrl: string, mimeType: string): string {
+  const isOffice =
+    mimeType.includes("word") ||
+    mimeType.includes("document") ||
+    mimeType.includes("excel") ||
+    mimeType.includes("spreadsheet") ||
+    mimeType.includes("presentation") ||
+    mimeType.includes("powerpoint") ||
+    mimeType === "application/msword" ||
+    mimeType === "application/vnd.ms-excel" ||
+    mimeType === "application/vnd.ms-powerpoint";
+
+  if (isOffice) {
+    return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(signedUrl)}`;
+  }
+  return signedUrl;
+}
+
 const ACCEPTED = [
   "application/pdf",
   "application/msword",
@@ -84,6 +140,8 @@ export function PatientDocuments({ patientId }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [viewer, setViewer] = useState<ViewerState | null>(null);
+  const [loadingId, setLoadingId] = useState<number | null>(null);
 
   const { data: documents = [], isLoading } = useListPatientDocuments(patientId);
 
@@ -120,6 +178,21 @@ export function PatientDocuments({ patientId }: Props) {
     e.preventDefault();
     setIsDragging(false);
     handleFiles(e.dataTransfer.files);
+  }
+
+  async function handleOpen(docId: number) {
+    setLoadingId(docId);
+    try {
+      const res = await fetch(`/api/documents/${docId}/signed-url`);
+      if (!res.ok) throw new Error("Could not generate view URL");
+      const { url, fileName, fileType } = await res.json();
+      const viewerUrl = buildViewerUrl(url, fileType);
+      setViewer({ url: viewerUrl, fileName, fileType });
+    } catch {
+      toast({ variant: "destructive", title: "Could not open document", description: "Try downloading it instead." });
+    } finally {
+      setLoadingId(null);
+    }
   }
 
   const docToDelete = documents.find((d) => d.id === deleteId);
@@ -171,6 +244,21 @@ export function PatientDocuments({ patientId }: Props) {
                 </p>
               </div>
               <div className="flex items-center gap-1 shrink-0">
+                {isViewable(doc.fileType) && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    title="Open"
+                    disabled={loadingId === doc.id}
+                    onClick={() => handleOpen(doc.id)}
+                  >
+                    {loadingId === doc.id
+                      ? <Loader2 className="h-4 w-4 animate-spin" />
+                      : <Eye className="h-4 w-4" />
+                    }
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"
@@ -218,6 +306,49 @@ export function PatientDocuments({ patientId }: Props) {
       {upload.isPending && (
         <p className="text-sm text-muted-foreground animate-pulse">Uploading…</p>
       )}
+
+      {/* Document viewer modal */}
+      <Dialog open={viewer !== null} onOpenChange={(open) => !open && setViewer(null)}>
+        <DialogContent className="max-w-5xl w-full h-[90vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-4 py-3 border-b shrink-0">
+            <DialogTitle className="text-sm font-medium truncate pr-8">
+              {viewer?.fileName}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden">
+            {viewer && (
+              viewer.fileType.startsWith("image/") ? (
+                <div className="h-full flex items-center justify-center bg-muted/30 p-4">
+                  <img
+                    src={viewer.url}
+                    alt={viewer.fileName}
+                    className="max-h-full max-w-full object-contain rounded"
+                  />
+                </div>
+              ) : viewer.fileType.startsWith("video/") ? (
+                <div className="h-full flex items-center justify-center bg-black p-4">
+                  <video
+                    src={viewer.url}
+                    controls
+                    className="max-h-full max-w-full"
+                  />
+                </div>
+              ) : viewer.fileType.startsWith("audio/") ? (
+                <div className="h-full flex items-center justify-center p-8">
+                  <audio src={viewer.url} controls className="w-full" />
+                </div>
+              ) : (
+                <iframe
+                  src={viewer.url}
+                  title={viewer.fileName}
+                  className="w-full h-full border-0"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                />
+              )
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent>
