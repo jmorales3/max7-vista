@@ -252,6 +252,12 @@ export default function Capture() {
             </Button>
           </div>
 
+          {/* Always-mounted hidden inputs — listeners are attached once on mount
+              in useEffect. Inputs exist in the DOM regardless of mode so that
+              fileInputRef.current is never null when the effect runs. */}
+          <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" />
+          <input ref={addMoreRef}   type="file" accept="image/*" multiple className="hidden" />
+
           {/* Camera / upload input area */}
           {mode === "camera" ? (
             <div className="relative rounded-xl overflow-hidden bg-black aspect-video flex items-center justify-center">
@@ -278,23 +284,17 @@ export default function Capture() {
               )}
             </div>
           ) : (
-            <div className="relative border-2 border-dashed border-muted-foreground/25 rounded-xl aspect-video flex flex-col items-center justify-center p-6 hover:bg-muted/50 transition-colors">
-              <Images className="h-12 w-12 text-muted-foreground mb-4 pointer-events-none" />
-              <p className="text-lg font-medium pointer-events-none">{t("capture.clickToBrowse")}</p>
-              <p className="text-sm text-muted-foreground mb-4 pointer-events-none">{t("capture.uploadInfo")}</p>
+            <div
+              className="border-2 border-dashed border-muted-foreground/25 rounded-xl aspect-video flex flex-col items-center justify-center p-6 hover:bg-muted/50 transition-colors cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Images className="h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-lg font-medium">{t("capture.clickToBrowse")}</p>
+              <p className="text-sm text-muted-foreground mb-4">{t("capture.uploadInfo")}</p>
               <span className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-input bg-background text-sm font-medium shadow-sm pointer-events-none">
                 <Plus className="h-4 w-4" />
                 {t("capture.selectFile")}
               </span>
-              {/* Transparent overlay — user taps the native input directly.
-                  ref + native listeners handle the change (see useEffect above). */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              />
             </div>
           )}
 
@@ -306,19 +306,15 @@ export default function Capture() {
               </p>
               <div className="flex gap-2">
                 {mode === "upload" && (
-                  <div className="relative inline-flex">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-input bg-background text-sm font-medium shadow-sm pointer-events-none">
-                      <Plus className="h-3.5 w-3.5" />
-                      {t("capture.addMore")}
-                    </span>
-                    <input
-                      ref={addMoreRef}
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    />
-                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addMoreRef.current?.click()}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />
+                    {t("capture.addMore")}
+                  </Button>
                 )}
                 <Button variant="ghost" size="sm" onClick={clearQueue} disabled={isUploading}>
                   {t("capture.clearAll")}
