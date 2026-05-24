@@ -51,15 +51,35 @@ function parseCSV(csv: string): Map<string, PatientInfo> {
   const header = parseCSVLine(lines[0]).map((h) =>
     h.toLowerCase().replace(/['"]/g, "").replace(/\s+/g, ""),
   );
-  const idIdx = header.findIndex((h) => h === "id" || h === "patientid" || h === "patient_id");
-  const nameIdx = header.findIndex((h) => h === "name" || h === "patientname");
+  const idIdx = header.findIndex(
+    (h) => h === "id" || h === "patientid" || h === "patient_id" || h === "codigo" || h === "code",
+  );
+  const nameIdx = header.findIndex(
+    (h) =>
+      h === "name" ||
+      h === "patientname" ||
+      h === "patient_name" ||
+      h === "fullname" ||
+      h === "full_name" ||
+      h === "nombre" ||
+      h === "nombrecompleto" ||
+      h === "nombre_completo",
+  );
+  const firstNameIdx = header.findIndex(
+    (h) => h === "firstname" || h === "first_name",
+  );
+  const lastNameIdx = header.findIndex(
+    (h) => h === "lastname" || h === "last_name" || h === "apellido" || h === "apellidos",
+  );
   const dobIdx = header.findIndex(
     (h) =>
       h === "dob" ||
       h === "dateofbirth" ||
       h === "date_of_birth" ||
       h === "birthdate" ||
-      h === "birth_date",
+      h === "birth_date" ||
+      h === "fechanacimiento" ||
+      h === "fecha_nacimiento",
   );
 
   if (idIdx === -1) return map;
@@ -70,10 +90,20 @@ function parseCSV(csv: string): Map<string, PatientInfo> {
     const cols = parseCSVLine(line);
     const id = cols[idIdx]?.replace(/['"]/g, "").trim();
     if (!id) continue;
-    const name =
-      nameIdx >= 0 ? (cols[nameIdx]?.replace(/['"]/g, "").trim() || id) : id;
-    const rawDob =
-      dobIdx >= 0 ? cols[dobIdx]?.replace(/['"]/g, "").trim() : undefined;
+
+    let name: string;
+    const clean = (v: string | undefined) => v?.replace(/['"]/g, "").trim() ?? "";
+    if (nameIdx >= 0 && clean(cols[nameIdx])) {
+      name = clean(cols[nameIdx]);
+    } else if ((firstNameIdx >= 0 || lastNameIdx >= 0)) {
+      const first = firstNameIdx >= 0 ? clean(cols[firstNameIdx]) : "";
+      const last = lastNameIdx >= 0 ? clean(cols[lastNameIdx]) : "";
+      name = [first, last].filter(Boolean).join(" ") || id;
+    } else {
+      name = id;
+    }
+
+    const rawDob = dobIdx >= 0 ? clean(cols[dobIdx]) : undefined;
     map.set(id, { name, dateOfBirth: rawDob || null });
   }
   return map;
