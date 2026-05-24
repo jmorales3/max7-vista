@@ -14,8 +14,8 @@ import {
   ListPatientImagesParams,
   ReplaceImageFileParams,
 } from "@workspace/api-zod";
-import { getStorageDirectory } from "../lib/storage";
 import { logAudit } from "../lib/audit";
+import { uploadToGcs, streamFile, deleteFile, isGcsPath } from "../lib/gcsStorage";
 
 const router: IRouter = Router();
 
@@ -158,20 +158,14 @@ router.post("/images", upload.single("file"), async (req, res): Promise<void> =>
     }
   }
 
-  // Build subfolder: {storageDir}/{patientId}/{YYYY-MM-DD}/
-  const storageDir = await getStorageDirectory();
   const dateStr = capturedAt.toISOString().split("T")[0]; // YYYY-MM-DD
-  const subFolder = patientId
-    ? path.join(storageDir, String(patientId), dateStr)
-    : path.join(storageDir, "unassigned", dateStr);
-
-  fs.mkdirSync(subFolder, { recursive: true });
-
   const ext = path.extname(req.file.originalname) || ".jpg";
   const filename = `${Date.now()}${ext}`;
-  const filePath = path.join(subFolder, filename);
+  const objectName = patientId
+    ? `images/${patientId}/${dateStr}/${filename}`
+    : `images/unassigned/${dateStr}/${filename}`;
 
-  fs.writeFileSync(filePath, req.file.buffer);
+  const filePath = await uploadToGcs(req.file.buffer, objectName, req.file.mimetype);
 
   const [image] = await db
     .insert(imagesTable)
@@ -222,8 +216,13 @@ router.put("/images/:id/file", upload.single("file"), async (req, res): Promise<
     return;
   }
 
-  // Overwrite the existing file on disk (preserving the same path)
-  fs.writeFileSync(existingImage.filePath, req.file.buffer);
+  // Overwrite the existing file in GCS (preserving the same path)
+  const ext = path.extname(req.file.originalname) || ".jpg";
+  const filename = `${Date.now()}${ext}`;
+  const objectName = isGcsPath(existingImage.filePath)
+    ? existingImage.filePath.slice(4)  // reuse the same GCS key
+    : `images/replaced/${filename}`;
+  await uploadToGcs(req.file.buffer, objectName, req.file.mimetype);
 
   const rows = await db
     .select({
@@ -264,13 +263,8 @@ router.get("/images/:id/file", async (req, res): Promise<void> => {
     return;
   }
 
-  if (!fs.existsSync(image.filePath)) {
-    res.status(404).json({ error: "Image file not found on disk" });
-    return;
-  }
-
   await logAudit(req, "view", "image", params.data.id);
-  res.sendFile(path.resolve(image.filePath));
+  await streamFile(image.filePath, image.fileName, res);
 });
 
 router.get("/patients/:id/images", async (req, res): Promise<void> => {
@@ -425,9 +419,7 @@ router.delete("/images/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  if (fs.existsSync(image.filePath)) {
-    fs.unlinkSync(image.filePath);
-  }
+  await deleteFile(image.filePath);
 
   await logAudit(req, "delete", "image", params.data.id, JSON.stringify({ fileName: image.fileName, patientId: image.patientId }));
   res.sendStatus(204);

@@ -73,14 +73,6 @@ autoInstallPeers: false
 # was generated without it — dangerouslyAllowAllBuilds bypasses that check).
 dangerouslyAllowAllBuilds: true
 
-onlyBuiltDependencies:
-  - '@clerk/shared'
-  - '@swc/core'
-  - better-sqlite3
-  - electron
-  - esbuild
-  - msw
-  - unrs-resolver
 
 overrides:
   # replit uses linux-x64 only, we can exclude all other platforms

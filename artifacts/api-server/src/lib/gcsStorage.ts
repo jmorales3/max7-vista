@@ -1,0 +1,135 @@
+/**
+ * Thin GCS wrapper for uploading and streaming files.
+ * Uses Replit sidecar authentication — no credentials config needed.
+ *
+ * filePath convention stored in DB:
+ *   "gcs:<objectName>"   e.g. "gcs:images/4/2024-01-01/1700000000000.jpg"
+ *
+ * Legacy local-disk paths (no "gcs:" prefix) are still supported for
+ * reading so that older records continue to work.
+ */
+
+import { Storage } from "@google-cloud/storage";
+import type { Response } from "express";
+import fs from "fs";
+
+const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
+
+const storageClient = new Storage({
+  credentials: {
+    audience: "replit",
+    subject_token_type: "access_token",
+    token_url: `${REPLIT_SIDECAR_ENDPOINT}/token`,
+    type: "external_account",
+    credential_source: {
+      url: `${REPLIT_SIDECAR_ENDPOINT}/credential`,
+      format: { type: "json", subject_token_field_name: "access_token" },
+    },
+    universe_domain: "googleapis.com",
+  },
+  projectId: "",
+} as ConstructorParameters<typeof Storage>[0]);
+
+function getBucketName(): string {
+  const id = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+  if (!id) throw new Error("DEFAULT_OBJECT_STORAGE_BUCKET_ID is not set");
+  // env var is the full bucket ID like "replit-objstore-<uuid>"
+  // GCS bucket name is just the uuid part after the last slash (or the whole thing)
+  return id.startsWith("/") ? id.slice(1) : id;
+}
+
+/** Returns true if the filePath is a GCS reference */
+export function isGcsPath(filePath: string): boolean {
+  return filePath.startsWith("gcs:");
+}
+
+/** Convert an object name to the canonical DB storage key */
+export function toGcsPath(objectName: string): string {
+  return `gcs:${objectName}`;
+}
+
+/** Extract the GCS object name from a DB storage key */
+export function fromGcsPath(filePath: string): string {
+  return filePath.startsWith("gcs:") ? filePath.slice(4) : filePath;
+}
+
+/**
+ * Upload a Buffer to GCS.
+ * Returns the DB storage key (e.g. "gcs:images/4/2024-01-01/1234.jpg").
+ */
+export async function uploadToGcs(
+  buffer: Buffer,
+  objectName: string,
+  contentType: string,
+): Promise<string> {
+  const bucket = storageClient.bucket(getBucketName());
+  const file = bucket.file(objectName);
+  await file.save(buffer, { contentType, resumable: false });
+  return toGcsPath(objectName);
+}
+
+/**
+ * Stream a file from GCS (or fall back to local disk) to an Express response.
+ * Handles Content-Type and 404 automatically.
+ */
+export async function streamFile(
+  filePath: string,
+  fileName: string,
+  res: Response,
+  download = false,
+): Promise<void> {
+  if (isGcsPath(filePath)) {
+    const objectName = fromGcsPath(filePath);
+    const bucket = storageClient.bucket(getBucketName());
+    const file = bucket.file(objectName);
+
+    const [exists] = await file.exists();
+    if (!exists) {
+      res.status(404).json({ error: "File not found" });
+      return;
+    }
+
+    const [metadata] = await file.getMetadata();
+    const contentType = (metadata.contentType as string) || "application/octet-stream";
+
+    res.setHeader("Content-Type", contentType);
+    if (download) {
+      res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(fileName)}"`);
+    } else {
+      res.setHeader("Cache-Control", "private, max-age=31536000");
+    }
+
+    file.createReadStream().pipe(res);
+  } else {
+    // Legacy local-disk path
+    if (!fs.existsSync(filePath)) {
+      res.status(404).json({ error: "File not found on disk" });
+      return;
+    }
+    if (download) {
+      res.download(filePath, fileName);
+    } else {
+      res.sendFile(filePath);
+    }
+  }
+}
+
+/**
+ * Delete a file from GCS (or local disk for legacy paths).
+ * Silently ignores missing files.
+ */
+export async function deleteFile(filePath: string): Promise<void> {
+  try {
+    if (isGcsPath(filePath)) {
+      const objectName = fromGcsPath(filePath);
+      const bucket = storageClient.bucket(getBucketName());
+      const file = bucket.file(objectName);
+      const [exists] = await file.exists();
+      if (exists) await file.delete();
+    } else {
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+  } catch {
+    // ignore — best-effort cleanup
+  }
+}

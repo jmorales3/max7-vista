@@ -1,10 +1,9 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import path from "path";
-import fs from "fs";
 import multer from "multer";
 import { db, documentsTable, patientsTable } from "@workspace/db";
-import { getStorageDirectory } from "../lib/storage";
+import { uploadToGcs, streamFile, deleteFile } from "../lib/gcsStorage";
 
 const router: IRouter = Router();
 
@@ -75,14 +74,9 @@ router.post("/documents", upload.single("file"), async (req, res) => {
     return;
   }
 
-  const storageDir = await getStorageDirectory();
-  const docsDir = path.join(storageDir, "documents", String(patientId));
-  fs.mkdirSync(docsDir, { recursive: true });
-
   const ext = path.extname(req.file.originalname);
-  const destFileName = `${Date.now()}${ext}`;
-  const filePath = path.join(docsDir, destFileName);
-  fs.writeFileSync(filePath, req.file.buffer);
+  const objectName = `documents/${patientId}/${Date.now()}${ext}`;
+  const filePath = await uploadToGcs(req.file.buffer, objectName, req.file.mimetype);
 
   const notes = req.body.notes || null;
 
@@ -120,12 +114,7 @@ router.get("/documents/:id/file", async (req, res) => {
     return;
   }
 
-  if (!fs.existsSync(doc.filePath)) {
-    res.status(404).json({ error: "File not found on disk" });
-    return;
-  }
-
-  res.download(doc.filePath, doc.fileName);
+  await streamFile(doc.filePath, doc.fileName, res, true);
 });
 
 // PATCH /api/documents/:id
@@ -174,14 +163,7 @@ router.delete("/documents/:id", async (req, res) => {
   }
 
   await db.delete(documentsTable).where(eq(documentsTable.id, id));
-
-  try {
-    if (fs.existsSync(doc.filePath)) {
-      fs.unlinkSync(doc.filePath);
-    }
-  } catch {
-    // ignore fs errors — DB record is already gone
-  }
+  await deleteFile(doc.filePath);
 
   res.status(204).send();
 });
