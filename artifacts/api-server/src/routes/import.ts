@@ -145,6 +145,18 @@ async function upsertPatient(
 
   if (existing) {
     summary.patientsMatched++;
+    // If the CSV provides an explicit name (not just the folder-name fallback),
+    // update the existing record — this allows a re-import with a corrected CSV
+    // to fix patient names without creating duplicates.
+    const csvInfo = patientMap.get(patientCode);
+    if (csvInfo && csvInfo.name && csvInfo.name !== patientCode) {
+      const updateVals: Record<string, unknown> = { name: csvInfo.name };
+      if (csvInfo.dateOfBirth) updateVals.dateOfBirth = csvInfo.dateOfBirth;
+      await db
+        .update(patientsTable)
+        .set(updateVals)
+        .where(eq(patientsTable.id, existing.id));
+    }
     return existing;
   }
 

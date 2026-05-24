@@ -278,6 +278,7 @@
       "editor": "Édition d'Images",
       "settings": "Paramètres et Stockage",
       "bulkImport": "Import en Masse d'Images",
+      "documents": "Documents du Patient",
       "roles": "Rôles Utilisateur",
       "tenants": "Configuration Multi-Organisation"
     },
@@ -307,7 +308,11 @@
     },
     "bulkImport": {
       "heading": "Import en Masse d'Images",
-      "body": "La page Import en Masse vous permet de migrer une archive d'images existante dans Max7 Vista en une seule étape. Deux modes sont disponibles. Téléverser ZIP : compressez vos images dans un ZIP et téléversez-le depuis n'importe quel appareil. Dossier Serveur : sur la version LAN ou bureau, saisissez le chemin complet du dossier sur le serveur (ex. /data/photos) et le serveur lit les images directement — sans ZIP. Dans les deux modes, les sous-dossiers immédiats doivent être nommés avec l'ID patient (ex. 2116/, 2117/). Un dossier racine enveloppant unique est détecté et ignoré automatiquement. Joignez facultativement un CSV avec les colonnes id, name et dateOfBirth pour renseigner les patients ; sans CSV, le nom du dossier sert d'ID et de nom. Les dates de capture proviennent des métadonnées EXIF, avec l'horodatage de modification comme alternative. Après l'import, un résumé affiche les patients créés, les correspondances, les images importées et les fichiers ignorés avec la raison."
+      "body": "La page Import en Masse vous permet de migrer une archive d'images existante dans Max7 Vista en une seule étape. Deux modes sont disponibles. Téléverser ZIP : compressez vos images dans un ZIP et téléversez-le depuis n'importe quel appareil. Dossier Serveur : sur la version LAN ou bureau, saisissez le chemin complet du dossier sur le serveur (ex. /data/photos) et le serveur lit les images directement — sans ZIP. Dans les deux modes, les sous-dossiers immédiats doivent être nommés avec l'ID patient (ex. 2116/, 2117/). Un dossier racine enveloppant unique est détecté et ignoré automatiquement. Joignez facultativement un CSV avec les colonnes id, name et dateOfBirth pour renseigner les patients ; sans CSV, le nom du dossier sert d'ID et de nom. Les dates de capture proviennent des métadonnées EXIF, avec l'horodatage de modification comme alternative. Après l'import, un résumé affiche les patients créés, les correspondances, les images importées et les fichiers ignorés avec la raison. Réimporter avec un CSV corrigé mettra à jour le nom et la date de naissance des patients existants sans créer de doublons."
+    },
+    "documents": {
+      "heading": "Documents du Patient",
+      "body": "Chaque dossier patient comprend une section Documents où vous pouvez stocker tout type de fichier — documents Word, PDF, feuilles de calcul Excel, présentations PowerPoint, images, vidéos et fichiers audio. Cliquez sur le bouton Téléverser ou faites glisser-déposer des fichiers directement sur le panneau pour les joindre. Pour consulter un document sans le télécharger, cliquez sur l'icône œil : les fichiers Word, Excel et PowerPoint s'ouvrent dans le visionneur Microsoft Office Online ; les PDF s'ouvrent dans le lecteur intégré du navigateur ; les images s'affichent directement ; les fichiers vidéo et audio se lisent avec les commandes multimédias standard. Le bouton de téléchargement est toujours disponible sur chaque fichier. Tous les documents sont stockés dans le cloud de façon persistante et restent accessibles entre les sessions."
     },
     "settings": {
       "heading": "Paramètres et Stockage",
@@ -398,6 +403,23 @@
     "loginFailedDesc": "Veuillez vérifier votre identifiant et mot de passe.",
     "welcome": "Bienvenue sur Max7 Vista",
     "subtitle": "Système de Gestion des Images Cliniques"
+  },
+  "documents": {
+    "title": "Documents",
+    "upload": "Téléverser",
+    "open": "Ouvrir",
+    "download": "Télécharger",
+    "noDocuments": "Aucun document",
+    "noDocumentsDesc": "Déposez des fichiers ici ou cliquez pour téléverser · PDF, Word, Excel, PowerPoint, vidéo et plus",
+    "uploading": "Téléversement…",
+    "uploaded": "Document téléversé",
+    "deleted": "Document supprimé",
+    "uploadFailed": "Échec du téléversement",
+    "deleteFailed": "Échec de la suppression",
+    "openFailed": "Impossible d'ouvrir le document",
+    "openFailedDesc": "Essayez de le télécharger à la place.",
+    "deleteTitle": "Supprimer le document ?",
+    "deleteDesc": "\"{{name}}\" sera supprimé définitivement. Cette action est irréversible."
   },
   "migration": {
     "title": "Migration",

@@ -278,6 +278,7 @@
       "editor": "Edición de Imágenes",
       "settings": "Configuración y Almacenamiento",
       "bulkImport": "Importación Masiva de Imágenes",
+      "documents": "Documentos del Paciente",
       "roles": "Roles de Usuario",
       "tenants": "Configuración Multiempresa"
     },
@@ -307,7 +308,11 @@
     },
     "bulkImport": {
       "heading": "Importación Masiva de Imágenes",
-      "body": "La página de Importación Masiva permite migrar un archivo de imágenes existente a Max7 Vista en un solo paso. Hay dos modos disponibles. Subir ZIP: empaquete sus imágenes en un ZIP y súbalo desde cualquier dispositivo. Carpeta del Servidor: en la versión LAN o de escritorio, introduzca la ruta completa de la carpeta en el servidor (ej. /data/fotos) y el servidor lee las imágenes directamente sin necesidad de ZIP. En ambos modos, las subcarpetas inmediatas deben llamarse con el ID del paciente (ej. 2116/, 2117/). Una carpeta raíz envolvente única se detecta y omite automáticamente. Adjunte opcionalmente un CSV con columnas id, name y dateOfBirth para crear los pacientes con los datos correctos; sin CSV, se usa el nombre de carpeta como ID y nombre. Las fechas de captura provienen de los metadatos EXIF, con la fecha de modificación del archivo como alternativa. Tras la importación se muestra un resumen con pacientes creados, coincidencias, imágenes importadas y archivos omitidos."
+      "body": "La página de Importación Masiva permite migrar un archivo de imágenes existente a Max7 Vista en un solo paso. Hay dos modos disponibles. Subir ZIP: empaquete sus imágenes en un ZIP y súbalo desde cualquier dispositivo. Carpeta del Servidor: en la versión LAN o de escritorio, introduzca la ruta completa de la carpeta en el servidor (ej. /data/fotos) y el servidor lee las imágenes directamente sin necesidad de ZIP. En ambos modos, las subcarpetas inmediatas deben llamarse con el ID del paciente (ej. 2116/, 2117/). Una carpeta raíz envolvente única se detecta y omite automáticamente. Adjunte opcionalmente un CSV con columnas id, name y dateOfBirth para crear los pacientes con los datos correctos; sin CSV, se usa el nombre de carpeta como ID y nombre. Las fechas de captura provienen de los metadatos EXIF, con la fecha de modificación del archivo como alternativa. Tras la importación se muestra un resumen con pacientes creados, coincidencias, imágenes importadas y archivos omitidos. Re-importar con un CSV corregido actualizará el nombre y la fecha de nacimiento de los pacientes existentes sin crear duplicados."
+    },
+    "documents": {
+      "heading": "Documentos del Paciente",
+      "body": "Cada registro de paciente incluye una sección de Documentos donde puede almacenar cualquier tipo de archivo: documentos Word, PDF, hojas de cálculo Excel, presentaciones PowerPoint, imágenes, vídeos y archivos de audio. Haga clic en el botón Subir o arrastre y suelte archivos directamente en el panel para adjuntarlos. Para leer un documento sin descargarlo, haga clic en el icono de ojo: los archivos Word, Excel y PowerPoint se abren en el visor Microsoft Office Online; los PDF se abren en el lector integrado del navegador; las imágenes se muestran directamente; los archivos de vídeo y audio se reproducen con los controles multimedia estándar. El botón de descarga siempre está disponible en cada archivo. Todos los documentos se almacenan en la nube de forma persistente y son accesibles en todas las sesiones."
     },
     "settings": {
       "heading": "Configuración y Almacenamiento",
@@ -398,6 +403,23 @@
     "loginFailedDesc": "Por favor verifique su usuario y contraseña.",
     "welcome": "Bienvenido a Max7 Vista",
     "subtitle": "Sistema de Gestión de Imágenes Clínicas"
+  },
+  "documents": {
+    "title": "Documentos",
+    "upload": "Subir",
+    "open": "Abrir",
+    "download": "Descargar",
+    "noDocuments": "Sin documentos aún",
+    "noDocumentsDesc": "Suelte archivos aquí o haga clic para subir · PDF, Word, Excel, PowerPoint, vídeo y más",
+    "uploading": "Subiendo…",
+    "uploaded": "Documento subido",
+    "deleted": "Documento eliminado",
+    "uploadFailed": "Error al subir",
+    "deleteFailed": "Error al eliminar",
+    "openFailed": "No se pudo abrir el documento",
+    "openFailedDesc": "Intente descargarlo en su lugar.",
+    "deleteTitle": "¿Eliminar documento?",
+    "deleteDesc": "\"{{name}}\" se eliminará permanentemente. Esta acción no se puede deshacer."
   },
   "migration": {
     "title": "Migración",

@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -77,9 +78,6 @@ function DocIcon({ mimeType }: { mimeType: string }) {
   return <File className={`${cls} text-muted-foreground`} />;
 }
 
-/**
- * Returns true if this MIME type can be viewed in-browser without a download.
- */
 function isViewable(mimeType: string): boolean {
   return (
     mimeType === "application/pdf" ||
@@ -97,10 +95,6 @@ function isViewable(mimeType: string): boolean {
   );
 }
 
-/**
- * For Office files, return the Microsoft Office Online embed URL.
- * For everything else, return the raw signed URL.
- */
 function buildViewerUrl(signedUrl: string, mimeType: string): string {
   const isOffice =
     mimeType.includes("word") ||
@@ -135,6 +129,7 @@ const ACCEPTED = [
 ].join(",");
 
 export function PatientDocuments({ patientId }: Props) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -148,21 +143,25 @@ export function PatientDocuments({ patientId }: Props) {
   const upload = useUploadDocument({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: getListPatientDocumentsQueryKey(patientId) });
-      toast({ title: "Document uploaded" });
+      toast({ title: t("documents.uploaded") });
     },
     onError: (e: unknown) => {
-      toast({ variant: "destructive", title: "Upload failed", description: e instanceof Error ? e.message : "Unknown error" });
+      toast({
+        variant: "destructive",
+        title: t("documents.uploadFailed"),
+        description: e instanceof Error ? e.message : String(e),
+      });
     },
   });
 
   const deleteDoc = useDeleteDocument({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: getListPatientDocumentsQueryKey(patientId) });
-      toast({ title: "Document deleted" });
+      toast({ title: t("documents.deleted") });
       setDeleteId(null);
     },
     onError: () => {
-      toast({ variant: "destructive", title: "Delete failed" });
+      toast({ variant: "destructive", title: t("documents.deleteFailed") });
       setDeleteId(null);
     },
   });
@@ -189,7 +188,11 @@ export function PatientDocuments({ patientId }: Props) {
       const viewerUrl = buildViewerUrl(url, fileType);
       setViewer({ url: viewerUrl, fileName, fileType });
     } catch {
-      toast({ variant: "destructive", title: "Could not open document", description: "Try downloading it instead." });
+      toast({
+        variant: "destructive",
+        title: t("documents.openFailed"),
+        description: t("documents.openFailedDesc"),
+      });
     } finally {
       setLoadingId(null);
     }
@@ -202,7 +205,7 @@ export function PatientDocuments({ patientId }: Props) {
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
           <FolderOpen className="h-5 w-5 text-primary" />
-          Documents
+          {t("documents.title")}
           <span className="text-sm font-normal text-muted-foreground px-2 py-0.5 bg-muted rounded-full">
             {documents.length}
           </span>
@@ -214,7 +217,7 @@ export function PatientDocuments({ patientId }: Props) {
           disabled={upload.isPending}
         >
           <Upload className="mr-2 h-4 w-4" />
-          Upload
+          {t("documents.upload")}
         </Button>
       </div>
 
@@ -249,7 +252,7 @@ export function PatientDocuments({ patientId }: Props) {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
-                    title="Open"
+                    title={t("documents.open")}
                     disabled={loadingId === doc.id}
                     onClick={() => handleOpen(doc.id)}
                   >
@@ -263,7 +266,7 @@ export function PatientDocuments({ patientId }: Props) {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8"
-                  title="Download"
+                  title={t("documents.download")}
                   asChild
                 >
                   <a href={`/api/documents/${doc.id}/file`} download={doc.fileName}>
@@ -274,7 +277,7 @@ export function PatientDocuments({ patientId }: Props) {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-destructive hover:text-destructive"
-                  title="Delete"
+                  title={t("documents.delete") ?? "Delete"}
                   onClick={() => setDeleteId(doc.id)}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -296,18 +299,15 @@ export function PatientDocuments({ patientId }: Props) {
           <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
             <FolderOpen className="h-6 w-6 text-primary" />
           </div>
-          <p className="text-sm font-medium text-foreground">No documents yet</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Drop files here or click to upload · PDF, Word, Excel, PowerPoint, video, and more
-          </p>
+          <p className="text-sm font-medium text-foreground">{t("documents.noDocuments")}</p>
+          <p className="text-xs text-muted-foreground mt-1">{t("documents.noDocumentsDesc")}</p>
         </div>
       )}
 
       {upload.isPending && (
-        <p className="text-sm text-muted-foreground animate-pulse">Uploading…</p>
+        <p className="text-sm text-muted-foreground animate-pulse">{t("documents.uploading")}</p>
       )}
 
-      {/* Document viewer modal */}
       <Dialog open={viewer !== null} onOpenChange={(open) => !open && setViewer(null)}>
         <DialogContent className="max-w-5xl w-full h-[90vh] flex flex-col p-0 gap-0">
           <DialogHeader className="px-4 py-3 border-b shrink-0">
@@ -353,18 +353,18 @@ export function PatientDocuments({ patientId }: Props) {
       <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete document?</AlertDialogTitle>
+            <AlertDialogTitle>{t("documents.deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              "{docToDelete?.fileName}" will be permanently removed. This cannot be undone.
+              {t("documents.deleteDesc", { name: docToDelete?.fileName ?? "" })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => deleteId !== null && deleteDoc.mutate(deleteId)}
             >
-              Delete
+              {t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

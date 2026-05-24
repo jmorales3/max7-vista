@@ -278,6 +278,7 @@
       "editor": "Edição de Imagens",
       "settings": "Configurações e Armazenamento",
       "bulkImport": "Importação em Massa de Imagens",
+      "documents": "Documentos do Paciente",
       "roles": "Funções de Usuário",
       "tenants": "Configuração Multitenant"
     },
@@ -307,7 +308,11 @@
     },
     "bulkImport": {
       "heading": "Importação em Massa de Imagens",
-      "body": "A página de Importação em Massa permite migrar um arquivo de imagens existente para o Max7 Vista em uma única etapa. Dois modos estão disponíveis. Enviar ZIP: compacte suas imagens em um ZIP e envie de qualquer dispositivo. Pasta do Servidor: na versão LAN ou desktop, informe o caminho completo da pasta no servidor (ex.: /data/fotos) e o servidor lê as imagens diretamente — sem ZIP. Nos dois modos, as subpastas imediatas devem ter o ID do paciente como nome (ex.: 2116/, 2117/). Uma pasta raiz envolvente única é detectada e ignorada automaticamente. Opcionalmente, anexe um CSV com colunas id, name e dateOfBirth para criar os pacientes com os dados corretos; sem CSV, o nome da pasta é usado como ID e nome. As datas de captura vêm dos metadados EXIF, com a data de modificação do arquivo como alternativa. Após a importação, um resumo exibe pacientes criados, correspondências, imagens importadas e arquivos ignorados com o motivo."
+      "body": "A página de Importação em Massa permite migrar um arquivo de imagens existente para o Max7 Vista em uma única etapa. Dois modos estão disponíveis. Enviar ZIP: compacte suas imagens em um ZIP e envie de qualquer dispositivo. Pasta do Servidor: na versão LAN ou desktop, informe o caminho completo da pasta no servidor (ex.: /data/fotos) e o servidor lê as imagens diretamente — sem ZIP. Nos dois modos, as subpastas imediatas devem ter o ID do paciente como nome (ex.: 2116/, 2117/). Uma pasta raiz envolvente única é detectada e ignorada automaticamente. Opcionalmente, anexe um CSV com colunas id, name e dateOfBirth para criar os pacientes com os dados corretos; sem CSV, o nome da pasta é usado como ID e nome. As datas de captura vêm dos metadados EXIF, com a data de modificação do arquivo como alternativa. Após a importação, um resumo exibe pacientes criados, correspondências, imagens importadas e arquivos ignorados com o motivo. Re-importar com um CSV corrigido atualizará o nome e a data de nascimento dos pacientes existentes sem criar duplicatas."
+    },
+    "documents": {
+      "heading": "Documentos do Paciente",
+      "body": "Cada registro de paciente inclui uma seção de Documentos onde você pode armazenar qualquer tipo de arquivo — documentos Word, PDFs, planilhas Excel, apresentações PowerPoint, imagens, vídeos e arquivos de áudio. Clique no botão Enviar ou arraste e solte arquivos diretamente no painel para anexá-los. Para ler um documento sem baixá-lo, clique no ícone de olho: arquivos Word, Excel e PowerPoint abrem no visualizador Microsoft Office Online; PDFs abrem no leitor integrado do navegador; imagens são exibidas diretamente; vídeos e áudios reproduzem com os controles de mídia padrão. O botão de download está sempre disponível em cada arquivo. Todos os documentos são armazenados em nuvem de forma persistente e permanecem acessíveis entre sessões e implantações."
     },
     "settings": {
       "heading": "Configurações e Armazenamento",
@@ -398,6 +403,23 @@
     "loginFailedDesc": "Por favor verifique seu usuário e senha.",
     "welcome": "Bem-vindo ao Max7 Vista",
     "subtitle": "Sistema de Gestão de Imagens Clínicas"
+  },
+  "documents": {
+    "title": "Documentos",
+    "upload": "Enviar",
+    "open": "Abrir",
+    "download": "Baixar",
+    "noDocuments": "Nenhum documento ainda",
+    "noDocumentsDesc": "Solte arquivos aqui ou clique para enviar · PDF, Word, Excel, PowerPoint, vídeo e mais",
+    "uploading": "Enviando…",
+    "uploaded": "Documento enviado",
+    "deleted": "Documento excluído",
+    "uploadFailed": "Falha no envio",
+    "deleteFailed": "Falha ao excluir",
+    "openFailed": "Não foi possível abrir o documento",
+    "openFailedDesc": "Tente baixá-lo em vez disso.",
+    "deleteTitle": "Excluir documento?",
+    "deleteDesc": "\"{{name}}\" será removido permanentemente. Esta ação não pode ser desfeita."
   },
   "migration": {
     "title": "Migração",
