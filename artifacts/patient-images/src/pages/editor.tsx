@@ -462,56 +462,66 @@ export default function Editor() {
 
   function applySmooth() {
     const canvas = canvasRef.current;
-    const container = containerRef.current;
+    const img = imgRef.current;
     const path = pendingSmoothPath;
-    if (!canvas || !path || path.length < 3) return;
+    if (!canvas || !img || !path || path.length < 3) return;
 
-    // 1. Blurred copy of the current visible canvas
+    const iw = img.naturalWidth;
+    const ih = img.naturalHeight;
+    const panX = panOffsetRef.current.x;
+    const panY = panOffsetRef.current.y;
+    // Inverse of the renderCanvas transform: screen-space → image-space
+    const rad = (-rotation * Math.PI) / 180;
+
+    // 1. Transform lasso path from screen-space into full-resolution image-space
+    const imagePath: [number, number][] = path.map(([sx, sy]) => {
+      const dx = (sx - canvas.width / 2 - panX) / scale;
+      const dy = (sy - canvas.height / 2 - panY) / scale;
+      return [
+        dx * Math.cos(rad) - dy * Math.sin(rad) + iw / 2,
+        dx * Math.sin(rad) + dy * Math.cos(rad) + ih / 2,
+      ];
+    });
+
+    // 2. Offscreen canvas at the original image's full resolution
     const offscreen = document.createElement("canvas");
-    offscreen.width = canvas.width;
-    offscreen.height = canvas.height;
+    offscreen.width = iw;
+    offscreen.height = ih;
     const ctx2 = offscreen.getContext("2d")!;
-    ctx2.filter = `blur(${smoothBlur}px)`;
-    ctx2.drawImage(canvas, 0, 0);
-    ctx2.filter = "none";
+    ctx2.drawImage(img, 0, 0);
 
-    // 2. Clip to lasso path and paint blurred layer onto main canvas
-    const ctx = canvas.getContext("2d")!;
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(path[0][0], path[0][1]);
-    for (let i = 1; i < path.length; i++) ctx.lineTo(path[i][0], path[i][1]);
-    ctx.closePath();
-    ctx.clip();
-    ctx.drawImage(offscreen, 0, 0);
-    ctx.restore();
+    // 3. Blurred copy — radius scaled to image pixels so it looks the same at any zoom
+    const blurred = document.createElement("canvas");
+    blurred.width = iw;
+    blurred.height = ih;
+    const ctx3 = blurred.getContext("2d")!;
+    const blurPx = Math.max(1, smoothBlur / scale);
+    ctx3.filter = `blur(${blurPx}px)`;
+    ctx3.drawImage(offscreen, 0, 0);
+    ctx3.filter = "none";
 
-    // 3. Flatten to new source image (same pattern as applyCrop / applyFloater)
-    const flatUrl = canvas.toDataURL("image/png");
+    // 4. Clip to image-space lasso and paint blurred pixels over the original
+    ctx2.save();
+    ctx2.beginPath();
+    ctx2.moveTo(imagePath[0][0], imagePath[0][1]);
+    for (let i = 1; i < imagePath.length; i++) ctx2.lineTo(imagePath[i][0], imagePath[i][1]);
+    ctx2.closePath();
+    ctx2.clip();
+    ctx2.drawImage(blurred, 0, 0);
+    ctx2.restore();
+
+    // 5. Install updated full-res image; stay at current zoom/pan/rotation
     const newImg = new Image();
     newImg.onload = () => {
       imgRef.current = newImg;
-      const fitScale =
-        container && newImg.naturalWidth > 0
-          ? Math.min(container.offsetWidth / newImg.naturalWidth, container.offsetHeight / newImg.naturalHeight)
-          : 1;
-      setAnnotations([]);
-      setScale(fitScale);
-      setRotation(0);
-      setPanOffset({ x: 0, y: 0 });
-      panOffsetRef.current = { x: 0, y: 0 };
       setPendingSmoothPath(null);
       smoothPathRef.current = [];
       smoothDrawingRef.current = false;
-      setTool("pointer");
       clearBrushCursor();
-      if (container) {
-        canvas.width = container.offsetWidth;
-        canvas.height = container.offsetHeight;
-      }
-      renderCanvas(canvas, newImg, [], fitScale, 0);
+      // Re-render at exactly the same view the user was in — nothing is lost
+      renderCanvas(canvas, newImg, annotationsRef.current, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, panOffsetRef.current);
     };
-    newImg.src = flatUrl;
+    newImg.src = offscreen.toDataURL("image/png");
   }
 
   function cancelSmooth() {
