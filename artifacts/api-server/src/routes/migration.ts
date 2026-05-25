@@ -238,17 +238,24 @@ router.post(
 
             // Extract file from ZIP and store via the storage adapter
             // (uploadToGcs → GCS on cloud, local disk on Electron/LAN build)
-            let storedFilePath = "";
+            let storedFilePath: string | null = null;
             if (img.zipPath) {
               const fileEntry = zip.getEntry(img.zipPath);
               if (fileEntry) {
                 storedFilePath = await uploadToGcs(fileEntry.getData(), objectName, mimeType);
+              } else {
+                // File was expected in ZIP but not found — skip this record entirely
+                // to avoid inserting a broken image row with no usable file path.
+                summary.errors.push({ item: `image:${img.fileName}`, reason: "File entry not found in ZIP archive" });
+                summary.imagesSkipped++;
+                continue;
               }
             }
+            // img.zipPath === null means the original record had no file (edge case); insert metadata only.
 
             await db.insert(imagesTable).values({
               patientId: patientId ?? undefined,
-              filePath: storedFilePath,
+              filePath: storedFilePath ?? "",
               fileName: img.fileName,
               notes: img.notes ?? null,
               capturedAt: capturedAt,
