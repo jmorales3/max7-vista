@@ -49,6 +49,7 @@ import {
   Scissors,
   Clipboard,
   X,
+  Pipette,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -61,7 +62,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type Tool = "pointer" | "pen" | "text" | "eraser" | "crop" | "arrow" | "circle" | "straightline" | "select";
+type Tool = "pointer" | "pen" | "text" | "eraser" | "crop" | "arrow" | "circle" | "straightline" | "select" | "eyedropper";
 
 interface DrawLine {
   type: "line";
@@ -437,6 +438,21 @@ export default function Editor() {
       circleStartRef.current = getCanvasPoint(e);
     } else if (tool === "straightline") {
       straightLineStartRef.current = getCanvasPoint(e);
+    } else if (tool === "eyedropper") {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const [sx, sy] = getScreenPoint(e);
+      const ctx = canvas.getContext("2d")!;
+      const pixel = ctx.getImageData(Math.round(sx), Math.round(sy), 1, 1).data;
+      if (pixel[3] === 0) return; // transparent — ignore
+      const hex =
+        "#" +
+        [pixel[0], pixel[1], pixel[2]]
+          .map((v) => v.toString(16).padStart(2, "0"))
+          .join("");
+      setPenColor(hex);
+      setTool("pen");
+      toast({ title: t("editor.colorSampled"), description: hex.toUpperCase() });
     } else if (tool === "select" && !floater) {
       const [sx, sy] = getScreenPoint(e);
       selectionStartRef.current = { x: sx, y: sy };
@@ -935,13 +951,14 @@ export default function Editor() {
       ? "cursor-crosshair"
       : tool === "text"
       ? "cursor-text"
-      : tool === "crop" || (tool === "select" && !floater)
+      : tool === "crop" || (tool === "select" && !floater) || tool === "eyedropper"
       ? "cursor-crosshair"
       : "cursor-default";
 
   const tools: { id: Tool; Icon: React.ElementType; label: string }[] = [
     { id: "pointer",     Icon: MousePointer2, label: t("editor.pointer") },
     { id: "pen",         Icon: PenTool,       label: t("editor.draw") },
+    { id: "eyedropper",  Icon: Pipette,       label: t("editor.eyedropper") },
     { id: "straightline",Icon: Minus,         label: t("editor.straightLine") },
     { id: "arrow",       Icon: MoveRight,     label: t("editor.arrow") },
     { id: "circle",      Icon: CircleIcon,    label: t("editor.circle") },
@@ -1003,7 +1020,7 @@ export default function Editor() {
             </div>
           )}
 
-          {tool !== "crop" && tool !== "pointer" && tool !== "select" && (
+          {tool !== "crop" && tool !== "pointer" && tool !== "select" && tool !== "eyedropper" && (
             <div className="relative flex items-center gap-1.5" title={t("editor.annotationColor")}>
               <div
                 className="w-5 h-5 rounded-full border-2 border-muted-foreground/40 shadow cursor-pointer"

@@ -233,7 +233,9 @@
     "cancelSelection": "Annuler",
     "copiedToClipboard": "Sélection copiée dans le presse-papiers",
     "clipboardFailed": "Impossible de copier dans le presse-papiers",
-    "selectHint": "Faites glisser pour délimiter une zone, puis déplacez-la ou copiez-la"
+    "selectHint": "Faites glisser pour délimiter une zone, puis déplacez-la ou copiez-la",
+    "eyedropper": "Pipette couleur",
+    "colorSampled": "Couleur prélevée"
   },
   "settings": {
     "title": "Paramètres",

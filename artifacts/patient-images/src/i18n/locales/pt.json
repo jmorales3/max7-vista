@@ -233,7 +233,9 @@
     "cancelSelection": "Cancelar",
     "copiedToClipboard": "Seleção copiada para a área de transferência",
     "clipboardFailed": "Não foi possível copiar para a área de transferência",
-    "selectHint": "Arraste para contornar uma área e mova-a ou copie-a"
+    "selectHint": "Arraste para contornar uma área e mova-a ou copie-a",
+    "eyedropper": "Coletar cor",
+    "colorSampled": "Cor coletada"
   },
   "settings": {
     "title": "Configurações",

@@ -233,7 +233,9 @@
     "cancelSelection": "Cancelar",
     "copiedToClipboard": "Selección copiada al portapapeles",
     "clipboardFailed": "No se pudo copiar al portapapeles",
-    "selectHint": "Arrastra para seleccionar un área, luego muévela o cópiala"
+    "selectHint": "Arrastra para seleccionar un área, luego muévela o cópiala",
+    "eyedropper": "Tomar color",
+    "colorSampled": "Color tomado"
   },
   "settings": {
     "title": "Configuración",

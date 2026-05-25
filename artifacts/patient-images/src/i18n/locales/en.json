@@ -233,7 +233,9 @@
     "cancelSelection": "Cancel",
     "copiedToClipboard": "Selection copied to clipboard",
     "clipboardFailed": "Could not copy to clipboard",
-    "selectHint": "Drag to outline an area, then move or copy it"
+    "selectHint": "Drag to outline an area, then move or copy it",
+    "eyedropper": "Pick Color",
+    "colorSampled": "Color sampled"
   },
   "settings": {
     "title": "Settings",
