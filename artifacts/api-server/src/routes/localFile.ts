@@ -16,7 +16,7 @@ import fs from "fs";
 
 const router: IRouter = Router();
 
-router.get("/local-file/:objectPath(*)", (req, res) => {
+router.get("/local-file/*objectPath", (req, res) => {
   const storageDir = process.env.STORAGE_DIRECTORY;
 
   if (!storageDir) {
