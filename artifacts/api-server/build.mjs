@@ -27,9 +27,6 @@ async function buildAll() {
     alias: IS_ELECTRON_BUILD
       ? {
           "@workspace/db": path.resolve(artifactDir, "../../lib/db/src/sqlite-compat.ts"),
-          // Swap GCS storage for local-disk storage in the Electron/LAN build
-          // so the bundled output never references @google-cloud/storage.
-          "../lib/gcsStorage": path.resolve(artifactDir, "src/lib/localDiskStorage.ts"),
         }
       : undefined,
     // Some packages may not be bundleable, so we externalize them, we can add more here as needed.
@@ -113,6 +110,19 @@ async function buildAll() {
     ],
     sourcemap: "linked",
     plugins: [
+      // In the Electron/LAN build, redirect any import of gcsStorage to the
+      // local-disk adapter so @google-cloud/storage is never bundled.
+      ...(IS_ELECTRON_BUILD
+        ? [{
+            name: "swap-gcs-storage",
+            setup(build) {
+              const localDiskPath = path.resolve(artifactDir, "src/lib/localDiskStorage.ts");
+              build.onResolve({ filter: /gcsStorage/ }, () => ({
+                path: localDiskPath,
+              }));
+            },
+          }]
+        : []),
       // pino relies on workers to handle logging, instead of externalizing it we use a plugin to handle it
       esbuildPluginPino({ transports: ["pino-pretty"] })
     ],
