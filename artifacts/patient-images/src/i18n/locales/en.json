@@ -240,7 +240,10 @@
     "smooth": "Smooth / Blend",
     "smoothStrength": "Strength",
     "applySmooth": "Apply Smooth",
-    "smoothHint": "Draw a freehand outline around the area, then release to smooth"
+    "smoothHint": "Draw a freehand outline around the area, then release to smooth",
+    "selectModeRect": "Rectangle selection",
+    "selectModeFreehand": "Freehand selection",
+    "selectFreehandHint": "Draw a freehand outline around the area, then release to cut"
   },
   "settings": {
     "title": "Settings",

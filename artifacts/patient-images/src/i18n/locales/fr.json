@@ -240,7 +240,10 @@
     "smooth": "Lisser / Fondre",
     "smoothStrength": "Intensité",
     "applySmooth": "Appliquer le lissage",
-    "smoothHint": "Tracez un contour autour de la zone, puis relâchez pour lisser"
+    "smoothHint": "Tracez un contour autour de la zone, puis relâchez pour lisser",
+    "selectModeRect": "Sélection rectangulaire",
+    "selectModeFreehand": "Sélection à main levée",
+    "selectFreehandHint": "Tracez un contour autour de la zone, puis relâchez pour couper"
   },
   "settings": {
     "title": "Paramètres",

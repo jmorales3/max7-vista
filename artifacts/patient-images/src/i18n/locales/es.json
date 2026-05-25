@@ -240,7 +240,10 @@
     "smooth": "Suavizar / Difuminar",
     "smoothStrength": "Intensidad",
     "applySmooth": "Aplicar suavizado",
-    "smoothHint": "Dibuja un contorno alrededor del área y suelta para suavizar"
+    "smoothHint": "Dibuja un contorno alrededor del área y suelta para suavizar",
+    "selectModeRect": "Selección rectangular",
+    "selectModeFreehand": "Selección a mano alzada",
+    "selectFreehandHint": "Dibuja un contorno alrededor del área y suelta para cortar"
   },
   "settings": {
     "title": "Configuración",

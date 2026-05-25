@@ -52,6 +52,8 @@ import {
   Pipette,
   Hand,
   Wand2,
+  RectangleHorizontal,
+  Lasso,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -202,6 +204,7 @@ function renderCanvas(
   cutRect?: CropRect | null,
   selectionOverlay?: CropRect | null,
   panOffset?: { x: number; y: number },
+  cutPath?: [number, number][] | null,
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -226,7 +229,16 @@ function renderCanvas(
   ctx.restore();
 
   // White "hole" where a selection was cut from
-  if (cutRect && cutRect.w > 0 && cutRect.h > 0) {
+  if (cutPath && cutPath.length > 2) {
+    ctx.save();
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.moveTo(cutPath[0][0], cutPath[0][1]);
+    for (let i = 1; i < cutPath.length; i++) ctx.lineTo(cutPath[i][0], cutPath[i][1]);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  } else if (cutRect && cutRect.w > 0 && cutRect.h > 0) {
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(cutRect.x, cutRect.y, cutRect.w, cutRect.h);
   }
@@ -309,6 +321,10 @@ export default function Editor() {
   const [pendingSmoothPath, setPendingSmoothPath] = useState<[number, number][] | null>(null);
   const smoothDrawingRef = useRef(false);
   const smoothPathRef = useRef<[number, number][]>([]);
+  const [selectMode, setSelectMode] = useState<"rect" | "freehand">("rect");
+  const selectPathRef = useRef<[number, number][]>([]);
+  const selectDrawingRef = useRef(false);
+  const [cutPath, setCutPath] = useState<[number, number][] | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cursorCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -385,8 +401,8 @@ export default function Editor() {
       cursorCanvasRef.current.width = container.offsetWidth;
       cursorCanvasRef.current.height = container.offsetHeight;
     }
-    renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, panOffsetRef.current);
-  }, [scale, rotation, cropRect, cutRect, selectionRect]);
+    renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, panOffsetRef.current, cutPath);
+  }, [scale, rotation, cropRect, cutRect, selectionRect, cutPath]);
 
   useEffect(() => {
     panOffsetRef.current = panOffset;
@@ -395,8 +411,8 @@ export default function Editor() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    renderCanvas(canvas, imgRef.current, annotations, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, panOffset);
-  }, [annotations, scale, rotation, cropRect, cutRect, selectionRect, panOffset]);
+    renderCanvas(canvas, imgRef.current, annotations, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, panOffset, cutPath);
+  }, [annotations, scale, rotation, cropRect, cutRect, selectionRect, panOffset, cutPath]);
 
   useEffect(() => {
     const observer = new ResizeObserver(resizeCanvas);
@@ -616,8 +632,13 @@ export default function Editor() {
       toast({ title: t("editor.colorSampled"), description: hex.toUpperCase() });
     } else if (tool === "select" && !floater) {
       const [sx, sy] = getScreenPoint(e);
-      selectionStartRef.current = { x: sx, y: sy };
-      setSelectionRect({ x: sx, y: sy, w: 0, h: 0 });
+      if (selectMode === "rect") {
+        selectionStartRef.current = { x: sx, y: sy };
+        setSelectionRect({ x: sx, y: sy, w: 0, h: 0 });
+      } else {
+        selectPathRef.current = [[sx, sy]];
+        selectDrawingRef.current = true;
+      }
     } else if (tool === "pointer") {
       const [x, y] = getCanvasPoint(e);
       const hit = findTextAt(x, y);
@@ -644,6 +665,10 @@ export default function Editor() {
       const [sx, sy] = getScreenPoint(e);
       smoothPathRef.current.push([sx, sy]);
       drawSmoothOverlay(smoothPathRef.current);
+    } else if (tool === "select" && selectMode === "freehand" && selectDrawingRef.current) {
+      const [sx, sy] = getScreenPoint(e);
+      selectPathRef.current.push([sx, sy]);
+      drawSmoothOverlay(selectPathRef.current);
     } else {
       clearBrushCursor();
     }
@@ -663,7 +688,7 @@ export default function Editor() {
       const dy = e.clientY - panDragRef.current.startY;
       const newPan = { x: panDragRef.current.origX + dx, y: panDragRef.current.origY + dy };
       panOffsetRef.current = newPan;
-      renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, newPan);
+      renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, newPan, cutPath);
       return;
     }
 
@@ -815,6 +840,52 @@ export default function Editor() {
         };
         setAnnotations((prev) => [...prev, newLine]);
       }
+      return;
+    }
+
+    if (tool === "select" && selectMode === "freehand" && selectDrawingRef.current && !floater) {
+      selectDrawingRef.current = false;
+      const path = selectPathRef.current;
+      selectPathRef.current = [];
+      clearBrushCursor();
+      if (path.length < 3 || !canvasRef.current) return;
+      const canvas = canvasRef.current;
+      const xs = path.map((p) => p[0]);
+      const ys = path.map((p) => p[1]);
+      const bx = Math.min(...xs), by = Math.min(...ys);
+      const bw = Math.max(...xs) - bx, bh = Math.max(...ys) - by;
+      if (bw < 4 || bh < 4) return;
+      preCutStateRef.current = {
+        imgSrc: imgRef.current?.src ?? "",
+        annotations: annotationsRef.current.slice(),
+        scale,
+        rotation,
+      };
+      // Extract the freehand region — clip to path, copy from canvas
+      const offscreen = document.createElement("canvas");
+      offscreen.width = bw;
+      offscreen.height = bh;
+      const octx = offscreen.getContext("2d")!;
+      octx.beginPath();
+      octx.moveTo(path[0][0] - bx, path[0][1] - by);
+      for (let i = 1; i < path.length; i++) octx.lineTo(path[i][0] - bx, path[i][1] - by);
+      octx.closePath();
+      octx.clip();
+      octx.drawImage(canvas, bx, by, bw, bh, 0, 0, bw, bh);
+      const dataUrl = offscreen.toDataURL("image/png");
+      // Fill the freehand shape with white on the canvas
+      const ctx = canvas.getContext("2d")!;
+      ctx.save();
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.moveTo(path[0][0], path[0][1]);
+      for (let i = 1; i < path.length; i++) ctx.lineTo(path[i][0], path[i][1]);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      setCutPath(path);
+      setCutRect({ x: bx, y: by, w: bw, h: bh });
+      setFloater({ dataUrl, x: bx, y: by, w: bw, h: bh });
       return;
     }
 
@@ -972,7 +1043,7 @@ export default function Editor() {
     const img = new Image();
     img.onload = () => {
       // Render current state (image + annotations + white hole), then burn in floater
-      renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, null, null, cutRect);
+      renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, null, null, cutRect, undefined, undefined, cutPath);
       const ctx = canvas.getContext("2d")!;
       ctx.drawImage(img, floater.x, floater.y, floater.w, floater.h);
       // Flatten to a new image
@@ -988,6 +1059,7 @@ export default function Editor() {
         setScale(fitScale);
         setRotation(0);
         setCutRect(null);
+        setCutPath(null);
         setFloater(null);
         setPanOffset({ x: 0, y: 0 });
         panOffsetRef.current = { x: 0, y: 0 };
@@ -1020,6 +1092,7 @@ export default function Editor() {
     const prev = preCutStateRef.current;
     if (!prev || !canvasRef.current) {
       setCutRect(null);
+      setCutPath(null);
       setFloater(null);
       setSelectionRect(null);
       return;
@@ -1033,6 +1106,7 @@ export default function Editor() {
       setScale(prev.scale);
       setRotation(prev.rotation);
       setCutRect(null);
+      setCutPath(null);
       setFloater(null);
       setSelectionRect(null);
       setPanOffset({ x: 0, y: 0 });
@@ -1221,6 +1295,38 @@ export default function Editor() {
               <Check className="h-3.5 w-3.5" />
               {t("editor.applyCrop")}
             </Button>
+          )}
+
+          {tool === "select" && !floater && (
+            <div className="flex items-center gap-0.5 border rounded-md p-0.5 bg-muted/30">
+              <Button
+                size="icon"
+                variant={selectMode === "rect" ? "secondary" : "ghost"}
+                className="h-7 w-7"
+                title={t("editor.selectModeRect")}
+                onClick={() => {
+                  setSelectMode("rect");
+                  selectDrawingRef.current = false;
+                  selectPathRef.current = [];
+                  clearBrushCursor();
+                }}
+              >
+                <RectangleHorizontal className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                size="icon"
+                variant={selectMode === "freehand" ? "secondary" : "ghost"}
+                className="h-7 w-7"
+                title={t("editor.selectModeFreehand")}
+                onClick={() => {
+                  setSelectMode("freehand");
+                  selectionStartRef.current = null;
+                  setSelectionRect(null);
+                }}
+              >
+                <Lasso className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           )}
 
           {tool === "select" && floater && (
@@ -1453,7 +1559,7 @@ export default function Editor() {
           {tool === "select" && !floater && (
             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-none">
               <span className="bg-black/50 text-white text-xs px-2 py-1 rounded-full">
-                {t("editor.selectHint")}
+                {selectMode === "rect" ? t("editor.selectHint") : t("editor.selectFreehandHint")}
               </span>
             </div>
           )}
@@ -1476,8 +1582,6 @@ export default function Editor() {
                 width: floater.w,
                 height: floater.h,
                 cursor: "move",
-                outline: "2px dashed #f97316",
-                outlineOffset: "-1px",
                 zIndex: 20,
               }}
               onMouseDown={startFloaterDrag}
