@@ -110,6 +110,19 @@ export async function getSignedDownloadUrl(
 }
 
 /**
+ * Read a locally-stored file as a Buffer.
+ * Returns null if the file does not exist.
+ * Used by migration export to bundle files into the ZIP.
+ */
+export async function readFileAsBuffer(filePath: string): Promise<Buffer | null> {
+  const localPath = isGcsPath(filePath)
+    ? objectNameToLocalPath(fromGcsPath(filePath))
+    : filePath;
+  if (!fs.existsSync(localPath)) return null;
+  return fs.promises.readFile(localPath);
+}
+
+/**
  * Delete a locally-stored file. Silently ignores missing files.
  */
 export async function deleteFile(filePath: string): Promise<void> {

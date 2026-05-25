@@ -156,6 +156,26 @@ export async function getSignedDownloadUrl(
 }
 
 /**
+ * Download a file from GCS (or legacy local disk) and return it as a Buffer.
+ * Returns null if the file does not exist.
+ * Used by migration export to bundle files into the ZIP.
+ */
+export async function readFileAsBuffer(filePath: string): Promise<Buffer | null> {
+  if (!isGcsPath(filePath)) {
+    // Legacy local-disk path
+    if (!fs.existsSync(filePath)) return null;
+    return fs.promises.readFile(filePath);
+  }
+  const objectName = fromGcsPath(filePath);
+  const bucket = storageClient.bucket(getBucketName());
+  const file = bucket.file(objectName);
+  const [exists] = await file.exists();
+  if (!exists) return null;
+  const [buffer] = await file.download();
+  return buffer;
+}
+
+/**
  * Delete a file from GCS (or local disk for legacy paths).
  * Silently ignores missing files.
  */

@@ -7,7 +7,8 @@ import bcrypt from "bcryptjs";
 import { db, patientsTable, imagesTable, usersTable, settingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireRole } from "../middlewares/requireAuth";
-import { getStorageDirectory, setSetting } from "../lib/storage";
+import { setSetting } from "../lib/storage";
+import { readFileAsBuffer, uploadToGcs } from "../lib/gcsStorage";
 import { logAudit } from "../lib/audit";
 
 const router: IRouter = Router();
@@ -33,20 +34,29 @@ router.get(
       // Build a patientId → patientCode map for portable image references
       const idToCode = new Map(patients.map((p) => [p.id, p.patientCode]));
 
-      const exportedImages = images.map((img) => ({
-        patientCode: idToCode.get(img.patientId ?? -1) ?? null,
-        fileName: img.fileName,
-        notes: img.notes ?? null,
-        capturedAt: img.capturedAt instanceof Date
-          ? img.capturedAt.toISOString()
-          : String(img.capturedAt),
-        isUnassigned: img.isUnassigned,
-        // relative path inside the ZIP's files/ folder
-        zipPath: img.filePath
-          ? `files/${idToCode.get(img.patientId ?? -1) ?? "unassigned"}/${path.basename(img.filePath)}`
-          : null,
-        _srcPath: img.filePath,
-      }));
+      const exportedImages = images.map((img) => {
+        // img.filePath may be "gcs:<objectName>" or a legacy absolute disk path.
+        // Extract just the filename portion for the ZIP entry name.
+        const rawPath = img.filePath ?? "";
+        const baseName = rawPath.startsWith("gcs:")
+          ? path.basename(rawPath.slice(4))   // strip "gcs:" prefix before basename
+          : path.basename(rawPath);
+        return {
+          patientCode: idToCode.get(img.patientId ?? -1) ?? null,
+          fileName: img.fileName,
+          fileType: img.fileType ?? "application/octet-stream",
+          notes: img.notes ?? null,
+          capturedAt: img.capturedAt instanceof Date
+            ? img.capturedAt.toISOString()
+            : String(img.capturedAt),
+          isUnassigned: img.isUnassigned,
+          // relative path inside the ZIP's files/ folder
+          zipPath: rawPath
+            ? `files/${idToCode.get(img.patientId ?? -1) ?? "unassigned"}/${baseName}`
+            : null,
+          _srcPath: rawPath,
+        };
+      });
 
       const exportedUsers = users.map((u) => ({
         username: u.username,
@@ -72,16 +82,19 @@ router.get(
       zip.addFile("data/users.json",    Buffer.from(JSON.stringify(exportedUsers,    null, 2)));
       zip.addFile("data/settings.json", Buffer.from(JSON.stringify(settings,         null, 2)));
 
-      // Embed the actual image files
+      // Embed the actual image files (handles both "gcs:" keys and legacy disk paths)
       let filesAdded = 0;
       for (const img of exportedImages) {
         if (!img._srcPath || !img.zipPath) continue;
         try {
-          const buf = fs.readFileSync(img._srcPath);
-          zip.addFile(img.zipPath, buf);
-          filesAdded++;
+          const buf = await readFileAsBuffer(img._srcPath);
+          if (buf) {
+            zip.addFile(img.zipPath, buf);
+            filesAdded++;
+          }
+          // file missing — skip silently, manifest record is still exported
         } catch {
-          // file missing on disk — skip, record is still exported
+          // ignore individual file errors
         }
       }
 
@@ -107,6 +120,7 @@ router.get(
 interface ExportedImage {
   patientCode: string | null;
   fileName: string;
+  fileType?: string;
   notes: string | null;
   capturedAt: string;
   isUnassigned: boolean | number;
@@ -175,8 +189,6 @@ router.post(
         return;
       }
 
-      const storageDir = await getStorageDirectory();
-
       // ── Patients ───────────────────────────────────────────────────────────
       const patientsEntry = zip.getEntry("data/patients.json");
       if (patientsEntry) {
@@ -217,29 +229,26 @@ router.post(
             const capturedAt = new Date(img.capturedAt);
             const dateStr = (!isNaN(capturedAt.getTime()) ? capturedAt : new Date()).toISOString().split("T")[0];
 
-            // Determine target directory
-            const subDir = patientId
-              ? path.join(storageDir, String(patientId), dateStr)
-              : path.join(storageDir, "unassigned", dateStr);
-            fs.mkdirSync(subDir, { recursive: true });
-
             const ext = path.extname(img.fileName) || ".jpg";
             const storedName = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}${ext}`;
-            const destPath = path.join(subDir, storedName);
+            const objectName = patientId
+              ? `images/${patientId}/${dateStr}/${storedName}`
+              : `images/unassigned/${dateStr}/${storedName}`;
+            const mimeType = img.fileType ?? "application/octet-stream";
 
-            // Extract image file from ZIP if present
-            let fileWritten = false;
+            // Extract file from ZIP and store via the storage adapter
+            // (uploadToGcs → GCS on cloud, local disk on Electron/LAN build)
+            let storedFilePath = "";
             if (img.zipPath) {
               const fileEntry = zip.getEntry(img.zipPath);
               if (fileEntry) {
-                fs.writeFileSync(destPath, fileEntry.getData());
-                fileWritten = true;
+                storedFilePath = await uploadToGcs(fileEntry.getData(), objectName, mimeType);
               }
             }
 
             await db.insert(imagesTable).values({
               patientId: patientId ?? undefined,
-              filePath: fileWritten ? destPath : (img.zipPath ?? ""),
+              filePath: storedFilePath,
               fileName: img.fileName,
               notes: img.notes ?? null,
               capturedAt: capturedAt,
