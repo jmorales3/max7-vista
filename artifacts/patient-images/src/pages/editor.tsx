@@ -54,6 +54,8 @@ import {
   Wand2,
   RectangleHorizontal,
   Lasso,
+  Ruler,
+  Compass,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -66,7 +68,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type Tool = "pointer" | "pen" | "text" | "eraser" | "crop" | "arrow" | "circle" | "straightline" | "select" | "eyedropper" | "hand" | "smooth";
+type Tool = "pointer" | "pen" | "text" | "eraser" | "crop" | "arrow" | "circle" | "straightline" | "select" | "eyedropper" | "hand" | "smooth" | "ruler" | "angle";
 
 interface DrawLine {
   type: "line";
@@ -117,7 +119,30 @@ interface DrawStraightLine {
   id: string;
 }
 
-type Annotation = DrawLine | DrawText | DrawArrow | DrawCircle | DrawStraightLine;
+interface DrawRuler {
+  type: "ruler";
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  color: string;
+  pxPerMm: number | null;
+  id: string;
+}
+
+interface DrawAngle {
+  type: "angle";
+  vx: number;
+  vy: number;
+  p1x: number;
+  p1y: number;
+  p2x: number;
+  p2y: number;
+  color: string;
+  id: string;
+}
+
+type Annotation = DrawLine | DrawText | DrawArrow | DrawCircle | DrawStraightLine | DrawRuler | DrawAngle;
 
 interface CropRect {
   x: number;
@@ -157,7 +182,7 @@ function drawArrow(
   ctx.fill();
 }
 
-function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation) {
+function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation, scale: number = 1) {
   if (ann.type === "line") {
     if (ann.points.length < 4) return;
     ctx.beginPath();
@@ -190,6 +215,89 @@ function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation) {
     ctx.moveTo(ann.x1, ann.y1);
     ctx.lineTo(ann.x2, ann.y2);
     ctx.stroke();
+  } else if (ann.type === "ruler") {
+    const { x1, y1, x2, y2, color, pxPerMm: annPxPerMm } = ann;
+    const lineAngle = Math.atan2(y2 - y1, x2 - x1);
+    const perpAngle = lineAngle + Math.PI / 2;
+    const tickLen = 8 / scale;
+    const lw = 1.5 / scale;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lw;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    for (const [px, py] of [[x1, y1], [x2, y2]] as [number, number][]) {
+      ctx.beginPath();
+      ctx.moveTo(px + Math.cos(perpAngle) * tickLen, py + Math.sin(perpAngle) * tickLen);
+      ctx.lineTo(px - Math.cos(perpAngle) * tickLen, py - Math.sin(perpAngle) * tickLen);
+      ctx.stroke();
+    }
+    const dist = Math.hypot(x2 - x1, y2 - y1);
+    const label = annPxPerMm != null ? `${(dist / annPxPerMm).toFixed(1)} mm` : `${Math.round(dist)} px`;
+    const fontSize = 12 / scale;
+    const offsetDist = tickLen + fontSize * 0.9;
+    const midX = (x1 + x2) / 2;
+    const midY = (y1 + y2) / 2;
+    const lx = midX + Math.cos(perpAngle) * offsetDist;
+    const ly = midY + Math.sin(perpAngle) * offsetDist;
+    ctx.font = `bold ${fontSize}px sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const tw = ctx.measureText(label).width;
+    const pad = 2 / scale;
+    ctx.fillStyle = "rgba(0,0,0,0.72)";
+    ctx.fillRect(lx - tw / 2 - pad, ly - fontSize / 2 - pad, tw + pad * 2, fontSize + pad * 2);
+    ctx.fillStyle = color;
+    ctx.fillText(label, lx, ly);
+    ctx.textAlign = "start";
+    ctx.textBaseline = "alphabetic";
+  } else if (ann.type === "angle") {
+    const { vx, vy, p1x, p1y, p2x, p2y, color } = ann;
+    const arm1Len = Math.hypot(p1x - vx, p1y - vy);
+    const arm2Len = Math.hypot(p2x - vx, p2y - vy);
+    if (arm1Len < 0.5 || arm2Len < 0.5) return;
+    const lw = 1.5 / scale;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lw;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(vx, vy);
+    ctx.lineTo(p1x, p1y);
+    ctx.moveTo(vx, vy);
+    ctx.lineTo(p2x, p2y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(vx, vy, 3 / scale, 0, 2 * Math.PI);
+    ctx.fillStyle = color;
+    ctx.fill();
+    const a1 = Math.atan2(p1y - vy, p1x - vx);
+    const a2 = Math.atan2(p2y - vy, p2x - vx);
+    const arcR = Math.min(24 / scale, arm1Len * 0.38, arm2Len * 0.38);
+    let span = ((a2 - a1) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+    const anticlockwise = span > Math.PI;
+    const angleDeg = anticlockwise ? (2 * Math.PI - span) * 180 / Math.PI : span * 180 / Math.PI;
+    ctx.beginPath();
+    ctx.arc(vx, vy, arcR, a1, a2, anticlockwise);
+    ctx.stroke();
+    const midAngle = anticlockwise ? a1 - (2 * Math.PI - span) / 2 : a1 + span / 2;
+    const labelDist = arcR + 14 / scale;
+    const lx = vx + Math.cos(midAngle) * labelDist;
+    const ly = vy + Math.sin(midAngle) * labelDist;
+    const label = `${angleDeg.toFixed(1)}°`;
+    const fontSize = 12 / scale;
+    ctx.font = `bold ${fontSize}px sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const tw = ctx.measureText(label).width;
+    const pad = 2 / scale;
+    ctx.fillStyle = "rgba(0,0,0,0.72)";
+    ctx.fillRect(lx - tw / 2 - pad, ly - fontSize / 2 - pad, tw + pad * 2, fontSize + pad * 2);
+    ctx.fillStyle = color;
+    ctx.fillText(label, lx, ly);
+    ctx.textAlign = "start";
+    ctx.textBaseline = "alphabetic";
   }
 }
 
@@ -223,7 +331,7 @@ function renderCanvas(
 
   const allAnns: Annotation[] = previewAnn ? [...annotations, previewAnn] : annotations;
   for (const ann of allAnns) {
-    drawAnnotation(ctx, ann);
+    drawAnnotation(ctx, ann, scale);
   }
 
   ctx.restore();
@@ -256,7 +364,7 @@ function renderCanvas(
     ctx.rotate((rotation * Math.PI) / 180);
     ctx.scale(scale, scale);
     if (img) ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
-    for (const ann of allAnns) drawAnnotation(ctx, ann);
+    for (const ann of allAnns) drawAnnotation(ctx, ann, scale);
     ctx.restore();
     ctx.strokeStyle = "#0ea5e9";
     ctx.lineWidth = 2;
@@ -325,6 +433,16 @@ export default function Editor() {
   const selectPathRef = useRef<[number, number][]>([]);
   const selectDrawingRef = useRef(false);
   const [cutPath, setCutPath] = useState<[number, number][] | null>(null);
+  const [pxPerMm, setPxPerMm] = useState<number | null>(() => {
+    const v = localStorage.getItem("max7_pxPerMm");
+    return v ? parseFloat(v) : null;
+  });
+  const [calibrating, setCalibrating] = useState(false);
+  const [calibratingPx, setCalibratingPx] = useState<number | null>(null);
+  const [calibratingMmInput, setCalibratingMmInput] = useState("");
+  const rulerStartRef = useRef<[number, number] | null>(null);
+  const [angleStep, setAngleStep] = useState(0);
+  const anglePointsRef = useRef<[number, number][]>([]);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cursorCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -547,6 +665,21 @@ export default function Editor() {
     clearBrushCursor();
   }
 
+  function applyCalibration() {
+    const mm = parseFloat(calibratingMmInput);
+    if (!calibratingPx || isNaN(mm) || mm <= 0) return;
+    const newPxPerMm = calibratingPx / mm;
+    setPxPerMm(newPxPerMm);
+    localStorage.setItem("max7_pxPerMm", String(newPxPerMm));
+    setAnnotations((prev) =>
+      prev.map((ann) => (ann.type === "ruler" ? { ...ann, pxPerMm: newPxPerMm } : ann)),
+    );
+    setCalibratingPx(null);
+    setCalibratingMmInput("");
+    setCalibrating(false);
+    toast({ title: t("editor.calibrationSet"), description: `1 mm = ${(1 / newPxPerMm).toFixed(3)} px` });
+  }
+
   function drawBrushCursor(sx: number, sy: number) {
     const cc = cursorCanvasRef.current;
     if (!cc) return;
@@ -615,6 +748,26 @@ export default function Editor() {
       circleStartRef.current = getCanvasPoint(e);
     } else if (tool === "straightline") {
       straightLineStartRef.current = getCanvasPoint(e);
+    } else if (tool === "ruler") {
+      rulerStartRef.current = getCanvasPoint(e);
+    } else if (tool === "angle") {
+      const pt = getCanvasPoint(e);
+      const newPts = [...anglePointsRef.current, pt];
+      anglePointsRef.current = newPts;
+      if (newPts.length === 1) {
+        setAngleStep(1);
+      } else if (newPts.length === 2) {
+        setAngleStep(2);
+      } else {
+        const [[vx, vy], [p1x, p1y], [p2x, p2y]] = newPts as [[number,number],[number,number],[number,number]];
+        if (Math.hypot(p1x - vx, p1y - vy) > 3 && Math.hypot(p2x - vx, p2y - vy) > 3) {
+          const newAngleAnn: DrawAngle = { type: "angle", vx, vy, p1x, p1y, p2x, p2y, color: penColor, id: Date.now().toString() };
+          setAnnotations((prev) => [...prev, newAngleAnn]);
+        }
+        anglePointsRef.current = [];
+        setAngleStep(0);
+      }
+      return;
     } else if (tool === "eyedropper") {
       const canvas = canvasRef.current;
       if (!canvas) return;
@@ -714,6 +867,28 @@ export default function Editor() {
       const [x1, y1] = straightLineStartRef.current;
       const preview: DrawStraightLine = { type: "straightline", x1, y1, x2, y2, color: penColor, width: strokeWidth, id: "__preview__" };
       renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview, null, undefined, panOffsetRef.current);
+      return;
+    }
+
+    if (tool === "ruler" && rulerStartRef.current) {
+      const [x2, y2] = getCanvasPoint(e);
+      const [x1, y1] = rulerStartRef.current;
+      const preview: DrawRuler = { type: "ruler", x1, y1, x2, y2, color: penColor, pxPerMm: calibrating ? null : pxPerMm, id: "__preview__" };
+      renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview, null, undefined, panOffsetRef.current);
+      return;
+    }
+
+    if (tool === "angle" && anglePointsRef.current.length > 0) {
+      const [mx, my] = getCanvasPoint(e);
+      const [vx, vy] = anglePointsRef.current[0];
+      if (anglePointsRef.current.length >= 2) {
+        const [p1x, p1y] = anglePointsRef.current[1];
+        const preview: DrawAngle = { type: "angle", vx, vy, p1x, p1y, p2x: mx, p2y: my, color: penColor, id: "__preview__" };
+        renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview, null, undefined, panOffsetRef.current);
+      } else {
+        const preview: DrawStraightLine = { type: "straightline", x1: vx, y1: vy, x2: mx, y2: my, color: penColor, width: 1.5, id: "__preview__" };
+        renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview, null, undefined, panOffsetRef.current);
+      }
       return;
     }
 
@@ -839,6 +1014,25 @@ export default function Editor() {
           id: Date.now().toString(),
         };
         setAnnotations((prev) => [...prev, newLine]);
+      }
+      return;
+    }
+
+    if (tool === "ruler" && rulerStartRef.current) {
+      const [x2, y2] = getCanvasPoint(e);
+      const [x1, y1] = rulerStartRef.current;
+      rulerStartRef.current = null;
+      const dist = Math.hypot(x2 - x1, y2 - y1);
+      if (dist < 5) {
+        const canvas2 = canvasRef.current;
+        if (canvas2) renderCanvas(canvas2, imgRef.current, annotationsRef.current, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, panOffsetRef.current, cutPath);
+        return;
+      }
+      if (calibrating) {
+        setCalibratingPx(dist);
+      } else {
+        const newRuler: DrawRuler = { type: "ruler", x1, y1, x2, y2, color: penColor, pxPerMm, id: Date.now().toString() };
+        setAnnotations((prev) => [...prev, newRuler]);
       }
       return;
     }
@@ -1230,7 +1424,7 @@ export default function Editor() {
   const cursorClass =
     tool === "pen" || tool === "eraser"
       ? "cursor-none"
-      : tool === "arrow" || tool === "circle" || tool === "straightline"
+      : tool === "arrow" || tool === "circle" || tool === "straightline" || tool === "ruler" || tool === "angle"
       ? "cursor-crosshair"
       : tool === "text"
       ? "cursor-text"
@@ -1260,6 +1454,8 @@ export default function Editor() {
     { id: "crop",        Icon: Crop,          label: t("editor.crop") },
     { id: "select",      Icon: Scissors,      label: t("editor.select") },
     { id: "smooth",      Icon: Wand2,         label: t("editor.smooth") },
+    { id: "ruler",       Icon: Ruler,         label: t("editor.ruler") },
+    { id: "angle",       Icon: Compass,       label: t("editor.angle") },
   ];
 
   return (
@@ -1343,6 +1539,83 @@ export default function Editor() {
                 <X className="h-3.5 w-3.5" />
                 {t("editor.cancelSelection")}
               </Button>
+            </div>
+          )}
+
+          {tool === "ruler" && (
+            <div className="flex items-center gap-2">
+              {calibratingPx !== null ? (
+                <>
+                  <span className="text-xs text-muted-foreground">{t("editor.calibratingLine")}</span>
+                  <input
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    autoFocus
+                    placeholder="mm"
+                    value={calibratingMmInput}
+                    onChange={(e) => setCalibratingMmInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") applyCalibration();
+                      if (e.key === "Escape") { setCalibratingPx(null); setCalibratingMmInput(""); setCalibrating(false); }
+                    }}
+                    className="w-20 h-7 text-xs border rounded px-2 bg-background"
+                  />
+                  <span className="text-xs text-muted-foreground">mm</span>
+                  <Button
+                    size="sm"
+                    className="h-7 gap-1"
+                    onClick={applyCalibration}
+                    disabled={!calibratingMmInput || isNaN(parseFloat(calibratingMmInput))}
+                  >
+                    <Check className="h-3 w-3" />
+                    {t("editor.setScale")}
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setCalibratingPx(null); setCalibratingMmInput(""); setCalibrating(false); }}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    size="sm"
+                    variant={calibrating ? "secondary" : "outline"}
+                    className="h-7 gap-1 text-xs"
+                    onClick={() => setCalibrating((v) => !v)}
+                  >
+                    <Ruler className="h-3 w-3" />
+                    {calibrating ? t("editor.calibratingDraw") : t("editor.calibrate")}
+                  </Button>
+                  {pxPerMm != null && !calibrating && (
+                    <span className="text-xs text-muted-foreground bg-muted/40 px-2 py-0.5 rounded">
+                      {(1 / pxPerMm).toFixed(4)} mm/px
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {tool === "angle" && (
+            <div className="flex items-center gap-2">
+              {angleStep > 0 ? (
+                <>
+                  <span className="text-xs text-muted-foreground bg-muted/40 px-2 py-0.5 rounded">
+                    {angleStep === 1 ? t("editor.angleClickArm1") : t("editor.angleClickArm2")}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 gap-1"
+                    onClick={() => { setAngleStep(0); anglePointsRef.current = []; }}
+                  >
+                    <X className="h-3 w-3" />
+                    {t("common.cancel")}
+                  </Button>
+                </>
+              ) : (
+                <span className="text-xs text-muted-foreground">{t("editor.angleHint")}</span>
+              )}
             </div>
           )}
 
