@@ -236,7 +236,11 @@
     "selectHint": "Drag to outline an area, then move or copy it",
     "eyedropper": "Pick Color",
     "colorSampled": "Color sampled",
-    "pan": "Pan / Move"
+    "pan": "Pan / Move",
+    "smooth": "Smooth / Blend",
+    "smoothStrength": "Strength",
+    "applySmooth": "Apply Smooth",
+    "smoothHint": "Draw a freehand outline around the area, then release to smooth"
   },
   "settings": {
     "title": "Settings",

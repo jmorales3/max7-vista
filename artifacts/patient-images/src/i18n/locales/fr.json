@@ -236,7 +236,11 @@
     "selectHint": "Faites glisser pour délimiter une zone, puis déplacez-la ou copiez-la",
     "eyedropper": "Pipette couleur",
     "colorSampled": "Couleur prélevée",
-    "pan": "Déplacer / Panoramique"
+    "pan": "Déplacer / Panoramique",
+    "smooth": "Lisser / Fondre",
+    "smoothStrength": "Intensité",
+    "applySmooth": "Appliquer le lissage",
+    "smoothHint": "Tracez un contour autour de la zone, puis relâchez pour lisser"
   },
   "settings": {
     "title": "Paramètres",

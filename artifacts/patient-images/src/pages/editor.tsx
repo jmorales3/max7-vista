@@ -51,6 +51,7 @@ import {
   X,
   Pipette,
   Hand,
+  Wand2,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -63,7 +64,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type Tool = "pointer" | "pen" | "text" | "eraser" | "crop" | "arrow" | "circle" | "straightline" | "select" | "eyedropper" | "hand";
+type Tool = "pointer" | "pen" | "text" | "eraser" | "crop" | "arrow" | "circle" | "straightline" | "select" | "eyedropper" | "hand" | "smooth";
 
 interface DrawLine {
   type: "line";
@@ -304,6 +305,10 @@ export default function Editor() {
   } | null>(null);
   const [pendingText, setPendingText] = useState<{ x: number; y: number } | null>(null);
   const [textInput, setTextInput] = useState("");
+  const [smoothBlur, setSmoothBlur] = useState(8);
+  const [pendingSmoothPath, setPendingSmoothPath] = useState<[number, number][] | null>(null);
+  const smoothDrawingRef = useRef(false);
+  const smoothPathRef = useRef<[number, number][]>([]);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cursorCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -436,6 +441,86 @@ export default function Editor() {
     return null;
   }
 
+  function drawSmoothOverlay(path: [number, number][], closed = false) {
+    const cc = cursorCanvasRef.current;
+    if (!cc || path.length < 2) return;
+    const ctx = cc.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, cc.width, cc.height);
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(path[0][0], path[0][1]);
+    for (let i = 1; i < path.length; i++) ctx.lineTo(path[i][0], path[i][1]);
+    if (closed) ctx.closePath();
+    ctx.strokeStyle = "#f97316";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  function applySmooth() {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    const path = pendingSmoothPath;
+    if (!canvas || !path || path.length < 3) return;
+
+    // 1. Blurred copy of the current visible canvas
+    const offscreen = document.createElement("canvas");
+    offscreen.width = canvas.width;
+    offscreen.height = canvas.height;
+    const ctx2 = offscreen.getContext("2d")!;
+    ctx2.filter = `blur(${smoothBlur}px)`;
+    ctx2.drawImage(canvas, 0, 0);
+    ctx2.filter = "none";
+
+    // 2. Clip to lasso path and paint blurred layer onto main canvas
+    const ctx = canvas.getContext("2d")!;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(path[0][0], path[0][1]);
+    for (let i = 1; i < path.length; i++) ctx.lineTo(path[i][0], path[i][1]);
+    ctx.closePath();
+    ctx.clip();
+    ctx.drawImage(offscreen, 0, 0);
+    ctx.restore();
+
+    // 3. Flatten to new source image (same pattern as applyCrop / applyFloater)
+    const flatUrl = canvas.toDataURL("image/png");
+    const newImg = new Image();
+    newImg.onload = () => {
+      imgRef.current = newImg;
+      const fitScale =
+        container && newImg.naturalWidth > 0
+          ? Math.min(container.offsetWidth / newImg.naturalWidth, container.offsetHeight / newImg.naturalHeight)
+          : 1;
+      setAnnotations([]);
+      setScale(fitScale);
+      setRotation(0);
+      setPanOffset({ x: 0, y: 0 });
+      panOffsetRef.current = { x: 0, y: 0 };
+      setPendingSmoothPath(null);
+      smoothPathRef.current = [];
+      smoothDrawingRef.current = false;
+      setTool("pointer");
+      clearBrushCursor();
+      if (container) {
+        canvas.width = container.offsetWidth;
+        canvas.height = container.offsetHeight;
+      }
+      renderCanvas(canvas, newImg, [], fitScale, 0);
+    };
+    newImg.src = flatUrl;
+  }
+
+  function cancelSmooth() {
+    setPendingSmoothPath(null);
+    smoothPathRef.current = [];
+    smoothDrawingRef.current = false;
+    clearBrushCursor();
+  }
+
   function drawBrushCursor(sx: number, sy: number) {
     const cc = cursorCanvasRef.current;
     if (!cc) return;
@@ -472,6 +557,12 @@ export default function Editor() {
   }
 
   function handleMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
+    if (tool === "smooth" && !pendingSmoothPath) {
+      const [sx, sy] = getScreenPoint(e);
+      smoothPathRef.current = [[sx, sy]];
+      smoothDrawingRef.current = true;
+      return;
+    }
     if (tool === "hand") {
       panDragRef.current = {
         startX: e.clientX,
@@ -539,6 +630,10 @@ export default function Editor() {
     if (tool === "pen" || tool === "eraser") {
       const [sx, sy] = getScreenPoint(e);
       drawBrushCursor(sx, sy);
+    } else if (tool === "smooth" && smoothDrawingRef.current) {
+      const [sx, sy] = getScreenPoint(e);
+      smoothPathRef.current.push([sx, sy]);
+      drawSmoothOverlay(smoothPathRef.current);
     } else {
       clearBrushCursor();
     }
@@ -636,6 +731,19 @@ export default function Editor() {
   }
 
   function handleMouseUp(e: React.MouseEvent<HTMLCanvasElement>) {
+    if (tool === "smooth" && smoothDrawingRef.current) {
+      smoothDrawingRef.current = false;
+      const path = smoothPathRef.current;
+      if (path.length >= 3) {
+        const closed = path.slice();
+        setPendingSmoothPath(closed);
+        drawSmoothOverlay(closed, true);
+      } else {
+        smoothPathRef.current = [];
+        clearBrushCursor();
+      }
+      return;
+    }
     if (tool === "hand") {
       if (panDragRef.current) {
         setPanOffset(panOffsetRef.current);
@@ -1044,6 +1152,8 @@ export default function Editor() {
       ? "cursor-text"
       : tool === "crop" || (tool === "select" && !floater) || tool === "eyedropper"
       ? "cursor-crosshair"
+      : tool === "smooth" && !pendingSmoothPath
+      ? "cursor-crosshair"
       : tool === "hand"
       ? (panDragRef.current ? "cursor-grabbing" : "cursor-grab")
       : "cursor-default";
@@ -1065,6 +1175,7 @@ export default function Editor() {
     { id: "eraser",      Icon: Eraser,        label: t("editor.erase") },
     { id: "crop",        Icon: Crop,          label: t("editor.crop") },
     { id: "select",      Icon: Scissors,      label: t("editor.select") },
+    { id: "smooth",      Icon: Wand2,         label: t("editor.smooth") },
   ];
 
   return (
@@ -1119,7 +1230,34 @@ export default function Editor() {
             </div>
           )}
 
-          {tool !== "crop" && tool !== "pointer" && tool !== "select" && tool !== "eyedropper" && tool !== "hand" && (
+          {tool === "smooth" && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">{t("editor.smoothStrength")}</span>
+              <input
+                type="range"
+                min={1}
+                max={20}
+                value={smoothBlur}
+                onChange={(e) => setSmoothBlur(+e.target.value)}
+                className="w-20 h-1.5 accent-primary"
+              />
+              <span className="text-xs font-mono w-4 text-center">{smoothBlur}</span>
+              {pendingSmoothPath && (
+                <>
+                  <Button size="sm" className="h-8 gap-1" onClick={applySmooth}>
+                    <Check className="h-3.5 w-3.5" />
+                    {t("editor.applySmooth")}
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-8 gap-1" onClick={cancelSmooth}>
+                    <X className="h-3.5 w-3.5" />
+                    {t("common.cancel")}
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+
+          {tool !== "crop" && tool !== "pointer" && tool !== "select" && tool !== "eyedropper" && tool !== "hand" && tool !== "smooth" && (
             <div className="relative flex items-center gap-1.5" title={t("editor.annotationColor")}>
               <div
                 className="w-5 h-5 rounded-full border-2 border-muted-foreground/40 shadow cursor-pointer"
@@ -1306,6 +1444,14 @@ export default function Editor() {
             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-none">
               <span className="bg-black/50 text-white text-xs px-2 py-1 rounded-full">
                 {t("editor.selectHint")}
+              </span>
+            </div>
+          )}
+
+          {tool === "smooth" && !pendingSmoothPath && (
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-none">
+              <span className="bg-black/50 text-white text-xs px-2 py-1 rounded-full">
+                {t("editor.smoothHint")}
               </span>
             </div>
           )}

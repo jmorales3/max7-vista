@@ -236,7 +236,11 @@
     "selectHint": "Arrastra para seleccionar un área, luego muévela o cópiala",
     "eyedropper": "Tomar color",
     "colorSampled": "Color tomado",
-    "pan": "Desplazar / Mover"
+    "pan": "Desplazar / Mover",
+    "smooth": "Suavizar / Difuminar",
+    "smoothStrength": "Intensidad",
+    "applySmooth": "Aplicar suavizado",
+    "smoothHint": "Dibuja un contorno alrededor del área y suelta para suavizar"
   },
   "settings": {
     "title": "Configuración",

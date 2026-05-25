@@ -236,7 +236,11 @@
     "selectHint": "Arraste para contornar uma área e mova-a ou copie-a",
     "eyedropper": "Coletar cor",
     "colorSampled": "Cor coletada",
-    "pan": "Mover / Panorâmica"
+    "pan": "Mover / Panorâmica",
+    "smooth": "Suavizar / Misturar",
+    "smoothStrength": "Intensidade",
+    "applySmooth": "Aplicar suavização",
+    "smoothHint": "Desenhe um contorno ao redor da área e solte para suavizar"
   },
   "settings": {
     "title": "Configurações",
