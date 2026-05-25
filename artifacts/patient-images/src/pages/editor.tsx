@@ -306,6 +306,7 @@ export default function Editor() {
   const [textInput, setTextInput] = useState("");
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const cursorCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
 
@@ -375,6 +376,10 @@ export default function Editor() {
     if (!canvas || !container) return;
     canvas.width = container.offsetWidth;
     canvas.height = container.offsetHeight;
+    if (cursorCanvasRef.current) {
+      cursorCanvasRef.current.width = container.offsetWidth;
+      cursorCanvasRef.current.height = container.offsetHeight;
+    }
     renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, panOffsetRef.current);
   }, [scale, rotation, cropRect, cutRect, selectionRect]);
 
@@ -429,6 +434,41 @@ export default function Editor() {
       }
     }
     return null;
+  }
+
+  function drawBrushCursor(sx: number, sy: number) {
+    const cc = cursorCanvasRef.current;
+    if (!cc) return;
+    const ctx = cc.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, cc.width, cc.height);
+    const radius = (tool === "eraser" ? 10 : strokeWidth / 2) * scale;
+    const r = Math.max(2, radius);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(sx, sy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = tool === "eraser" ? "rgba(80,80,80,0.9)" : penColor;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // thin white halo so circle is visible on dark backgrounds too
+    ctx.beginPath();
+    ctx.arc(sx, sy, r + 1.5, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255,255,255,0.5)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // crosshair centre dot
+    ctx.beginPath();
+    ctx.arc(sx, sy, 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = tool === "eraser" ? "rgba(80,80,80,0.9)" : penColor;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function clearBrushCursor() {
+    const cc = cursorCanvasRef.current;
+    if (!cc) return;
+    const ctx = cc.getContext("2d");
+    if (ctx) ctx.clearRect(0, 0, cc.width, cc.height);
   }
 
   function handleMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
@@ -495,6 +535,13 @@ export default function Editor() {
   function handleMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    if (tool === "pen" || tool === "eraser") {
+      const [sx, sy] = getScreenPoint(e);
+      drawBrushCursor(sx, sy);
+    } else {
+      clearBrushCursor();
+    }
 
     if (tool === "crop" && cropStartRef.current) {
       const [sx, sy] = getScreenPoint(e);
@@ -989,7 +1036,9 @@ export default function Editor() {
   const isSaving = replaceFile.isPending || updateImage.isPending;
 
   const cursorClass =
-    tool === "pen" || tool === "eraser" || tool === "arrow" || tool === "circle" || tool === "straightline"
+    tool === "pen" || tool === "eraser"
+      ? "cursor-none"
+      : tool === "arrow" || tool === "circle" || tool === "straightline"
       ? "cursor-crosshair"
       : tool === "text"
       ? "cursor-text"
@@ -998,6 +1047,11 @@ export default function Editor() {
       : tool === "hand"
       ? (panDragRef.current ? "cursor-grabbing" : "cursor-grab")
       : "cursor-default";
+
+  function handleMouseLeave(e: React.MouseEvent<HTMLCanvasElement>) {
+    clearBrushCursor();
+    handleMouseUp(e);
+  }
 
   const tools: { id: Tool; Icon: React.ElementType; label: string }[] = [
     { id: "pointer",     Icon: MousePointer2, label: t("editor.pointer") },
@@ -1207,7 +1261,11 @@ export default function Editor() {
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
+          />
+          <canvas
+            ref={cursorCanvasRef}
+            className="absolute inset-0 w-full h-full pointer-events-none"
           />
 
           {pendingText && (
