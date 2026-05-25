@@ -27,6 +27,9 @@ async function buildAll() {
     alias: IS_ELECTRON_BUILD
       ? {
           "@workspace/db": path.resolve(artifactDir, "../../lib/db/src/sqlite-compat.ts"),
+          // Swap GCS storage for local-disk storage in the Electron/LAN build
+          // so the bundled output never references @google-cloud/storage.
+          "../lib/gcsStorage": path.resolve(artifactDir, "src/lib/localDiskStorage.ts"),
         }
       : undefined,
     // Some packages may not be bundleable, so we externalize them, we can add more here as needed.

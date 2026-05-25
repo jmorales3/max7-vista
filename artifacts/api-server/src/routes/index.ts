@@ -14,6 +14,7 @@ import importRouter from "./import";
 import profileRouter from "./profile";
 import migrationRouter from "./migration";
 import documentsRouter from "./documents";
+import localFileRouter from "./localFile";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use(importRouter);
 router.use(profileRouter);
 router.use(migrationRouter);
 router.use(documentsRouter);
+router.use(localFileRouter);
 
 export default router;
