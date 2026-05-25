@@ -235,7 +235,8 @@
     "clipboardFailed": "No se pudo copiar al portapapeles",
     "selectHint": "Arrastra para seleccionar un área, luego muévela o cópiala",
     "eyedropper": "Tomar color",
-    "colorSampled": "Color tomado"
+    "colorSampled": "Color tomado",
+    "pan": "Desplazar / Mover"
   },
   "settings": {
     "title": "Configuración",

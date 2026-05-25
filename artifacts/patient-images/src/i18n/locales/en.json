@@ -235,7 +235,8 @@
     "clipboardFailed": "Could not copy to clipboard",
     "selectHint": "Drag to outline an area, then move or copy it",
     "eyedropper": "Pick Color",
-    "colorSampled": "Color sampled"
+    "colorSampled": "Color sampled",
+    "pan": "Pan / Move"
   },
   "settings": {
     "title": "Settings",

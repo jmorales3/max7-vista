@@ -50,6 +50,7 @@ import {
   Clipboard,
   X,
   Pipette,
+  Hand,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -62,7 +63,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type Tool = "pointer" | "pen" | "text" | "eraser" | "crop" | "arrow" | "circle" | "straightline" | "select" | "eyedropper";
+type Tool = "pointer" | "pen" | "text" | "eraser" | "crop" | "arrow" | "circle" | "straightline" | "select" | "eyedropper" | "hand";
 
 interface DrawLine {
   type: "line";
@@ -199,13 +200,16 @@ function renderCanvas(
   previewAnn?: Annotation | null,
   cutRect?: CropRect | null,
   selectionOverlay?: CropRect | null,
+  panOffset?: { x: number; y: number },
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
+  const px = panOffset?.x ?? 0;
+  const py = panOffset?.y ?? 0;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save();
-  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.translate(canvas.width / 2 + px, canvas.height / 2 + py);
   ctx.rotate((rotation * Math.PI) / 180);
   ctx.scale(scale, scale);
 
@@ -235,7 +239,7 @@ function renderCanvas(
     ctx.beginPath();
     ctx.rect(cropRect.x, cropRect.y, cropRect.w, cropRect.h);
     ctx.clip();
-    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.translate(canvas.width / 2 + px, canvas.height / 2 + py);
     ctx.rotate((rotation * Math.PI) / 180);
     ctx.scale(scale, scale);
     if (img) ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
@@ -286,6 +290,9 @@ export default function Editor() {
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [scale, setScale] = useState(1);
   const [rotation, setRotation] = useState(0);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const panOffsetRef = useRef({ x: 0, y: 0 });
+  const panDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
   const [penColor, setPenColor] = useState("#ff0000");
   const [strokeWidth, setStrokeWidth] = useState(4);
   const [textSize, setTextSize] = useState(36);
@@ -368,14 +375,18 @@ export default function Editor() {
     if (!canvas || !container) return;
     canvas.width = container.offsetWidth;
     canvas.height = container.offsetHeight;
-    renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined);
+    renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, panOffsetRef.current);
   }, [scale, rotation, cropRect, cutRect, selectionRect]);
+
+  useEffect(() => {
+    panOffsetRef.current = panOffset;
+  }, [panOffset]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    renderCanvas(canvas, imgRef.current, annotations, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined);
-  }, [annotations, scale, rotation, cropRect, cutRect, selectionRect]);
+    renderCanvas(canvas, imgRef.current, annotations, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, panOffset);
+  }, [annotations, scale, rotation, cropRect, cutRect, selectionRect, panOffset]);
 
   useEffect(() => {
     const observer = new ResizeObserver(resizeCanvas);
@@ -386,8 +397,8 @@ export default function Editor() {
   function getCanvasPoint(e: React.MouseEvent<HTMLCanvasElement>): [number, number] {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
-    const cx = (e.clientX - rect.left - canvas.width / 2) / scale;
-    const cy = (e.clientY - rect.top - canvas.height / 2) / scale;
+    const cx = (e.clientX - rect.left - canvas.width / 2 - panOffsetRef.current.x) / scale;
+    const cy = (e.clientY - rect.top - canvas.height / 2 - panOffsetRef.current.y) / scale;
     const rad = (-rotation * Math.PI) / 180;
     return [
       cx * Math.cos(rad) - cy * Math.sin(rad),
@@ -421,6 +432,15 @@ export default function Editor() {
   }
 
   function handleMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
+    if (tool === "hand") {
+      panDragRef.current = {
+        startX: e.clientX,
+        startY: e.clientY,
+        origX: panOffsetRef.current.x,
+        origY: panOffsetRef.current.y,
+      };
+      return;
+    }
     if (tool === "pen" || tool === "eraser") {
       isDrawingRef.current = true;
       const [x, y] = getCanvasPoint(e);
@@ -486,11 +506,20 @@ export default function Editor() {
       return;
     }
 
+    if (tool === "hand" && panDragRef.current) {
+      const dx = e.clientX - panDragRef.current.startX;
+      const dy = e.clientY - panDragRef.current.startY;
+      const newPan = { x: panDragRef.current.origX + dx, y: panDragRef.current.origY + dy };
+      panOffsetRef.current = newPan;
+      renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, newPan);
+      return;
+    }
+
     if (tool === "arrow" && arrowStartRef.current) {
       const [x2, y2] = getCanvasPoint(e);
       const [x1, y1] = arrowStartRef.current;
       const preview: DrawArrow = { type: "arrow", x1, y1, x2, y2, color: penColor, width: strokeWidth, id: "__preview__" };
-      renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview);
+      renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview, null, undefined, panOffsetRef.current);
       return;
     }
 
@@ -499,7 +528,7 @@ export default function Editor() {
       const [mx, my] = getCanvasPoint(e);
       const r = Math.hypot(mx - cx, my - cy);
       const preview: DrawCircle = { type: "circle", cx, cy, r, color: penColor, width: strokeWidth, id: "__preview__" };
-      renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview);
+      renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview, null, undefined, panOffsetRef.current);
       return;
     }
 
@@ -507,7 +536,7 @@ export default function Editor() {
       const [x2, y2] = getCanvasPoint(e);
       const [x1, y1] = straightLineStartRef.current;
       const preview: DrawStraightLine = { type: "straightline", x1, y1, x2, y2, color: penColor, width: strokeWidth, id: "__preview__" };
-      renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview);
+      renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview, null, undefined, panOffsetRef.current);
       return;
     }
 
@@ -531,7 +560,7 @@ export default function Editor() {
           ? { ...ann, x: origX + dx, y: origY + dy }
           : ann,
       );
-      renderCanvas(canvas, imgRef.current, updated, scale, rotation, null);
+      renderCanvas(canvas, imgRef.current, updated, scale, rotation, null, null, null, undefined, panOffsetRef.current);
       return;
     }
 
@@ -539,10 +568,10 @@ export default function Editor() {
     const [x, y] = getCanvasPoint(e);
     currentLineRef.current = [...currentLineRef.current, x, y];
 
-    renderCanvas(canvas, imgRef.current, annotations, scale, rotation);
+    renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, null, null, undefined, panOffsetRef.current);
     const ctx = canvas.getContext("2d")!;
     ctx.save();
-    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.translate(canvas.width / 2 + panOffsetRef.current.x, canvas.height / 2 + panOffsetRef.current.y);
     ctx.rotate((rotation * Math.PI) / 180);
     ctx.scale(scale, scale);
     const pts = currentLineRef.current;
@@ -560,6 +589,13 @@ export default function Editor() {
   }
 
   function handleMouseUp(e: React.MouseEvent<HTMLCanvasElement>) {
+    if (tool === "hand") {
+      if (panDragRef.current) {
+        setPanOffset(panOffsetRef.current);
+        panDragRef.current = null;
+      }
+      return;
+    }
     if (tool === "crop") {
       cropStartRef.current = null;
       return;
@@ -705,6 +741,8 @@ export default function Editor() {
       setRotation(0);
       setCropRect(null);
       cropStartRef.current = null;
+      setPanOffset({ x: 0, y: 0 });
+      panOffsetRef.current = { x: 0, y: 0 };
       setTool("pointer");
       if (canvas && container) {
         canvas.width = container.offsetWidth;
@@ -786,6 +824,8 @@ export default function Editor() {
         setRotation(0);
         setCutRect(null);
         setFloater(null);
+        setPanOffset({ x: 0, y: 0 });
+        panOffsetRef.current = { x: 0, y: 0 };
         setTool("pointer");
         preCutStateRef.current = null;
         if (container) {
@@ -830,6 +870,8 @@ export default function Editor() {
       setCutRect(null);
       setFloater(null);
       setSelectionRect(null);
+      setPanOffset({ x: 0, y: 0 });
+      panOffsetRef.current = { x: 0, y: 0 };
       preCutStateRef.current = null;
       if (container) {
         canvas.width = container.offsetWidth;
@@ -953,10 +995,13 @@ export default function Editor() {
       ? "cursor-text"
       : tool === "crop" || (tool === "select" && !floater) || tool === "eyedropper"
       ? "cursor-crosshair"
+      : tool === "hand"
+      ? (panDragRef.current ? "cursor-grabbing" : "cursor-grab")
       : "cursor-default";
 
   const tools: { id: Tool; Icon: React.ElementType; label: string }[] = [
     { id: "pointer",     Icon: MousePointer2, label: t("editor.pointer") },
+    { id: "hand",        Icon: Hand,          label: t("editor.pan") },
     { id: "pen",         Icon: PenTool,       label: t("editor.draw") },
     { id: "eyedropper",  Icon: Pipette,       label: t("editor.eyedropper") },
     { id: "straightline",Icon: Minus,         label: t("editor.straightLine") },
@@ -1020,7 +1065,7 @@ export default function Editor() {
             </div>
           )}
 
-          {tool !== "crop" && tool !== "pointer" && tool !== "select" && tool !== "eyedropper" && (
+          {tool !== "crop" && tool !== "pointer" && tool !== "select" && tool !== "eyedropper" && tool !== "hand" && (
             <div className="relative flex items-center gap-1.5" title={t("editor.annotationColor")}>
               <div
                 className="w-5 h-5 rounded-full border-2 border-muted-foreground/40 shadow cursor-pointer"

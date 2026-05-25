@@ -235,7 +235,8 @@
     "clipboardFailed": "Impossible de copier dans le presse-papiers",
     "selectHint": "Faites glisser pour délimiter une zone, puis déplacez-la ou copiez-la",
     "eyedropper": "Pipette couleur",
-    "colorSampled": "Couleur prélevée"
+    "colorSampled": "Couleur prélevée",
+    "pan": "Déplacer / Panoramique"
   },
   "settings": {
     "title": "Paramètres",
