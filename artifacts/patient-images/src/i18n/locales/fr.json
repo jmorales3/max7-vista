@@ -225,7 +225,15 @@
     "circle": "Cercle",
     "pointerHint": "Cliquez et faites glisser les étiquettes de texte pour les repositionner",
     "strokeWidth": "Épaisseur",
-    "textSize": "Taille"
+    "textSize": "Taille",
+    "straightLine": "Ligne droite",
+    "select": "Sélectionner / Déplacer",
+    "applySelection": "Appliquer",
+    "copyToClipboard": "Copier dans le presse-papiers",
+    "cancelSelection": "Annuler",
+    "copiedToClipboard": "Sélection copiée dans le presse-papiers",
+    "clipboardFailed": "Impossible de copier dans le presse-papiers",
+    "selectHint": "Faites glisser pour délimiter une zone, puis déplacez-la ou copiez-la"
   },
   "settings": {
     "title": "Paramètres",

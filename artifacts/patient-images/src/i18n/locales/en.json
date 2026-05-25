@@ -225,7 +225,15 @@
     "circle": "Circle",
     "pointerHint": "Click & drag text labels to reposition them",
     "strokeWidth": "Width",
-    "textSize": "Size"
+    "textSize": "Size",
+    "straightLine": "Straight Line",
+    "select": "Select / Move",
+    "applySelection": "Apply",
+    "copyToClipboard": "Copy to Clipboard",
+    "cancelSelection": "Cancel",
+    "copiedToClipboard": "Selection copied to clipboard",
+    "clipboardFailed": "Could not copy to clipboard",
+    "selectHint": "Drag to outline an area, then move or copy it"
   },
   "settings": {
     "title": "Settings",

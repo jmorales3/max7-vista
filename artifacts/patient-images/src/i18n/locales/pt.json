@@ -225,7 +225,15 @@
     "circle": "Círculo",
     "pointerHint": "Clique e arraste os rótulos de texto para reposicioná-los",
     "strokeWidth": "Espessura",
-    "textSize": "Tamanho"
+    "textSize": "Tamanho",
+    "straightLine": "Linha reta",
+    "select": "Selecionar / Mover",
+    "applySelection": "Aplicar",
+    "copyToClipboard": "Copiar para a área de transferência",
+    "cancelSelection": "Cancelar",
+    "copiedToClipboard": "Seleção copiada para a área de transferência",
+    "clipboardFailed": "Não foi possível copiar para a área de transferência",
+    "selectHint": "Arraste para contornar uma área e mova-a ou copie-a"
   },
   "settings": {
     "title": "Configurações",

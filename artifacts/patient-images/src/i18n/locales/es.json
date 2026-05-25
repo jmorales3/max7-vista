@@ -225,7 +225,15 @@
     "circle": "Círculo",
     "pointerHint": "Haga clic y arrastre las etiquetas de texto para reposicionarlas",
     "strokeWidth": "Grosor",
-    "textSize": "Tamaño"
+    "textSize": "Tamaño",
+    "straightLine": "Línea recta",
+    "select": "Seleccionar / Mover",
+    "applySelection": "Aplicar",
+    "copyToClipboard": "Copiar al portapapeles",
+    "cancelSelection": "Cancelar",
+    "copiedToClipboard": "Selección copiada al portapapeles",
+    "clipboardFailed": "No se pudo copiar al portapapeles",
+    "selectHint": "Arrastra para seleccionar un área, luego muévela o cópiala"
   },
   "settings": {
     "title": "Configuración",

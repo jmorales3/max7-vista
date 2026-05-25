@@ -45,6 +45,10 @@ import {
   Check,
   MoveRight,
   Circle as CircleIcon,
+  Minus,
+  Scissors,
+  Clipboard,
+  X,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -57,7 +61,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type Tool = "pointer" | "pen" | "text" | "eraser" | "crop" | "arrow" | "circle";
+type Tool = "pointer" | "pen" | "text" | "eraser" | "crop" | "arrow" | "circle" | "straightline" | "select";
 
 interface DrawLine {
   type: "line";
@@ -97,7 +101,18 @@ interface DrawCircle {
   id: string;
 }
 
-type Annotation = DrawLine | DrawText | DrawArrow | DrawCircle;
+interface DrawStraightLine {
+  type: "straightline";
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  color: string;
+  width: number;
+  id: string;
+}
+
+type Annotation = DrawLine | DrawText | DrawArrow | DrawCircle | DrawStraightLine;
 
 interface CropRect {
   x: number;
@@ -162,6 +177,14 @@ function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation) {
     ctx.lineWidth = ann.width;
     ctx.arc(ann.cx, ann.cy, ann.r, 0, 2 * Math.PI);
     ctx.stroke();
+  } else if (ann.type === "straightline") {
+    ctx.beginPath();
+    ctx.strokeStyle = ann.color;
+    ctx.lineWidth = ann.width;
+    ctx.lineCap = "round";
+    ctx.moveTo(ann.x1, ann.y1);
+    ctx.lineTo(ann.x2, ann.y2);
+    ctx.stroke();
   }
 }
 
@@ -173,6 +196,8 @@ function renderCanvas(
   rotation: number,
   cropRect?: CropRect | null,
   previewAnn?: Annotation | null,
+  cutRect?: CropRect | null,
+  selectionOverlay?: CropRect | null,
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -193,6 +218,12 @@ function renderCanvas(
   }
 
   ctx.restore();
+
+  // White "hole" where a selection was cut from
+  if (cutRect && cutRect.w > 0 && cutRect.h > 0) {
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(cutRect.x, cutRect.y, cutRect.w, cutRect.h);
+  }
 
   if (cropRect && cropRect.w > 0 && cropRect.h > 0) {
     ctx.save();
@@ -227,6 +258,17 @@ function renderCanvas(
     }
     ctx.restore();
   }
+
+  // Dashed selection border (select tool, drawing phase)
+  if (selectionOverlay && selectionOverlay.w > 0 && selectionOverlay.h > 0) {
+    ctx.save();
+    ctx.strokeStyle = "#f97316";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 4]);
+    ctx.strokeRect(selectionOverlay.x, selectionOverlay.y, selectionOverlay.w, selectionOverlay.h);
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
 }
 
 export default function Editor() {
@@ -247,6 +289,11 @@ export default function Editor() {
   const [strokeWidth, setStrokeWidth] = useState(4);
   const [textSize, setTextSize] = useState(36);
   const [cropRect, setCropRect] = useState<CropRect | null>(null);
+  const [selectionRect, setSelectionRect] = useState<CropRect | null>(null);
+  const [cutRect, setCutRect] = useState<CropRect | null>(null);
+  const [floater, setFloater] = useState<{
+    dataUrl: string; x: number; y: number; w: number; h: number;
+  } | null>(null);
   const [pendingText, setPendingText] = useState<{ x: number; y: number } | null>(null);
   const [textInput, setTextInput] = useState("");
 
@@ -260,6 +307,17 @@ export default function Editor() {
 
   const arrowStartRef = useRef<[number, number] | null>(null);
   const circleStartRef = useRef<[number, number] | null>(null);
+  const straightLineStartRef = useRef<[number, number] | null>(null);
+  const selectionStartRef = useRef<{ x: number; y: number } | null>(null);
+  const preCutStateRef = useRef<{
+    imgSrc: string;
+    annotations: Annotation[];
+    scale: number;
+    rotation: number;
+  } | null>(null);
+  const floaterDragRef = useRef<{
+    startX: number; startY: number; origX: number; origY: number;
+  } | null>(null);
 
   const draggingTextRef = useRef<{
     id: string;
@@ -309,14 +367,14 @@ export default function Editor() {
     if (!canvas || !container) return;
     canvas.width = container.offsetWidth;
     canvas.height = container.offsetHeight;
-    renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, cropRect);
-  }, [scale, rotation, cropRect]);
+    renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined);
+  }, [scale, rotation, cropRect, cutRect, selectionRect]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    renderCanvas(canvas, imgRef.current, annotations, scale, rotation, cropRect);
-  }, [annotations, scale, rotation, cropRect]);
+    renderCanvas(canvas, imgRef.current, annotations, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined);
+  }, [annotations, scale, rotation, cropRect, cutRect, selectionRect]);
 
   useEffect(() => {
     const observer = new ResizeObserver(resizeCanvas);
@@ -377,6 +435,12 @@ export default function Editor() {
       arrowStartRef.current = getCanvasPoint(e);
     } else if (tool === "circle") {
       circleStartRef.current = getCanvasPoint(e);
+    } else if (tool === "straightline") {
+      straightLineStartRef.current = getCanvasPoint(e);
+    } else if (tool === "select" && !floater) {
+      const [sx, sy] = getScreenPoint(e);
+      selectionStartRef.current = { x: sx, y: sy };
+      setSelectionRect({ x: sx, y: sy, w: 0, h: 0 });
     } else if (tool === "pointer") {
       const [x, y] = getCanvasPoint(e);
       const hit = findTextAt(x, y);
@@ -420,6 +484,24 @@ export default function Editor() {
       const r = Math.hypot(mx - cx, my - cy);
       const preview: DrawCircle = { type: "circle", cx, cy, r, color: penColor, width: strokeWidth, id: "__preview__" };
       renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview);
+      return;
+    }
+
+    if (tool === "straightline" && straightLineStartRef.current) {
+      const [x2, y2] = getCanvasPoint(e);
+      const [x1, y1] = straightLineStartRef.current;
+      const preview: DrawStraightLine = { type: "straightline", x1, y1, x2, y2, color: penColor, width: strokeWidth, id: "__preview__" };
+      renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview);
+      return;
+    }
+
+    if (tool === "select" && selectionStartRef.current && !floater) {
+      const [sx, sy] = getScreenPoint(e);
+      const x = Math.min(selectionStartRef.current.x, sx);
+      const y = Math.min(selectionStartRef.current.y, sy);
+      const w = Math.abs(sx - selectionStartRef.current.x);
+      const h = Math.abs(sy - selectionStartRef.current.y);
+      setSelectionRect({ x, y, w, h });
       return;
     }
 
@@ -499,6 +581,55 @@ export default function Editor() {
         };
         setAnnotations((prev) => [...prev, newCircle]);
       }
+      return;
+    }
+
+    if (tool === "straightline" && straightLineStartRef.current) {
+      const [x2, y2] = getCanvasPoint(e);
+      const [x1, y1] = straightLineStartRef.current;
+      straightLineStartRef.current = null;
+      if (Math.hypot(x2 - x1, y2 - y1) > 3) {
+        const newLine: DrawStraightLine = {
+          type: "straightline",
+          x1, y1, x2, y2,
+          color: penColor,
+          width: strokeWidth,
+          id: Date.now().toString(),
+        };
+        setAnnotations((prev) => [...prev, newLine]);
+      }
+      return;
+    }
+
+    if (tool === "select" && selectionStartRef.current && !floater) {
+      selectionStartRef.current = null;
+      const sel = selectionRect;
+      if (!sel || sel.w < 4 || sel.h < 4 || !canvasRef.current) {
+        setSelectionRect(null);
+        return;
+      }
+      const canvas = canvasRef.current;
+      // Save the pre-cut state so Cancel can fully restore it
+      preCutStateRef.current = {
+        imgSrc: imgRef.current?.src ?? "",
+        annotations: annotationsRef.current.slice(),
+        scale,
+        rotation,
+      };
+      // Extract the selected region into a floater
+      const offscreen = document.createElement("canvas");
+      offscreen.width = sel.w;
+      offscreen.height = sel.h;
+      const octx = offscreen.getContext("2d")!;
+      octx.drawImage(canvas, sel.x, sel.y, sel.w, sel.h, 0, 0, sel.w, sel.h);
+      const dataUrl = offscreen.toDataURL("image/png");
+      // Cut: white hole at selection site
+      const ctx = canvas.getContext("2d")!;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(sel.x, sel.y, sel.w, sel.h);
+      setCutRect(sel);
+      setFloater({ dataUrl, x: sel.x, y: sel.y, w: sel.w, h: sel.h });
+      setSelectionRect(null);
       return;
     }
 
@@ -587,6 +718,110 @@ export default function Editor() {
     setPendingText(null);
     setTextInput("");
     // Stay in text mode so the user can keep adding more text annotations
+  }
+
+  function startFloaterDrag(e: React.MouseEvent<HTMLDivElement>) {
+    if (!floater) return;
+    e.preventDefault();
+    floaterDragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      origX: floater.x,
+      origY: floater.y,
+    };
+    function onMove(ev: MouseEvent) {
+      if (!floaterDragRef.current) return;
+      const dx = ev.clientX - floaterDragRef.current.startX;
+      const dy = ev.clientY - floaterDragRef.current.startY;
+      setFloater((prev) =>
+        prev ? { ...prev, x: floaterDragRef.current!.origX + dx, y: floaterDragRef.current!.origY + dy } : null,
+      );
+    }
+    function onUp() {
+      floaterDragRef.current = null;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }
+
+  function applyFloater() {
+    if (!floater || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    const img = new Image();
+    img.onload = () => {
+      // Render current state (image + annotations + white hole), then burn in floater
+      renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, null, null, cutRect);
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, floater.x, floater.y, floater.w, floater.h);
+      // Flatten to a new image
+      const flatUrl = canvas.toDataURL("image/png");
+      const newImg = new Image();
+      newImg.onload = () => {
+        imgRef.current = newImg;
+        const fitScale =
+          container && newImg.naturalWidth > 0
+            ? Math.min(container.offsetWidth / newImg.naturalWidth, container.offsetHeight / newImg.naturalHeight)
+            : 1;
+        setAnnotations([]);
+        setScale(fitScale);
+        setRotation(0);
+        setCutRect(null);
+        setFloater(null);
+        setTool("pointer");
+        preCutStateRef.current = null;
+        if (container) {
+          canvas.width = container.offsetWidth;
+          canvas.height = container.offsetHeight;
+        }
+        renderCanvas(canvas, newImg, [], fitScale, 0, null);
+      };
+      newImg.src = flatUrl;
+    };
+    img.src = floater.dataUrl;
+  }
+
+  async function copyFloaterToClipboard() {
+    if (!floater) return;
+    try {
+      const res = await fetch(floater.dataUrl);
+      const blob = await res.blob();
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      toast({ title: t("editor.copiedToClipboard") });
+    } catch {
+      toast({ variant: "destructive", title: t("editor.clipboardFailed") });
+    }
+  }
+
+  function cancelSelection() {
+    const prev = preCutStateRef.current;
+    if (!prev || !canvasRef.current) {
+      setCutRect(null);
+      setFloater(null);
+      setSelectionRect(null);
+      return;
+    }
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    const img = new Image();
+    img.onload = () => {
+      imgRef.current = img;
+      setAnnotations(prev.annotations);
+      setScale(prev.scale);
+      setRotation(prev.rotation);
+      setCutRect(null);
+      setFloater(null);
+      setSelectionRect(null);
+      preCutStateRef.current = null;
+      if (container) {
+        canvas.width = container.offsetWidth;
+        canvas.height = container.offsetHeight;
+      }
+      renderCanvas(canvas, img, prev.annotations, prev.scale, prev.rotation, null);
+    };
+    img.src = prev.imgSrc;
   }
 
   const replaceFile = useReplaceImageFile({
@@ -696,22 +931,24 @@ export default function Editor() {
   const isSaving = replaceFile.isPending || updateImage.isPending;
 
   const cursorClass =
-    tool === "pen" || tool === "eraser" || tool === "arrow" || tool === "circle"
+    tool === "pen" || tool === "eraser" || tool === "arrow" || tool === "circle" || tool === "straightline"
       ? "cursor-crosshair"
       : tool === "text"
       ? "cursor-text"
-      : tool === "crop"
+      : tool === "crop" || (tool === "select" && !floater)
       ? "cursor-crosshair"
       : "cursor-default";
 
   const tools: { id: Tool; Icon: React.ElementType; label: string }[] = [
-    { id: "pointer", Icon: MousePointer2, label: t("editor.pointer") },
-    { id: "pen",     Icon: PenTool,       label: t("editor.draw") },
-    { id: "arrow",   Icon: MoveRight,     label: t("editor.arrow") },
-    { id: "circle",  Icon: CircleIcon,    label: t("editor.circle") },
-    { id: "text",    Icon: TypeIcon,      label: t("editor.text") },
-    { id: "eraser",  Icon: Eraser,        label: t("editor.erase") },
-    { id: "crop",    Icon: Crop,          label: t("editor.crop") },
+    { id: "pointer",     Icon: MousePointer2, label: t("editor.pointer") },
+    { id: "pen",         Icon: PenTool,       label: t("editor.draw") },
+    { id: "straightline",Icon: Minus,         label: t("editor.straightLine") },
+    { id: "arrow",       Icon: MoveRight,     label: t("editor.arrow") },
+    { id: "circle",      Icon: CircleIcon,    label: t("editor.circle") },
+    { id: "text",        Icon: TypeIcon,      label: t("editor.text") },
+    { id: "eraser",      Icon: Eraser,        label: t("editor.erase") },
+    { id: "crop",        Icon: Crop,          label: t("editor.crop") },
+    { id: "select",      Icon: Scissors,      label: t("editor.select") },
   ];
 
   return (
@@ -749,7 +986,24 @@ export default function Editor() {
             </Button>
           )}
 
-          {tool !== "crop" && tool !== "pointer" && (
+          {tool === "select" && floater && (
+            <div className="flex items-center gap-1">
+              <Button size="sm" className="h-8 gap-1" onClick={applyFloater}>
+                <Check className="h-3.5 w-3.5" />
+                {t("editor.applySelection")}
+              </Button>
+              <Button size="sm" variant="outline" className="h-8 gap-1" onClick={copyFloaterToClipboard}>
+                <Clipboard className="h-3.5 w-3.5" />
+                {t("editor.copyToClipboard")}
+              </Button>
+              <Button size="sm" variant="ghost" className="h-8 gap-1" onClick={cancelSelection}>
+                <X className="h-3.5 w-3.5" />
+                {t("editor.cancelSelection")}
+              </Button>
+            </div>
+          )}
+
+          {tool !== "crop" && tool !== "pointer" && tool !== "select" && (
             <div className="relative flex items-center gap-1.5" title={t("editor.annotationColor")}>
               <div
                 className="w-5 h-5 rounded-full border-2 border-muted-foreground/40 shadow cursor-pointer"
@@ -765,7 +1019,7 @@ export default function Editor() {
             </div>
           )}
 
-          {(tool === "pen" || tool === "arrow" || tool === "circle" || tool === "eraser") && (
+          {(tool === "pen" || tool === "arrow" || tool === "circle" || tool === "eraser" || tool === "straightline") && (
             <div className="flex items-center gap-1" title={t("editor.strokeWidth")}>
               <span className="text-xs text-muted-foreground">{t("editor.strokeWidth")}</span>
               <Button
@@ -925,6 +1179,39 @@ export default function Editor() {
               <span className="bg-black/50 text-white text-xs px-2 py-1 rounded-full">
                 {t("editor.pointerHint")}
               </span>
+            </div>
+          )}
+
+          {tool === "select" && !floater && (
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-none">
+              <span className="bg-black/50 text-white text-xs px-2 py-1 rounded-full">
+                {t("editor.selectHint")}
+              </span>
+            </div>
+          )}
+
+          {/* Floating selection — draggable cut region */}
+          {floater && (
+            <div
+              className="absolute select-none"
+              style={{
+                left: floater.x,
+                top: floater.y,
+                width: floater.w,
+                height: floater.h,
+                cursor: "move",
+                outline: "2px dashed #f97316",
+                outlineOffset: "-1px",
+                zIndex: 20,
+              }}
+              onMouseDown={startFloaterDrag}
+            >
+              <img
+                src={floater.dataUrl}
+                draggable={false}
+                style={{ width: floater.w, height: floater.h, display: "block" }}
+                alt=""
+              />
             </div>
           )}
         </div>
