@@ -787,6 +787,10 @@ export default function Editor() {
     const rounded = Math.round(px);
     setReferenceLinePx(rounded);
     localStorage.setItem("max7_refLinePx", String(rounded));
+    // Persist the ruler annotation to DB so it survives navigation away from Image A
+    if (id) {
+      updateImage.mutate({ id, data: { notes, annotation: JSON.stringify(annotations) } });
+    }
     toast({ title: t("editor.resizeSaveRef"), description: `${rounded} px ${t("editor.resizeSavedDesc")}` });
   }
 
@@ -801,10 +805,12 @@ export default function Editor() {
     const factor = refPx / currentPx;
     const img = imgRef.current;
     if (!img || !id) return;
+    // Render the flat canvas WITHOUT rulers so they stay as live annotations
+    const nonRulerAnnotations = annotations.filter(a => a.type !== "ruler");
     const flatCanvas = document.createElement("canvas");
     flatCanvas.width = img.naturalWidth;
     flatCanvas.height = img.naturalHeight;
-    renderCanvas(flatCanvas, img, annotations, 1, 0, null, null, null, undefined, { x: 0, y: 0 });
+    renderCanvas(flatCanvas, img, nonRulerAnnotations, 1, 0, null, null, null, undefined, { x: 0, y: 0 });
     const newW = Math.max(1, Math.round(img.naturalWidth * factor));
     const newH = Math.max(1, Math.round(img.naturalHeight * factor));
     const scaledCanvas = document.createElement("canvas");
@@ -819,7 +825,17 @@ export default function Editor() {
         { id, data: { file } },
         {
           onSuccess: () => {
-            setAnnotations([]);
+            // Scale ruler coordinates by the same factor so they stay accurate on the resized image
+            const scaledRulers = rulers.map(r => ({
+              ...r,
+              x1: r.x1 * factor,
+              y1: r.y1 * factor,
+              x2: r.x2 * factor,
+              y2: r.y2 * factor,
+            }));
+            setAnnotations(scaledRulers);
+            // Persist the scaled rulers to DB
+            updateImage.mutate({ id, data: { notes, annotation: JSON.stringify(scaledRulers) } });
             setShowResizePanel(false);
             setResizeRefInput("");
             toast({
