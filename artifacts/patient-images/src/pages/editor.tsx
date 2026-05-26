@@ -1776,13 +1776,12 @@ export default function Editor() {
                   {t("editor.overlayNone")}
                 </Button>
               )}
-              <div className="flex gap-1 overflow-x-auto max-w-xs">
+              <div className="flex gap-1 overflow-x-auto max-w-[480px]">
                 {patientImages.filter((pi) => String(pi.id) !== String(id)).length === 0 ? (
                   <span className="text-xs text-muted-foreground italic">{t("editor.overlayNoImages")}</span>
                 ) : (
                   patientImages
                     .filter((pi) => String(pi.id) !== String(id))
-                    .slice(0, 10)
                     .map((pi) => (
                       <button
                         key={pi.id}
