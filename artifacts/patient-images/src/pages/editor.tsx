@@ -31,6 +31,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
   ChevronLeft,
+  ChevronRight,
   Trash2,
   Save,
   Copy,
@@ -450,6 +451,7 @@ export default function Editor() {
   const [overlayOpacity, setOverlayOpacity] = useState(0.5);
   const overlayImgRef = useRef<HTMLImageElement | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const overlayScrollRef = useRef<HTMLDivElement | null>(null);
   const [showResizePanel, setShowResizePanel] = useState(false);
   const [resizeRefInput, setResizeRefInput] = useState("");
   const [resizeMode, setResizeMode] = useState(false);
@@ -1776,31 +1778,49 @@ export default function Editor() {
                   {t("editor.overlayNone")}
                 </Button>
               )}
-              <div className="flex gap-1 overflow-x-auto max-w-[480px]">
-                {patientImages.filter((pi) => String(pi.id) !== String(id)).length === 0 ? (
-                  <span className="text-xs text-muted-foreground italic">{t("editor.overlayNoImages")}</span>
-                ) : (
-                  patientImages
-                    .filter((pi) => String(pi.id) !== String(id))
-                    .map((pi) => (
-                      <button
-                        key={pi.id}
-                        title={pi.notes ?? String(pi.id)}
-                        className={`shrink-0 w-9 h-9 rounded border-2 overflow-hidden transition-colors ${
-                          overlayImageId === String(pi.id) ? "border-primary" : "border-transparent hover:border-muted-foreground/40"
-                        }`}
-                        onClick={() => setOverlayImageId(overlayImageId === String(pi.id) ? null : String(pi.id))}
-                      >
-                        <img
-                          src={`/api/images/${pi.id}/file`}
-                          alt=""
-                          className="w-full h-full object-cover"
-                          crossOrigin="anonymous"
-                        />
-                      </button>
-                    ))
-                )}
-              </div>
+              {patientImages.filter((pi) => String(pi.id) !== String(id)).length === 0 ? (
+                <span className="text-xs text-muted-foreground italic">{t("editor.overlayNoImages")}</span>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <button
+                    className="shrink-0 h-7 w-5 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground"
+                    onClick={() => overlayScrollRef.current?.scrollBy({ left: -160, behavior: "smooth" })}
+                  >
+                    <ChevronLeft className="h-3 w-3" />
+                  </button>
+                  <div
+                    ref={overlayScrollRef}
+                    className="flex gap-1 overflow-x-auto w-[320px] scroll-smooth"
+                    style={{ scrollbarWidth: "none" }}
+                  >
+                    {patientImages
+                      .filter((pi) => String(pi.id) !== String(id))
+                      .map((pi) => (
+                        <button
+                          key={pi.id}
+                          title={pi.notes ?? String(pi.id)}
+                          className={`shrink-0 w-9 h-9 rounded border-2 overflow-hidden transition-colors ${
+                            overlayImageId === String(pi.id) ? "border-primary" : "border-transparent hover:border-muted-foreground/40"
+                          }`}
+                          onClick={() => setOverlayImageId(overlayImageId === String(pi.id) ? null : String(pi.id))}
+                        >
+                          <img
+                            src={`/api/images/${pi.id}/file`}
+                            alt=""
+                            className="w-full h-full object-cover"
+                            crossOrigin="anonymous"
+                          />
+                        </button>
+                      ))}
+                  </div>
+                  <button
+                    className="shrink-0 h-7 w-5 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground"
+                    onClick={() => overlayScrollRef.current?.scrollBy({ left: 160, behavior: "smooth" })}
+                  >
+                    <ChevronRight className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
               {overlayImageId && (
                 <>
                   <div className="h-4 w-px bg-border mx-0.5" />
