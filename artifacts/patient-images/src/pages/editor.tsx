@@ -61,6 +61,7 @@ import {
   Layers,
   Minimize2,
   Move,
+  Bookmark,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -461,6 +462,10 @@ export default function Editor() {
   const [showResizePanel, setShowResizePanel] = useState(false);
   const [resizeRefInput, setResizeRefInput] = useState("");
   const [resizeMode, setResizeMode] = useState(false);
+  const [referenceLinePx, setReferenceLinePx] = useState<number | null>(() => {
+    const s = localStorage.getItem("max7_refLinePx");
+    return s ? parseFloat(s) : null;
+  });
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cursorCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -778,8 +783,15 @@ export default function Editor() {
     toast({ title: t("editor.calibrationSet"), description: `1 mm = ${(1 / newPxPerMm).toFixed(3)} px` });
   }
 
-  function handleResizeToReference() {
-    const refPx = parseFloat(resizeRefInput);
+  function saveAsReference(px: number) {
+    const rounded = Math.round(px);
+    setReferenceLinePx(rounded);
+    localStorage.setItem("max7_refLinePx", String(rounded));
+    toast({ title: t("editor.resizeSaveRef"), description: `${rounded} px ${t("editor.resizeSavedDesc")}` });
+  }
+
+  function handleResizeToReference(targetPx?: number) {
+    const refPx = targetPx ?? parseFloat(resizeRefInput);
     if (isNaN(refPx) || refPx <= 0) return;
     const rulers = annotations.filter((a): a is DrawRuler => a.type === "ruler");
     if (rulers.length === 0) return;
@@ -1604,6 +1616,11 @@ export default function Editor() {
     { id: "overlay",     Icon: Layers,        label: t("editor.overlayImage") },
   ];
 
+  const resizePanelLastRuler = annotations.filter(a => a.type === "ruler").at(-1) as DrawRuler | undefined;
+  const resizePanelLinePx = resizePanelLastRuler
+    ? Math.round(Math.hypot(resizePanelLastRuler.x2 - resizePanelLastRuler.x1, resizePanelLastRuler.y2 - resizePanelLastRuler.y1))
+    : 0;
+
   return (
     <div className="flex flex-col h-[calc(100vh-theme(spacing.14))] -m-4 md:-m-6 lg:-m-8">
       {/* Toolbar */}
@@ -1722,45 +1739,59 @@ export default function Editor() {
                     <X className="h-3 w-3" />
                   </Button>
                 </>
-              ) : showResizePanel && annotations.some((a) => a.type === "ruler") ? (
-                // Step 2 of Resize path: line drawn, enter target pixel length
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground">
-                    {t("editor.resizeOriginalPx")} ({Math.round(Math.hypot(
-                      ((annotations.filter(a => a.type === "ruler").at(-1) as DrawRuler | undefined)?.x2 ?? 0) -
-                      ((annotations.filter(a => a.type === "ruler").at(-1) as DrawRuler | undefined)?.x1 ?? 0),
-                      ((annotations.filter(a => a.type === "ruler").at(-1) as DrawRuler | undefined)?.y2 ?? 0) -
-                      ((annotations.filter(a => a.type === "ruler").at(-1) as DrawRuler | undefined)?.y1 ?? 0),
-                    ))} px):
-                  </span>
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    autoFocus
-                    placeholder="px"
-                    value={resizeRefInput}
-                    onChange={(e) => setResizeRefInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleResizeToReference();
-                      if (e.key === "Escape") { setShowResizePanel(false); setResizeRefInput(""); }
-                    }}
-                    className="w-20 h-7 text-xs border rounded px-2 bg-background"
-                  />
-                  <span className="text-xs text-muted-foreground">px</span>
-                  <Button
-                    size="sm"
-                    className="h-7 gap-1"
-                    onClick={handleResizeToReference}
-                    disabled={!resizeRefInput || isNaN(parseFloat(resizeRefInput)) || replaceFile.isPending}
-                  >
-                    <Check className="h-3 w-3" />
-                    {t("editor.resizeApply")}
-                  </Button>
-                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setShowResizePanel(false); setResizeRefInput(""); }}>
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
+              ) : showResizePanel && resizePanelLinePx > 0 ? (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-xs text-muted-foreground">{t("editor.resizeLandmark")}:</span>
+                    <span className="text-xs font-mono font-semibold">{resizePanelLinePx} px</span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs gap-1"
+                      onClick={() => saveAsReference(resizePanelLinePx)}
+                    >
+                      <Bookmark className="h-3 w-3" />
+                      {t("editor.resizeSaveRef")}
+                    </Button>
+                    {referenceLinePx && referenceLinePx !== resizePanelLinePx && (
+                      <Button
+                        size="sm"
+                        className="h-7 text-xs gap-1"
+                        onClick={() => handleResizeToReference(referenceLinePx)}
+                        disabled={replaceFile.isPending}
+                      >
+                        <Check className="h-3 w-3" />
+                        {t("editor.resizeMatchRef")} ({referenceLinePx} px)
+                      </Button>
+                    )}
+                    <div className="h-4 w-px bg-border mx-0.5" />
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      placeholder="px"
+                      value={resizeRefInput}
+                      onChange={(e) => setResizeRefInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleResizeToReference();
+                        if (e.key === "Escape") { setShowResizePanel(false); setResizeRefInput(""); }
+                      }}
+                      className="w-20 h-7 text-xs border rounded px-2 bg-background"
+                    />
+                    <span className="text-xs text-muted-foreground">px</span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 gap-1"
+                      onClick={() => handleResizeToReference()}
+                      disabled={!resizeRefInput || isNaN(parseFloat(resizeRefInput)) || replaceFile.isPending}
+                    >
+                      <Check className="h-3 w-3" />
+                      {t("editor.resizeApply")}
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setShowResizePanel(false); setResizeRefInput(""); }}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
               ) : calibrating || resizeMode ? (
                 // Step 1 (either path): mode chosen, waiting for the user to draw
                 <>
