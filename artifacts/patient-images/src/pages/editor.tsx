@@ -512,21 +512,6 @@ export default function Editor() {
   }, [id]);
 
   useEffect(() => {
-    if (!overlayImageId) {
-      overlayImgRef.current = null;
-      redrawOverlay();
-      return;
-    }
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = `/api/images/${overlayImageId}/file`;
-    img.onload = () => {
-      overlayImgRef.current = img;
-      redrawOverlay();
-    };
-  }, [overlayImageId, redrawOverlay]);
-
-  useEffect(() => {
     if (image?.notes) setNotes(image.notes);
     if (image?.annotation) {
       try {
@@ -555,6 +540,21 @@ export default function Editor() {
     ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
     ctx.restore();
   }, [overlayOpacity, rotation, scale]);
+
+  useEffect(() => {
+    if (!overlayImageId) {
+      overlayImgRef.current = null;
+      redrawOverlay();
+      return;
+    }
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = `/api/images/${overlayImageId}/file`;
+    img.onload = () => {
+      overlayImgRef.current = img;
+      redrawOverlay();
+    };
+  }, [overlayImageId, redrawOverlay]);
 
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -1762,11 +1762,11 @@ export default function Editor() {
                 </Button>
               )}
               <div className="flex gap-1 overflow-x-auto max-w-xs">
-                {patientImages.filter((pi) => String(pi.id) !== id).length === 0 ? (
+                {patientImages.filter((pi) => String(pi.id) !== String(id)).length === 0 ? (
                   <span className="text-xs text-muted-foreground italic">{t("editor.overlayNoImages")}</span>
                 ) : (
                   patientImages
-                    .filter((pi) => String(pi.id) !== id)
+                    .filter((pi) => String(pi.id) !== String(id))
                     .slice(0, 10)
                     .map((pi) => (
                       <button
