@@ -256,6 +256,8 @@
     "overlayNoImages": "No other images for this patient",
     "overlayOpacity": "Opacity",
     "overlayNone": "Remove overlay",
+    "overlayPosition": "Position",
+    "overlayOffsetReset": "Reset",
     "resizeToReference": "Resize to Reference",
     "resizeOriginalPx": "Target length in original image",
     "resizeApply": "Apply",

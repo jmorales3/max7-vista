@@ -449,6 +449,8 @@ export default function Editor() {
   const anglePointsRef = useRef<[number, number][]>([]);
   const [overlayImageId, setOverlayImageId] = useState<string | null>(null);
   const [overlayOpacity, setOverlayOpacity] = useState(0.5);
+  const [overlayOffsetX, setOverlayOffsetX] = useState(0);
+  const [overlayOffsetY, setOverlayOffsetY] = useState(0);
   const overlayImgRef = useRef<HTMLImageElement | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayScrollRef = useRef<HTMLDivElement | null>(null);
@@ -537,14 +539,16 @@ export default function Editor() {
     const { x: px, y: py } = panOffsetRef.current;
     ctx.save();
     ctx.globalAlpha = overlayOpacity;
-    ctx.translate(canvas.width / 2 + px, canvas.height / 2 + py);
+    ctx.translate(canvas.width / 2 + px + overlayOffsetX, canvas.height / 2 + py + overlayOffsetY);
     ctx.rotate((rotation * Math.PI) / 180);
     ctx.scale(scale, scale);
     ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
     ctx.restore();
-  }, [overlayOpacity, rotation, scale]);
+  }, [overlayOpacity, rotation, scale, overlayOffsetX, overlayOffsetY]);
 
   useEffect(() => {
+    setOverlayOffsetX(0);
+    setOverlayOffsetY(0);
     if (!overlayImageId) {
       overlayImgRef.current = null;
       redrawOverlay();
@@ -1835,6 +1839,38 @@ export default function Editor() {
                     className="w-24 h-1.5 accent-primary"
                   />
                   <span className="text-xs font-mono w-8 text-center">{Math.round(overlayOpacity * 100)}%</span>
+                  <div className="h-4 w-px bg-border mx-0.5" />
+                  <span className="text-xs text-muted-foreground">{t("editor.overlayPosition")}:</span>
+                  <span className="text-xs text-muted-foreground">X</span>
+                  <button
+                    className="shrink-0 h-6 w-5 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground text-xs font-bold"
+                    onClick={() => setOverlayOffsetX((v) => v - 5)}
+                  >−</button>
+                  <span className="text-xs font-mono w-10 text-center">{overlayOffsetX}</span>
+                  <button
+                    className="shrink-0 h-6 w-5 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground text-xs font-bold"
+                    onClick={() => setOverlayOffsetX((v) => v + 5)}
+                  >+</button>
+                  <span className="text-xs text-muted-foreground">Y</span>
+                  <button
+                    className="shrink-0 h-6 w-5 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground text-xs font-bold"
+                    onClick={() => setOverlayOffsetY((v) => v - 5)}
+                  >−</button>
+                  <span className="text-xs font-mono w-10 text-center">{overlayOffsetY}</span>
+                  <button
+                    className="shrink-0 h-6 w-5 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground text-xs font-bold"
+                    onClick={() => setOverlayOffsetY((v) => v + 5)}
+                  >+</button>
+                  {(overlayOffsetX !== 0 || overlayOffsetY !== 0) && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 text-xs px-2"
+                      onClick={() => { setOverlayOffsetX(0); setOverlayOffsetY(0); }}
+                    >
+                      {t("editor.overlayOffsetReset")}
+                    </Button>
+                  )}
                 </>
               )}
             </div>
