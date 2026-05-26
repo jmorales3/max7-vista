@@ -1531,16 +1531,35 @@ export default function Editor() {
     },
   });
 
+  /**
+   * Renders the image + annotations into an off-screen canvas at the image's
+   * natural resolution (scale=1, no pan), accounting for the current rotation.
+   * This ensures Save / Save as Copy always produce the full-resolution image
+   * regardless of the zoom level the user had on screen.
+   */
+  function renderFlatBlob(): Promise<Blob | null> {
+    const img = imgRef.current;
+    if (!img) return Promise.resolve(null);
+    // For 90°/270° rotations swap dimensions so the whole image fits
+    const angle = ((rotation % 360) + 360) % 360;
+    const isOrthogonal = angle === 90 || angle === 270;
+    const outW = isOrthogonal ? img.naturalHeight : img.naturalWidth;
+    const outH = isOrthogonal ? img.naturalWidth : img.naturalHeight;
+    const flat = document.createElement("canvas");
+    flat.width = outW;
+    flat.height = outH;
+    renderCanvas(flat, img, annotations, 1, rotation, null, null, null, undefined, { x: 0, y: 0 });
+    return new Promise<Blob | null>((resolve) => flat.toBlob(resolve, "image/png"));
+  }
+
   async function handleSave() {
-    const canvas = canvasRef.current;
-    if (!canvas) {
+    const img = imgRef.current;
+    if (!img) {
       toast({ variant: "destructive", title: t("editor.canvasNotReady") });
       return;
     }
 
-    const blob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob(resolve, "image/png");
-    });
+    const blob = await renderFlatBlob();
 
     if (blob) {
       const file = new File([blob], "edited.png", { type: "image/png" });
@@ -1551,17 +1570,15 @@ export default function Editor() {
   }
 
   async function handleSaveAsCopy() {
-    const canvas = canvasRef.current;
-    if (!canvas || !image?.patientId) {
+    const img = imgRef.current;
+    if (!img || !image?.patientId) {
       toast({ variant: "destructive", title: t("editor.canvasNotReady") });
       return;
     }
 
     setIsSavingCopy(true);
     try {
-      const blob = await new Promise<Blob | null>((resolve) => {
-        canvas.toBlob(resolve, "image/png");
-      });
+      const blob = await renderFlatBlob();
       if (!blob) throw new Error("Failed to export canvas");
 
       const file = new File([blob], "copy.png", { type: "image/png" });
