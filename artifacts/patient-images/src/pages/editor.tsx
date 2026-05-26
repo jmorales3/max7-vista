@@ -452,6 +452,8 @@ export default function Editor() {
   const [overlayOpacity, setOverlayOpacity] = useState(0.5);
   const [overlayOffsetX, setOverlayOffsetX] = useState(0);
   const [overlayOffsetY, setOverlayOffsetY] = useState(0);
+  const overlayOffsetXRef = useRef(0);
+  const overlayOffsetYRef = useRef(0);
   const overlayImgRef = useRef<HTMLImageElement | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayScrollRef = useRef<HTMLDivElement | null>(null);
@@ -541,36 +543,43 @@ export default function Editor() {
     const { x: px, y: py } = panOffsetRef.current;
     ctx.save();
     ctx.globalAlpha = overlayOpacity;
-    ctx.translate(canvas.width / 2 + px + overlayOffsetX, canvas.height / 2 + py + overlayOffsetY);
+    ctx.translate(canvas.width / 2 + px + overlayOffsetXRef.current, canvas.height / 2 + py + overlayOffsetYRef.current);
     ctx.rotate((rotation * Math.PI) / 180);
     ctx.scale(scale, scale);
     ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
     ctx.restore();
-  }, [overlayOpacity, rotation, scale, overlayOffsetX, overlayOffsetY]);
+  }, [overlayOpacity, rotation, scale]);
 
   const handleOverlayPointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
     overlayDragStartRef.current = {
       mx: e.clientX,
       my: e.clientY,
-      ox: overlayOffsetX,
-      oy: overlayOffsetY,
+      ox: overlayOffsetXRef.current,
+      oy: overlayOffsetYRef.current,
     };
-  }, [overlayOffsetX, overlayOffsetY]);
+  }, []);
 
   const handleOverlayPointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!overlayDragStartRef.current) return;
     const dx = e.clientX - overlayDragStartRef.current.mx;
     const dy = e.clientY - overlayDragStartRef.current.my;
-    setOverlayOffsetX(overlayDragStartRef.current.ox + Math.round(dx));
-    setOverlayOffsetY(overlayDragStartRef.current.oy + Math.round(dy));
-  }, []);
+    const newX = overlayDragStartRef.current.ox + Math.round(dx);
+    const newY = overlayDragStartRef.current.oy + Math.round(dy);
+    overlayOffsetXRef.current = newX;
+    overlayOffsetYRef.current = newY;
+    setOverlayOffsetX(newX);
+    setOverlayOffsetY(newY);
+    redrawOverlay();
+  }, [redrawOverlay]);
 
   const handleOverlayPointerUp = useCallback(() => {
     overlayDragStartRef.current = null;
   }, []);
 
   useEffect(() => {
+    overlayOffsetXRef.current = 0;
+    overlayOffsetYRef.current = 0;
     setOverlayOffsetX(0);
     setOverlayOffsetY(0);
     if (!overlayImageId) {
@@ -1874,7 +1883,13 @@ export default function Editor() {
                       size="sm"
                       variant="ghost"
                       className="h-6 text-xs px-2"
-                      onClick={() => { setOverlayOffsetX(0); setOverlayOffsetY(0); }}
+                      onClick={() => {
+                        overlayOffsetXRef.current = 0;
+                        overlayOffsetYRef.current = 0;
+                        setOverlayOffsetX(0);
+                        setOverlayOffsetY(0);
+                        redrawOverlay();
+                      }}
                     >
                       {t("editor.overlayOffsetReset")}
                     </Button>
@@ -2094,6 +2109,27 @@ export default function Editor() {
             ref={cursorCanvasRef}
             className="absolute inset-0 w-full h-full pointer-events-none"
           />
+          {tool === "overlay" && overlayImageId && (
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-background/90 border rounded-full px-3 py-1 shadow-md text-xs select-none pointer-events-none">
+              <Move className="h-3 w-3 text-muted-foreground shrink-0" />
+              <span className="text-muted-foreground">{t("editor.overlayPosition")}</span>
+              <span className="font-mono">{overlayOffsetX},{overlayOffsetY}</span>
+              {(overlayOffsetX !== 0 || overlayOffsetY !== 0) && (
+                <button
+                  className="ml-0.5 text-primary hover:underline pointer-events-auto"
+                  onClick={() => {
+                    overlayOffsetXRef.current = 0;
+                    overlayOffsetYRef.current = 0;
+                    setOverlayOffsetX(0);
+                    setOverlayOffsetY(0);
+                    redrawOverlay();
+                  }}
+                >
+                  {t("editor.overlayOffsetReset")}
+                </button>
+              )}
+            </div>
+          )}
 
           {pendingText && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/30 z-10">
