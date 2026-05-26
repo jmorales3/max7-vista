@@ -60,6 +60,7 @@ import {
   Compass,
   Layers,
   Minimize2,
+  Move,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -454,6 +455,7 @@ export default function Editor() {
   const overlayImgRef = useRef<HTMLImageElement | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayScrollRef = useRef<HTMLDivElement | null>(null);
+  const overlayDragStartRef = useRef<{ mx: number; my: number; ox: number; oy: number } | null>(null);
   const [showResizePanel, setShowResizePanel] = useState(false);
   const [resizeRefInput, setResizeRefInput] = useState("");
   const [resizeMode, setResizeMode] = useState(false);
@@ -545,6 +547,28 @@ export default function Editor() {
     ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
     ctx.restore();
   }, [overlayOpacity, rotation, scale, overlayOffsetX, overlayOffsetY]);
+
+  const handleOverlayPointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    overlayDragStartRef.current = {
+      mx: e.clientX,
+      my: e.clientY,
+      ox: overlayOffsetX,
+      oy: overlayOffsetY,
+    };
+  }, [overlayOffsetX, overlayOffsetY]);
+
+  const handleOverlayPointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!overlayDragStartRef.current) return;
+    const dx = e.clientX - overlayDragStartRef.current.mx;
+    const dy = e.clientY - overlayDragStartRef.current.my;
+    setOverlayOffsetX(overlayDragStartRef.current.ox + Math.round(dx));
+    setOverlayOffsetY(overlayDragStartRef.current.oy + Math.round(dy));
+  }, []);
+
+  const handleOverlayPointerUp = useCallback(() => {
+    overlayDragStartRef.current = null;
+  }, []);
 
   useEffect(() => {
     setOverlayOffsetX(0);
@@ -1840,27 +1864,11 @@ export default function Editor() {
                   />
                   <span className="text-xs font-mono w-8 text-center">{Math.round(overlayOpacity * 100)}%</span>
                   <div className="h-4 w-px bg-border mx-0.5" />
-                  <span className="text-xs text-muted-foreground">{t("editor.overlayPosition")}:</span>
-                  <span className="text-xs text-muted-foreground">X</span>
-                  <button
-                    className="shrink-0 h-6 w-5 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground text-xs font-bold"
-                    onClick={() => setOverlayOffsetX((v) => v - 5)}
-                  >−</button>
-                  <span className="text-xs font-mono w-10 text-center">{overlayOffsetX}</span>
-                  <button
-                    className="shrink-0 h-6 w-5 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground text-xs font-bold"
-                    onClick={() => setOverlayOffsetX((v) => v + 5)}
-                  >+</button>
-                  <span className="text-xs text-muted-foreground">Y</span>
-                  <button
-                    className="shrink-0 h-6 w-5 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground text-xs font-bold"
-                    onClick={() => setOverlayOffsetY((v) => v - 5)}
-                  >−</button>
-                  <span className="text-xs font-mono w-10 text-center">{overlayOffsetY}</span>
-                  <button
-                    className="shrink-0 h-6 w-5 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground text-xs font-bold"
-                    onClick={() => setOverlayOffsetY((v) => v + 5)}
-                  >+</button>
+                  <Move className="h-3 w-3 text-muted-foreground shrink-0" />
+                  <span className="text-xs text-muted-foreground">{t("editor.overlayPosition")}</span>
+                  <span className="text-xs font-mono text-muted-foreground">
+                    {overlayOffsetX},{overlayOffsetY}
+                  </span>
                   {(overlayOffsetX !== 0 || overlayOffsetY !== 0) && (
                     <Button
                       size="sm"
@@ -2072,7 +2080,15 @@ export default function Editor() {
           />
           <canvas
             ref={overlayCanvasRef}
-            className="absolute inset-0 w-full h-full pointer-events-none"
+            className={`absolute inset-0 w-full h-full ${
+              tool === "overlay" && overlayImageId
+                ? "cursor-move"
+                : "pointer-events-none"
+            }`}
+            onPointerDown={tool === "overlay" && overlayImageId ? handleOverlayPointerDown : undefined}
+            onPointerMove={tool === "overlay" && overlayImageId ? handleOverlayPointerMove : undefined}
+            onPointerUp={tool === "overlay" && overlayImageId ? handleOverlayPointerUp : undefined}
+            onPointerLeave={tool === "overlay" && overlayImageId ? handleOverlayPointerUp : undefined}
           />
           <canvas
             ref={cursorCanvasRef}
