@@ -255,6 +255,7 @@
     "overlayPickHint": "Pick an image to overlay for comparison",
     "overlayNoImages": "No other images for this patient",
     "overlayOpacity": "Opacity",
+    "overlayScale": "Scale",
     "overlayNone": "Remove overlay",
     "overlayPosition": "Position",
     "overlayOffsetReset": "Reset",

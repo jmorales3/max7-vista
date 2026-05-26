@@ -255,6 +255,7 @@
     "overlayPickHint": "Choisissez une image à superposer pour comparaison",
     "overlayNoImages": "Aucune autre image pour ce patient",
     "overlayOpacity": "Opacité",
+    "overlayScale": "Échelle",
     "overlayNone": "Supprimer la superposition",
     "overlayPosition": "Position",
     "overlayOffsetReset": "Réinitialiser",

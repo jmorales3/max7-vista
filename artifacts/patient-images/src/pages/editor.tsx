@@ -455,6 +455,8 @@ export default function Editor() {
   const [overlayOffsetY, setOverlayOffsetY] = useState(0);
   const overlayOffsetXRef = useRef(0);
   const overlayOffsetYRef = useRef(0);
+  const [overlayScaleCorrection, setOverlayScaleCorrection] = useState(1.0);
+  const overlayScaleCorrectionRef = useRef(1.0);
   const overlayImgRef = useRef<HTMLImageElement | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayScrollRef = useRef<HTMLDivElement | null>(null);
@@ -550,7 +552,7 @@ export default function Editor() {
     ctx.globalAlpha = overlayOpacity;
     ctx.translate(canvas.width / 2 + px + overlayOffsetXRef.current, canvas.height / 2 + py + overlayOffsetYRef.current);
     ctx.rotate((rotation * Math.PI) / 180);
-    ctx.scale(scale, scale);
+    ctx.scale(scale * overlayScaleCorrectionRef.current, scale * overlayScaleCorrectionRef.current);
     ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
     ctx.restore();
   }, [overlayOpacity, rotation, scale]);
@@ -585,8 +587,10 @@ export default function Editor() {
   useEffect(() => {
     overlayOffsetXRef.current = 0;
     overlayOffsetYRef.current = 0;
+    overlayScaleCorrectionRef.current = 1.0;
     setOverlayOffsetX(0);
     setOverlayOffsetY(0);
+    setOverlayScaleCorrection(1.0);
     if (!overlayImageId) {
       overlayImgRef.current = null;
       redrawOverlay();
@@ -1924,6 +1928,35 @@ export default function Editor() {
                     className="w-24 h-1.5 accent-primary"
                   />
                   <span className="text-xs font-mono w-8 text-center">{Math.round(overlayOpacity * 100)}%</span>
+                  <div className="h-4 w-px bg-border mx-0.5" />
+                  <span className="text-xs text-muted-foreground">{t("editor.overlayScale")}</span>
+                  <input
+                    type="range"
+                    min={0.1}
+                    max={3.0}
+                    step={0.01}
+                    value={overlayScaleCorrection}
+                    onChange={(e) => {
+                      const v = parseFloat(e.target.value);
+                      overlayScaleCorrectionRef.current = v;
+                      setOverlayScaleCorrection(v);
+                      redrawOverlay();
+                    }}
+                    className="w-24 h-1.5 accent-primary"
+                  />
+                  <span className="text-xs font-mono w-10 text-center">{Math.round(overlayScaleCorrection * 100)}%</span>
+                  {overlayScaleCorrection !== 1.0 && (
+                    <button
+                      className="text-xs text-primary hover:underline shrink-0"
+                      onClick={() => {
+                        overlayScaleCorrectionRef.current = 1.0;
+                        setOverlayScaleCorrection(1.0);
+                        redrawOverlay();
+                      }}
+                    >
+                      {t("editor.overlayOffsetReset")}
+                    </button>
+                  )}
                   <div className="h-4 w-px bg-border mx-0.5" />
                   <Move className="h-3 w-3 text-muted-foreground shrink-0" />
                   <span className="text-xs text-muted-foreground">{t("editor.overlayPosition")}</span>
