@@ -452,6 +452,7 @@ export default function Editor() {
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [showResizePanel, setShowResizePanel] = useState(false);
   const [resizeRefInput, setResizeRefInput] = useState("");
+  const [resizeMode, setResizeMode] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cursorCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -1129,6 +1130,10 @@ export default function Editor() {
       } else {
         const newRuler: DrawRuler = { type: "ruler", x1, y1, x2, y2, color: penColor, pxPerMm, id: Date.now().toString() };
         setAnnotations((prev) => [...prev, newRuler]);
+        if (resizeMode) {
+          setShowResizePanel(true);
+          setResizeMode(false);
+        }
       }
       return;
     }
@@ -1640,8 +1645,9 @@ export default function Editor() {
           )}
 
           {tool === "ruler" && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {calibratingPx !== null ? (
+                // Step 2 of Measure path: line drawn, enter its real length in mm
                 <>
                   <span className="text-xs text-muted-foreground">{t("editor.calibratingLine")}</span>
                   <input
@@ -1672,75 +1678,84 @@ export default function Editor() {
                     <X className="h-3 w-3" />
                   </Button>
                 </>
+              ) : showResizePanel && annotations.some((a) => a.type === "ruler") ? (
+                // Step 2 of Resize path: line drawn, enter target pixel length
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground">
+                    {t("editor.resizeOriginalPx")} ({Math.round(Math.hypot(
+                      ((annotations.filter(a => a.type === "ruler").at(-1) as DrawRuler | undefined)?.x2 ?? 0) -
+                      ((annotations.filter(a => a.type === "ruler").at(-1) as DrawRuler | undefined)?.x1 ?? 0),
+                      ((annotations.filter(a => a.type === "ruler").at(-1) as DrawRuler | undefined)?.y2 ?? 0) -
+                      ((annotations.filter(a => a.type === "ruler").at(-1) as DrawRuler | undefined)?.y1 ?? 0),
+                    ))} px):
+                  </span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    autoFocus
+                    placeholder="px"
+                    value={resizeRefInput}
+                    onChange={(e) => setResizeRefInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleResizeToReference();
+                      if (e.key === "Escape") { setShowResizePanel(false); setResizeRefInput(""); }
+                    }}
+                    className="w-20 h-7 text-xs border rounded px-2 bg-background"
+                  />
+                  <span className="text-xs text-muted-foreground">px</span>
+                  <Button
+                    size="sm"
+                    className="h-7 gap-1"
+                    onClick={handleResizeToReference}
+                    disabled={!resizeRefInput || isNaN(parseFloat(resizeRefInput)) || replaceFile.isPending}
+                  >
+                    <Check className="h-3 w-3" />
+                    {t("editor.resizeApply")}
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setShowResizePanel(false); setResizeRefInput(""); }}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : calibrating || resizeMode ? (
+                // Step 1 (either path): mode chosen, waiting for the user to draw
+                <>
+                  <span className="text-xs text-muted-foreground">{t("editor.rulerDrawHint")}</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 gap-1 text-xs"
+                    onClick={() => { setCalibrating(false); setResizeMode(false); }}
+                  >
+                    <X className="h-3 w-3" />
+                    {t("common.cancel")}
+                  </Button>
+                </>
               ) : (
+                // Default: two explicit mode buttons
                 <>
                   <Button
                     size="sm"
-                    variant={calibrating ? "secondary" : "outline"}
+                    variant="outline"
                     className="h-7 gap-1 text-xs"
-                    onClick={() => setCalibrating((v) => !v)}
+                    onClick={() => { setCalibrating(true); setResizeMode(false); }}
                   >
                     <Ruler className="h-3 w-3" />
-                    {calibrating ? t("editor.calibratingDraw") : t("editor.calibrate")}
+                    {t("editor.rulerMeasure")}
                   </Button>
-                  {pxPerMm != null && !calibrating && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 gap-1 text-xs"
+                    onClick={() => { setResizeMode(true); setCalibrating(false); }}
+                  >
+                    <Minimize2 className="h-3 w-3" />
+                    {t("editor.rulerResize")}
+                  </Button>
+                  {pxPerMm != null && (
                     <span className="text-xs text-muted-foreground bg-muted/40 px-2 py-0.5 rounded">
                       {(1 / pxPerMm).toFixed(4)} mm/px
                     </span>
-                  )}
-                  {!calibrating && annotations.some((a) => a.type === "ruler") && (
-                    <>
-                      <div className="h-4 w-px bg-border mx-0.5" />
-                      {showResizePanel ? (
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs text-muted-foreground">
-                            {t("editor.resizeOriginalPx")} ({Math.round(Math.hypot(
-                              ((annotations.filter(a => a.type === "ruler").at(-1) as DrawRuler | undefined)?.x2 ?? 0) -
-                              ((annotations.filter(a => a.type === "ruler").at(-1) as DrawRuler | undefined)?.x1 ?? 0),
-                              ((annotations.filter(a => a.type === "ruler").at(-1) as DrawRuler | undefined)?.y2 ?? 0) -
-                              ((annotations.filter(a => a.type === "ruler").at(-1) as DrawRuler | undefined)?.y1 ?? 0),
-                            ))} px):
-                          </span>
-                          <input
-                            type="number"
-                            min="1"
-                            step="1"
-                            autoFocus
-                            placeholder="px"
-                            value={resizeRefInput}
-                            onChange={(e) => setResizeRefInput(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") handleResizeToReference();
-                              if (e.key === "Escape") { setShowResizePanel(false); setResizeRefInput(""); }
-                            }}
-                            className="w-20 h-7 text-xs border rounded px-2 bg-background"
-                          />
-                          <span className="text-xs text-muted-foreground">px</span>
-                          <Button
-                            size="sm"
-                            className="h-7 gap-1"
-                            onClick={handleResizeToReference}
-                            disabled={!resizeRefInput || isNaN(parseFloat(resizeRefInput)) || replaceFile.isPending}
-                          >
-                            <Check className="h-3 w-3" />
-                            {t("editor.resizeApply")}
-                          </Button>
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setShowResizePanel(false); setResizeRefInput(""); }}>
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 gap-1 text-xs"
-                          onClick={() => setShowResizePanel(true)}
-                        >
-                          <Minimize2 className="h-3 w-3" />
-                          {t("editor.resizeToReference")}
-                        </Button>
-                      )}
-                    </>
                   )}
                 </>
               )}
