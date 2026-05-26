@@ -594,7 +594,12 @@ export default function Editor() {
       overlayImgRef.current = img;
       redrawOverlay();
     };
-  }, [overlayImageId, redrawOverlay]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [overlayImageId]); // redrawOverlay intentionally excluded — offset reset must only trigger on image change
+
+  useEffect(() => {
+    redrawOverlay();
+  }, [redrawOverlay]);
 
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
