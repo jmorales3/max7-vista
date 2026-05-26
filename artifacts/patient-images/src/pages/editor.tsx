@@ -9,6 +9,7 @@ import {
   useDeleteImage,
   useReplaceImageFile,
   useListPatients,
+  useListPatientImages,
   getListImagesQueryKey,
   getListPatientImagesQueryKey,
   getListPatientsQueryKey,
@@ -56,6 +57,8 @@ import {
   Lasso,
   Ruler,
   Compass,
+  Layers,
+  Minimize2,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -68,7 +71,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type Tool = "pointer" | "pen" | "text" | "eraser" | "crop" | "arrow" | "circle" | "straightline" | "select" | "eyedropper" | "hand" | "smooth" | "ruler" | "angle";
+type Tool = "pointer" | "pen" | "text" | "eraser" | "crop" | "arrow" | "circle" | "straightline" | "select" | "eyedropper" | "hand" | "smooth" | "ruler" | "angle" | "overlay";
 
 interface DrawLine {
   type: "line";
@@ -443,6 +446,12 @@ export default function Editor() {
   const rulerStartRef = useRef<[number, number] | null>(null);
   const [angleStep, setAngleStep] = useState(0);
   const anglePointsRef = useRef<[number, number][]>([]);
+  const [overlayImageId, setOverlayImageId] = useState<string | null>(null);
+  const [overlayOpacity, setOverlayOpacity] = useState(0.5);
+  const overlayImgRef = useRef<HTMLImageElement | null>(null);
+  const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [showResizePanel, setShowResizePanel] = useState(false);
+  const [resizeRefInput, setResizeRefInput] = useState("");
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cursorCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -486,6 +495,11 @@ export default function Editor() {
     query: { queryKey: getListPatientsQueryKey() },
   });
 
+  const { data: patientImages = [] } = useListPatientImages(
+    image?.patientId ?? 0,
+    { query: { enabled: !!image?.patientId, queryKey: getListPatientImagesQueryKey(image?.patientId ?? 0) } },
+  );
+
   useEffect(() => {
     if (!id) return;
     const img = new Image();
@@ -496,6 +510,21 @@ export default function Editor() {
       resizeCanvas();
     };
   }, [id]);
+
+  useEffect(() => {
+    if (!overlayImageId) {
+      overlayImgRef.current = null;
+      redrawOverlay();
+      return;
+    }
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = `/api/images/${overlayImageId}/file`;
+    img.onload = () => {
+      overlayImgRef.current = img;
+      redrawOverlay();
+    };
+  }, [overlayImageId, redrawOverlay]);
 
   useEffect(() => {
     if (image?.notes) setNotes(image.notes);
@@ -509,6 +538,24 @@ export default function Editor() {
     }
   }, [image]);
 
+  const redrawOverlay = useCallback(() => {
+    const canvas = overlayCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const img = overlayImgRef.current;
+    if (!img) return;
+    const { x: px, y: py } = panOffsetRef.current;
+    ctx.save();
+    ctx.globalAlpha = overlayOpacity;
+    ctx.translate(canvas.width / 2 + px, canvas.height / 2 + py);
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.scale(scale, scale);
+    ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+    ctx.restore();
+  }, [overlayOpacity, rotation, scale]);
+
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
@@ -519,8 +566,13 @@ export default function Editor() {
       cursorCanvasRef.current.width = container.offsetWidth;
       cursorCanvasRef.current.height = container.offsetHeight;
     }
+    if (overlayCanvasRef.current) {
+      overlayCanvasRef.current.width = container.offsetWidth;
+      overlayCanvasRef.current.height = container.offsetHeight;
+    }
     renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, panOffsetRef.current, cutPath);
-  }, [scale, rotation, cropRect, cutRect, selectionRect, cutPath]);
+    redrawOverlay();
+  }, [scale, rotation, cropRect, cutRect, selectionRect, cutPath, redrawOverlay]);
 
   useEffect(() => {
     panOffsetRef.current = panOffset;
@@ -530,7 +582,8 @@ export default function Editor() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     renderCanvas(canvas, imgRef.current, annotations, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, panOffset, cutPath);
-  }, [annotations, scale, rotation, cropRect, cutRect, selectionRect, panOffset, cutPath]);
+    redrawOverlay();
+  }, [annotations, scale, rotation, cropRect, cutRect, selectionRect, panOffset, cutPath, redrawOverlay]);
 
   useEffect(() => {
     const observer = new ResizeObserver(resizeCanvas);
@@ -538,7 +591,7 @@ export default function Editor() {
     return () => observer.disconnect();
   }, [resizeCanvas]);
 
-  function getCanvasPoint(e: React.MouseEvent<HTMLCanvasElement>): [number, number] {
+  function getCanvasPoint(e: React.PointerEvent<HTMLCanvasElement>): [number, number] {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
     const cx = (e.clientX - rect.left - canvas.width / 2 - panOffsetRef.current.x) / scale;
@@ -550,7 +603,7 @@ export default function Editor() {
     ];
   }
 
-  function getScreenPoint(e: React.MouseEvent<HTMLCanvasElement>): [number, number] {
+  function getScreenPoint(e: React.PointerEvent<HTMLCanvasElement>): [number, number] {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
     return [e.clientX - rect.left, e.clientY - rect.top];
@@ -680,6 +733,48 @@ export default function Editor() {
     toast({ title: t("editor.calibrationSet"), description: `1 mm = ${(1 / newPxPerMm).toFixed(3)} px` });
   }
 
+  function handleResizeToReference() {
+    const refPx = parseFloat(resizeRefInput);
+    if (isNaN(refPx) || refPx <= 0) return;
+    const rulers = annotations.filter((a): a is DrawRuler => a.type === "ruler");
+    if (rulers.length === 0) return;
+    const ref = rulers[rulers.length - 1];
+    const currentPx = Math.hypot(ref.x2 - ref.x1, ref.y2 - ref.y1);
+    if (currentPx < 1) return;
+    const factor = refPx / currentPx;
+    const img = imgRef.current;
+    if (!img || !id) return;
+    const flatCanvas = document.createElement("canvas");
+    flatCanvas.width = img.naturalWidth;
+    flatCanvas.height = img.naturalHeight;
+    renderCanvas(flatCanvas, img, annotations, 1, 0, null, null, null, undefined, { x: 0, y: 0 });
+    const newW = Math.max(1, Math.round(img.naturalWidth * factor));
+    const newH = Math.max(1, Math.round(img.naturalHeight * factor));
+    const scaledCanvas = document.createElement("canvas");
+    scaledCanvas.width = newW;
+    scaledCanvas.height = newH;
+    const sctx = scaledCanvas.getContext("2d")!;
+    sctx.drawImage(flatCanvas, 0, 0, newW, newH);
+    scaledCanvas.toBlob((blob) => {
+      if (!blob) return;
+      const file = new File([blob], "image.png", { type: "image/png" });
+      replaceFile.mutate(
+        { id, data: { file } },
+        {
+          onSuccess: () => {
+            setAnnotations([]);
+            setShowResizePanel(false);
+            setResizeRefInput("");
+            toast({
+              title: t("editor.resizeApplied"),
+              description: `${newW}×${newH} px  (×${factor.toFixed(3)})`,
+            });
+          },
+        },
+      );
+    }, "image/png");
+  }
+
   function drawBrushCursor(sx: number, sy: number) {
     const cc = cursorCanvasRef.current;
     if (!cc) return;
@@ -715,7 +810,8 @@ export default function Editor() {
     if (ctx) ctx.clearRect(0, 0, cc.width, cc.height);
   }
 
-  function handleMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
+  function handlePointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    e.currentTarget.setPointerCapture(e.pointerId);
     if (tool === "smooth" && !pendingSmoothPath) {
       const [sx, sy] = getScreenPoint(e);
       smoothPathRef.current = [[sx, sy]];
@@ -807,7 +903,7 @@ export default function Editor() {
     }
   }
 
-  function handleMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
+  function handlePointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -940,7 +1036,7 @@ export default function Editor() {
     ctx.restore();
   }
 
-  function handleMouseUp(e: React.MouseEvent<HTMLCanvasElement>) {
+  function handlePointerUp(e: React.PointerEvent<HTMLCanvasElement>) {
     if (tool === "smooth" && smoothDrawingRef.current) {
       smoothDrawingRef.current = false;
       const path = smoothPathRef.current;
@@ -1436,9 +1532,9 @@ export default function Editor() {
       ? (panDragRef.current ? "cursor-grabbing" : "cursor-grab")
       : "cursor-default";
 
-  function handleMouseLeave(e: React.MouseEvent<HTMLCanvasElement>) {
+  function handlePointerLeave(e: React.PointerEvent<HTMLCanvasElement>) {
     clearBrushCursor();
-    handleMouseUp(e);
+    handlePointerUp(e);
   }
 
   const tools: { id: Tool; Icon: React.ElementType; label: string }[] = [
@@ -1456,6 +1552,7 @@ export default function Editor() {
     { id: "smooth",      Icon: Wand2,         label: t("editor.smooth") },
     { id: "ruler",       Icon: Ruler,         label: t("editor.ruler") },
     { id: "angle",       Icon: Compass,       label: t("editor.angle") },
+    { id: "overlay",     Icon: Layers,        label: t("editor.overlayImage") },
   ];
 
   return (
@@ -1591,6 +1688,119 @@ export default function Editor() {
                       {(1 / pxPerMm).toFixed(4)} mm/px
                     </span>
                   )}
+                  {!calibrating && annotations.some((a) => a.type === "ruler") && (
+                    <>
+                      <div className="h-4 w-px bg-border mx-0.5" />
+                      {showResizePanel ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-muted-foreground">
+                            {t("editor.resizeOriginalPx")} ({Math.round(Math.hypot(
+                              ((annotations.filter(a => a.type === "ruler").at(-1) as DrawRuler | undefined)?.x2 ?? 0) -
+                              ((annotations.filter(a => a.type === "ruler").at(-1) as DrawRuler | undefined)?.x1 ?? 0),
+                              ((annotations.filter(a => a.type === "ruler").at(-1) as DrawRuler | undefined)?.y2 ?? 0) -
+                              ((annotations.filter(a => a.type === "ruler").at(-1) as DrawRuler | undefined)?.y1 ?? 0),
+                            ))} px):
+                          </span>
+                          <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            autoFocus
+                            placeholder="px"
+                            value={resizeRefInput}
+                            onChange={(e) => setResizeRefInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleResizeToReference();
+                              if (e.key === "Escape") { setShowResizePanel(false); setResizeRefInput(""); }
+                            }}
+                            className="w-20 h-7 text-xs border rounded px-2 bg-background"
+                          />
+                          <span className="text-xs text-muted-foreground">px</span>
+                          <Button
+                            size="sm"
+                            className="h-7 gap-1"
+                            onClick={handleResizeToReference}
+                            disabled={!resizeRefInput || isNaN(parseFloat(resizeRefInput)) || replaceFile.isPending}
+                          >
+                            <Check className="h-3 w-3" />
+                            {t("editor.resizeApply")}
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setShowResizePanel(false); setResizeRefInput(""); }}>
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 gap-1 text-xs"
+                          onClick={() => setShowResizePanel(true)}
+                        >
+                          <Minimize2 className="h-3 w-3" />
+                          {t("editor.resizeToReference")}
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {tool === "overlay" && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-muted-foreground">{t("editor.overlayPickHint")}:</span>
+              {overlayImageId && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 gap-1 text-xs"
+                  onClick={() => { setOverlayImageId(null); overlayImgRef.current = null; redrawOverlay(); }}
+                >
+                  <X className="h-3 w-3" />
+                  {t("editor.overlayNone")}
+                </Button>
+              )}
+              <div className="flex gap-1 overflow-x-auto max-w-xs">
+                {patientImages.filter((pi) => String(pi.id) !== id).length === 0 ? (
+                  <span className="text-xs text-muted-foreground italic">{t("editor.overlayNoImages")}</span>
+                ) : (
+                  patientImages
+                    .filter((pi) => String(pi.id) !== id)
+                    .slice(0, 10)
+                    .map((pi) => (
+                      <button
+                        key={pi.id}
+                        title={pi.notes ?? String(pi.id)}
+                        className={`shrink-0 w-9 h-9 rounded border-2 overflow-hidden transition-colors ${
+                          overlayImageId === String(pi.id) ? "border-primary" : "border-transparent hover:border-muted-foreground/40"
+                        }`}
+                        onClick={() => setOverlayImageId(overlayImageId === String(pi.id) ? null : String(pi.id))}
+                      >
+                        <img
+                          src={`/api/images/${pi.id}/file`}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          crossOrigin="anonymous"
+                        />
+                      </button>
+                    ))
+                )}
+              </div>
+              {overlayImageId && (
+                <>
+                  <div className="h-4 w-px bg-border mx-0.5" />
+                  <span className="text-xs text-muted-foreground">{t("editor.overlayOpacity")}</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={overlayOpacity}
+                    onChange={(e) => setOverlayOpacity(parseFloat(e.target.value))}
+                    className="w-24 h-1.5 accent-primary"
+                  />
+                  <span className="text-xs font-mono w-8 text-center">{Math.round(overlayOpacity * 100)}%</span>
                 </>
               )}
             </div>
@@ -1784,11 +1994,15 @@ export default function Editor() {
         <div className="flex-1 bg-muted/30 relative overflow-hidden" ref={containerRef}>
           <canvas
             ref={canvasRef}
-            className={`absolute inset-0 w-full h-full ${cursorClass}`}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseLeave}
+            className={`absolute inset-0 w-full h-full touch-none ${cursorClass}`}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerLeave}
+          />
+          <canvas
+            ref={overlayCanvasRef}
+            className="absolute inset-0 w-full h-full pointer-events-none"
           />
           <canvas
             ref={cursorCanvasRef}
