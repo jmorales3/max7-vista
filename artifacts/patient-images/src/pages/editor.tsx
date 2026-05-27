@@ -2212,27 +2212,6 @@ export default function Editor() {
             ref={cursorCanvasRef}
             className="absolute inset-0 w-full h-full pointer-events-none"
           />
-          {tool === "overlay" && overlayImageId && (
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-background/90 border rounded-full px-3 py-1 shadow-md text-xs select-none pointer-events-none">
-              <Move className="h-3 w-3 text-muted-foreground shrink-0" />
-              <span className="text-muted-foreground">{t("editor.overlayPosition")}</span>
-              <span className="font-mono">{overlayOffsetX},{overlayOffsetY}</span>
-              {(overlayOffsetX !== 0 || overlayOffsetY !== 0) && (
-                <button
-                  className="ml-0.5 text-primary hover:underline pointer-events-auto"
-                  onClick={() => {
-                    overlayOffsetXRef.current = 0;
-                    overlayOffsetYRef.current = 0;
-                    setOverlayOffsetX(0);
-                    setOverlayOffsetY(0);
-                    redrawOverlay();
-                  }}
-                >
-                  {t("editor.overlayOffsetReset")}
-                </button>
-              )}
-            </div>
-          )}
 
           {pendingText && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/30 z-10">
