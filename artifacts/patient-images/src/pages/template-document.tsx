@@ -478,14 +478,15 @@ export default function TemplateDocumentPage() {
                 <button
                   key={img.id}
                   className="block w-full rounded-lg overflow-hidden border-2 border-transparent hover:border-primary focus:outline-none focus:border-primary"
-                  style={{ aspectRatio: "1 / 1" }}
                   onClick={() => pickerFrameId && assignImage(pickerFrameId, img.id)}
                 >
-                  <img
-                    src={`/api/images/${img.id}/file`}
-                    alt={img.fileName ?? ""}
-                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                  />
+                  <div style={{ position: "relative", width: "100%", paddingTop: "100%" }}>
+                    <img
+                      src={`/api/images/${img.id}/file`}
+                      alt={img.fileName ?? ""}
+                      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    />
+                  </div>
                 </button>
               ))}
             </div>
