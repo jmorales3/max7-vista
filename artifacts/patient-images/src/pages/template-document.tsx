@@ -113,9 +113,10 @@ function ImageInFrame({
           </div>
         )}
 
-        {/* Remove button */}
+        {/* Remove button — hidden in print */}
         {hasImage && editing && (
           <button
+            className="no-print"
             style={{ position: "absolute", top: 2, right: 2, background: "hsl(var(--destructive))", color: "white", borderRadius: 4, border: "none", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 10 }}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => { e.stopPropagation(); onPanChange(-1, -1); }}
@@ -125,29 +126,47 @@ function ImageInFrame({
           </button>
         )}
 
-        {/* Zoom control */}
-        {hasImage && editing && (
-          <div
-            style={{ position: "absolute", bottom: 2, left: 2, right: canPan ? 52 : 2, display: "flex", alignItems: "center", gap: 3, zIndex: 10 }}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <span style={{ fontSize: btnFontPx, color: "white", background: "rgba(0,0,0,0.45)", borderRadius: 3, padding: "1px 3px", lineHeight: 1.4, whiteSpace: "nowrap", flexShrink: 0 }}>Fit</span>
-            <input
-              type="range" min={0} max={100} value={zoom}
-              onChange={(e) => onZoomChange(Number(e.target.value))}
-              style={{ flex: 1, minWidth: 0, height: 3, accentColor: "hsl(var(--primary))", cursor: "pointer" }}
-            />
-            <span style={{ fontSize: btnFontPx, color: "white", background: "rgba(0,0,0,0.45)", borderRadius: 3, padding: "1px 3px", lineHeight: 1.4, whiteSpace: "nowrap", flexShrink: 0 }}>Fill</span>
-          </div>
-        )}
-
-        {/* Pan hint */}
+        {/* Pan hint — hidden in print */}
         {canPan && editing && frameH > 50 && (
-          <div style={{ position: "absolute", bottom: 2, right: 2, background: "rgba(0,0,0,0.35)", color: "white", borderRadius: 3, fontSize: Math.max(6, 7 * (pxPerMm / PX_PER_MM)), padding: "1px 3px", pointerEvents: "none", lineHeight: 1.4 }}>
+          <div className="no-print" style={{ position: "absolute", bottom: 2, left: "50%", transform: "translateX(-50%)", background: "rgba(0,0,0,0.45)", color: "white", borderRadius: 3, fontSize: Math.max(7, 8 * (pxPerMm / PX_PER_MM)), padding: "1px 5px", pointerEvents: "none", lineHeight: 1.5, whiteSpace: "nowrap" }}>
             drag to pan
           </div>
         )}
       </div>
+
+      {/* Fit / Fill toggle — outside the frame, hidden in print */}
+      {hasImage && editing && (
+        <div
+          className="no-print"
+          style={{ display: "flex", width: frameW, marginTop: 2 }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => onZoomChange(0)}
+            style={{
+              flex: 1, padding: "2px 0", fontSize: Math.max(8, 9 * (pxPerMm / PX_PER_MM)),
+              background: !isCover ? "hsl(var(--primary))" : "rgba(0,0,0,0.10)",
+              color: !isCover ? "white" : "hsl(var(--muted-foreground))",
+              border: "none", borderRadius: "3px 0 0 3px", cursor: "pointer", lineHeight: 1.5,
+              fontWeight: !isCover ? 600 : 400,
+            }}
+          >
+            Fit
+          </button>
+          <button
+            onClick={() => onZoomChange(100)}
+            style={{
+              flex: 1, padding: "2px 0", fontSize: Math.max(8, 9 * (pxPerMm / PX_PER_MM)),
+              background: isCover ? "hsl(var(--primary))" : "rgba(0,0,0,0.10)",
+              color: isCover ? "white" : "hsl(var(--muted-foreground))",
+              border: "none", borderRadius: "0 3px 3px 0", cursor: "pointer", lineHeight: 1.5,
+              fontWeight: isCover ? 600 : 400,
+            }}
+          >
+            Fill
+          </button>
+        </div>
+      )}
 
       {/* Label below frame */}
       {hasImage && frame.label && (
@@ -297,15 +316,12 @@ export default function TemplateDocumentPage() {
             box-shadow: none !important;
             margin: 0 !important;
             position: relative !important;
-            overflow: hidden !important;
+            overflow: visible !important;
           }
           .print-canvas {
             transform: none !important;
-            width: ${pageWidth}mm !important;
-            height: ${pageHeight}mm !important;
             position: relative !important;
           }
-          .print-canvas img { object-fit: inherit !important; object-position: inherit !important; }
           .print-header {
             position: absolute !important;
             top: 50% !important;
