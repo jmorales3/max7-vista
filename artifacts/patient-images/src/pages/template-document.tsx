@@ -341,6 +341,7 @@ export default function TemplateDocumentPage() {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(680);
+  const skipNextDocInit = useRef(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -375,6 +376,7 @@ export default function TemplateDocumentPage() {
 
   useEffect(() => {
     if (!document || !template) return;
+    if (skipNextDocInit.current) { skipNextDocInit.current = false; return; }
     const existing = document.frames as DocumentFrame[];
     const headerEx = existing.find((df) => df.frameId === "__header__");
     const merged: DocumentFrame[] = [
@@ -396,8 +398,9 @@ export default function TemplateDocumentPage() {
         method: "PUT",
         body: JSON.stringify({ frames }),
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["template-documents", documentId] });
+    onSuccess: (savedDoc) => {
+      skipNextDocInit.current = true;
+      queryClient.setQueryData(["template-documents", documentId], savedDoc);
       setDirty(false);
       toast({ title: t("templates.document.saved") });
     },

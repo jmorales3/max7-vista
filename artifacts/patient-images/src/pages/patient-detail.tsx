@@ -418,7 +418,7 @@ export default function PatientDetail() {
                   href={`/template-documents/${doc.id}`}
                   className="flex-1 min-w-0 cursor-pointer"
                 >
-                  <div className="font-medium truncate text-sm">{doc.title}</div>
+                  <div className="font-medium text-sm break-words line-clamp-2">{doc.title}</div>
                   <div className="text-xs text-muted-foreground">{format(new Date(doc.updatedAt), "MMM d, yyyy")}</div>
                 </a>
                 <div className="flex items-center gap-1 shrink-0">
