@@ -11,7 +11,7 @@ import { ArrowLeft, Printer, Save, ImagePlus, X } from "lucide-react";
 import { format } from "date-fns";
 
 interface TemplateFrame { id: string; x: number; y: number; width: number; height: number; label?: string; }
-interface Template { id: number; title: string; officeName?: string | null; officeInfo?: string | null; pageWidth: number; pageHeight: number; frames: TemplateFrame[]; }
+interface Template { id: number; title: string; officeName?: string | null; officeInfo?: string | null; logoData?: string | null; pageWidth: number; pageHeight: number; frames: TemplateFrame[]; }
 interface DocumentFrame { frameId: string; imageId?: number; panX: number; panY: number; }
 interface TemplateDocument { id: number; templateId: number; patientId?: number | null; title: string; frames: DocumentFrame[]; printedAt?: string | null; createdAt: string; updatedAt: string; }
 interface PatientData { id: number; name: string; dateOfBirth?: string | null; }
@@ -365,9 +365,18 @@ export default function TemplateDocumentPage() {
                 width: physW,
               }}
             >
-              <div className="print-header-left" style={headerLeft}>
-                {template.officeName && <div style={{ fontWeight: 600 }}>{template.officeName}</div>}
-                {template.officeInfo && <div style={{ whiteSpace: "pre-line" }}>{template.officeInfo}</div>}
+              <div className="print-header-left" style={{ ...headerLeft, display: "flex", alignItems: "flex-start", gap: 8 }}>
+                {template.logoData && (
+                  <img
+                    src={template.logoData}
+                    alt="logo"
+                    style={{ height: 36, maxWidth: 72, objectFit: "contain", flexShrink: 0 }}
+                  />
+                )}
+                <div>
+                  {template.officeName && <div style={{ fontWeight: 600 }}>{template.officeName}</div>}
+                  {template.officeInfo && <div style={{ whiteSpace: "pre-line" }}>{template.officeInfo}</div>}
+                </div>
               </div>
               <div className="print-header-right" style={headerRight}>
                 {patient && (

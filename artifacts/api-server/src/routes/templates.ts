@@ -45,6 +45,7 @@ router.post("/templates", async (req, res): Promise<void> => {
       description: body.data.description ?? null,
       officeName: body.data.officeName ?? null,
       officeInfo: body.data.officeInfo ?? null,
+      logoData: body.data.logoData ?? null,
       pageWidth: body.data.pageWidth,
       pageHeight: body.data.pageHeight,
       frames: body.data.frames as TemplateFrame[],
@@ -89,6 +90,7 @@ router.put("/templates/:id", async (req, res): Promise<void> => {
   if (body.data.description !== undefined) updates.description = body.data.description;
   if (body.data.officeName !== undefined) updates.officeName = body.data.officeName;
   if (body.data.officeInfo !== undefined) updates.officeInfo = body.data.officeInfo;
+  if (body.data.logoData !== undefined) updates.logoData = body.data.logoData;
   if (body.data.pageWidth !== undefined) updates.pageWidth = body.data.pageWidth;
   if (body.data.pageHeight !== undefined) updates.pageHeight = body.data.pageHeight;
   if (body.data.frames !== undefined) updates.frames = body.data.frames as TemplateFrame[];

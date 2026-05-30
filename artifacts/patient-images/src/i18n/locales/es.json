@@ -565,7 +565,21 @@
       "saved": "Plantilla guardada",
       "saveFailed": "Error al guardar la plantilla",
       "saving": "Guardando…",
-      "save": "Guardar"
+      "save": "Guardar",
+      "orientation": "Orientación:",
+      "portrait": "Vertical",
+      "landscape": "Horizontal",
+      "swapOrientation": "Intercambiar orientación",
+      "snapToGrid": "Alinear a cuadrícula",
+      "snapOff": "Desactivado",
+      "copySize": "Copiar tamaño",
+      "pasteSize": "Pegar tamaño",
+      "sameSize": "Mismo tamaño",
+      "copiedSize": "Copiado: {{w}} × {{h}} {{unit}}",
+      "officeLogo": "Logo de la clínica",
+      "uploadLogo": "Subir logo",
+      "removeLogo": "Eliminar logo",
+      "logoHint": "Aparece en el encabezado del documento"
     },
     "document": {
       "loading": "Cargando documento…",

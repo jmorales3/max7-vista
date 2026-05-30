@@ -19,6 +19,7 @@ export const templatesTable = sqliteTable("templates", {
   pageWidth: real("page_width").notNull().default(215.9),
   pageHeight: real("page_height").notNull().default(279.4),
   frames: text("frames", { mode: "json" }).notNull().$type<TemplateFrame[]>().default([]),
+  logoData: text("logo_data"),
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
   updatedAt: text("updated_at").notNull().default(new Date().toISOString()),
 });

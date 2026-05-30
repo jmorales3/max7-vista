@@ -565,7 +565,21 @@
       "saved": "Modelo salvo",
       "saveFailed": "Falha ao salvar o modelo",
       "saving": "Salvando…",
-      "save": "Salvar"
+      "save": "Salvar",
+      "orientation": "Orientação:",
+      "portrait": "Retrato",
+      "landscape": "Paisagem",
+      "swapOrientation": "Alternar orientação",
+      "snapToGrid": "Alinhar à grade",
+      "snapOff": "Desativado",
+      "copySize": "Copiar tamanho",
+      "pasteSize": "Colar tamanho",
+      "sameSize": "Mesmo tamanho",
+      "copiedSize": "Copiado: {{w}} × {{h}} {{unit}}",
+      "officeLogo": "Logo do consultório",
+      "uploadLogo": "Carregar logo",
+      "removeLogo": "Remover logo",
+      "logoHint": "Aparece no cabeçalho do documento"
     },
     "document": {
       "loading": "Carregando documento…",

@@ -18,6 +18,7 @@ export const templatesTable = pgTable("templates", {
   pageWidth: real("page_width").notNull().default(215.9),
   pageHeight: real("page_height").notNull().default(279.4),
   frames: jsonb("frames").notNull().$type<TemplateFrame[]>().default([]),
+  logoData: text("logo_data"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

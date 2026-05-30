@@ -565,7 +565,21 @@
       "saved": "Modèle enregistré",
       "saveFailed": "Échec de l'enregistrement du modèle",
       "saving": "Enregistrement…",
-      "save": "Enregistrer"
+      "save": "Enregistrer",
+      "orientation": "Orientation :",
+      "portrait": "Portrait",
+      "landscape": "Paysage",
+      "swapOrientation": "Permuter l'orientation",
+      "snapToGrid": "Aligner sur la grille",
+      "snapOff": "Désactivé",
+      "copySize": "Copier la taille",
+      "pasteSize": "Coller la taille",
+      "sameSize": "Même taille",
+      "copiedSize": "Copié : {{w}} × {{h}} {{unit}}",
+      "officeLogo": "Logo du cabinet",
+      "uploadLogo": "Charger le logo",
+      "removeLogo": "Supprimer le logo",
+      "logoHint": "Apparaît dans l'en-tête du document"
     },
     "document": {
       "loading": "Chargement du document…",

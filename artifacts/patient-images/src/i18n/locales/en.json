@@ -565,7 +565,21 @@
       "saved": "Template saved",
       "saveFailed": "Failed to save template",
       "saving": "Saving…",
-      "save": "Save"
+      "save": "Save",
+      "orientation": "Orientation:",
+      "portrait": "Portrait",
+      "landscape": "Landscape",
+      "swapOrientation": "Swap orientation",
+      "snapToGrid": "Snap to Grid",
+      "snapOff": "Off",
+      "copySize": "Copy Size",
+      "pasteSize": "Paste Size",
+      "sameSize": "Same Size",
+      "copiedSize": "Copied: {{w}} × {{h}} {{unit}}",
+      "officeLogo": "Office Logo",
+      "uploadLogo": "Upload Logo",
+      "removeLogo": "Remove Logo",
+      "logoHint": "Appears in document header"
     },
     "document": {
       "loading": "Loading document…",

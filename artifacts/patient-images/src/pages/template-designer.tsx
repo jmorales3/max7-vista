@@ -10,11 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Save, SquareStack, RotateCcw, Grid3X3, Copy, ClipboardPaste } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, SquareStack, RotateCcw, Grid3X3, Copy, ClipboardPaste, ImageIcon, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TemplateFrame { id: string; x: number; y: number; width: number; height: number; label?: string; }
-interface Template { id: number; title: string; description?: string | null; officeName?: string | null; officeInfo?: string | null; pageWidth: number; pageHeight: number; frames: TemplateFrame[]; createdAt: string; updatedAt: string; }
+interface Template { id: number; title: string; description?: string | null; officeName?: string | null; officeInfo?: string | null; logoData?: string | null; pageWidth: number; pageHeight: number; frames: TemplateFrame[]; createdAt: string; updatedAt: string; }
 
 type DragState =
   | { type: "move"; frameId: string; startMX: number; startMY: number; origX: number; origY: number }
@@ -76,8 +76,10 @@ export default function TemplateDesigner() {
   const [isDirty, setIsDirty] = useState(false);
   const [snapToGrid, setSnapToGrid] = useState(true);
   const [copiedSize, setCopiedSize] = useState<{ width: number; height: number } | null>(null);
+  const [logoData, setLogoData] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const [containerWidth, setContainerWidth] = useState(640);
   const dragRef = useRef<DragState | null>(null);
   const framesRef = useRef<TemplateFrame[]>([]);
@@ -170,6 +172,7 @@ export default function TemplateDesigner() {
     setTitle(template.title ?? "");
     setOfficeName(template.officeName ?? "");
     setOfficeInfo(template.officeInfo ?? "");
+    setLogoData(template.logoData ?? null);
     setPageWidth(template.pageWidth);
     setPageHeight(template.pageHeight);
     setFrames((template.frames as TemplateFrame[]) ?? []);
@@ -191,7 +194,19 @@ export default function TemplateDesigner() {
   });
 
   function handleSave() {
-    saveMutation.mutate({ title, officeName: officeName || null, officeInfo: officeInfo || null, pageWidth, pageHeight, frames });
+    saveMutation.mutate({ title, officeName: officeName || null, officeInfo: officeInfo || null, logoData: logoData ?? null, pageWidth, pageHeight, frames });
+  }
+
+  function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setLogoData(ev.target?.result as string ?? null);
+      setIsDirty(true);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
   }
 
   function addFrame() {
@@ -346,7 +361,7 @@ export default function TemplateDesigner() {
             })}
           </div>
           <p className="text-center text-xs text-muted-foreground mt-3">
-            {(pageWidth / MM_PER_IN).toFixed(2)}" × {(pageHeight / MM_PER_IN).toFixed(2)}" · {isLandscape ? "Landscape" : "Portrait"} · {frames.length} frame{frames.length !== 1 ? "s" : ""}
+            {(pageWidth / MM_PER_IN).toFixed(2)}" × {(pageHeight / MM_PER_IN).toFixed(2)}" · {isLandscape ? t("templates.designer.landscape") : t("templates.designer.portrait")} · {frames.length} frame{frames.length !== 1 ? "s" : ""}
             {displayScale < 0.99 && ` · Zoom ${Math.round(displayScale * 100)}%`}
           </p>
         </div>
@@ -380,6 +395,33 @@ export default function TemplateDesigner() {
               <Label className="text-xs">{t("templates.designer.officeInfo")}</Label>
               <Textarea value={officeInfo} onChange={(e) => { setOfficeInfo(e.target.value); setIsDirty(true); }} placeholder={t("templates.designer.optional")} rows={2} className="text-sm resize-none" />
             </div>
+
+            {/* Office Logo */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t("templates.designer.officeLogo")}</Label>
+              <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+              {logoData ? (
+                <div className="flex items-center gap-2">
+                  <img src={logoData} alt="logo" className="h-10 max-w-[120px] object-contain rounded border border-border bg-muted/30 p-0.5" />
+                  <Button
+                    type="button" variant="ghost" size="sm"
+                    className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                    onClick={() => { setLogoData(null); setIsDirty(true); }}
+                  >
+                    <X className="h-3 w-3 mr-1" />{t("templates.designer.removeLogo")}
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button" variant="outline" size="sm"
+                  className="h-8 text-xs w-full gap-1.5"
+                  onClick={() => logoInputRef.current?.click()}
+                >
+                  <ImageIcon className="h-3.5 w-3.5" />{t("templates.designer.uploadLogo")}
+                </Button>
+              )}
+              <p className="text-xs text-muted-foreground">{t("templates.designer.logoHint")}</p>
+            </div>
           </section>
 
           {/* Page Size */}
@@ -394,14 +436,14 @@ export default function TemplateDesigner() {
 
             {/* Orientation toggle */}
             <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground mr-1">Orientation:</span>
+              <span className="text-xs text-muted-foreground mr-1">{t("templates.designer.orientation")}</span>
               <Button
                 variant="outline" size="sm"
                 className={cn("h-7 px-2.5 text-xs gap-1.5", !isLandscape && "bg-primary text-primary-foreground border-primary")}
                 onClick={() => isLandscape && toggleOrientation()}
               >
                 <span style={{ display: "inline-block", width: 10, height: 13, border: "1.5px solid currentColor", borderRadius: 1, flexShrink: 0 }} />
-                Portrait
+                {t("templates.designer.portrait")}
               </Button>
               <Button
                 variant="outline" size="sm"
@@ -409,9 +451,9 @@ export default function TemplateDesigner() {
                 onClick={() => !isLandscape && toggleOrientation()}
               >
                 <span style={{ display: "inline-block", width: 13, height: 10, border: "1.5px solid currentColor", borderRadius: 1, flexShrink: 0 }} />
-                Landscape
+                {t("templates.designer.landscape")}
               </Button>
-              <Button variant="ghost" size="sm" className="h-7 px-1.5 text-muted-foreground" title="Swap orientation" onClick={toggleOrientation}>
+              <Button variant="ghost" size="sm" className="h-7 px-1.5 text-muted-foreground" title={t("templates.designer.swapOrientation")} onClick={toggleOrientation}>
                 <RotateCcw className="h-3.5 w-3.5" />
               </Button>
             </div>
@@ -443,8 +485,8 @@ export default function TemplateDesigner() {
               onClick={() => setSnapToGrid((v) => !v)}
             >
               <Grid3X3 className="h-3.5 w-3.5 flex-shrink-0" />
-              <span className="font-medium">Snap to Grid</span>
-              <span className="ml-auto text-xs opacity-70">{snapToGrid ? `${GRID_MM}mm` : "Off"}</span>
+              <span className="font-medium">{t("templates.designer.snapToGrid")}</span>
+              <span className="ml-auto text-xs opacity-70">{snapToGrid ? `${GRID_MM}mm` : t("templates.designer.snapOff")}</span>
             </button>
           </section>
 
@@ -534,7 +576,7 @@ export default function TemplateDesigner() {
                   size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1.5"
                   onClick={() => setCopiedSize({ width: selectedFrame.width, height: selectedFrame.height })}
                 >
-                  <Copy className="h-3 w-3" /> Copy Size
+                  <Copy className="h-3 w-3" /> {t("templates.designer.copySize")}
                 </Button>
                 {copiedSize && copiedSize.width !== selectedFrame.width || copiedSize && copiedSize.height !== selectedFrame.height ? (
                   <Button
@@ -545,17 +587,17 @@ export default function TemplateDesigner() {
                       }
                     }}
                   >
-                    <ClipboardPaste className="h-3 w-3" /> Paste Size
+                    <ClipboardPaste className="h-3 w-3" /> {t("templates.designer.pasteSize")}
                   </Button>
                 ) : copiedSize ? (
                   <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1.5 opacity-50" disabled>
-                    <ClipboardPaste className="h-3 w-3" /> Same Size
+                    <ClipboardPaste className="h-3 w-3" /> {t("templates.designer.sameSize")}
                   </Button>
                 ) : null}
               </div>
               {copiedSize && (
                 <p className="text-xs text-muted-foreground">
-                  Copied: {toDisp(copiedSize.width, unit)} × {toDisp(copiedSize.height, unit)} {unit}
+                  {t("templates.designer.copiedSize", { w: toDisp(copiedSize.width, unit), h: toDisp(copiedSize.height, unit), unit })}
                 </p>
               )}
 
