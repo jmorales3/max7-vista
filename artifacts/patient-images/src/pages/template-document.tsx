@@ -28,41 +28,32 @@ function ImageInFrame({
   onZoomChange: (zoom: number) => void;
   clickToAddLabel: string; removeImageTitle: string;
 }) {
-  const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
   const panRef = useRef<{ sx: number; sy: number; spx: number; spy: number } | null>(null);
 
   const frameW = frame.width * pxPerMm;
   const frameH = frame.height * pxPerMm;
   const hasImage = !!docFrame.imageId;
-  const zoom = docFrame.zoom ?? 0; // 0 = full image visible (contain), 100 = frame fully filled (cover)
+  const zoom = docFrame.zoom ?? 0; // 0 = full image (contain), 100 = frame filled (cover)
+  // Use CSS objectFit so the browser handles EXIF orientation automatically.
+  const isCover = zoom > 0;
+  const canPan = hasImage && isCover;
 
-  let imgLeft = 0, imgTop = 0, imgW = frameW, imgH = frameH;
-  let canPan = false;
-  if (hasImage && naturalSize && naturalSize.w > 0 && naturalSize.h > 0) {
-    const containScale = Math.min(frameW / naturalSize.w, frameH / naturalSize.h);
-    const coverScale = Math.max(frameW / naturalSize.w, frameH / naturalSize.h);
-    const currentScale = containScale + (zoom / 100) * (coverScale - containScale);
-    imgW = naturalSize.w * currentScale;
-    imgH = naturalSize.h * currentScale;
-    const maxOX = Math.max(0, imgW - frameW);
-    const maxOY = Math.max(0, imgH - frameH);
-    canPan = maxOX > 0 || maxOY > 0;
-    imgLeft = maxOX > 0 ? -((docFrame.panX / 100) * maxOX) : (frameW - imgW) / 2;
-    imgTop = maxOY > 0 ? -((docFrame.panY / 100) * maxOY) : (frameH - imgH) / 2;
-  }
+  // Pan using objectPosition (0%=top-left, 50%=center, 100%=bottom-right)
+  const objPos = `${docFrame.panX}% ${docFrame.panY}%`;
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!canPan || !naturalSize) return;
+    if (!canPan) return;
     e.preventDefault();
+    // Approximate overflow for pan sensitivity; use frame size as proxy when natural size unknown
+    const panSensX = frameW * 0.5;
+    const panSensY = frameH * 0.5;
     panRef.current = { sx: e.clientX, sy: e.clientY, spx: docFrame.panX, spy: docFrame.panY };
-    const maxOX = Math.max(1, imgW - frameW);
-    const maxOY = Math.max(1, imgH - frameH);
     const onMove = (ev: MouseEvent) => {
       if (!panRef.current) return;
       const dx = ev.clientX - panRef.current.sx;
       const dy = ev.clientY - panRef.current.sy;
-      const npx = Math.max(0, Math.min(100, panRef.current.spx - (dx / maxOX) * 100));
-      const npy = Math.max(0, Math.min(100, panRef.current.spy - (dy / maxOY) * 100));
+      const npx = Math.max(0, Math.min(100, panRef.current.spx - (dx / panSensX) * 100));
+      const npy = Math.max(0, Math.min(100, panRef.current.spy - (dy / panSensY) * 100));
       onPanChange(npx, npy);
     };
     const onUp = () => {
@@ -76,7 +67,9 @@ function ImageInFrame({
 
   const labelFontPx = Math.max(7, 9 * (pxPerMm / PX_PER_MM));
   const btnFontPx = Math.max(6, 8 * (pxPerMm / PX_PER_MM));
-  const hasLetterbox = hasImage && naturalSize && (imgW < frameW || imgH < frameH);
+  // At zoom=0 → objectFit:contain (full image, EXIF handled by browser)
+  // At zoom>0 → objectFit:cover with objectPosition for panning
+  const hasLetterbox = hasImage && !isCover;
 
   return (
     <div style={{ position: "absolute", left: frame.x * pxPerMm, top: frame.y * pxPerMm, width: frameW }}>
@@ -96,11 +89,13 @@ function ImageInFrame({
         {hasImage ? (
           <img
             src={`/api/images/${docFrame.imageId}/file`}
-            onLoad={(e) => {
-              const img = e.target as HTMLImageElement;
-              setNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
+            style={{
+              display: "block",
+              width: "100%", height: "100%",
+              objectFit: isCover ? "cover" : "contain",
+              objectPosition: isCover ? objPos : "center",
+              userSelect: "none", pointerEvents: "none",
             }}
-            style={{ position: "absolute", left: imgLeft, top: imgTop, width: imgW, height: imgH, userSelect: "none", pointerEvents: "none", objectFit: "none" }}
             draggable={false}
             alt=""
           />
