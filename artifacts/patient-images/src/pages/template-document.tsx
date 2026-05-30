@@ -34,7 +34,7 @@ function ImageInFrame({
   const frameW = frame.width * pxPerMm;
   const frameH = frame.height * pxPerMm;
   const hasImage = !!docFrame.imageId;
-  const fitMode = docFrame.fitMode ?? "contain";
+  const fitMode = docFrame.fitMode ?? "cover";
   const canPan = hasImage && fitMode === "cover";
 
   let imgLeft = 0, imgTop = 0, imgW = frameW, imgH = frameH;
@@ -95,7 +95,7 @@ function ImageInFrame({
           boxSizing: "border-box",
           cursor: hasImage ? (canPan ? "grab" : "default") : "pointer",
           position: "relative",
-          background: fitMode === "contain" && hasImage ? "hsl(var(--muted)/0.15)" : undefined,
+          background: fitMode === "contain" && hasImage ? "#111" : undefined,
         }}
         onClick={hasImage ? undefined : onClick}
         onMouseDown={canPan ? handleMouseDown : undefined}
