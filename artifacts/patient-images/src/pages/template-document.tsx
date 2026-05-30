@@ -284,12 +284,6 @@ export default function TemplateDocumentPage() {
     return <div className="flex items-center justify-center h-64 text-muted-foreground">{t("templates.document.notFound")}</div>;
   }
 
-  // Physical header height in CSS pixels (before display scaling).
-  // Must match the constant in template-designer.tsx.
-  const HEADER_PHYSICAL_PX = 80;
-  // Displayed header height (what the browser renders on screen)
-  const HEADER_PX = HEADER_PHYSICAL_PX * displayScale;
-
   return (
     <>
       <style>{`
@@ -299,16 +293,41 @@ export default function TemplateDocumentPage() {
           .print-page {
             transform: none !important;
             width: ${pageWidth}mm !important;
-            height: ${(pageHeight + HEADER_PHYSICAL_PX / (96 / 25.4)).toFixed(1)}mm !important;
+            height: ${pageHeight}mm !important;
             box-shadow: none !important;
             margin: 0 !important;
+            position: relative !important;
+            overflow: hidden !important;
           }
-          .print-header-wrap { width: ${pageWidth}mm !important; height: ${(HEADER_PHYSICAL_PX / (96 / 25.4)).toFixed(1)}mm !important; overflow: hidden !important; }
-          .print-header { transform: none !important; width: ${pageWidth}mm !important; height: ${(HEADER_PHYSICAL_PX / (96 / 25.4)).toFixed(1)}mm !important; padding: 3mm 8mm !important; }
-          .print-frame-wrap { top: ${(HEADER_PHYSICAL_PX / (96 / 25.4)).toFixed(1)}mm !important; left: 0 !important; width: ${pageWidth}mm !important; height: ${pageHeight}mm !important; }
-          .print-canvas { transform: none !important; width: ${pageWidth}mm !important; height: ${pageHeight}mm !important; }
-          .print-frame img { object-fit: inherit; object-position: inherit; }
-          @page { size: ${pageWidth}mm ${(pageHeight + HEADER_PHYSICAL_PX / (96 / 25.4)).toFixed(1)}mm; margin: 0; }
+          .print-canvas {
+            transform: none !important;
+            width: ${pageWidth}mm !important;
+            height: ${pageHeight}mm !important;
+            position: relative !important;
+          }
+          .print-canvas img { object-fit: inherit !important; object-position: inherit !important; }
+          .print-header {
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            width: 85% !important;
+            max-width: 85% !important;
+            padding: 4mm 10mm !important;
+            background: rgba(255,255,255,0.92) !important;
+            border: none !important;
+            border-radius: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            text-align: center !important;
+            gap: 2mm !important;
+          }
+          .print-header img { height: 10mm !important; max-width: 24mm !important; object-fit: contain !important; }
+          .print-header-name { font-size: 13pt !important; }
+          .print-header-info { font-size: 10pt !important; }
+          .print-header-patient { font-size: 10pt !important; }
+          @page { size: ${pageWidth}mm ${pageHeight}mm; margin: 0; }
         }
       `}</style>
 
@@ -340,98 +359,86 @@ export default function TemplateDocumentPage() {
             className="print-page"
             style={{
               width: physW * displayScale,
-              height: (HEADER_PX + physH * displayScale),
+              height: physH * displayScale,
               background: "white",
               boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
               position: "relative",
               overflow: "hidden",
             }}
           >
-            {/* Header: wrapper clips transform overflow to correct display size */}
+            {/* Frame canvas — fills the full page */}
             <div
-              className="print-header-wrap"
-              style={{ width: physW * displayScale, height: HEADER_PX, overflow: "hidden" }}
-            >
-              <div
-                className="print-header"
-                style={{
-                  height: HEADER_PHYSICAL_PX,
-                  width: physW,
-                  transform: `scale(${displayScale})`,
-                  transformOrigin: "top left",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  textAlign: "center",
-                  gap: 2,
-                  padding: "6px 14px 5px",
-                  borderBottom: "1.5px solid #ccc",
-                  boxSizing: "border-box",
-                }}
-              >
-                {template.logoData && (
-                  <img
-                    src={template.logoData}
-                    alt="logo"
-                    style={{ height: 38, maxWidth: 90, objectFit: "contain" }}
-                  />
-                )}
-                {template.officeName && (
-                  <div style={{ fontWeight: 700, fontSize: "13pt", color: "#111", lineHeight: 1.2 }}>
-                    {template.officeName}
-                  </div>
-                )}
-                {template.officeInfo && (
-                  <div style={{ fontSize: "10pt", color: "#555", lineHeight: 1.2, whiteSpace: "pre-line" }}>
-                    {template.officeInfo}
-                  </div>
-                )}
-                <div style={{ fontSize: "10pt", color: "#444", lineHeight: 1.2, borderTop: "1px solid #ddd", paddingTop: 3, marginTop: 1 }}>
-                  {patient && <span style={{ fontWeight: 600 }}>{patient.name}</span>}
-                  {patient?.dateOfBirth && <span> · {t("templates.document.dob")} {patient.dateOfBirth}</span>}
-                  <span> · {t("templates.document.date")} {printDate}</span>
-                </div>
-              </div>
-            </div>
-            <div
-              className="print-frame-wrap"
+              className="print-canvas"
               style={{
-                position: "absolute",
-                top: HEADER_PX,
-                left: 0,
-                width: physW * displayScale,
-                height: physH * displayScale,
-                overflow: "hidden",
+                transform: `scale(${displayScale})`,
+                transformOrigin: "top left",
+                width: physW,
+                height: physH,
+                position: "relative",
               }}
             >
-              <div
-                className="print-canvas"
-                style={{
-                  transform: `scale(${displayScale})`,
-                  transformOrigin: "top left",
-                  width: physW,
-                  height: physH,
-                  position: "relative",
-                }}
-              >
-                {(template.frames as TemplateFrame[]).map((frame) => {
-                  const df = docFrames.find((d) => d.frameId === frame.id) ?? { frameId: frame.id, panX: 50, panY: 50 };
-                  return (
-                    <ImageInFrame
-                      key={frame.id}
-                      frame={frame}
-                      docFrame={df}
-                      pxPerMm={PX_PER_MM}
-                      editing={true}
-                      onClick={() => setPickerFrameId(frame.id)}
-                      onPanChange={(px, py) => updatePan(frame.id, px, py)}
-                      onZoomChange={(z) => updateZoom(frame.id, z)}
-                      clickToAddLabel={t("templates.document.clickToAdd")}
-                      removeImageTitle={t("templates.document.removeImage")}
-                    />
-                  );
-                })}
+              {(template.frames as TemplateFrame[]).map((frame) => {
+                const df = docFrames.find((d) => d.frameId === frame.id) ?? { frameId: frame.id, panX: 50, panY: 50 };
+                return (
+                  <ImageInFrame
+                    key={frame.id}
+                    frame={frame}
+                    docFrame={df}
+                    pxPerMm={PX_PER_MM}
+                    editing={true}
+                    onClick={() => setPickerFrameId(frame.id)}
+                    onPanChange={(px, py) => updatePan(frame.id, px, py)}
+                    onZoomChange={(z) => updateZoom(frame.id, z)}
+                    clickToAddLabel={t("templates.document.clickToAdd")}
+                    removeImageTitle={t("templates.document.removeImage")}
+                  />
+                );
+              })}
+            </div>
+
+            {/* Office info — centered overlay on the page */}
+            <div
+              className="print-header"
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: physW * displayScale * 0.85,
+                maxWidth: "85%",
+                boxSizing: "border-box",
+                background: "rgba(255,255,255,0.92)",
+                border: "1px solid #ddd",
+                borderRadius: 4,
+                padding: `${5 * displayScale}px ${12 * displayScale}px`,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                textAlign: "center",
+                gap: 2 * displayScale,
+              }}
+            >
+              {template.logoData && (
+                <img
+                  src={template.logoData}
+                  alt="logo"
+                  style={{ height: 38 * displayScale, maxWidth: 90 * displayScale, objectFit: "contain" }}
+                />
+              )}
+              {template.officeName && (
+                <div className="print-header-name" style={{ fontWeight: 700, fontSize: Math.max(11, 13 * displayScale), color: "#111", lineHeight: 1.2 }}>
+                  {template.officeName}
+                </div>
+              )}
+              {template.officeInfo && (
+                <div className="print-header-info" style={{ fontSize: Math.max(9, 10 * displayScale), color: "#555", lineHeight: 1.2, whiteSpace: "pre-line" }}>
+                  {template.officeInfo}
+                </div>
+              )}
+              <div className="print-header-patient" style={{ fontSize: Math.max(9, 10 * displayScale), color: "#444", lineHeight: 1.2, borderTop: "1px solid #ddd", paddingTop: 3 * displayScale, marginTop: displayScale }}>
+                {patient && <span style={{ fontWeight: 600 }}>{patient.name}</span>}
+                {patient?.dateOfBirth && <span> · {t("templates.document.dob")} {patient.dateOfBirth}</span>}
+                <span> · {t("templates.document.date")} {printDate}</span>
               </div>
             </div>
           </div>

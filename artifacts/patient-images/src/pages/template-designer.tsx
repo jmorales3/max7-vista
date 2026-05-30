@@ -257,8 +257,11 @@ export default function TemplateDesigner() {
     e.target.value = "";
   }
 
-  // Header zone height in mm — must match HEADER_PHYSICAL_PX (80px) in template-document.tsx
-  const HEADER_ZONE_MM = 80 / PX_PER_MM; // ≈ 21.2mm
+  // Centered info overlay dimensions (mm) — approximates what will be printed centered on the page
+  const INFO_W_MM = pageWidth * 0.85;
+  const INFO_H_MM = 30; // approximate height of the info block
+  const infoLeft = (pageWidth - INFO_W_MM) / 2;
+  const infoTop = (pageHeight - INFO_H_MM) / 2;
 
   // Ruler calculation
   const pxPerMm = PX_PER_MM * displayScale;
@@ -272,15 +275,13 @@ export default function TemplateDesigner() {
   const inTickStepMm = inLabelStepMm >= 25.4 ? 6.35 : inLabelStepMm >= 12.7 ? 3.175 : 3.175;
   const tickStepMm = unit === "mm" ? mmTickStep : inTickStepMm;
   const labelStepMm = unit === "mm" ? mmLabelStep : inLabelStepMm;
-  const headerZoneH = 80 * displayScale; // display px
-  const totalH = headerZoneH + displayH;  // total ruler height in display px
+  const totalH = displayH;  // ruler height = frame canvas height (full page)
   const xTicks = makeRulerTicks(pageWidth, tickStepMm, labelStepMm, pxPerMm, unit, MM_PER_IN);
-  const yTicks = makeRulerTicks(HEADER_ZONE_MM + pageHeight, tickStepMm, labelStepMm, pxPerMm, unit, MM_PER_IN);
+  const yTicks = makeRulerTicks(pageHeight, tickStepMm, labelStepMm, pxPerMm, unit, MM_PER_IN);
 
   function addFrame() {
     const id = crypto.randomUUID();
-    const defaultY = snapVal(Math.ceil(HEADER_ZONE_MM) + 5, snapToGrid);
-    const newFrame: TemplateFrame = { id, x: snapVal(10, snapToGrid), y: defaultY, width: snapVal(50, snapToGrid), height: snapVal(50, snapToGrid), label: `Frame ${frames.length + 1}` };
+    const newFrame: TemplateFrame = { id, x: snapVal(10, snapToGrid), y: snapVal(10, snapToGrid), width: snapVal(50, snapToGrid), height: snapVal(50, snapToGrid), label: `Frame ${frames.length + 1}` };
     setFrames((prev) => [...prev, newFrame]);
     setSelectedFrameId(id);
     setIsDirty(true);
@@ -386,53 +387,9 @@ export default function TemplateDesigner() {
             </svg>
           </div>
 
-          {/* Page content (header reserved zone + frame canvas), offset by ruler strips */}
+          {/* Page content — full-page frame canvas, offset by ruler strips */}
           <div style={{ marginLeft: RULER_PX, marginTop: RULER_PX }}>
-            {/* Header zone — top section of the page canvas, reserved for header content */}
-            <div
-              style={{
-                width: displayW,
-                height: headerZoneH,
-                background: "white",
-                boxShadow: "4px 0 0 0 rgba(0,0,0,0.13), -4px 0 0 0 rgba(0,0,0,0.13), 0 -4px 12px rgba(0,0,0,0.10)",
-                boxSizing: "border-box",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: `${5 * displayScale}px ${10 * displayScale}px`,
-                overflow: "hidden",
-                gap: 2 * displayScale,
-                position: "relative",
-                borderBottom: "2px dashed rgba(234,88,12,0.45)",
-              }}
-            >
-              {/* Reserved badge */}
-              <div style={{ position: "absolute", top: 3 * displayScale, right: 4 * displayScale, background: "rgba(234,88,12,0.82)", color: "white", fontSize: Math.max(8, 10 * displayScale), padding: `${1 * displayScale}px ${4 * displayScale}px`, borderRadius: 3, lineHeight: 1.4, pointerEvents: "none", whiteSpace: "nowrap" }}>
-                Reserved · Header
-              </div>
-              {logoData ? (
-                <img src={logoData} alt="logo" style={{ height: 28 * displayScale, maxWidth: 70 * displayScale, objectFit: "contain", flexShrink: 0 }} />
-              ) : (
-                <div style={{ width: 30 * displayScale, height: 22 * displayScale, background: "hsl(var(--muted))", border: "1px dashed hsl(var(--border))", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ fontSize: Math.max(5, 7 * displayScale), color: "hsl(var(--muted-foreground))", lineHeight: 1 }}>Logo</span>
-                </div>
-              )}
-              <div style={{ fontSize: Math.max(7, 13 * displayScale), fontWeight: 700, color: "#222", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", textAlign: "center" }}>
-                {officeName || "Office Name"}
-              </div>
-              {officeInfo && (
-                <div style={{ fontSize: Math.max(6, 10 * displayScale), color: "#555", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", textAlign: "center" }}>
-                  {officeInfo.split("\n")[0]}
-                </div>
-              )}
-              <div style={{ fontSize: Math.max(6, 10 * displayScale), color: "#666", opacity: 0.8, textAlign: "center", whiteSpace: "nowrap", borderTop: "1px solid #ddd", paddingTop: 2 * displayScale, marginTop: 1 * displayScale }}>
-                <span style={{ fontWeight: 600 }}>Patient Name</span>
-                <span> · DOB · Date</span>
-              </div>
-            </div>
-
-            {/* Frame canvas */}
+            {/* Frame canvas — covers the full page */}
             <div
               style={{
                 width: displayW,
@@ -444,6 +401,50 @@ export default function TemplateDesigner() {
               }}
               onClick={() => setSelectedFrameId(null)}
             >
+              {/* Centered info overlay — preview of where office info will print */}
+              <div style={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: displayW * 0.85,
+                boxSizing: "border-box",
+                background: "rgba(255,255,255,0.88)",
+                border: "2px dashed rgba(59,130,246,0.45)",
+                borderRadius: 5,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: `${5 * displayScale}px ${10 * displayScale}px`,
+                gap: 2 * displayScale,
+                pointerEvents: "none",
+                zIndex: 2,
+              }}>
+                <div style={{ position: "absolute", top: 3 * displayScale, right: 4 * displayScale, background: "rgba(59,130,246,0.8)", color: "white", fontSize: Math.max(7, 9 * displayScale), padding: `${1 * displayScale}px ${4 * displayScale}px`, borderRadius: 3, lineHeight: 1.4, whiteSpace: "nowrap" }}>
+                  Reserved · Office Info
+                </div>
+                {logoData ? (
+                  <img src={logoData} alt="logo" style={{ height: 24 * displayScale, maxWidth: 60 * displayScale, objectFit: "contain", flexShrink: 0 }} />
+                ) : (
+                  <div style={{ width: 28 * displayScale, height: 18 * displayScale, background: "hsl(var(--muted))", border: "1px dashed hsl(var(--border))", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontSize: Math.max(5, 6 * displayScale), color: "hsl(var(--muted-foreground))", lineHeight: 1 }}>Logo</span>
+                  </div>
+                )}
+                <div style={{ fontSize: Math.max(7, 11 * displayScale), fontWeight: 700, color: "#222", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", textAlign: "center" }}>
+                  {officeName || "Office Name"}
+                </div>
+                {officeInfo && (
+                  <div style={{ fontSize: Math.max(6, 9 * displayScale), color: "#555", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", textAlign: "center" }}>
+                    {officeInfo.split("\n")[0]}
+                  </div>
+                )}
+                <div style={{ fontSize: Math.max(6, 9 * displayScale), color: "#666", opacity: 0.8, textAlign: "center", whiteSpace: "nowrap", borderTop: "1px solid #ddd", paddingTop: 2 * displayScale, marginTop: displayScale }}>
+                  <span style={{ fontWeight: 600 }}>Patient Name</span>
+                  <span> · DOB · Date</span>
+                </div>
+              </div>
+
               {snapToGrid && (
                 <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 1 }}>
                   {gridLinesX.map((x, i) => (
@@ -462,7 +463,9 @@ export default function TemplateDesigner() {
                 const fw = frame.width * PX_PER_MM * displayScale;
                 const fh = frame.height * PX_PER_MM * displayScale;
                 const labelFontSize = Math.max(9, 11 * displayScale);
-                const overlapsHeader = frame.y < HEADER_ZONE_MM;
+                const overlapsInfo =
+                  frame.x < infoLeft + INFO_W_MM && frame.x + frame.width > infoLeft &&
+                  frame.y < infoTop + INFO_H_MM && frame.y + frame.height > infoTop;
                 return (
                   <div
                     key={frame.id}
@@ -472,8 +475,8 @@ export default function TemplateDesigner() {
                     <div
                       style={{
                         position: "absolute", inset: 0,
-                        border: overlapsHeader ? "2px solid rgba(234,88,12,0.8)" : isSelected ? "2px solid hsl(var(--primary))" : "2px dashed hsl(var(--muted-foreground))",
-                        background: overlapsHeader ? "rgba(254,215,170,0.35)" : isSelected ? "hsl(var(--primary)/0.05)" : "hsl(var(--muted)/0.3)",
+                        border: overlapsInfo ? "2px solid rgba(234,88,12,0.8)" : isSelected ? "2px solid hsl(var(--primary))" : "2px dashed hsl(var(--muted-foreground))",
+                        background: overlapsInfo ? "rgba(254,215,170,0.35)" : isSelected ? "hsl(var(--primary)/0.05)" : "hsl(var(--muted)/0.3)",
                         cursor: "move",
                         boxSizing: "border-box",
                         userSelect: "none",
@@ -489,12 +492,12 @@ export default function TemplateDesigner() {
                         dragRef.current = { type: "move", frameId: frame.id, startMX: e.clientX, startMY: e.clientY, origX: frame.x, origY: frame.y };
                       }}
                     >
-                      {overlapsHeader && (
+                      {overlapsInfo && (
                         <span style={{ fontSize: Math.max(7, 9 * displayScale), color: "rgba(180,50,0,0.9)", fontWeight: 600, pointerEvents: "none", marginBottom: 2 }}>
-                          ⚠ Overlaps header
+                          ⚠ Overlaps office info
                         </span>
                       )}
-                      <span style={{ fontSize: labelFontSize, color: overlapsHeader ? "rgba(120,40,0,0.85)" : "hsl(var(--muted-foreground))", fontWeight: 500, pointerEvents: "none", textAlign: "center", padding: "0 4px" }}>
+                      <span style={{ fontSize: labelFontSize, color: overlapsInfo ? "rgba(120,40,0,0.85)" : "hsl(var(--muted-foreground))", fontWeight: 500, pointerEvents: "none", textAlign: "center", padding: "0 4px" }}>
                         {frame.label || `Frame ${i + 1}`}
                       </span>
                       <span style={{ fontSize: Math.max(8, 9 * displayScale), color: "hsl(var(--muted-foreground)/0.6)", pointerEvents: "none", marginTop: 2 }}>

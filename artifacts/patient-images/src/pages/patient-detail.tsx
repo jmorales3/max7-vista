@@ -90,6 +90,7 @@ export default function PatientDetail() {
   const [gridColumns, setGridColumns] = useState<1 | 2 | 4 | 8>(4);
   const [selectedTagId, setSelectedTagId] = useState("");
   const [templateDocOpen, setTemplateDocOpen] = useState(false);
+  const [deleteDocId, setDeleteDocId] = useState<number | null>(null);
 
   const { data: patient, isLoading: patientLoading } = useGetPatient(id, {
     query: { enabled: !!id, queryKey: getGetPatientQueryKey(id) }
@@ -182,6 +183,20 @@ export default function PatientDetail() {
     },
     onError: () => {
       toast({ variant: "destructive", title: t("patients.createTemplateDocError") });
+    },
+  });
+
+  const deleteDocMutation = useMutation({
+    mutationFn: (docId: number) =>
+      customFetch<void>(`/api/template-documents/${docId}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["template-documents", "patient", id] });
+      setDeleteDocId(null);
+      toast({ title: "Document deleted" });
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Failed to delete document" });
+      setDeleteDocId(null);
     },
   });
 
@@ -388,18 +403,39 @@ export default function PatientDetail() {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {patientDocs.map((doc) => (
-              <a
+              <div
                 key={doc.id}
-                href={`/template-documents/${doc.id}`}
                 className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 hover:bg-accent hover:border-primary/40 transition-colors group"
               >
                 <LayoutTemplate className="h-5 w-5 shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
-                <div className="flex-1 min-w-0">
+                <a
+                  href={`/template-documents/${doc.id}`}
+                  className="flex-1 min-w-0 cursor-pointer"
+                >
                   <div className="font-medium truncate text-sm">{doc.title}</div>
                   <div className="text-xs text-muted-foreground">{format(new Date(doc.updatedAt), "MMM d, yyyy")}</div>
+                </a>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                    asChild
+                  >
+                    <a href={`/template-documents/${doc.id}`}>
+                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                    </a>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={(e) => { e.preventDefault(); setDeleteDocId(doc.id); }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
-                <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-              </a>
+              </div>
             ))}
           </div>
         </div>
@@ -463,6 +499,26 @@ export default function PatientDetail() {
               onClick={() => deletePatient.mutate({ id: patient.id })}
             >
               {t("patients.deletePatient")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteDocId !== null} onOpenChange={(open) => { if (!open) setDeleteDocId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete document?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This template document will be permanently deleted. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => { if (deleteDocId !== null) deleteDocMutation.mutate(deleteDocId); }}
+            >
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
