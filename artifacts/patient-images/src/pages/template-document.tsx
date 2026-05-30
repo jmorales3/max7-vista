@@ -34,7 +34,7 @@ function ImageInFrame({
   const frameW = frame.width * pxPerMm;
   const frameH = frame.height * pxPerMm;
   const hasImage = !!docFrame.imageId;
-  const fitMode = docFrame.fitMode ?? "cover";
+  const fitMode = docFrame.fitMode ?? "contain";
   const canPan = hasImage && fitMode === "cover";
 
   let imgLeft = 0, imgTop = 0, imgW = frameW, imgH = frameH;
