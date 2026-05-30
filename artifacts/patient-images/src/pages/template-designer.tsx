@@ -271,7 +271,7 @@ export default function TemplateDesigner() {
   return (
     <div className="flex -mx-4 -mt-4 md:-mx-6 md:-mt-6 lg:-mx-8 lg:-mt-8" style={{ height: "calc(100vh - 3.5rem)" }}>
       {/* Canvas area */}
-      <div ref={containerRef} className="flex-1 bg-muted/40 overflow-auto flex flex-col items-center p-6 min-w-0">
+      <div ref={containerRef} className="flex-1 bg-muted/40 overflow-auto flex flex-col items-center p-6 min-w-0" style={{ scrollbarGutter: "stable" }}>
         <div className="w-full max-w-3xl">
           <div
             style={{
