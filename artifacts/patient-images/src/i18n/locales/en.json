@@ -93,7 +93,9 @@
     "templateDocuments": "Template Documents",
     "selectTemplate": "Pick a Template",
     "noTemplatesAvailable": "No templates yet. Create one in the Templates section first.",
-    "createTemplateDocError": "Failed to create document"
+    "createTemplateDocError": "Failed to create document",
+    "nameDocument": "Name Your Document",
+    "nameDocumentDesc": "Using template: {{template}}"
   },
   "capture": {
     "title": "Capture Image",

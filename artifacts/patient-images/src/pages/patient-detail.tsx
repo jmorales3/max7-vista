@@ -90,6 +90,8 @@ export default function PatientDetail() {
   const [gridColumns, setGridColumns] = useState<1 | 2 | 4 | 8>(4);
   const [selectedTagId, setSelectedTagId] = useState("");
   const [templateDocOpen, setTemplateDocOpen] = useState(false);
+  const [pendingTemplate, setPendingTemplate] = useState<TemplateItem | null>(null);
+  const [docName, setDocName] = useState("");
   const [deleteDocId, setDeleteDocId] = useState<number | null>(null);
 
   const { data: patient, isLoading: patientLoading } = useGetPatient(id, {
@@ -172,13 +174,15 @@ export default function PatientDetail() {
   });
 
   const createDocMutation = useMutation({
-    mutationFn: (templateId: number) =>
+    mutationFn: ({ templateId, title }: { templateId: number; title: string }) =>
       customFetch<{ id: number }>("/api/template-documents", {
         method: "POST",
-        body: JSON.stringify({ templateId, patientId: id }),
+        body: JSON.stringify({ templateId, patientId: id, title }),
       }),
     onSuccess: (doc) => {
       setTemplateDocOpen(false);
+      setPendingTemplate(null);
+      setDocName("");
       setLocation(`/template-documents/${doc.id}`);
     },
     onError: () => {
@@ -443,44 +447,75 @@ export default function PatientDetail() {
 
       <PatientDocuments patientId={patient.id} />
 
-      <Dialog open={templateDocOpen} onOpenChange={setTemplateDocOpen}>
+      <Dialog open={templateDocOpen} onOpenChange={(o) => { if (!o) { setTemplateDocOpen(false); setPendingTemplate(null); setDocName(""); } }}>
         <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <LayoutTemplate className="h-5 w-5 text-primary" />
-              {t("patients.selectTemplate")}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2 mt-2">
-            {templatesLoading ? (
-              <>
-                <Skeleton className="h-14 w-full" />
-                <Skeleton className="h-14 w-full" />
-                <Skeleton className="h-14 w-full" />
-              </>
-            ) : templates.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">
-                {t("patients.noTemplatesAvailable")}
-              </p>
-            ) : (
-              templates.map((tmpl) => (
-                <button
-                  key={tmpl.id}
-                  className="w-full flex items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm hover:bg-accent hover:border-primary/40 transition-colors disabled:opacity-50"
+          {!pendingTemplate ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <LayoutTemplate className="h-5 w-5 text-primary" />
+                  {t("patients.selectTemplate")}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-2 mt-2">
+                {templatesLoading ? (
+                  <>
+                    <Skeleton className="h-14 w-full" />
+                    <Skeleton className="h-14 w-full" />
+                    <Skeleton className="h-14 w-full" />
+                  </>
+                ) : templates.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">
+                    {t("patients.noTemplatesAvailable")}
+                  </p>
+                ) : (
+                  templates.map((tmpl) => (
+                    <button
+                      key={tmpl.id}
+                      className="w-full flex items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm hover:bg-accent hover:border-primary/40 transition-colors"
+                      onClick={() => { setPendingTemplate(tmpl); setDocName(tmpl.title); }}
+                    >
+                      <LayoutTemplate className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">{tmpl.title}</div>
+                        {tmpl.officeName && (
+                          <div className="text-xs text-muted-foreground truncate">{tmpl.officeName}</div>
+                        )}
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>{t("patients.nameDocument")}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3 py-2">
+                <p className="text-sm text-muted-foreground">
+                  {t("patients.nameDocumentDesc", { template: pendingTemplate.title })}
+                </p>
+                <Input
+                  value={docName}
+                  onChange={(e) => setDocName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && docName.trim()) createDocMutation.mutate({ templateId: pendingTemplate.id, title: docName.trim() }); }}
+                  autoFocus
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { setPendingTemplate(null); setDocName(""); }}>
+                  {t("common.back")}
+                </Button>
+                <Button
+                  onClick={() => createDocMutation.mutate({ templateId: pendingTemplate.id, title: docName.trim() || pendingTemplate.title })}
                   disabled={createDocMutation.isPending}
-                  onClick={() => createDocMutation.mutate(tmpl.id)}
                 >
-                  <LayoutTemplate className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <div className="min-w-0">
-                    <div className="font-medium truncate">{tmpl.title}</div>
-                    {tmpl.officeName && (
-                      <div className="text-xs text-muted-foreground truncate">{tmpl.officeName}</div>
-                    )}
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
+                  {createDocMutation.isPending ? t("templates.creating") : t("templates.createDocument")}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 

@@ -93,7 +93,9 @@
     "templateDocuments": "Documents de Modèle",
     "selectTemplate": "Choisir un Modèle",
     "noTemplatesAvailable": "Aucun modèle pour l'instant. Créez-en un dans la section Modèles d'abord.",
-    "createTemplateDocError": "Échec de la création du document"
+    "createTemplateDocError": "Échec de la création du document",
+    "nameDocument": "Nommer le document",
+    "nameDocumentDesc": "Modèle utilisé\u00a0: {{template}}"
   },
   "capture": {
     "title": "Capturer une Image",
