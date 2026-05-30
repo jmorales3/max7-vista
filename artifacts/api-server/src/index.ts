@@ -155,6 +155,30 @@ async function initSqlite() {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS templates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL DEFAULT 'Untitled Template',
+      office_name TEXT,
+      office_info TEXT,
+      logo_data TEXT,
+      page_width REAL NOT NULL DEFAULT 215.9,
+      page_height REAL NOT NULL DEFAULT 279.4,
+      frames TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS template_documents (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      template_id INTEGER NOT NULL REFERENCES templates(id) ON DELETE CASCADE,
+      patient_id INTEGER REFERENCES patients(id) ON DELETE SET NULL,
+      title TEXT NOT NULL DEFAULT 'Untitled Document',
+      frames TEXT NOT NULL DEFAULT '[]',
+      printed_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 
   logger.info("SQLite tables initialized");
@@ -175,8 +199,32 @@ async function initPostgres() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS templates (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL DEFAULT 'Untitled Template',
+      office_name TEXT,
+      office_info TEXT,
+      logo_data TEXT,
+      page_width REAL NOT NULL DEFAULT 215.9,
+      page_height REAL NOT NULL DEFAULT 279.4,
+      frames JSONB NOT NULL DEFAULT '[]',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS template_documents (
+      id SERIAL PRIMARY KEY,
+      template_id INTEGER NOT NULL REFERENCES templates(id) ON DELETE CASCADE,
+      patient_id INTEGER REFERENCES patients(id) ON DELETE SET NULL,
+      title TEXT NOT NULL DEFAULT 'Untitled Document',
+      frames JSONB NOT NULL DEFAULT '[]',
+      printed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
   `);
-  logger.info("PostgreSQL documents table ensured");
+  logger.info("PostgreSQL tables ensured");
 }
 
 async function start() {
