@@ -480,14 +480,16 @@ export default function TemplateDocumentPage() {
               {(patientImages as ImageItem[]).filter((img) => !img.patientId || img.patientId === document.patientId).map((img) => (
                 <button
                   key={img.id}
-                  className="relative block aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-primary focus:outline-none focus:border-primary"
+                  className="block w-full rounded-lg overflow-hidden border-2 border-transparent hover:border-primary focus:outline-none focus:border-primary"
                   onClick={() => pickerFrameId && assignImage(pickerFrameId, img.id)}
                 >
-                  <img
-                    src={`/api/images/${img.id}/file`}
-                    alt={img.fileName ?? ""}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
+                  <div className="aspect-square w-full overflow-hidden">
+                    <img
+                      src={`/api/images/${img.id}/file`}
+                      alt={img.fileName ?? ""}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 </button>
               ))}
             </div>
