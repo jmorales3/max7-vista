@@ -12,7 +12,7 @@ import { format } from "date-fns";
 
 interface TemplateFrame { id: string; x: number; y: number; width: number; height: number; label?: string; }
 interface Template { id: number; title: string; officeName?: string | null; officeInfo?: string | null; logoData?: string | null; pageWidth: number; pageHeight: number; frames: TemplateFrame[]; }
-interface DocumentFrame { frameId: string; imageId?: number; panX: number; panY: number; zoom?: number; }
+interface DocumentFrame { frameId: string; imageId?: number; panX: number; panY: number; zoom?: number; headerX?: number; headerY?: number; headerWidth?: number; headerEnabled?: boolean; }
 interface TemplateDocument { id: number; templateId: number; patientId?: number | null; title: string; frames: DocumentFrame[]; printedAt?: string | null; createdAt: string; updatedAt: string; }
 interface PatientData { id: number; name: string; dateOfBirth?: string | null; }
 interface ImageItem { id: number; fileName?: string; capturedAt: string; patientId?: number | null; }
@@ -201,6 +201,132 @@ function ImageInFrame({
   );
 }
 
+function HeaderInCanvas({
+  x, y, width, template, patient, printDate, displayScale, editing,
+  onMove, onWidthChange, onRemove,
+}: {
+  x: number; y: number; width: number;
+  template: Template; patient?: PatientData; printDate: string;
+  displayScale: number; editing: boolean;
+  onMove: (x: number, y: number) => void;
+  onWidthChange: (w: number) => void;
+  onRemove: () => void;
+}) {
+  const dragRef = useRef<{ sx: number; sy: number; ox: number; oy: number } | null>(null);
+  const resizeRef = useRef<{ sx: number; sw: number } | null>(null);
+
+  const px = x * PX_PER_MM;
+  const py = y * PX_PER_MM;
+  const pw = width * PX_PER_MM;
+
+  const handleDragDown = (e: React.MouseEvent) => {
+    if (!editing) return;
+    e.preventDefault();
+    dragRef.current = { sx: e.clientX, sy: e.clientY, ox: x, oy: y };
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!dragRef.current) return;
+      const dx = (ev.clientX - dragRef.current.sx) / displayScale / PX_PER_MM;
+      const dy = (ev.clientY - dragRef.current.sy) / displayScale / PX_PER_MM;
+      onMove(dragRef.current.ox + dx, dragRef.current.oy + dy);
+    };
+    const onMouseUp = () => {
+      dragRef.current = null;
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  };
+
+  const handleResizeDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    resizeRef.current = { sx: e.clientX, sw: width };
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!resizeRef.current) return;
+      const dw = (ev.clientX - resizeRef.current.sx) / displayScale / PX_PER_MM;
+      onWidthChange(resizeRef.current.sw + dw);
+    };
+    const onMouseUp = () => {
+      resizeRef.current = null;
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  };
+
+  return (
+    <div
+      className="print-header"
+      style={{
+        position: "absolute",
+        left: px,
+        top: py,
+        width: pw,
+        boxSizing: "border-box",
+        background: "rgba(255,255,255,0.92)",
+        border: editing ? "2px dashed hsl(var(--primary))" : "1px solid #ddd",
+        borderRadius: 4,
+        padding: `${29 * displayScale}px ${12 * displayScale}px`,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        textAlign: "center",
+        gap: 2 * displayScale,
+        cursor: editing ? "move" : "default",
+        userSelect: editing ? "none" : undefined,
+      }}
+      onMouseDown={editing ? handleDragDown : undefined}
+    >
+      {editing && (
+        <button
+          className="no-print"
+          style={{ position: "absolute", top: 2, right: 2, background: "hsl(var(--destructive))", color: "white", borderRadius: 4, border: "none", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 10 }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          title="Hide header"
+        >
+          <X style={{ width: 10, height: 10 }} />
+        </button>
+      )}
+      {template.logoData && (
+        <img src={template.logoData} alt="logo" style={{ height: 62 * displayScale, maxWidth: pw * 0.65, objectFit: "contain" }} />
+      )}
+      {template.officeName && (
+        <div className="print-header-name" style={{ fontWeight: 700, fontSize: Math.max(11, 13 * displayScale), color: "#111", lineHeight: 1.2 }}>
+          {template.officeName}
+        </div>
+      )}
+      {template.officeInfo && (
+        <div className="print-header-info" style={{ fontSize: Math.max(9, 10 * displayScale), color: "#555", lineHeight: 1.2, whiteSpace: "pre-line" }}>
+          {template.officeInfo}
+        </div>
+      )}
+      <div className="print-header-patient" style={{ fontSize: Math.max(9, 10 * displayScale), color: "#444", lineHeight: 1.2, borderTop: "1px solid #ddd", paddingTop: 3 * displayScale, marginTop: displayScale, width: "100%" }}>
+        {patient ? (
+          <span style={{ fontWeight: 600 }}>{patient.name}</span>
+        ) : (
+          <span style={{ fontWeight: 600, opacity: 0.4, fontStyle: "italic" }}>Patient Name</span>
+        )}
+        {patient?.dateOfBirth ? (
+          <span> · DOB {patient.dateOfBirth}</span>
+        ) : !patient ? (
+          <span style={{ opacity: 0.4, fontStyle: "italic" }}> · DOB</span>
+        ) : null}
+        <span> · {printDate}</span>
+      </div>
+      {editing && (
+        <div
+          className="no-print"
+          style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: 10, cursor: "ew-resize", zIndex: 5 }}
+          onMouseDown={handleResizeDown}
+        />
+      )}
+    </div>
+  );
+}
+
 export default function TemplateDocumentPage() {
   const params = useParams<{ id: string }>();
   const documentId = parseInt(params.id);
@@ -250,13 +376,16 @@ export default function TemplateDocumentPage() {
   useEffect(() => {
     if (!document || !template) return;
     const existing = document.frames as DocumentFrame[];
-    const merged = (template.frames as TemplateFrame[]).map((tf) => {
-      const ex = existing.find((df) => df.frameId === tf.id);
-      if (!ex) return { frameId: tf.id, panX: 0, panY: 0, zoom: 1 };
-      // Migrate legacy format (zoom was 0=fit or 100=fill)
-      if (!ex.zoom || ex.zoom === 0 || ex.zoom >= 10) return { ...ex, panX: 0, panY: 0, zoom: 1 };
-      return ex;
-    });
+    const headerEx = existing.find((df) => df.frameId === "__header__");
+    const merged: DocumentFrame[] = [
+      ...(template.frames as TemplateFrame[]).map((tf) => {
+        const ex = existing.find((df) => df.frameId === tf.id);
+        if (!ex) return { frameId: tf.id, panX: 0, panY: 0, zoom: 1 };
+        if (!ex.zoom || ex.zoom === 0 || ex.zoom >= 10) return { ...ex, panX: 0, panY: 0, zoom: 1 };
+        return ex;
+      }),
+      ...(headerEx ? [headerEx] : []),
+    ];
     setDocFrames(merged);
     setDirty(false);
   }, [document, template]);
@@ -307,6 +436,33 @@ export default function TemplateDocumentPage() {
     setDirty(true);
   }
 
+  function updateHeaderPos(newX: number, newY: number) {
+    setDocFrames((prev) => {
+      const ex = prev.find((df) => df.frameId === "__header__");
+      const updated: DocumentFrame = { ...(ex ?? { frameId: "__header__", panX: 0, panY: 0 }), headerX: newX, headerY: newY };
+      return ex ? prev.map((df) => df.frameId === "__header__" ? updated : df) : [...prev, updated];
+    });
+    setDirty(true);
+  }
+
+  function updateHeaderWidth(newW: number) {
+    setDocFrames((prev) => {
+      const ex = prev.find((df) => df.frameId === "__header__");
+      const updated: DocumentFrame = { ...(ex ?? { frameId: "__header__", panX: 0, panY: 0 }), headerWidth: Math.max(40, newW) };
+      return ex ? prev.map((df) => df.frameId === "__header__" ? updated : df) : [...prev, updated];
+    });
+    setDirty(true);
+  }
+
+  function toggleHeader() {
+    setDocFrames((prev) => {
+      const ex = prev.find((df) => df.frameId === "__header__");
+      const updated: DocumentFrame = { ...(ex ?? { frameId: "__header__", panX: 0, panY: 0 }), headerEnabled: !(ex?.headerEnabled ?? true) };
+      return ex ? prev.map((df) => df.frameId === "__header__" ? updated : df) : [...prev, updated];
+    });
+    setDirty(true);
+  }
+
   // suppress unused warning
   void saving; void setSaving;
 
@@ -320,6 +476,12 @@ export default function TemplateDocumentPage() {
 
   const printDate = format(new Date(), "MMMM d, yyyy");
   const pickerFrame = template?.frames.find((f) => f.id === pickerFrameId) ?? null;
+
+  const headerEntry = docFrames.find((df) => df.frameId === "__header__");
+  const headerEnabled = headerEntry?.headerEnabled ?? true;
+  const headerX = headerEntry?.headerX ?? (pageWidth - 88.9) / 2;
+  const headerY = headerEntry?.headerY ?? (pageHeight - 60) / 2;
+  const headerW = headerEntry?.headerWidth ?? 88.9;
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-64 text-muted-foreground">{t("templates.document.loading")}</div>;
@@ -348,12 +510,6 @@ export default function TemplateDocumentPage() {
             position: relative !important;
           }
           .print-header {
-            position: absolute !important;
-            top: 50% !important;
-            left: 50% !important;
-            transform: translate(-50%, -50%) !important;
-            width: 88.9mm !important;
-            max-width: 88.9mm !important;
             padding: 8.35mm 5mm !important;
             background: rgba(255,255,255,0.92) !important;
             border: none !important;
@@ -363,6 +519,7 @@ export default function TemplateDocumentPage() {
             align-items: center !important;
             text-align: center !important;
             gap: 2mm !important;
+            cursor: default !important;
           }
           .print-header img { height: 24mm !important; max-width: 56mm !important; object-fit: contain !important; }
           .print-header-name { font-size: 13pt !important; }
@@ -380,6 +537,9 @@ export default function TemplateDocumentPage() {
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-foreground truncate max-w-48">{document.title}</span>
             {dirty && <span className="text-xs text-muted-foreground">{t("templates.document.unsavedChanges")}</span>}
+            <Button variant={headerEnabled ? "secondary" : "outline"} size="sm" onClick={toggleHeader} title={headerEnabled ? "Hide header block" : "Show header block"}>
+              {headerEnabled ? "Header: On" : "Header: Off"}
+            </Button>
             <Button variant="outline" size="sm" onClick={handleSave} disabled={saveMutation.isPending || !dirty}>
               <Save className="h-3.5 w-3.5 mr-1.5" />
               {saveMutation.isPending ? t("templates.document.saving") : t("templates.document.save")}
@@ -437,51 +597,22 @@ export default function TemplateDocumentPage() {
                   />
                 );
               })}
-            </div>
 
-            {/* Office info — centered overlay on the page */}
-            <div
-              className="print-header"
-              style={{
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                width: 76.2 * PX_PER_MM * displayScale,
-                boxSizing: "border-box",
-                background: "rgba(255,255,255,0.92)",
-                border: "1px solid #ddd",
-                borderRadius: 4,
-                padding: `${29 * displayScale}px ${12 * displayScale}px`,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                textAlign: "center",
-                gap: 2 * displayScale,
-              }}
-            >
-              {template.logoData && (
-                <img
-                  src={template.logoData}
-                  alt="logo"
-                  style={{ height: 62 * displayScale, maxWidth: 148 * displayScale, objectFit: "contain" }}
+              {headerEnabled && (
+                <HeaderInCanvas
+                  x={headerX}
+                  y={headerY}
+                  width={headerW}
+                  template={template}
+                  patient={patient}
+                  printDate={printDate}
+                  displayScale={displayScale}
+                  editing={true}
+                  onMove={updateHeaderPos}
+                  onWidthChange={updateHeaderWidth}
+                  onRemove={toggleHeader}
                 />
               )}
-              {template.officeName && (
-                <div className="print-header-name" style={{ fontWeight: 700, fontSize: Math.max(11, 13 * displayScale), color: "#111", lineHeight: 1.2 }}>
-                  {template.officeName}
-                </div>
-              )}
-              {template.officeInfo && (
-                <div className="print-header-info" style={{ fontSize: Math.max(9, 10 * displayScale), color: "#555", lineHeight: 1.2, whiteSpace: "pre-line" }}>
-                  {template.officeInfo}
-                </div>
-              )}
-              <div className="print-header-patient" style={{ fontSize: Math.max(9, 10 * displayScale), color: "#444", lineHeight: 1.2, borderTop: "1px solid #ddd", paddingTop: 3 * displayScale, marginTop: displayScale }}>
-                {patient && <span style={{ fontWeight: 600 }}>{patient.name}</span>}
-                {patient?.dateOfBirth && <span> · {t("templates.document.dob")} {patient.dateOfBirth}</span>}
-                <span> · {t("templates.document.date")} {printDate}</span>
-              </div>
             </div>
           </div>
         </div>
@@ -492,6 +623,9 @@ export default function TemplateDocumentPage() {
         <span className="text-sm font-medium text-foreground truncate max-w-xs">{document.title}</span>
         <div className="flex items-center gap-2 shrink-0">
           {dirty && <span className="text-xs text-muted-foreground">{t("templates.document.unsavedChanges")}</span>}
+          <Button variant={headerEnabled ? "secondary" : "outline"} size="sm" onClick={toggleHeader}>
+            {headerEnabled ? "Header: On" : "Header: Off"}
+          </Button>
           <Button variant="outline" size="sm" onClick={handleSave} disabled={saveMutation.isPending || !dirty}>
             <Save className="h-3.5 w-3.5 mr-1.5" />
             {saveMutation.isPending ? t("templates.document.saving") : t("templates.document.save")}
