@@ -294,50 +294,43 @@ export default function TemplateDesigner() {
           <div
             style={{
               width: displayW, margin: "0 auto",
-              height: 48 * displayScale,
+              height: 60 * displayScale,
               background: "hsl(var(--muted)/0.35)",
               border: "1px solid hsl(var(--border)/0.6)",
               borderBottom: "2px solid hsl(var(--primary)/0.25)",
               boxSizing: "border-box",
               display: "flex",
+              flexDirection: "column",
               alignItems: "center",
-              justifyContent: "space-between",
-              padding: `${4 * displayScale}px ${8 * displayScale}px`,
+              justifyContent: "center",
+              padding: `${3 * displayScale}px ${8 * displayScale}px`,
               overflow: "hidden",
-              position: "relative",
+              gap: 1 * displayScale,
             }}
             title="Reserved header area — logo, office info, patient name and DOB appear here in the printed document"
           >
-            {/* Left: logo + office info */}
-            <div style={{ display: "flex", alignItems: "center", gap: 5 * displayScale, overflow: "hidden", minWidth: 0 }}>
-              {logoData ? (
-                <img src={logoData} alt="logo" style={{ height: 28 * displayScale, maxWidth: 54 * displayScale, objectFit: "contain", flexShrink: 0 }} />
-              ) : (
-                <div style={{ width: 26 * displayScale, height: 26 * displayScale, background: "hsl(var(--muted))", border: "1px dashed hsl(var(--border))", borderRadius: 3, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ fontSize: Math.max(5, 7 * displayScale), color: "hsl(var(--muted-foreground))", lineHeight: 1 }}>Logo</span>
-                </div>
-              )}
-              <div style={{ overflow: "hidden", minWidth: 0 }}>
-                <div style={{ fontSize: Math.max(6, 9 * displayScale), fontWeight: 600, color: "#222", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {officeName || "Office Name"}
-                </div>
-                {officeInfo && (
-                  <div style={{ fontSize: Math.max(5, 7.5 * displayScale), color: "#555", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {officeInfo.split("\n")[0]}
-                  </div>
-                )}
+            {/* Logo */}
+            {logoData ? (
+              <img src={logoData} alt="logo" style={{ height: 20 * displayScale, maxWidth: 50 * displayScale, objectFit: "contain", flexShrink: 0 }} />
+            ) : (
+              <div style={{ width: 22 * displayScale, height: 16 * displayScale, background: "hsl(var(--muted))", border: "1px dashed hsl(var(--border))", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: Math.max(4, 6 * displayScale), color: "hsl(var(--muted-foreground))", lineHeight: 1 }}>Logo</span>
               </div>
+            )}
+            {/* Office name */}
+            <div style={{ fontSize: Math.max(6, 9 * displayScale), fontWeight: 700, color: "#222", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", textAlign: "center" }}>
+              {officeName || "Office Name"}
             </div>
-            {/* Center label */}
-            <div style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", pointerEvents: "none" }}>
-              <span style={{ fontSize: Math.max(5, 7 * displayScale), color: "hsl(var(--primary)/0.5)", fontStyle: "italic", whiteSpace: "nowrap", background: "hsl(var(--muted)/0.6)", borderRadius: 2, padding: `1px ${3 * displayScale}px` }}>
-                {t("templates.designer.headerReserved")}
-              </span>
-            </div>
-            {/* Right: patient placeholder */}
-            <div style={{ textAlign: "right", flexShrink: 0, opacity: 0.55 }}>
-              <div style={{ fontSize: Math.max(6, 8 * displayScale), color: "#444", fontWeight: 600 }}>Patient Name</div>
-              <div style={{ fontSize: Math.max(5, 7 * displayScale), color: "#777" }}>DOB · Date</div>
+            {/* Office info first line */}
+            {officeInfo && (
+              <div style={{ fontSize: Math.max(5, 7 * displayScale), color: "#555", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", textAlign: "center" }}>
+                {officeInfo.split("\n")[0]}
+              </div>
+            )}
+            {/* Patient / date row */}
+            <div style={{ fontSize: Math.max(5, 7 * displayScale), color: "#666", opacity: 0.7, textAlign: "center", whiteSpace: "nowrap", borderTop: `1px solid hsl(var(--border)/0.4)`, paddingTop: 1 * displayScale, marginTop: 1 * displayScale }}>
+              <span style={{ fontWeight: 600 }}>Patient Name</span>
+              <span> · DOB · Date</span>
             </div>
           </div>
 

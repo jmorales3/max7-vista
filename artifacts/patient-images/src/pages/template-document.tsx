@@ -299,18 +299,17 @@ export default function TemplateDocumentPage() {
   }
 
   const headerStyle: React.CSSProperties = {
-    padding: "6px 10px 4px",
+    padding: "5px 10px 4px",
     borderBottom: "1px solid #ccc",
     marginBottom: 0,
     display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
+    flexDirection: "column",
+    alignItems: "center",
+    textAlign: "center",
+    gap: 1,
   };
 
-  const headerLeft: React.CSSProperties = { fontSize: "9pt", lineHeight: 1.4, color: "#222" };
-  const headerRight: React.CSSProperties = { fontSize: "8pt", lineHeight: 1.4, color: "#555", textAlign: "right" };
-
-  const HEADER_PX = 48 * displayScale;
+  const HEADER_PX = 60 * displayScale;
 
   return (
     <>
@@ -325,9 +324,7 @@ export default function TemplateDocumentPage() {
             box-shadow: none !important;
             margin: 0 !important;
           }
-          .print-header { padding: 4mm 5mm 2mm !important; }
-          .print-header-left { font-size: 9pt !important; }
-          .print-header-right { font-size: 8pt !important; }
+          .print-header { padding: 4mm 8mm 3mm !important; }
           .print-frame img {
             left: var(--img-left) !important;
             top: var(--img-top) !important;
@@ -383,27 +380,27 @@ export default function TemplateDocumentPage() {
                 width: physW,
               }}
             >
-              <div className="print-header-left" style={{ ...headerLeft, display: "flex", alignItems: "flex-start", gap: 8 }}>
-                {template.logoData && (
-                  <img
-                    src={template.logoData}
-                    alt="logo"
-                    style={{ height: 36, maxWidth: 72, objectFit: "contain", flexShrink: 0 }}
-                  />
-                )}
-                <div>
-                  {template.officeName && <div style={{ fontWeight: 600 }}>{template.officeName}</div>}
-                  {template.officeInfo && <div style={{ whiteSpace: "pre-line" }}>{template.officeInfo}</div>}
+              {template.logoData && (
+                <img
+                  src={template.logoData}
+                  alt="logo"
+                  style={{ height: 28, maxWidth: 64, objectFit: "contain" }}
+                />
+              )}
+              {template.officeName && (
+                <div style={{ fontWeight: 700, fontSize: "9pt", color: "#111", lineHeight: 1.3 }}>
+                  {template.officeName}
                 </div>
-              </div>
-              <div className="print-header-right" style={headerRight}>
-                {patient && (
-                  <>
-                    <div style={{ fontWeight: 600 }}>{patient.name}</div>
-                    {patient.dateOfBirth && <div>{t("templates.document.dob")} {patient.dateOfBirth}</div>}
-                  </>
-                )}
-                <div>{t("templates.document.date")} {printDate}</div>
+              )}
+              {template.officeInfo && (
+                <div style={{ fontSize: "7.5pt", color: "#555", lineHeight: 1.3, whiteSpace: "pre-line" }}>
+                  {template.officeInfo}
+                </div>
+              )}
+              <div style={{ fontSize: "7.5pt", color: "#444", lineHeight: 1.3, borderTop: "1px solid #ddd", paddingTop: 2, marginTop: 1 }}>
+                {patient && <span style={{ fontWeight: 600 }}>{patient.name}</span>}
+                {patient?.dateOfBirth && <span> · {t("templates.document.dob")} {patient.dateOfBirth}</span>}
+                <span> · {t("templates.document.date")} {printDate}</span>
               </div>
             </div>
             <div
