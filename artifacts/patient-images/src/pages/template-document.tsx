@@ -65,7 +65,7 @@ function ImageInFrame({
     window.addEventListener("mouseup", onUp);
   };
 
-  const labelFontPx = Math.max(7, 9 * (pxPerMm / PX_PER_MM));
+  const labelFontPx = Math.max(9, 13 * (pxPerMm / PX_PER_MM));
   const btnFontPx = Math.max(6, 8 * (pxPerMm / PX_PER_MM));
   // At zoom=0 → objectFit:contain (full image, EXIF handled by browser)
   // At zoom>0 → objectFit:cover with objectPosition for panning
@@ -284,18 +284,11 @@ export default function TemplateDocumentPage() {
     return <div className="flex items-center justify-center h-64 text-muted-foreground">{t("templates.document.notFound")}</div>;
   }
 
-  const headerStyle: React.CSSProperties = {
-    padding: "5px 10px 4px",
-    borderBottom: "1px solid #ccc",
-    marginBottom: 0,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    textAlign: "center",
-    gap: 1,
-  };
-
-  const HEADER_PX = 60 * displayScale;
+  // Physical header height in CSS pixels (before display scaling).
+  // Must match the constant in template-designer.tsx.
+  const HEADER_PHYSICAL_PX = 80;
+  // Displayed header height (what the browser renders on screen)
+  const HEADER_PX = HEADER_PHYSICAL_PX * displayScale;
 
   return (
     <>
@@ -310,7 +303,10 @@ export default function TemplateDocumentPage() {
             box-shadow: none !important;
             margin: 0 !important;
           }
-          .print-header { padding: 4mm 8mm 3mm !important; }
+          .print-header-wrap { width: ${pageWidth}mm !important; height: ${(HEADER_PHYSICAL_PX / (96 / 25.4)).toFixed(1)}mm !important; overflow: hidden !important; }
+          .print-header { transform: none !important; width: ${pageWidth}mm !important; height: ${(HEADER_PHYSICAL_PX / (96 / 25.4)).toFixed(1)}mm !important; padding: 3mm 8mm !important; }
+          .print-frame-wrap { top: ${(HEADER_PHYSICAL_PX / (96 / 25.4)).toFixed(1)}mm !important; left: 0 !important; width: ${pageWidth}mm !important; height: ${pageHeight}mm !important; }
+          .print-canvas { transform: none !important; width: ${pageWidth}mm !important; height: ${pageHeight}mm !important; }
           .print-frame img { object-fit: inherit; object-position: inherit; }
           @page { size: ${pageWidth}mm ${pageHeight}mm; margin: 0; }
         }
@@ -351,40 +347,55 @@ export default function TemplateDocumentPage() {
               overflow: "hidden",
             }}
           >
+            {/* Header: wrapper clips transform overflow to correct display size */}
             <div
-              className="print-header"
-              style={{
-                ...headerStyle,
-                height: HEADER_PX,
-                transform: `scale(${displayScale})`,
-                transformOrigin: "top left",
-                width: physW,
-              }}
+              className="print-header-wrap"
+              style={{ width: physW * displayScale, height: HEADER_PX, overflow: "hidden" }}
             >
-              {template.logoData && (
-                <img
-                  src={template.logoData}
-                  alt="logo"
-                  style={{ height: 28, maxWidth: 64, objectFit: "contain" }}
-                />
-              )}
-              {template.officeName && (
-                <div style={{ fontWeight: 700, fontSize: "9pt", color: "#111", lineHeight: 1.3 }}>
-                  {template.officeName}
+              <div
+                className="print-header"
+                style={{
+                  height: HEADER_PHYSICAL_PX,
+                  width: physW,
+                  transform: `scale(${displayScale})`,
+                  transformOrigin: "top left",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textAlign: "center",
+                  gap: 2,
+                  padding: "6px 14px 5px",
+                  borderBottom: "1.5px solid #ccc",
+                  boxSizing: "border-box",
+                }}
+              >
+                {template.logoData && (
+                  <img
+                    src={template.logoData}
+                    alt="logo"
+                    style={{ height: 38, maxWidth: 90, objectFit: "contain" }}
+                  />
+                )}
+                {template.officeName && (
+                  <div style={{ fontWeight: 700, fontSize: "13pt", color: "#111", lineHeight: 1.2 }}>
+                    {template.officeName}
+                  </div>
+                )}
+                {template.officeInfo && (
+                  <div style={{ fontSize: "10pt", color: "#555", lineHeight: 1.2, whiteSpace: "pre-line" }}>
+                    {template.officeInfo}
+                  </div>
+                )}
+                <div style={{ fontSize: "10pt", color: "#444", lineHeight: 1.2, borderTop: "1px solid #ddd", paddingTop: 3, marginTop: 1 }}>
+                  {patient && <span style={{ fontWeight: 600 }}>{patient.name}</span>}
+                  {patient?.dateOfBirth && <span> · {t("templates.document.dob")} {patient.dateOfBirth}</span>}
+                  <span> · {t("templates.document.date")} {printDate}</span>
                 </div>
-              )}
-              {template.officeInfo && (
-                <div style={{ fontSize: "7.5pt", color: "#555", lineHeight: 1.3, whiteSpace: "pre-line" }}>
-                  {template.officeInfo}
-                </div>
-              )}
-              <div style={{ fontSize: "7.5pt", color: "#444", lineHeight: 1.3, borderTop: "1px solid #ddd", paddingTop: 2, marginTop: 1 }}>
-                {patient && <span style={{ fontWeight: 600 }}>{patient.name}</span>}
-                {patient?.dateOfBirth && <span> · {t("templates.document.dob")} {patient.dateOfBirth}</span>}
-                <span> · {t("templates.document.date")} {printDate}</span>
               </div>
             </div>
             <div
+              className="print-frame-wrap"
               style={{
                 position: "absolute",
                 top: HEADER_PX,
@@ -395,6 +406,7 @@ export default function TemplateDocumentPage() {
               }}
             >
               <div
+                className="print-canvas"
                 style={{
                   transform: `scale(${displayScale})`,
                   transformOrigin: "top left",

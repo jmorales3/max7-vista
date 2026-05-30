@@ -226,9 +226,13 @@ export default function TemplateDesigner() {
     e.target.value = "";
   }
 
+  // Header zone height in mm — must match HEADER_PHYSICAL_PX (80px) in template-document.tsx
+  const HEADER_ZONE_MM = 80 / PX_PER_MM; // ≈ 21.2mm
+
   function addFrame() {
     const id = crypto.randomUUID();
-    const newFrame: TemplateFrame = { id, x: snapVal(10, snapToGrid), y: snapVal(10, snapToGrid), width: snapVal(50, snapToGrid), height: snapVal(50, snapToGrid), label: `Frame ${frames.length + 1}` };
+    const defaultY = snapVal(Math.ceil(HEADER_ZONE_MM) + 5, snapToGrid);
+    const newFrame: TemplateFrame = { id, x: snapVal(10, snapToGrid), y: defaultY, width: snapVal(50, snapToGrid), height: snapVal(50, snapToGrid), label: `Frame ${frames.length + 1}` };
     setFrames((prev) => [...prev, newFrame]);
     setSelectedFrameId(id);
     setIsDirty(true);
@@ -290,45 +294,49 @@ export default function TemplateDesigner() {
       {/* Canvas area */}
       <div ref={containerRef} className="flex-1 bg-muted/40 overflow-auto flex flex-col items-center p-6 min-w-0" style={{ scrollbarGutter: "stable" }}>
         <div className="w-full max-w-3xl">
-          {/* Header preview — mirrors document header so frames can be designed around it */}
+          {/* Header zone — top section of the page canvas, reserved for header content */}
           <div
             style={{
               width: displayW, margin: "0 auto",
-              height: 60 * displayScale,
-              background: "hsl(var(--muted)/0.35)",
-              border: "1px solid hsl(var(--border)/0.6)",
-              borderBottom: "2px solid hsl(var(--primary)/0.25)",
+              height: 80 * displayScale,
+              background: "white",
+              boxShadow: "4px 0 0 0 rgba(0,0,0,0.15), -4px 0 0 0 rgba(0,0,0,0.15), 0 -4px 12px rgba(0,0,0,0.12)",
               boxSizing: "border-box",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              padding: `${3 * displayScale}px ${8 * displayScale}px`,
+              padding: `${5 * displayScale}px ${10 * displayScale}px`,
               overflow: "hidden",
-              gap: 1 * displayScale,
+              gap: 2 * displayScale,
+              position: "relative",
+              borderBottom: "2px dashed rgba(234,88,12,0.45)",
             }}
-            title="Reserved header area — logo, office info, patient name and DOB appear here in the printed document"
           >
+            {/* Reserved badge */}
+            <div style={{ position: "absolute", top: 3 * displayScale, right: 4 * displayScale, background: "rgba(234,88,12,0.82)", color: "white", fontSize: Math.max(8, 10 * displayScale), padding: `${1 * displayScale}px ${4 * displayScale}px`, borderRadius: 3, lineHeight: 1.4, pointerEvents: "none", whiteSpace: "nowrap" }}>
+              Reserved · Header
+            </div>
             {/* Logo */}
             {logoData ? (
-              <img src={logoData} alt="logo" style={{ height: 20 * displayScale, maxWidth: 50 * displayScale, objectFit: "contain", flexShrink: 0 }} />
+              <img src={logoData} alt="logo" style={{ height: 28 * displayScale, maxWidth: 70 * displayScale, objectFit: "contain", flexShrink: 0 }} />
             ) : (
-              <div style={{ width: 22 * displayScale, height: 16 * displayScale, background: "hsl(var(--muted))", border: "1px dashed hsl(var(--border))", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ fontSize: Math.max(4, 6 * displayScale), color: "hsl(var(--muted-foreground))", lineHeight: 1 }}>Logo</span>
+              <div style={{ width: 30 * displayScale, height: 22 * displayScale, background: "hsl(var(--muted))", border: "1px dashed hsl(var(--border))", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: Math.max(5, 7 * displayScale), color: "hsl(var(--muted-foreground))", lineHeight: 1 }}>Logo</span>
               </div>
             )}
             {/* Office name */}
-            <div style={{ fontSize: Math.max(6, 9 * displayScale), fontWeight: 700, color: "#222", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", textAlign: "center" }}>
+            <div style={{ fontSize: Math.max(7, 13 * displayScale), fontWeight: 700, color: "#222", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", textAlign: "center" }}>
               {officeName || "Office Name"}
             </div>
             {/* Office info first line */}
             {officeInfo && (
-              <div style={{ fontSize: Math.max(5, 7 * displayScale), color: "#555", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", textAlign: "center" }}>
+              <div style={{ fontSize: Math.max(6, 10 * displayScale), color: "#555", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", textAlign: "center" }}>
                 {officeInfo.split("\n")[0]}
               </div>
             )}
             {/* Patient / date row */}
-            <div style={{ fontSize: Math.max(5, 7 * displayScale), color: "#666", opacity: 0.7, textAlign: "center", whiteSpace: "nowrap", borderTop: `1px solid hsl(var(--border)/0.4)`, paddingTop: 1 * displayScale, marginTop: 1 * displayScale }}>
+            <div style={{ fontSize: Math.max(6, 10 * displayScale), color: "#666", opacity: 0.8, textAlign: "center", whiteSpace: "nowrap", borderTop: `1px solid #ddd`, paddingTop: 2 * displayScale, marginTop: 1 * displayScale }}>
               <span style={{ fontWeight: 600 }}>Patient Name</span>
               <span> · DOB · Date</span>
             </div>
@@ -340,7 +348,7 @@ export default function TemplateDesigner() {
               height: displayH,
               position: "relative",
               background: "white",
-              boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
               margin: "0 auto",
               overflow: "hidden",
             }}
@@ -368,6 +376,7 @@ export default function TemplateDesigner() {
               const fw = frame.width * PX_PER_MM * displayScale;
               const fh = frame.height * PX_PER_MM * displayScale;
               const labelFontSize = Math.max(9, 11 * displayScale);
+              const overlapsHeader = frame.y < HEADER_ZONE_MM;
               return (
                 <div
                   key={frame.id}
@@ -377,8 +386,12 @@ export default function TemplateDesigner() {
                   <div
                     style={{
                       position: "absolute", inset: 0,
-                      border: isSelected ? "2px solid hsl(var(--primary))" : "2px dashed hsl(var(--muted-foreground))",
-                      background: isSelected ? "hsl(var(--primary)/0.05)" : "hsl(var(--muted)/0.3)",
+                      border: overlapsHeader
+                        ? "2px solid rgba(234,88,12,0.8)"
+                        : isSelected ? "2px solid hsl(var(--primary))" : "2px dashed hsl(var(--muted-foreground))",
+                      background: overlapsHeader
+                        ? "rgba(254,215,170,0.35)"
+                        : isSelected ? "hsl(var(--primary)/0.05)" : "hsl(var(--muted)/0.3)",
                       cursor: "move",
                       boxSizing: "border-box",
                       userSelect: "none",
@@ -394,7 +407,12 @@ export default function TemplateDesigner() {
                       dragRef.current = { type: "move", frameId: frame.id, startMX: e.clientX, startMY: e.clientY, origX: frame.x, origY: frame.y };
                     }}
                   >
-                    <span style={{ fontSize: labelFontSize, color: "hsl(var(--muted-foreground))", fontWeight: 500, pointerEvents: "none", textAlign: "center", padding: "0 4px" }}>
+                    {overlapsHeader && (
+                      <span style={{ fontSize: Math.max(7, 9 * displayScale), color: "rgba(180,50,0,0.9)", fontWeight: 600, pointerEvents: "none", marginBottom: 2 }}>
+                        ⚠ Overlaps header
+                      </span>
+                    )}
+                    <span style={{ fontSize: labelFontSize, color: overlapsHeader ? "rgba(120,40,0,0.85)" : "hsl(var(--muted-foreground))", fontWeight: 500, pointerEvents: "none", textAlign: "center", padding: "0 4px" }}>
                       {frame.label || `Frame ${i + 1}`}
                     </span>
                     <span style={{ fontSize: Math.max(8, 9 * displayScale), color: "hsl(var(--muted-foreground)/0.6)", pointerEvents: "none", marginTop: 2 }}>
