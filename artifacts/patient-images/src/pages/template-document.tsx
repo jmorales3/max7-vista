@@ -311,9 +311,9 @@ export default function TemplateDocumentPage() {
             top: 50% !important;
             left: 50% !important;
             transform: translate(-50%, -50%) !important;
-            width: 85% !important;
-            max-width: 85% !important;
-            padding: 4mm 10mm !important;
+            width: 76.2mm !important;
+            max-width: 76.2mm !important;
+            padding: 2mm 5mm !important;
             background: rgba(255,255,255,0.92) !important;
             border: none !important;
             border-radius: 0 !important;
@@ -404,8 +404,7 @@ export default function TemplateDocumentPage() {
                 top: "50%",
                 left: "50%",
                 transform: "translate(-50%, -50%)",
-                width: physW * displayScale * 0.85,
-                maxWidth: "85%",
+                width: 76.2 * PX_PER_MM * displayScale,
                 boxSizing: "border-box",
                 background: "rgba(255,255,255,0.92)",
                 border: "1px solid #ddd",

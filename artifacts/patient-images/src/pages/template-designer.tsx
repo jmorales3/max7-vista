@@ -257,9 +257,9 @@ export default function TemplateDesigner() {
     e.target.value = "";
   }
 
-  // Centered info overlay dimensions (mm) — approximates what will be printed centered on the page
-  const INFO_W_MM = pageWidth * 0.85;
-  const INFO_H_MM = 30; // approximate height of the info block
+  // Centered info overlay dimensions (mm) — 3 × 1 inch, centered on the page
+  const INFO_W_MM = 76.2; // 3 inches
+  const INFO_H_MM = 25.4; // 1 inch
   const infoLeft = (pageWidth - INFO_W_MM) / 2;
   const infoTop = (pageHeight - INFO_H_MM) / 2;
 
@@ -401,13 +401,14 @@ export default function TemplateDesigner() {
               }}
               onClick={() => setSelectedFrameId(null)}
             >
-              {/* Centered info overlay — preview of where office info will print */}
+              {/* Centered info overlay — preview of where office info will print (3" × 1") */}
               <div style={{
                 position: "absolute",
                 top: "50%",
                 left: "50%",
                 transform: "translate(-50%, -50%)",
-                width: displayW * 0.85,
+                width: INFO_W_MM * PX_PER_MM * displayScale,
+                minHeight: INFO_H_MM * PX_PER_MM * displayScale,
                 boxSizing: "border-box",
                 background: "rgba(255,255,255,0.88)",
                 border: "2px dashed rgba(59,130,246,0.45)",
