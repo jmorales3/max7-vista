@@ -55,6 +55,35 @@ function snapVal(val: number, enabled: boolean): number {
   return Math.round(val / GRID_MM) * GRID_MM;
 }
 
+function makeRulerTicks(
+  totalMm: number,
+  tickStepMm: number,
+  labelStepMm: number,
+  pxPerMm: number,
+  unit: "mm" | "in",
+  mmPerIn: number
+): { px: number; major: boolean; label: string | null }[] {
+  const ticks: { px: number; major: boolean; label: string | null }[] = [];
+  const labelEvery = Math.max(1, Math.round(labelStepMm / tickStepMm));
+  const n = Math.ceil(totalMm / tickStepMm) + 1;
+  for (let i = 0; i <= n; i++) {
+    const vMm = i * tickStepMm;
+    if (vMm > totalMm + 0.01) break;
+    const major = i % labelEvery === 0;
+    let label: string | null = null;
+    if (major) {
+      if (unit === "mm") {
+        label = `${Math.round(vMm)}`;
+      } else {
+        const vIn = vMm / mmPerIn;
+        label = vIn === Math.round(vIn) ? `${Math.round(vIn)}` : `${+vIn.toFixed(2)}`;
+      }
+    }
+    ticks.push({ px: vMm * pxPerMm, major, label });
+  }
+  return ticks;
+}
+
 export default function TemplateDesigner() {
   const params = useParams<{ id: string }>();
   const templateId = parseInt(params.id);
@@ -96,9 +125,11 @@ export default function TemplateDesigner() {
 
   const isLandscape = pageWidth > pageHeight;
 
+  const RULER_PX = 20; // ruler strip thickness in display pixels
   const physW = pageWidth * PX_PER_MM;
   const physH = pageHeight * PX_PER_MM;
-  const displayScale = containerWidth > 0 ? Math.min(1, (containerWidth - 2) / physW) : 1;
+  // Reserve RULER_PX on the left for the vertical ruler strip
+  const displayScale = containerWidth > 0 ? Math.min(1, (containerWidth - 2 - RULER_PX) / physW) : 1;
   const displayW = physW * displayScale;
   const displayH = physH * displayScale;
 
@@ -229,6 +260,23 @@ export default function TemplateDesigner() {
   // Header zone height in mm — must match HEADER_PHYSICAL_PX (80px) in template-document.tsx
   const HEADER_ZONE_MM = 80 / PX_PER_MM; // ≈ 21.2mm
 
+  // Ruler calculation
+  const pxPerMm = PX_PER_MM * displayScale;
+  const MIN_LABEL_PX = 30;
+  const MM_NICE = [5, 10, 20, 25, 50, 100];
+  const mmLabelStep = MM_NICE.find(s => s * pxPerMm >= MIN_LABEL_PX) ?? 100;
+  const mmTickStep = mmLabelStep >= 10 ? 5 : 1;
+  // inch steps expressed in mm for the helper
+  const IN_NICE_MM = [6.35, 12.7, 25.4, 50.8]; // 1/4", 1/2", 1", 2"
+  const inLabelStepMm = IN_NICE_MM.find(s => s * pxPerMm >= MIN_LABEL_PX) ?? 50.8;
+  const inTickStepMm = inLabelStepMm >= 25.4 ? 6.35 : inLabelStepMm >= 12.7 ? 3.175 : 3.175;
+  const tickStepMm = unit === "mm" ? mmTickStep : inTickStepMm;
+  const labelStepMm = unit === "mm" ? mmLabelStep : inLabelStepMm;
+  const headerZoneH = 80 * displayScale; // display px
+  const totalH = headerZoneH + displayH;  // total ruler height in display px
+  const xTicks = makeRulerTicks(pageWidth, tickStepMm, labelStepMm, pxPerMm, unit, MM_PER_IN);
+  const yTicks = makeRulerTicks(HEADER_ZONE_MM + pageHeight, tickStepMm, labelStepMm, pxPerMm, unit, MM_PER_IN);
+
   function addFrame() {
     const id = crypto.randomUUID();
     const defaultY = snapVal(Math.ceil(HEADER_ZONE_MM) + 5, snapToGrid);
@@ -293,157 +341,192 @@ export default function TemplateDesigner() {
     <div className="flex -mx-4 -mt-4 md:-mx-6 md:-mt-6 lg:-mx-8 lg:-mt-8" style={{ height: "calc(100vh - 3.5rem)" }}>
       {/* Canvas area */}
       <div ref={containerRef} className="flex-1 bg-muted/40 overflow-auto flex flex-col items-center p-6 min-w-0" style={{ scrollbarGutter: "stable" }}>
-        <div className="w-full max-w-3xl">
-          {/* Header zone — top section of the page canvas, reserved for header content */}
-          <div
-            style={{
-              width: displayW, margin: "0 auto",
-              height: 80 * displayScale,
-              background: "white",
-              boxShadow: "4px 0 0 0 rgba(0,0,0,0.15), -4px 0 0 0 rgba(0,0,0,0.15), 0 -4px 12px rgba(0,0,0,0.12)",
-              boxSizing: "border-box",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: `${5 * displayScale}px ${10 * displayScale}px`,
-              overflow: "hidden",
-              gap: 2 * displayScale,
-              position: "relative",
-              borderBottom: "2px dashed rgba(234,88,12,0.45)",
-            }}
-          >
-            {/* Reserved badge */}
-            <div style={{ position: "absolute", top: 3 * displayScale, right: 4 * displayScale, background: "rgba(234,88,12,0.82)", color: "white", fontSize: Math.max(8, 10 * displayScale), padding: `${1 * displayScale}px ${4 * displayScale}px`, borderRadius: 3, lineHeight: 1.4, pointerEvents: "none", whiteSpace: "nowrap" }}>
-              Reserved · Header
-            </div>
-            {/* Logo */}
-            {logoData ? (
-              <img src={logoData} alt="logo" style={{ height: 28 * displayScale, maxWidth: 70 * displayScale, objectFit: "contain", flexShrink: 0 }} />
-            ) : (
-              <div style={{ width: 30 * displayScale, height: 22 * displayScale, background: "hsl(var(--muted))", border: "1px dashed hsl(var(--border))", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ fontSize: Math.max(5, 7 * displayScale), color: "hsl(var(--muted-foreground))", lineHeight: 1 }}>Logo</span>
-              </div>
-            )}
-            {/* Office name */}
-            <div style={{ fontSize: Math.max(7, 13 * displayScale), fontWeight: 700, color: "#222", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", textAlign: "center" }}>
-              {officeName || "Office Name"}
-            </div>
-            {/* Office info first line */}
-            {officeInfo && (
-              <div style={{ fontSize: Math.max(6, 10 * displayScale), color: "#555", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", textAlign: "center" }}>
-                {officeInfo.split("\n")[0]}
-              </div>
-            )}
-            {/* Patient / date row */}
-            <div style={{ fontSize: Math.max(6, 10 * displayScale), color: "#666", opacity: 0.8, textAlign: "center", whiteSpace: "nowrap", borderTop: `1px solid #ddd`, paddingTop: 2 * displayScale, marginTop: 1 * displayScale }}>
-              <span style={{ fontWeight: 600 }}>Patient Name</span>
-              <span> · DOB · Date</span>
-            </div>
+        {/* Ruler + page wrapper — centered in the scroll area */}
+        <div style={{ margin: "0 auto", width: displayW + RULER_PX, flexShrink: 0, position: "relative" }}>
+          {/* Corner piece */}
+          <div style={{ position: "absolute", top: 0, left: 0, width: RULER_PX, height: RULER_PX, background: "#e6e7e8", borderRight: "1px solid #bfc1c3", borderBottom: "1px solid #bfc1c3", boxSizing: "border-box", zIndex: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontSize: 7, color: "#888", fontFamily: "monospace", lineHeight: 1 }}>{unit}</span>
           </div>
 
-          <div
-            style={{
-              width: displayW,
-              height: displayH,
-              position: "relative",
-              background: "white",
-              boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
-              margin: "0 auto",
-              overflow: "hidden",
-            }}
-            onClick={() => setSelectedFrameId(null)}
-          >
-            {/* Grid overlay */}
-            {snapToGrid && (
-              <svg
-                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 1 }}
-              >
-                {gridLinesX.map((x, i) => (
-                  <line key={`gx${i}`} x1={x} y1={0} x2={x} y2={displayH} stroke="hsl(var(--muted-foreground)/0.12)" strokeWidth={0.5} />
-                ))}
-                {gridLinesY.map((y, i) => (
-                  <line key={`gy${i}`} x1={0} y1={y} x2={displayW} y2={y} stroke="hsl(var(--muted-foreground)/0.12)" strokeWidth={0.5} />
-                ))}
-              </svg>
-            )}
+          {/* Horizontal ruler (X axis) */}
+          <div style={{ position: "absolute", top: 0, left: RULER_PX, width: displayW, height: RULER_PX, overflow: "hidden" }}>
+            <svg width={displayW} height={RULER_PX} style={{ display: "block" }}>
+              <rect x={0} y={0} width={displayW} height={RULER_PX} fill="#e6e7e8" />
+              <line x1={0} y1={RULER_PX - 1} x2={displayW} y2={RULER_PX - 1} stroke="#bfc1c3" strokeWidth={1} />
+              {xTicks.map((t, i) => (
+                <g key={i}>
+                  <line x1={t.px} y1={t.major ? 2 : RULER_PX * 0.5} x2={t.px} y2={RULER_PX - 1} stroke="#9ca3af" strokeWidth={0.5} />
+                  {t.label && <text x={t.px + 1.5} y={RULER_PX - 4} fontSize={7} fill="#6b7280" fontFamily="monospace">{t.label}</text>}
+                </g>
+              ))}
+            </svg>
+          </div>
 
-            {/* Frames */}
-            {frames.map((frame, i) => {
-              const isSelected = frame.id === selectedFrameId;
-              const fx = frame.x * PX_PER_MM * displayScale;
-              const fy = frame.y * PX_PER_MM * displayScale;
-              const fw = frame.width * PX_PER_MM * displayScale;
-              const fh = frame.height * PX_PER_MM * displayScale;
-              const labelFontSize = Math.max(9, 11 * displayScale);
-              const overlapsHeader = frame.y < HEADER_ZONE_MM;
-              return (
-                <div
-                  key={frame.id}
-                  style={{ position: "absolute", left: fx, top: fy, width: fw, height: fh, zIndex: isSelected ? 10 : 5 }}
-                  onClick={(e) => { e.stopPropagation(); setSelectedFrameId(frame.id); }}
-                >
+          {/* Vertical ruler (Y axis) */}
+          <div style={{ position: "absolute", top: RULER_PX, left: 0, width: RULER_PX, height: totalH, overflow: "hidden" }}>
+            <svg width={RULER_PX} height={totalH} style={{ display: "block" }}>
+              <rect x={0} y={0} width={RULER_PX} height={totalH} fill="#e6e7e8" />
+              <line x1={RULER_PX - 1} y1={0} x2={RULER_PX - 1} y2={totalH} stroke="#bfc1c3" strokeWidth={1} />
+              {yTicks.map((t, i) => (
+                <g key={i}>
+                  <line x1={t.major ? 2 : RULER_PX * 0.5} y1={t.px} x2={RULER_PX - 1} y2={t.px} stroke="#9ca3af" strokeWidth={0.5} />
+                  {t.label && (
+                    <text
+                      transform={`rotate(-90,${RULER_PX / 2 - 1},${t.px})`}
+                      x={RULER_PX / 2 - 1}
+                      y={t.px + 0.5}
+                      fontSize={7}
+                      fill="#6b7280"
+                      fontFamily="monospace"
+                      textAnchor="middle"
+                    >{t.label}</text>
+                  )}
+                </g>
+              ))}
+            </svg>
+          </div>
+
+          {/* Page content (header reserved zone + frame canvas), offset by ruler strips */}
+          <div style={{ marginLeft: RULER_PX, marginTop: RULER_PX }}>
+            {/* Header zone — top section of the page canvas, reserved for header content */}
+            <div
+              style={{
+                width: displayW,
+                height: headerZoneH,
+                background: "white",
+                boxShadow: "4px 0 0 0 rgba(0,0,0,0.13), -4px 0 0 0 rgba(0,0,0,0.13), 0 -4px 12px rgba(0,0,0,0.10)",
+                boxSizing: "border-box",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: `${5 * displayScale}px ${10 * displayScale}px`,
+                overflow: "hidden",
+                gap: 2 * displayScale,
+                position: "relative",
+                borderBottom: "2px dashed rgba(234,88,12,0.45)",
+              }}
+            >
+              {/* Reserved badge */}
+              <div style={{ position: "absolute", top: 3 * displayScale, right: 4 * displayScale, background: "rgba(234,88,12,0.82)", color: "white", fontSize: Math.max(8, 10 * displayScale), padding: `${1 * displayScale}px ${4 * displayScale}px`, borderRadius: 3, lineHeight: 1.4, pointerEvents: "none", whiteSpace: "nowrap" }}>
+                Reserved · Header
+              </div>
+              {logoData ? (
+                <img src={logoData} alt="logo" style={{ height: 28 * displayScale, maxWidth: 70 * displayScale, objectFit: "contain", flexShrink: 0 }} />
+              ) : (
+                <div style={{ width: 30 * displayScale, height: 22 * displayScale, background: "hsl(var(--muted))", border: "1px dashed hsl(var(--border))", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: Math.max(5, 7 * displayScale), color: "hsl(var(--muted-foreground))", lineHeight: 1 }}>Logo</span>
+                </div>
+              )}
+              <div style={{ fontSize: Math.max(7, 13 * displayScale), fontWeight: 700, color: "#222", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", textAlign: "center" }}>
+                {officeName || "Office Name"}
+              </div>
+              {officeInfo && (
+                <div style={{ fontSize: Math.max(6, 10 * displayScale), color: "#555", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", textAlign: "center" }}>
+                  {officeInfo.split("\n")[0]}
+                </div>
+              )}
+              <div style={{ fontSize: Math.max(6, 10 * displayScale), color: "#666", opacity: 0.8, textAlign: "center", whiteSpace: "nowrap", borderTop: "1px solid #ddd", paddingTop: 2 * displayScale, marginTop: 1 * displayScale }}>
+                <span style={{ fontWeight: 600 }}>Patient Name</span>
+                <span> · DOB · Date</span>
+              </div>
+            </div>
+
+            {/* Frame canvas */}
+            <div
+              style={{
+                width: displayW,
+                height: displayH,
+                position: "relative",
+                background: "white",
+                boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+                overflow: "hidden",
+              }}
+              onClick={() => setSelectedFrameId(null)}
+            >
+              {snapToGrid && (
+                <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 1 }}>
+                  {gridLinesX.map((x, i) => (
+                    <line key={`gx${i}`} x1={x} y1={0} x2={x} y2={displayH} stroke="hsl(var(--muted-foreground)/0.12)" strokeWidth={0.5} />
+                  ))}
+                  {gridLinesY.map((y, i) => (
+                    <line key={`gy${i}`} x1={0} y1={y} x2={displayW} y2={y} stroke="hsl(var(--muted-foreground)/0.12)" strokeWidth={0.5} />
+                  ))}
+                </svg>
+              )}
+
+              {frames.map((frame, i) => {
+                const isSelected = frame.id === selectedFrameId;
+                const fx = frame.x * PX_PER_MM * displayScale;
+                const fy = frame.y * PX_PER_MM * displayScale;
+                const fw = frame.width * PX_PER_MM * displayScale;
+                const fh = frame.height * PX_PER_MM * displayScale;
+                const labelFontSize = Math.max(9, 11 * displayScale);
+                const overlapsHeader = frame.y < HEADER_ZONE_MM;
+                return (
                   <div
-                    style={{
-                      position: "absolute", inset: 0,
-                      border: overlapsHeader
-                        ? "2px solid rgba(234,88,12,0.8)"
-                        : isSelected ? "2px solid hsl(var(--primary))" : "2px dashed hsl(var(--muted-foreground))",
-                      background: overlapsHeader
-                        ? "rgba(254,215,170,0.35)"
-                        : isSelected ? "hsl(var(--primary)/0.05)" : "hsl(var(--muted)/0.3)",
-                      cursor: "move",
-                      boxSizing: "border-box",
-                      userSelect: "none",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setSelectedFrameId(frame.id);
-                      dragRef.current = { type: "move", frameId: frame.id, startMX: e.clientX, startMY: e.clientY, origX: frame.x, origY: frame.y };
-                    }}
+                    key={frame.id}
+                    style={{ position: "absolute", left: fx, top: fy, width: fw, height: fh, zIndex: isSelected ? 10 : 5 }}
+                    onClick={(e) => { e.stopPropagation(); setSelectedFrameId(frame.id); }}
                   >
-                    {overlapsHeader && (
-                      <span style={{ fontSize: Math.max(7, 9 * displayScale), color: "rgba(180,50,0,0.9)", fontWeight: 600, pointerEvents: "none", marginBottom: 2 }}>
-                        ⚠ Overlaps header
-                      </span>
-                    )}
-                    <span style={{ fontSize: labelFontSize, color: overlapsHeader ? "rgba(120,40,0,0.85)" : "hsl(var(--muted-foreground))", fontWeight: 500, pointerEvents: "none", textAlign: "center", padding: "0 4px" }}>
-                      {frame.label || `Frame ${i + 1}`}
-                    </span>
-                    <span style={{ fontSize: Math.max(8, 9 * displayScale), color: "hsl(var(--muted-foreground)/0.6)", pointerEvents: "none", marginTop: 2 }}>
-                      {toDisp(frame.width, unit)}×{toDisp(frame.height, unit)} {unit}
-                    </span>
-                  </div>
-                  {isSelected && RESIZE_HANDLES.map((rh) => (
                     <div
-                      key={rh.id}
                       style={{
-                        position: "absolute", width: 10, height: 10,
-                        background: "hsl(var(--primary))", borderRadius: 2,
-                        zIndex: 20, ...rh.style,
-                        cursor: rh.style.cursor,
+                        position: "absolute", inset: 0,
+                        border: overlapsHeader ? "2px solid rgba(234,88,12,0.8)" : isSelected ? "2px solid hsl(var(--primary))" : "2px dashed hsl(var(--muted-foreground))",
+                        background: overlapsHeader ? "rgba(254,215,170,0.35)" : isSelected ? "hsl(var(--primary)/0.05)" : "hsl(var(--muted)/0.3)",
+                        cursor: "move",
+                        boxSizing: "border-box",
+                        userSelect: "none",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
                       onMouseDown={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        dragRef.current = { type: "resize", frameId: frame.id, handle: rh.id, startMX: e.clientX, startMY: e.clientY, origX: frame.x, origY: frame.y, origW: frame.width, origH: frame.height };
+                        setSelectedFrameId(frame.id);
+                        dragRef.current = { type: "move", frameId: frame.id, startMX: e.clientX, startMY: e.clientY, origX: frame.x, origY: frame.y };
                       }}
-                    />
-                  ))}
-                </div>
-              );
-            })}
+                    >
+                      {overlapsHeader && (
+                        <span style={{ fontSize: Math.max(7, 9 * displayScale), color: "rgba(180,50,0,0.9)", fontWeight: 600, pointerEvents: "none", marginBottom: 2 }}>
+                          ⚠ Overlaps header
+                        </span>
+                      )}
+                      <span style={{ fontSize: labelFontSize, color: overlapsHeader ? "rgba(120,40,0,0.85)" : "hsl(var(--muted-foreground))", fontWeight: 500, pointerEvents: "none", textAlign: "center", padding: "0 4px" }}>
+                        {frame.label || `Frame ${i + 1}`}
+                      </span>
+                      <span style={{ fontSize: Math.max(8, 9 * displayScale), color: "hsl(var(--muted-foreground)/0.6)", pointerEvents: "none", marginTop: 2 }}>
+                        {toDisp(frame.width, unit)}×{toDisp(frame.height, unit)} {unit}
+                      </span>
+                    </div>
+                    {isSelected && RESIZE_HANDLES.map((rh) => (
+                      <div
+                        key={rh.id}
+                        style={{
+                          position: "absolute", width: 10, height: 10,
+                          background: "hsl(var(--primary))", borderRadius: 2,
+                          zIndex: 20, ...rh.style,
+                          cursor: rh.style.cursor,
+                        }}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          dragRef.current = { type: "resize", frameId: frame.id, handle: rh.id, startMX: e.clientX, startMY: e.clientY, origX: frame.x, origY: frame.y, origW: frame.width, origH: frame.height };
+                        }}
+                      />
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <p className="text-center text-xs text-muted-foreground mt-3">
-            {(pageWidth / MM_PER_IN).toFixed(2)}" × {(pageHeight / MM_PER_IN).toFixed(2)}" · {isLandscape ? t("templates.designer.landscape") : t("templates.designer.portrait")} · {frames.length} frame{frames.length !== 1 ? "s" : ""}
-            {displayScale < 0.99 && ` · Zoom ${Math.round(displayScale * 100)}%`}
-          </p>
         </div>
+        <p className="text-center text-xs text-muted-foreground mt-3" style={{ width: displayW + RULER_PX, margin: "0 auto" }}>
+          {(pageWidth / MM_PER_IN).toFixed(2)}" × {(pageHeight / MM_PER_IN).toFixed(2)}" · {isLandscape ? t("templates.designer.landscape") : t("templates.designer.portrait")} · {frames.length} frame{frames.length !== 1 ? "s" : ""}
+          {displayScale < 0.99 && ` · Zoom ${Math.round(displayScale * 100)}%`}
+        </p>
       </div>
 
       {/* Right sidebar */}

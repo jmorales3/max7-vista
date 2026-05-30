@@ -299,7 +299,7 @@ export default function TemplateDocumentPage() {
           .print-page {
             transform: none !important;
             width: ${pageWidth}mm !important;
-            height: ${pageHeight}mm !important;
+            height: ${(pageHeight + HEADER_PHYSICAL_PX / (96 / 25.4)).toFixed(1)}mm !important;
             box-shadow: none !important;
             margin: 0 !important;
           }
@@ -308,7 +308,7 @@ export default function TemplateDocumentPage() {
           .print-frame-wrap { top: ${(HEADER_PHYSICAL_PX / (96 / 25.4)).toFixed(1)}mm !important; left: 0 !important; width: ${pageWidth}mm !important; height: ${pageHeight}mm !important; }
           .print-canvas { transform: none !important; width: ${pageWidth}mm !important; height: ${pageHeight}mm !important; }
           .print-frame img { object-fit: inherit; object-position: inherit; }
-          @page { size: ${pageWidth}mm ${pageHeight}mm; margin: 0; }
+          @page { size: ${pageWidth}mm ${(pageHeight + HEADER_PHYSICAL_PX / (96 / 25.4)).toFixed(1)}mm; margin: 0; }
         }
       `}</style>
 
