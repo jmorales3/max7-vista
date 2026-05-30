@@ -95,7 +95,11 @@
     "noTemplatesAvailable": "No templates yet. Create one in the Templates section first.",
     "createTemplateDocError": "Failed to create document",
     "nameDocument": "Name Your Document",
-    "nameDocumentDesc": "Using template: {{template}}"
+    "nameDocumentDesc": "Using template: {{template}}",
+    "deleteDocTitle": "Delete document?",
+    "deleteDocDesc": "This template document will be permanently deleted. This action cannot be undone.",
+    "deleteDocSuccess": "Document deleted",
+    "deleteDocError": "Failed to delete document"
   },
   "capture": {
     "title": "Capture Image",

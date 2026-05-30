@@ -25,9 +25,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -196,10 +198,10 @@ export default function PatientDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["template-documents", "patient", id] });
       setDeleteDocId(null);
-      toast({ title: "Document deleted" });
+      toast({ title: t("patients.deleteDocSuccess") });
     },
     onError: () => {
-      toast({ variant: "destructive", title: "Failed to delete document" });
+      toast({ variant: "destructive", title: t("patients.deleteDocError") });
       setDeleteDocId(null);
     },
   });
@@ -542,9 +544,9 @@ export default function PatientDetail() {
       <AlertDialog open={deleteDocId !== null} onOpenChange={(open) => { if (!open) setDeleteDocId(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete document?</AlertDialogTitle>
+            <AlertDialogTitle>{t("patients.deleteDocTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This template document will be permanently deleted. This action cannot be undone.
+              {t("patients.deleteDocDesc")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -553,7 +555,7 @@ export default function PatientDetail() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => { if (deleteDocId !== null) deleteDocMutation.mutate(deleteDocId); }}
             >
-              Delete
+              {t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

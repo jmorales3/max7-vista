@@ -95,7 +95,11 @@
     "noTemplatesAvailable": "Nenhum modelo ainda. Crie um na seção de Modelos primeiro.",
     "createTemplateDocError": "Falha ao criar o documento",
     "nameDocument": "Nomear documento",
-    "nameDocumentDesc": "Usando modelo: {{template}}"
+    "nameDocumentDesc": "Usando modelo: {{template}}",
+    "deleteDocTitle": "Excluir documento?",
+    "deleteDocDesc": "Este documento de modelo será excluído permanentemente. Esta ação não pode ser desfeita.",
+    "deleteDocSuccess": "Documento excluído",
+    "deleteDocError": "Falha ao excluir o documento"
   },
   "capture": {
     "title": "Capturar Imagem",

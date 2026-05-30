@@ -95,7 +95,11 @@
     "noTemplatesAvailable": "Aún no hay plantillas. Crea una en la sección de Plantillas primero.",
     "createTemplateDocError": "Error al crear el documento",
     "nameDocument": "Nombrar documento",
-    "nameDocumentDesc": "Usando plantilla: {{template}}"
+    "nameDocumentDesc": "Usando plantilla: {{template}}",
+    "deleteDocTitle": "¿Eliminar documento?",
+    "deleteDocDesc": "Este documento de plantilla se eliminará permanentemente. Esta acción no se puede deshacer.",
+    "deleteDocSuccess": "Documento eliminado",
+    "deleteDocError": "Error al eliminar el documento"
   },
   "capture": {
     "title": "Capturar Imagen",

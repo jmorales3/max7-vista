@@ -95,7 +95,11 @@
     "noTemplatesAvailable": "Aucun modèle pour l'instant. Créez-en un dans la section Modèles d'abord.",
     "createTemplateDocError": "Échec de la création du document",
     "nameDocument": "Nommer le document",
-    "nameDocumentDesc": "Modèle utilisé\u00a0: {{template}}"
+    "nameDocumentDesc": "Modèle utilisé\u00a0: {{template}}",
+    "deleteDocTitle": "Supprimer le document\u00a0?",
+    "deleteDocDesc": "Ce document de modèle sera supprimé définitivement. Cette action est irréversible.",
+    "deleteDocSuccess": "Document supprimé",
+    "deleteDocError": "Échec de la suppression du document"
   },
   "capture": {
     "title": "Capturer une Image",
