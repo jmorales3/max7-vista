@@ -354,7 +354,7 @@ export default function TemplateDocumentPage() {
             transform: translate(-50%, -50%) !important;
             width: 88.9mm !important;
             max-width: 88.9mm !important;
-            padding: 2mm 5mm !important;
+            padding: 8.35mm 5mm !important;
             background: rgba(255,255,255,0.92) !important;
             border: none !important;
             border-radius: 0 !important;
@@ -452,7 +452,7 @@ export default function TemplateDocumentPage() {
                 background: "rgba(255,255,255,0.92)",
                 border: "1px solid #ddd",
                 borderRadius: 4,
-                padding: `${5 * displayScale}px ${12 * displayScale}px`,
+                padding: `${29 * displayScale}px ${12 * displayScale}px`,
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
