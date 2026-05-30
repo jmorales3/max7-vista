@@ -11,7 +11,8 @@
     "settings": "Configurações",
     "manual": "Manual",
     "bulkImport": "Importação em Massa",
-    "menu": "Menu"
+    "menu": "Menu",
+    "templates": "Modelos"
   },
   "common": {
     "save": "Salvar",
@@ -329,7 +330,8 @@
       "presentations": "Apresentações",
       "migration": "Migração (LAN ↔ Web)",
       "roles": "Funções de Usuário",
-      "tenants": "Configuração Multitenant"
+      "tenants": "Configuração Multitenant",
+      "templates": "Modelos"
     },
     "overview": {
       "heading": "O que é o Max7 Vista?",
@@ -382,6 +384,10 @@
     "migration": {
       "heading": "Migração (LAN ↔ Web)",
       "body": "Os Superadministradores podem transferir todos os dados entre a versão desktop/LAN Electron e a versão web na nuvem sem perda de dados. Acesse Configurações → Migração. Clique em 'Baixar arquivo de migração' para exportar um ZIP contendo todos os registros de pacientes, arquivos de imagens, usuários (com senhas criptografadas) e configurações do sistema. No sistema de destino, importe esse ZIP usando 'Importar arquivo'. Pacientes e usuários existentes são ignorados automaticamente para evitar duplicatas. A configuração do diretório de armazenamento é intencionalmente excluída para preservar os caminhos próprios de cada sistema. Todas as ações de exportação e importação são registradas no Registro de Auditoria."
+    },
+    "templates": {
+      "heading": "Modelos",
+      "body": "O recurso Modelos permite criar layouts de impressão reutilizáveis para documentos de pacientes. Cada modelo define um tamanho de página (Carta, A4, Ofício ou personalizado), nome e endereço opcionais da clínica, e uma ou mais molduras de imagem posicionadas em qualquer lugar da página. Abra Modelos na barra lateral para criar ou gerenciar modelos. Clique em 'Novo Modelo' para definir o título, o tamanho de página e as informações da clínica, depois clique em 'Criar e Projetar' para abrir o Designer de Layout. No designer, clique em 'Adicionar' para colocar molduras na página — arraste-as para mover, arraste as alças dos cantos para redimensionar, e defina um rótulo para cada moldura no painel lateral. Salve o modelo quando terminar. Para preencher um modelo, clique em 'Criar Documento' em qualquer cartão de modelo, selecione um paciente opcional e dê um título ao documento. Na visualização do Documento, clique em uma moldura vazia para escolher uma imagem do paciente para aquele espaço, depois arraste a imagem para reposicioná-la dentro da moldura. Clique em Imprimir para enviar o layout finalizado para a impressora."
     }
   },
   "bulkImport": {
@@ -443,7 +449,7 @@
     "placeholder": "Pergunte-me qualquer coisa sobre o Max7 Vista...",
     "send": "Enviar",
     "thinking": "Pensando...",
-    "welcome": "Olá! Sou seu guia do Max7 Vista. Posso ajudá-lo a navegar pelo sistema, explicar recursos e responder perguntas sobre gestão de imagens de pacientes. Como posso ajudá-lo hoje?",
+    "welcome": "Olá! Sou seu guia do Max7 Vista. Posso ajudá-lo a navegar pelo sistema, explicar recursos e responder perguntas sobre gestão de imagens de pacientes. Cubro Pacientes, Galeria, Captura, Modelos, Apresentações e todos os outros recursos. Como posso ajudá-lo hoje?",
     "error": "Desculpe, encontrei um erro. Por favor, tente novamente.",
     "open": "Abrir Guia",
     "close": "Fechar Guia"
@@ -501,5 +507,84 @@
     "patientsSkipped": "Pacientes ignorados",
     "imagesImported": "Imagens importadas",
     "imagesSkipped": "Imagens ignoradas"
+  },
+  "templates": {
+    "title": "Modelos",
+    "subtitle": "Crie layouts reutilizáveis com molduras de imagem e informações da clínica, depois preencha-os com imagens do paciente.",
+    "newTemplate": "Novo Modelo",
+    "noTemplates": "Nenhum modelo ainda",
+    "noTemplatesDesc": "Crie seu primeiro modelo para definir layouts para documentos de pacientes.",
+    "editLayout": "Editar Layout",
+    "createDocument": "Criar Documento",
+    "frameCount": "{{count}} moldura",
+    "frameCount_plural": "{{count}} molduras",
+    "createTitle": "Novo Modelo",
+    "templateName": "Nome do Modelo",
+    "pageSize": "Tamanho de Página",
+    "widthIn": "Largura (in)",
+    "heightIn": "Altura (in)",
+    "officeName": "Nome da Clínica / Consultório",
+    "officeInfo": "Endereço / Info da Clínica",
+    "officeNamePlaceholder": "Nome da sua Clínica",
+    "officeInfoPlaceholder": "Endereço, telefone, etc.",
+    "namePlaceholder": "ex. Comparação Antes/Depois",
+    "optional": "(opcional)",
+    "creating": "Criando…",
+    "createAndDesign": "Criar e Projetar",
+    "useTitle": "Criar Documento de \"{{title}}\"",
+    "patient": "Paciente",
+    "noPatient": "Sem paciente (genérico)",
+    "selectPatient": "Selecionar paciente…",
+    "documentTitle": "Título do Documento",
+    "createFailed": "Falha ao criar o modelo",
+    "deleted": "Modelo excluído",
+    "deleteFailed": "Falha ao excluir o modelo",
+    "docCreateFailed": "Falha ao criar o documento",
+    "deleteTitle": "Excluir Modelo",
+    "deleteDesc": "Excluir \"{{title}}\"? Isso também excluirá todos os documentos criados a partir deste modelo. Esta ação não pode ser desfeita.",
+    "updatedDate": "Atualizado {{date}}",
+    "designer": {
+      "loading": "Carregando modelo…",
+      "templateInfo": "Informações do Modelo",
+      "name": "Nome",
+      "officeName": "Nome da Clínica / Consultório",
+      "officeInfo": "Endereço / Informações de Contato",
+      "optional": "Opcional",
+      "pageSize": "Tamanho de Página",
+      "frames": "Molduras ({{count}})",
+      "noFrames": "Nenhuma moldura ainda. Clique em Adicionar para colocar uma moldura na página.",
+      "add": "Adicionar",
+      "selectedFrame": "Moldura Selecionada",
+      "label": "Rótulo",
+      "labelPlaceholder": "ex. Foto Antes",
+      "width": "Largura ({{unit}})",
+      "height": "Altura ({{unit}})",
+      "xPos": "Pos X ({{unit}})",
+      "yPos": "Pos Y ({{unit}})",
+      "removeFrame": "Remover Moldura",
+      "saved": "Modelo salvo",
+      "saveFailed": "Falha ao salvar o modelo",
+      "saving": "Salvando…",
+      "save": "Salvar"
+    },
+    "document": {
+      "loading": "Carregando documento…",
+      "notFound": "Documento não encontrado.",
+      "unsavedChanges": "Alterações não salvas",
+      "saving": "Salvando…",
+      "save": "Salvar",
+      "print": "Imprimir",
+      "hint": "Clique em uma moldura vazia para atribuir uma imagem do paciente. Arraste uma imagem atribuída para reposicioná-la dentro da moldura.",
+      "selectImage": "Selecionar Imagem para \"{{label}}\"",
+      "noImages": "Nenhuma imagem encontrada para este paciente.",
+      "noPatientImages": "Nenhum paciente atribuído a este documento — atribua um paciente para navegar pelas imagens.",
+      "saved": "Documento salvo",
+      "saveFailed": "Falha ao salvar o documento",
+      "removeImage": "Remover imagem",
+      "clickToAdd": "Clique para adicionar imagem",
+      "frame": "Moldura",
+      "dob": "Nasc.:",
+      "date": "Data:"
+    }
   }
 }

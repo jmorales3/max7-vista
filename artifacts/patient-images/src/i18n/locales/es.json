@@ -11,7 +11,8 @@
     "settings": "Configuración",
     "manual": "Manual",
     "bulkImport": "Importación Masiva",
-    "menu": "Menú"
+    "menu": "Menú",
+    "templates": "Plantillas"
   },
   "common": {
     "save": "Guardar",
@@ -329,7 +330,8 @@
       "presentations": "Presentaciones",
       "migration": "Migración (LAN ↔ Web)",
       "roles": "Roles de Usuario",
-      "tenants": "Configuración Multiempresa"
+      "tenants": "Configuración Multiempresa",
+      "templates": "Plantillas"
     },
     "overview": {
       "heading": "¿Qué es Max7 Vista?",
@@ -382,6 +384,10 @@
     "migration": {
       "heading": "Migración (LAN ↔ Web)",
       "body": "Los Superadministradores pueden transferir todos los datos entre la versión de escritorio/LAN Electron y la versión web en la nube sin pérdida de datos. Vaya a Configuración → Migración. Haga clic en 'Descargar archivo de migración' para exportar un ZIP con todos los registros de pacientes, archivos de imágenes, usuarios (con contraseñas cifradas) y configuración del sistema. En el sistema de destino, cargue ese ZIP mediante 'Importar archivo'. Los pacientes y usuarios existentes se omiten automáticamente para evitar duplicados. La configuración del directorio de almacenamiento se excluye intencionalmente para preservar las rutas propias de cada sistema. Todas las acciones de exportación e importación quedan registradas en el Registro de Auditoría."
+    },
+    "templates": {
+      "heading": "Plantillas",
+      "body": "La función Plantillas le permite diseñar maquetas de impresión reutilizables para documentos de pacientes. Cada plantilla define un tamaño de página (Carta, A4, Legal o personalizado), nombre y dirección opcionales de la clínica, y uno o más marcos de imagen posicionados en cualquier lugar de la página. Abra Plantillas en la barra lateral para crear o gestionar plantillas. Haga clic en 'Nueva Plantilla' para establecer el título, el tamaño de página y la información de la clínica, luego haga clic en 'Crear y Diseñar' para abrir el Diseñador de Maquetas. En el diseñador, haga clic en 'Agregar' para colocar marcos en la página — arrástrelos para moverlos, arrastre las esquinas para redimensionarlos, y establezca una etiqueta para cada marco en el panel lateral. Guarde la plantilla cuando termine. Para rellenar una plantilla, haga clic en 'Crear Documento' en cualquier tarjeta de plantilla, seleccione un paciente opcional y asigne un título al documento. En la vista del Documento, haga clic en un marco vacío para elegir una imagen del paciente para ese espacio, luego arrastre la imagen para reposicionarla dentro del marco. Haga clic en Imprimir para enviar el diseño terminado a la impresora."
     }
   },
   "bulkImport": {
@@ -443,7 +449,7 @@
     "placeholder": "Pregúnteme cualquier cosa sobre Max7 Vista...",
     "send": "Enviar",
     "thinking": "Pensando...",
-    "welcome": "¡Hola! Soy su guía de Max7 Vista. Puedo ayudarle a navegar el sistema, explicar funciones y responder preguntas sobre gestión de imágenes de pacientes. ¿En qué puedo ayudarle hoy?",
+    "welcome": "¡Hola! Soy su guía de Max7 Vista. Puedo ayudarle a navegar el sistema, explicar funciones y responder preguntas sobre gestión de imágenes de pacientes. Cubro Pacientes, Galería, Captura, Plantillas, Presentaciones y todas las demás funciones. ¿En qué puedo ayudarle hoy?",
     "error": "Lo siento, encontré un error. Por favor inténtelo de nuevo.",
     "open": "Abrir Guía",
     "close": "Cerrar Guía"
@@ -501,5 +507,84 @@
     "patientsSkipped": "Pacientes omitidos",
     "imagesImported": "Imágenes importadas",
     "imagesSkipped": "Imágenes omitidas"
+  },
+  "templates": {
+    "title": "Plantillas",
+    "subtitle": "Diseñe maquetas reutilizables con marcos de imagen e información de la clínica, y luego llénelas con imágenes del paciente.",
+    "newTemplate": "Nueva Plantilla",
+    "noTemplates": "Aún no hay plantillas",
+    "noTemplatesDesc": "Cree su primera plantilla para definir diseños para documentos de pacientes.",
+    "editLayout": "Editar Diseño",
+    "createDocument": "Crear Documento",
+    "frameCount": "{{count}} marco",
+    "frameCount_plural": "{{count}} marcos",
+    "createTitle": "Nueva Plantilla",
+    "templateName": "Nombre de la Plantilla",
+    "pageSize": "Tamaño de Página",
+    "widthIn": "Ancho (in)",
+    "heightIn": "Alto (in)",
+    "officeName": "Nombre de la Clínica / Consultorio",
+    "officeInfo": "Dirección / Info de la Clínica",
+    "officeNamePlaceholder": "Nombre de su Clínica",
+    "officeInfoPlaceholder": "Dirección, teléfono, etc.",
+    "namePlaceholder": "ej. Comparación Antes/Después",
+    "optional": "(opcional)",
+    "creating": "Creando…",
+    "createAndDesign": "Crear y Diseñar",
+    "useTitle": "Crear Documento de \"{{title}}\"",
+    "patient": "Paciente",
+    "noPatient": "Sin paciente (genérico)",
+    "selectPatient": "Seleccionar paciente…",
+    "documentTitle": "Título del Documento",
+    "createFailed": "Error al crear la plantilla",
+    "deleted": "Plantilla eliminada",
+    "deleteFailed": "Error al eliminar la plantilla",
+    "docCreateFailed": "Error al crear el documento",
+    "deleteTitle": "Eliminar Plantilla",
+    "deleteDesc": "¿Eliminar \"{{title}}\"? También se eliminarán todos los documentos creados con esta plantilla. Esta acción no se puede deshacer.",
+    "updatedDate": "Actualizado {{date}}",
+    "designer": {
+      "loading": "Cargando plantilla…",
+      "templateInfo": "Información de Plantilla",
+      "name": "Nombre",
+      "officeName": "Nombre de la Clínica / Consultorio",
+      "officeInfo": "Dirección / Información de Contacto",
+      "optional": "Opcional",
+      "pageSize": "Tamaño de Página",
+      "frames": "Marcos ({{count}})",
+      "noFrames": "Aún no hay marcos. Haga clic en Agregar para colocar un marco en la página.",
+      "add": "Agregar",
+      "selectedFrame": "Marco Seleccionado",
+      "label": "Etiqueta",
+      "labelPlaceholder": "ej. Foto Antes",
+      "width": "Ancho ({{unit}})",
+      "height": "Alto ({{unit}})",
+      "xPos": "Pos X ({{unit}})",
+      "yPos": "Pos Y ({{unit}})",
+      "removeFrame": "Eliminar Marco",
+      "saved": "Plantilla guardada",
+      "saveFailed": "Error al guardar la plantilla",
+      "saving": "Guardando…",
+      "save": "Guardar"
+    },
+    "document": {
+      "loading": "Cargando documento…",
+      "notFound": "Documento no encontrado.",
+      "unsavedChanges": "Cambios sin guardar",
+      "saving": "Guardando…",
+      "save": "Guardar",
+      "print": "Imprimir",
+      "hint": "Haga clic en un marco vacío para asignar una imagen del paciente. Arrastre una imagen asignada para reposicionarla dentro del marco.",
+      "selectImage": "Seleccionar Imagen para \"{{label}}\"",
+      "noImages": "No se encontraron imágenes para este paciente.",
+      "noPatientImages": "No hay paciente asignado a este documento — asigne un paciente para ver sus imágenes.",
+      "saved": "Documento guardado",
+      "saveFailed": "Error al guardar el documento",
+      "removeImage": "Eliminar imagen",
+      "clickToAdd": "Haga clic para agregar imagen",
+      "frame": "Marco",
+      "dob": "Nac.:",
+      "date": "Fecha:"
+    }
   }
 }

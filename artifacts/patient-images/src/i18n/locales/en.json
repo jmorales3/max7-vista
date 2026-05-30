@@ -11,7 +11,8 @@
     "settings": "Settings",
     "manual": "Manual",
     "bulkImport": "Bulk Import",
-    "menu": "Menu"
+    "menu": "Menu",
+    "templates": "Templates"
   },
   "common": {
     "save": "Save",
@@ -329,7 +330,8 @@
       "presentations": "Presentations",
       "migration": "Migration (LAN ↔ Web)",
       "roles": "User Roles",
-      "tenants": "Multi-Tenant Setup"
+      "tenants": "Multi-Tenant Setup",
+      "templates": "Templates"
     },
     "overview": {
       "heading": "What is Max7 Vista?",
@@ -382,6 +384,10 @@
     "migration": {
       "heading": "Migration (LAN ↔ Web)",
       "body": "Super Admins can transfer all data between the Electron desktop/LAN version and the cloud web version without data loss. Go to Settings → Migration. Click 'Download migration archive' to export a ZIP containing all patient records, image files, users (with encrypted passwords), and system settings. On the destination system, upload that ZIP using 'Import archive'. Existing patients and users are automatically skipped to prevent duplicates. The storage directory setting is intentionally excluded to preserve each system's own file paths. All export and import actions are recorded in the Audit Log."
+    },
+    "templates": {
+      "heading": "Templates",
+      "body": "The Templates feature lets you design reusable print layouts for patient documents. Each template defines a page size (Letter, A4, Legal, or custom), an optional clinic name and address, and one or more picture frames positioned anywhere on the page. Open Templates in the sidebar to create or manage templates. Click 'New Template' to set the title, page size, and clinic info, then click 'Create & Design' to open the Layout Designer. In the designer, click 'Add' to place frames on the page — drag them to move, drag the corner handles to resize, and set a label for each frame in the side panel. Save the template when done. To fill a template, click 'Create Document' on any template card, select an optional patient, and give the document a title. In the Document view, click an empty frame to pick a patient image for that slot, then drag the image to reposition it within the frame. Click Print to send the finished layout to the printer."
     }
   },
   "bulkImport": {
@@ -443,7 +449,7 @@
     "placeholder": "Ask me anything about Max7 Vista...",
     "send": "Send",
     "thinking": "Thinking...",
-    "welcome": "Hello! I'm your Max7 Vista guide. I can help you navigate the system, explain features, and answer questions about patient image management. How can I help you today?",
+    "welcome": "Hello! I'm your Max7 Vista guide. I can help you navigate the system, explain features, and answer questions about patient image management. I cover Patients, Gallery, Capture, Templates, Presentations, and all other features. How can I help you today?",
     "error": "Sorry, I encountered an error. Please try again.",
     "open": "Open Guide",
     "close": "Close Guide"
@@ -501,5 +507,84 @@
     "patientsSkipped": "Patients skipped",
     "imagesImported": "Images imported",
     "imagesSkipped": "Images skipped"
+  },
+  "templates": {
+    "title": "Templates",
+    "subtitle": "Design reusable layouts with picture frames and clinic info, then fill them with patient images.",
+    "newTemplate": "New Template",
+    "noTemplates": "No templates yet",
+    "noTemplatesDesc": "Create your first template to define layouts for patient documents.",
+    "editLayout": "Edit Layout",
+    "createDocument": "Create Document",
+    "frameCount": "{{count}} frame",
+    "frameCount_plural": "{{count}} frames",
+    "createTitle": "New Template",
+    "templateName": "Template Name",
+    "pageSize": "Page Size",
+    "widthIn": "Width (in)",
+    "heightIn": "Height (in)",
+    "officeName": "Clinic / Office Name",
+    "officeInfo": "Clinic Address / Info",
+    "officeNamePlaceholder": "Your Clinic Name",
+    "officeInfoPlaceholder": "Address, phone, etc.",
+    "namePlaceholder": "e.g. Pre/Post Comparison",
+    "optional": "(optional)",
+    "creating": "Creating…",
+    "createAndDesign": "Create & Design",
+    "useTitle": "Create Document from \"{{title}}\"",
+    "patient": "Patient",
+    "noPatient": "No patient (generic)",
+    "selectPatient": "Select patient…",
+    "documentTitle": "Document Title",
+    "createFailed": "Failed to create template",
+    "deleted": "Template deleted",
+    "deleteFailed": "Failed to delete template",
+    "docCreateFailed": "Failed to create document",
+    "deleteTitle": "Delete Template",
+    "deleteDesc": "Delete \"{{title}}\"? This will also delete all documents created from this template. This cannot be undone.",
+    "updatedDate": "Updated {{date}}",
+    "designer": {
+      "loading": "Loading template…",
+      "templateInfo": "Template Info",
+      "name": "Name",
+      "officeName": "Clinic / Office Name",
+      "officeInfo": "Address / Contact Info",
+      "optional": "Optional",
+      "pageSize": "Page Size",
+      "frames": "Frames ({{count}})",
+      "noFrames": "No frames yet. Click Add to place a picture frame on the page.",
+      "add": "Add",
+      "selectedFrame": "Selected Frame",
+      "label": "Label",
+      "labelPlaceholder": "e.g. Before Photo",
+      "width": "Width ({{unit}})",
+      "height": "Height ({{unit}})",
+      "xPos": "X pos ({{unit}})",
+      "yPos": "Y pos ({{unit}})",
+      "removeFrame": "Remove Frame",
+      "saved": "Template saved",
+      "saveFailed": "Failed to save template",
+      "saving": "Saving…",
+      "save": "Save"
+    },
+    "document": {
+      "loading": "Loading document…",
+      "notFound": "Document not found.",
+      "unsavedChanges": "Unsaved changes",
+      "saving": "Saving…",
+      "save": "Save",
+      "print": "Print",
+      "hint": "Click an empty frame to assign a patient image. Drag an assigned image to reposition it within the frame.",
+      "selectImage": "Select Image for \"{{label}}\"",
+      "noImages": "No images found for this patient.",
+      "noPatientImages": "No patient assigned to this document — assign a patient to browse their images.",
+      "saved": "Document saved",
+      "saveFailed": "Failed to save document",
+      "removeImage": "Remove image",
+      "clickToAdd": "Click to add image",
+      "frame": "Frame",
+      "dob": "DOB:",
+      "date": "Date:"
+    }
   }
 }

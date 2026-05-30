@@ -1,16 +1,15 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Plus, Trash2, Save, SquareStack } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +54,7 @@ export default function TemplateDesigner() {
   const templateId = parseInt(params.id);
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const [title, setTitle] = useState("Untitled Template");
   const [officeName, setOfficeName] = useState("");
@@ -166,9 +166,9 @@ export default function TemplateDesigner() {
       queryClient.invalidateQueries({ queryKey: ["templates"] });
       queryClient.invalidateQueries({ queryKey: ["templates", templateId] });
       setIsDirty(false);
-      toast({ title: "Template saved" });
+      toast({ title: t("templates.designer.saved") });
     },
-    onError: () => toast({ title: "Failed to save template", variant: "destructive" }),
+    onError: () => toast({ title: t("templates.designer.saveFailed"), variant: "destructive" }),
   });
 
   function handleSave() {
@@ -217,7 +217,7 @@ export default function TemplateDesigner() {
   const selectedFrame = frames.find((f) => f.id === selectedFrameId) ?? null;
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-64 text-muted-foreground">Loading template…</div>;
+    return <div className="flex items-center justify-center h-64 text-muted-foreground">{t("templates.designer.loading")}</div>;
   }
 
   return (
@@ -300,33 +300,33 @@ export default function TemplateDesigner() {
       <div className="w-72 xl:w-80 border-l bg-background overflow-y-auto flex-shrink-0 flex flex-col">
         <div className="flex items-center justify-between px-4 py-3 border-b">
           <Button variant="ghost" size="sm" onClick={() => navigate("/templates")} className="gap-1.5 text-muted-foreground">
-            <ArrowLeft className="h-3.5 w-3.5" /> Templates
+            <ArrowLeft className="h-3.5 w-3.5" /> {t("nav.templates")}
           </Button>
           <Button size="sm" onClick={handleSave} disabled={saveMutation.isPending || !isDirty}>
             <Save className="h-3.5 w-3.5 mr-1.5" />
-            {saveMutation.isPending ? "Saving…" : "Save"}
+            {saveMutation.isPending ? t("templates.designer.saving") : t("templates.designer.save")}
           </Button>
         </div>
 
         <div className="flex-1 overflow-y-auto">
           <section className="px-4 py-3 border-b space-y-3">
-            <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">Template Info</h3>
+            <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">{t("templates.designer.templateInfo")}</h3>
             <div className="space-y-1.5">
-              <Label className="text-xs">Name</Label>
+              <Label className="text-xs">{t("templates.designer.name")}</Label>
               <Input value={title} onChange={(e) => { setTitle(e.target.value); setIsDirty(true); }} className="h-8 text-sm" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Clinic / Office Name</Label>
-              <Input value={officeName} onChange={(e) => { setOfficeName(e.target.value); setIsDirty(true); }} placeholder="Optional" className="h-8 text-sm" />
+              <Label className="text-xs">{t("templates.designer.officeName")}</Label>
+              <Input value={officeName} onChange={(e) => { setOfficeName(e.target.value); setIsDirty(true); }} placeholder={t("templates.designer.optional")} className="h-8 text-sm" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Address / Contact Info</Label>
-              <Textarea value={officeInfo} onChange={(e) => { setOfficeInfo(e.target.value); setIsDirty(true); }} placeholder="Optional" rows={2} className="text-sm resize-none" />
+              <Label className="text-xs">{t("templates.designer.officeInfo")}</Label>
+              <Textarea value={officeInfo} onChange={(e) => { setOfficeInfo(e.target.value); setIsDirty(true); }} placeholder={t("templates.designer.optional")} rows={2} className="text-sm resize-none" />
             </div>
           </section>
 
           <section className="px-4 py-3 border-b space-y-3">
-            <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">Page Size</h3>
+            <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">{t("templates.designer.pageSize")}</h3>
             <Select value={pagePreset} onValueChange={handlePagePreset}>
               <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -339,11 +339,11 @@ export default function TemplateDesigner() {
             </div>
             <div className="flex gap-2">
               <div className="flex-1 space-y-1">
-                <Label className="text-xs">Width ({unit})</Label>
+                <Label className="text-xs">{t("templates.designer.width", { unit })}</Label>
                 <Input value={customW} onChange={(e) => setCustomW(e.target.value)} onBlur={applyCustomSize} className="h-7 text-xs" />
               </div>
               <div className="flex-1 space-y-1">
-                <Label className="text-xs">Height ({unit})</Label>
+                <Label className="text-xs">{t("templates.designer.height", { unit })}</Label>
                 <Input value={customH} onChange={(e) => setCustomH(e.target.value)} onBlur={applyCustomSize} className="h-7 text-xs" />
               </div>
             </div>
@@ -353,14 +353,14 @@ export default function TemplateDesigner() {
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide flex items-center gap-1.5">
                 <SquareStack className="h-3.5 w-3.5" />
-                Frames ({frames.length})
+                {t("templates.designer.frames", { count: frames.length })}
               </h3>
               <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={addFrame}>
-                <Plus className="h-3 w-3 mr-1" /> Add
+                <Plus className="h-3 w-3 mr-1" /> {t("templates.designer.add")}
               </Button>
             </div>
             {frames.length === 0 && (
-              <p className="text-xs text-muted-foreground py-2">No frames yet. Click Add to place a picture frame on the page.</p>
+              <p className="text-xs text-muted-foreground py-2">{t("templates.designer.noFrames")}</p>
             )}
             <div className="space-y-1">
               {frames.map((f, i) => (
@@ -383,10 +383,10 @@ export default function TemplateDesigner() {
 
           {selectedFrame && (
             <section className="px-4 py-3 space-y-3">
-              <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">Selected Frame</h3>
+              <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">{t("templates.designer.selectedFrame")}</h3>
               <div className="space-y-1.5">
-                <Label className="text-xs">Label</Label>
-                <Input value={selectedFrame.label ?? ""} onChange={(e) => updateFrame(selectedFrame.id, { label: e.target.value })} className="h-7 text-xs" placeholder="e.g. Before Photo" />
+                <Label className="text-xs">{t("templates.designer.label")}</Label>
+                <Input value={selectedFrame.label ?? ""} onChange={(e) => updateFrame(selectedFrame.id, { label: e.target.value })} className="h-7 text-xs" placeholder={t("templates.designer.labelPlaceholder")} />
               </div>
               <div className="flex items-center gap-1.5">
                 <Button variant="outline" size="sm" className={cn("h-6 px-2 text-xs", unit === "in" && "bg-primary text-primary-foreground")} onClick={() => setUnit("in")}>in</Button>
@@ -394,7 +394,7 @@ export default function TemplateDesigner() {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <Label className="text-xs">Width ({unit})</Label>
+                  <Label className="text-xs">{t("templates.designer.width", { unit })}</Label>
                   <Input
                     value={toDisp(selectedFrame.width, unit)}
                     onChange={(e) => { const v = fromDisp(e.target.value, unit); if (v && v > 0) updateFrame(selectedFrame.id, { width: v }); }}
@@ -402,7 +402,7 @@ export default function TemplateDesigner() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Height ({unit})</Label>
+                  <Label className="text-xs">{t("templates.designer.height", { unit })}</Label>
                   <Input
                     value={toDisp(selectedFrame.height, unit)}
                     onChange={(e) => { const v = fromDisp(e.target.value, unit); if (v && v > 0) updateFrame(selectedFrame.id, { height: v }); }}
@@ -410,7 +410,7 @@ export default function TemplateDesigner() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">X pos ({unit})</Label>
+                  <Label className="text-xs">{t("templates.designer.xPos", { unit })}</Label>
                   <Input
                     value={toDisp(selectedFrame.x, unit)}
                     onChange={(e) => { const v = fromDisp(e.target.value, unit); if (v !== null && v >= 0) updateFrame(selectedFrame.id, { x: v }); }}
@@ -418,7 +418,7 @@ export default function TemplateDesigner() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Y pos ({unit})</Label>
+                  <Label className="text-xs">{t("templates.designer.yPos", { unit })}</Label>
                   <Input
                     value={toDisp(selectedFrame.y, unit)}
                     onChange={(e) => { const v = fromDisp(e.target.value, unit); if (v !== null && v >= 0) updateFrame(selectedFrame.id, { y: v }); }}
@@ -427,7 +427,7 @@ export default function TemplateDesigner() {
                 </div>
               </div>
               <Button size="sm" variant="outline" className="w-full h-7 text-xs text-destructive hover:text-destructive" onClick={() => removeFrame(selectedFrame.id)}>
-                <Trash2 className="h-3 w-3 mr-1.5" /> Remove Frame
+                <Trash2 className="h-3 w-3 mr-1.5" /> {t("templates.designer.removeFrame")}
               </Button>
             </section>
           )}

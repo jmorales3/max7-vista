@@ -11,7 +11,8 @@
     "settings": "Paramètres",
     "manual": "Manuel",
     "bulkImport": "Import en Masse",
-    "menu": "Menu"
+    "menu": "Menu",
+    "templates": "Modèles"
   },
   "common": {
     "save": "Enregistrer",
@@ -329,7 +330,8 @@
       "presentations": "Présentations",
       "migration": "Migration (LAN ↔ Web)",
       "roles": "Rôles Utilisateur",
-      "tenants": "Configuration Multi-Organisation"
+      "tenants": "Configuration Multi-Organisation",
+      "templates": "Modèles"
     },
     "overview": {
       "heading": "Qu'est-ce que Max7 Vista ?",
@@ -382,6 +384,10 @@
     "migration": {
       "heading": "Migration (LAN ↔ Web)",
       "body": "Les Super Administrateurs peuvent transférer toutes les données entre la version bureau/LAN Electron et la version web cloud sans perte de données. Allez dans Paramètres → Migration. Cliquez sur 'Télécharger l'archive de migration' pour exporter un ZIP contenant tous les dossiers patients, fichiers d'images, utilisateurs (avec mots de passe chiffrés) et paramètres système. Sur le système de destination, importez ce ZIP via 'Importer l'archive'. Les patients et utilisateurs existants sont automatiquement ignorés pour éviter les doublons. Le paramètre de répertoire de stockage est intentionnellement exclu pour préserver les chemins propres à chaque système. Toutes les actions d'exportation et d'importation sont enregistrées dans le Journal d'Audit."
+    },
+    "templates": {
+      "heading": "Modèles",
+      "body": "La fonctionnalité Modèles vous permet de concevoir des mises en page d'impression réutilisables pour les documents patients. Chaque modèle définit un format de page (Lettre, A4, Légal ou personnalisé), un nom et une adresse de clinique facultatifs, et un ou plusieurs cadres photo positionnés n'importe où sur la page. Ouvrez Modèles dans la barre latérale pour créer ou gérer des modèles. Cliquez sur 'Nouveau Modèle' pour définir le titre, le format de page et les informations de la clinique, puis cliquez sur 'Créer et Concevoir' pour ouvrir le Concepteur de Mise en Page. Dans le concepteur, cliquez sur 'Ajouter' pour placer des cadres sur la page — faites-les glisser pour les déplacer, faites glisser les poignées d'angle pour les redimensionner, et définissez une étiquette pour chaque cadre dans le panneau latéral. Enregistrez le modèle une fois terminé. Pour remplir un modèle, cliquez sur 'Créer un Document' sur une carte de modèle, sélectionnez un patient facultatif et donnez un titre au document. Dans la vue Document, cliquez sur un cadre vide pour sélectionner une image patient pour cet emplacement, puis faites glisser l'image pour la repositionner dans le cadre. Cliquez sur Imprimer pour envoyer la mise en page terminée à l'imprimante."
     }
   },
   "bulkImport": {
@@ -443,7 +449,7 @@
     "placeholder": "Posez-moi n'importe quelle question sur Max7 Vista...",
     "send": "Envoyer",
     "thinking": "Réflexion...",
-    "welcome": "Bonjour ! Je suis votre guide Max7 Vista. Je peux vous aider à naviguer dans le système, expliquer les fonctionnalités et répondre à vos questions sur la gestion des images patients. Comment puis-je vous aider aujourd'hui ?",
+    "welcome": "Bonjour ! Je suis votre guide Max7 Vista. Je peux vous aider à naviguer dans le système, expliquer les fonctionnalités et répondre à vos questions sur la gestion des images patients. Je couvre les Patients, la Galerie, la Capture, les Modèles, les Présentations et toutes les autres fonctionnalités. Comment puis-je vous aider aujourd'hui ?",
     "error": "Désolé, j'ai rencontré une erreur. Veuillez réessayer.",
     "open": "Ouvrir le Guide",
     "close": "Fermer le Guide"
@@ -501,5 +507,84 @@
     "patientsSkipped": "Patients ignorés",
     "imagesImported": "Images importées",
     "imagesSkipped": "Images ignorées"
+  },
+  "templates": {
+    "title": "Modèles",
+    "subtitle": "Concevez des mises en page réutilisables avec des cadres photo et les informations de la clinique, puis remplissez-les avec des images patients.",
+    "newTemplate": "Nouveau Modèle",
+    "noTemplates": "Aucun modèle pour l'instant",
+    "noTemplatesDesc": "Créez votre premier modèle pour définir des mises en page pour les documents patients.",
+    "editLayout": "Modifier la Mise en Page",
+    "createDocument": "Créer un Document",
+    "frameCount": "{{count}} cadre",
+    "frameCount_plural": "{{count}} cadres",
+    "createTitle": "Nouveau Modèle",
+    "templateName": "Nom du Modèle",
+    "pageSize": "Format de Page",
+    "widthIn": "Largeur (in)",
+    "heightIn": "Hauteur (in)",
+    "officeName": "Nom de la Clinique / Cabinet",
+    "officeInfo": "Adresse / Infos de la Clinique",
+    "officeNamePlaceholder": "Nom de votre Clinique",
+    "officeInfoPlaceholder": "Adresse, téléphone, etc.",
+    "namePlaceholder": "ex. Comparaison Avant/Après",
+    "optional": "(facultatif)",
+    "creating": "Création…",
+    "createAndDesign": "Créer et Concevoir",
+    "useTitle": "Créer un Document depuis \"{{title}}\"",
+    "patient": "Patient",
+    "noPatient": "Sans patient (générique)",
+    "selectPatient": "Sélectionner un patient…",
+    "documentTitle": "Titre du Document",
+    "createFailed": "Échec de la création du modèle",
+    "deleted": "Modèle supprimé",
+    "deleteFailed": "Échec de la suppression du modèle",
+    "docCreateFailed": "Échec de la création du document",
+    "deleteTitle": "Supprimer le Modèle",
+    "deleteDesc": "Supprimer \"{{title}}\" ? Cela supprimera également tous les documents créés à partir de ce modèle. Cette action est irréversible.",
+    "updatedDate": "Mis à jour le {{date}}",
+    "designer": {
+      "loading": "Chargement du modèle…",
+      "templateInfo": "Infos du Modèle",
+      "name": "Nom",
+      "officeName": "Nom de la Clinique / Cabinet",
+      "officeInfo": "Adresse / Coordonnées",
+      "optional": "Facultatif",
+      "pageSize": "Format de Page",
+      "frames": "Cadres ({{count}})",
+      "noFrames": "Aucun cadre pour l'instant. Cliquez sur Ajouter pour placer un cadre photo sur la page.",
+      "add": "Ajouter",
+      "selectedFrame": "Cadre Sélectionné",
+      "label": "Étiquette",
+      "labelPlaceholder": "ex. Photo Avant",
+      "width": "Largeur ({{unit}})",
+      "height": "Hauteur ({{unit}})",
+      "xPos": "Pos X ({{unit}})",
+      "yPos": "Pos Y ({{unit}})",
+      "removeFrame": "Supprimer le Cadre",
+      "saved": "Modèle enregistré",
+      "saveFailed": "Échec de l'enregistrement du modèle",
+      "saving": "Enregistrement…",
+      "save": "Enregistrer"
+    },
+    "document": {
+      "loading": "Chargement du document…",
+      "notFound": "Document introuvable.",
+      "unsavedChanges": "Modifications non enregistrées",
+      "saving": "Enregistrement…",
+      "save": "Enregistrer",
+      "print": "Imprimer",
+      "hint": "Cliquez sur un cadre vide pour assigner une image patient. Faites glisser une image assignée pour la repositionner dans le cadre.",
+      "selectImage": "Sélectionner une Image pour \"{{label}}\"",
+      "noImages": "Aucune image trouvée pour ce patient.",
+      "noPatientImages": "Aucun patient assigné à ce document — assignez un patient pour parcourir ses images.",
+      "saved": "Document enregistré",
+      "saveFailed": "Échec de l'enregistrement du document",
+      "removeImage": "Supprimer l'image",
+      "clickToAdd": "Cliquez pour ajouter une image",
+      "frame": "Cadre",
+      "dob": "Né(e) :",
+      "date": "Date :"
+    }
   }
 }
