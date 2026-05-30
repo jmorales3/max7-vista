@@ -53,7 +53,7 @@ export default function Templates() {
 
   const [useOpen, setUseOpen] = useState(false);
   const [useTemplate, setUseTemplate] = useState<Template | null>(null);
-  const [usePatientId, setUsePatientId] = useState<string>("");
+  const [usePatientId, setUsePatientId] = useState<string>("none");
   const [useDocTitle, setUseDocTitle] = useState("");
 
   const { data: templates = [], isLoading } = useQuery<Template[]>({
@@ -102,14 +102,14 @@ export default function Templates() {
   function handleUse(tmpl: Template) {
     setUseTemplate(tmpl);
     setUseDocTitle(`${tmpl.title} — Document`);
-    setUsePatientId("");
+    setUsePatientId("none");
     setUseOpen(true);
   }
 
   function handleCreateDoc() {
     if (!useTemplate) return;
     const frames = useTemplate.frames.map((f) => ({ frameId: f.id, panX: 50, panY: 50 }));
-    createDocMutation.mutate({ templateId: useTemplate.id, patientId: usePatientId ? parseInt(usePatientId) : undefined, title: useDocTitle || "Document", frames });
+    createDocMutation.mutate({ templateId: useTemplate.id, patientId: usePatientId !== "none" ? parseInt(usePatientId) : undefined, title: useDocTitle || "Document", frames });
   }
 
   return (
@@ -239,7 +239,7 @@ export default function Templates() {
               <Select value={usePatientId} onValueChange={setUsePatientId}>
                 <SelectTrigger><SelectValue placeholder={t("templates.selectPatient")} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">{t("templates.noPatient")}</SelectItem>
+                  <SelectItem value="none">{t("templates.noPatient")}</SelectItem>
                   {(patients as any[]).map((p: any) => (
                     <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
                   ))}
