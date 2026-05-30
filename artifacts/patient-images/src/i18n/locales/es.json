@@ -88,7 +88,11 @@
     "editSubtitleFor": "Actualizar el registro de {{name}}.",
     "updateSuccess": "Paciente actualizado",
     "updateSuccessDesc": "Cambios guardados exitosamente.",
-    "updateError": "Error al actualizar paciente"
+    "updateError": "Error al actualizar paciente",
+    "createTemplateDoc": "Crear Documento de Plantilla",
+    "selectTemplate": "Elegir Plantilla",
+    "noTemplatesAvailable": "Aún no hay plantillas. Crea una en la sección de Plantillas primero.",
+    "createTemplateDocError": "Error al crear el documento"
   },
   "capture": {
     "title": "Capturar Imagen",

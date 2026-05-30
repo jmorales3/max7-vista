@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link, useRoute } from "wouter";
 import { useTranslation } from "react-i18next";
 import {
@@ -14,12 +15,19 @@ import {
   getListPatientTagsQueryKey,
   useAddPatientTag,
   useRemovePatientTag,
+  customFetch,
 } from "@workspace/api-client-react";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -41,6 +49,7 @@ import {
   Tag,
   Plus,
   X,
+  LayoutTemplate,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ImageGrid } from "@/components/image-grid";
@@ -64,6 +73,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useLocation } from "wouter";
 
+interface TemplateItem {
+  id: number;
+  title: string;
+  officeName?: string | null;
+}
+
 export default function PatientDetail() {
   const { t } = useTranslation();
   const [, params] = useRoute("/patients/:id");
@@ -73,6 +88,7 @@ export default function PatientDetail() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [gridColumns, setGridColumns] = useState<1 | 2 | 4 | 8>(4);
   const [selectedTagId, setSelectedTagId] = useState("");
+  const [templateDocOpen, setTemplateDocOpen] = useState(false);
 
   const { data: patient, isLoading: patientLoading } = useGetPatient(id, {
     query: { enabled: !!id, queryKey: getGetPatientQueryKey(id) }
@@ -140,6 +156,27 @@ export default function PatientDetail() {
     addTag.mutate({ id, data: { tagId: parseInt(selectedTagId, 10) } });
   };
 
+  const { data: templates = [], isLoading: templatesLoading } = useQuery<TemplateItem[]>({
+    queryKey: ["templates"],
+    queryFn: () => customFetch<TemplateItem[]>("/api/templates"),
+    enabled: templateDocOpen,
+  });
+
+  const createDocMutation = useMutation({
+    mutationFn: (templateId: number) =>
+      customFetch<{ id: number }>("/api/template-documents", {
+        method: "POST",
+        body: JSON.stringify({ templateId, patientId: id }),
+      }),
+    onSuccess: (doc) => {
+      setTemplateDocOpen(false);
+      setLocation(`/template-documents/${doc.id}`);
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: t("patients.createTemplateDocError") });
+    },
+  });
+
   if (patientLoading) {
     return <div className="p-8"><Skeleton className="h-12 w-64 mb-8" /><Skeleton className="h-64 w-full" /></div>;
   }
@@ -199,6 +236,10 @@ export default function PatientDetail() {
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
                 <Link href={`/patients/${patient.id}/edit`}>{t("patients.editPatient")}</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTemplateDocOpen(true)}>
+                <LayoutTemplate className="mr-2 h-4 w-4" />
+                {t("patients.createTemplateDoc")}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -331,6 +372,47 @@ export default function PatientDetail() {
       </div>
 
       <PatientDocuments patientId={patient.id} />
+
+      <Dialog open={templateDocOpen} onOpenChange={setTemplateDocOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LayoutTemplate className="h-5 w-5 text-primary" />
+              {t("patients.selectTemplate")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 mt-2">
+            {templatesLoading ? (
+              <>
+                <Skeleton className="h-14 w-full" />
+                <Skeleton className="h-14 w-full" />
+                <Skeleton className="h-14 w-full" />
+              </>
+            ) : templates.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                {t("patients.noTemplatesAvailable")}
+              </p>
+            ) : (
+              templates.map((tmpl) => (
+                <button
+                  key={tmpl.id}
+                  className="w-full flex items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm hover:bg-accent hover:border-primary/40 transition-colors disabled:opacity-50"
+                  disabled={createDocMutation.isPending}
+                  onClick={() => createDocMutation.mutate(tmpl.id)}
+                >
+                  <LayoutTemplate className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div className="min-w-0">
+                    <div className="font-medium truncate">{tmpl.title}</div>
+                    {tmpl.officeName && (
+                      <div className="text-xs text-muted-foreground truncate">{tmpl.officeName}</div>
+                    )}
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>

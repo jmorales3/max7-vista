@@ -88,7 +88,11 @@
     "editSubtitleFor": "Mettre à jour le dossier de {{name}}.",
     "updateSuccess": "Patient mis à jour",
     "updateSuccessDesc": "Modifications enregistrées avec succès.",
-    "updateError": "Erreur lors de la mise à jour du patient"
+    "updateError": "Erreur lors de la mise à jour du patient",
+    "createTemplateDoc": "Créer un Document à partir d'un Modèle",
+    "selectTemplate": "Choisir un Modèle",
+    "noTemplatesAvailable": "Aucun modèle pour l'instant. Créez-en un dans la section Modèles d'abord.",
+    "createTemplateDocError": "Échec de la création du document"
   },
   "capture": {
     "title": "Capturer une Image",

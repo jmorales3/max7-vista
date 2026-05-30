@@ -165,17 +165,19 @@ export default function Templates() {
                   {t("templates.updatedDate", { date: format(new Date(tmpl.updatedAt), "MMM d, yyyy") })}
                 </p>
               </CardContent>
-              <CardFooter className="pt-2 flex gap-2">
-                <Button size="sm" variant="outline" className="flex-1" onClick={() => navigate(`/templates/${tmpl.id}`)}>
-                  <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                  {t("templates.editLayout")}
-                </Button>
-                <Button size="sm" className="flex-1" onClick={() => handleUse(tmpl)}>
+              <CardFooter className="pt-2 flex flex-col gap-2">
+                <div className="flex gap-2 w-full">
+                  <Button size="sm" variant="outline" className="flex-1 min-w-0" onClick={() => navigate(`/templates/${tmpl.id}`)}>
+                    <Pencil className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                    <span className="truncate">{t("templates.editLayout")}</span>
+                  </Button>
+                  <Button size="sm" variant="ghost" className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10 px-2" onClick={() => setDeleteTarget(tmpl)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                <Button size="sm" className="w-full" onClick={() => handleUse(tmpl)}>
                   <FileText className="h-3.5 w-3.5 mr-1.5" />
                   {t("templates.createDocument")}
-                </Button>
-                <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10 px-2" onClick={() => setDeleteTarget(tmpl)}>
-                  <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </CardFooter>
             </Card>
