@@ -71,60 +71,92 @@ function ImageInFrame({
     window.addEventListener("mouseup", onUp);
   };
 
+  const labelFontPx = Math.max(7, 9 * (pxPerMm / PX_PER_MM));
+
   return (
     <div
       style={{
         position: "absolute",
-        left: frame.x * pxPerMm, top: frame.y * pxPerMm,
-        width: frameW, height: frameH,
-        overflow: "hidden",
-        border: editing ? (hasImage ? "2px solid hsl(var(--primary)/0.6)" : "2px dashed hsl(var(--primary))") : "1px solid hsl(var(--border))",
-        boxSizing: "border-box",
-        cursor: hasImage ? "grab" : "pointer",
+        left: frame.x * pxPerMm,
+        top: frame.y * pxPerMm,
+        width: frameW,
       }}
-      onClick={hasImage ? undefined : onClick}
-      onMouseDown={hasImage ? handleMouseDown : undefined}
     >
-      {hasImage ? (
-        <img
-          src={`/api/images/${docFrame.imageId}/file`}
-          onLoad={(e) => {
-            const img = e.target as HTMLImageElement;
-            setNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
-          }}
-          style={{
-            position: "absolute",
-            left: imgLeft, top: imgTop,
-            width: imgW, height: imgH,
-            userSelect: "none",
-            pointerEvents: "none",
-            objectFit: "none",
-          }}
-          draggable={false}
-          alt=""
-        />
-      ) : (
+      {/* Image frame box */}
+      <div
+        style={{
+          width: frameW, height: frameH,
+          overflow: "hidden",
+          border: editing ? (hasImage ? "2px solid hsl(var(--primary)/0.6)" : "2px dashed hsl(var(--primary))") : "1px solid hsl(var(--border))",
+          boxSizing: "border-box",
+          cursor: hasImage ? "grab" : "pointer",
+          position: "relative",
+        }}
+        onClick={hasImage ? undefined : onClick}
+        onMouseDown={hasImage ? handleMouseDown : undefined}
+      >
+        {hasImage ? (
+          <img
+            src={`/api/images/${docFrame.imageId}/file`}
+            onLoad={(e) => {
+              const img = e.target as HTMLImageElement;
+              setNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
+            }}
+            style={{
+              position: "absolute",
+              left: imgLeft, top: imgTop,
+              width: imgW, height: imgH,
+              userSelect: "none",
+              pointerEvents: "none",
+              objectFit: "none",
+            }}
+            draggable={false}
+            alt=""
+          />
+        ) : (
+          <div
+            style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "hsl(var(--muted)/0.4)", gap: 4 }}
+            onClick={onClick}
+          >
+            <ImagePlus style={{ width: Math.min(24, frameW * 0.25), height: Math.min(24, frameH * 0.25), color: "hsl(var(--muted-foreground))", opacity: 0.6 }} />
+            {frameH > 60 && (
+              <span style={{ fontSize: labelFontPx, color: "hsl(var(--muted-foreground))", textAlign: "center", padding: "0 6px" }}>
+                {frame.label ?? clickToAddLabel}
+              </span>
+            )}
+          </div>
+        )}
+        {hasImage && editing && (
+          <button
+            style={{ position: "absolute", top: 2, right: 2, background: "hsl(var(--destructive))", color: "white", borderRadius: 4, border: "none", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 10 }}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); onPanChange(-1, -1); }}
+            title={removeImageTitle}
+          >
+            <X style={{ width: 10, height: 10 }} />
+          </button>
+        )}
+      </div>
+
+      {/* Label below frame — shown when image is loaded and label exists */}
+      {hasImage && frame.label && (
         <div
-          style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "hsl(var(--muted)/0.4)", gap: 4 }}
-          onClick={onClick}
+          style={{
+            width: "100%",
+            textAlign: "center",
+            fontSize: labelFontPx,
+            lineHeight: 1.3,
+            color: "#333",
+            padding: "2px 4px",
+            borderLeft: "1px solid hsl(var(--border))",
+            borderRight: "1px solid hsl(var(--border))",
+            borderBottom: "1px solid hsl(var(--border))",
+            background: "#fafafa",
+            boxSizing: "border-box",
+          }}
         >
-          <ImagePlus style={{ width: Math.min(24, frameW * 0.25), height: Math.min(24, frameH * 0.25), color: "hsl(var(--muted-foreground))", opacity: 0.6 }} />
-          {frameH * pxPerMm > 60 && (
-            <span style={{ fontSize: Math.max(8, 10 * (pxPerMm / PX_PER_MM)), color: "hsl(var(--muted-foreground))", textAlign: "center" }}>
-              {frame.label ?? clickToAddLabel}
-            </span>
-          )}
+          {frame.label}
         </div>
-      )}
-      {hasImage && editing && (
-        <button
-          style={{ position: "absolute", top: 2, right: 2, background: "hsl(var(--destructive))", color: "white", borderRadius: 4, border: "none", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 10 }}
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); onPanChange(-1, -1); }}
-          title={removeImageTitle}
-        >
-          <X style={{ width: 10, height: 10 }} />
-        </button>
       )}
     </div>
   );

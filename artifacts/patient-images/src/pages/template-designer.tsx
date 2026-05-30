@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Save, SquareStack } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, SquareStack, RotateCcw, Grid3X3, Copy, ClipboardPaste } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TemplateFrame { id: string; x: number; y: number; width: number; height: number; label?: string; }
@@ -22,6 +22,7 @@ type DragState =
 
 const MM_PER_IN = 25.4;
 const PX_PER_MM = 96 / 25.4;
+const GRID_MM = 5;
 const PAGE_PRESETS = [
   { id: "letter", label: "Letter (8.5×11 in)", width: 215.9, height: 279.4 },
   { id: "a4", label: "A4 (210×297 mm)", width: 210, height: 297 },
@@ -43,10 +44,15 @@ function fromDisp(val: string, unit: "in" | "mm"): number | null {
   return isNaN(n) ? null : unit === "in" ? n * MM_PER_IN : n;
 }
 function detectPreset(w: number, h: number) {
-  for (const p of PAGE_PRESETS) {
-    if (p.id !== "custom" && Math.abs(p.width - w) < 0.5 && Math.abs(p.height - h) < 0.5) return p.id;
-  }
+  const portrait = PAGE_PRESETS.find((p) => p.id !== "custom" && Math.abs(p.width - w) < 0.5 && Math.abs(p.height - h) < 0.5);
+  if (portrait) return portrait.id;
+  const landscape = PAGE_PRESETS.find((p) => p.id !== "custom" && Math.abs(p.height - w) < 0.5 && Math.abs(p.width - h) < 0.5);
+  if (landscape) return landscape.id;
   return "custom";
+}
+function snapVal(val: number, enabled: boolean): number {
+  if (!enabled) return val;
+  return Math.round(val / GRID_MM) * GRID_MM;
 }
 
 export default function TemplateDesigner() {
@@ -68,6 +74,8 @@ export default function TemplateDesigner() {
   const [customW, setCustomW] = useState("8.50");
   const [customH, setCustomH] = useState("11.00");
   const [isDirty, setIsDirty] = useState(false);
+  const [snapToGrid, setSnapToGrid] = useState(true);
+  const [copiedSize, setCopiedSize] = useState<{ width: number; height: number } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(640);
@@ -76,11 +84,15 @@ export default function TemplateDesigner() {
   const pageWRef = useRef(215.9);
   const pageHRef = useRef(279.4);
   const containerWRef = useRef(640);
+  const snapRef = useRef(true);
 
   useEffect(() => { framesRef.current = frames; }, [frames]);
   useEffect(() => { pageWRef.current = pageWidth; }, [pageWidth]);
   useEffect(() => { pageHRef.current = pageHeight; }, [pageHeight]);
   useEffect(() => { containerWRef.current = containerWidth; }, [containerWidth]);
+  useEffect(() => { snapRef.current = snapToGrid; }, [snapToGrid]);
+
+  const isLandscape = pageWidth > pageHeight;
 
   const physW = pageWidth * PX_PER_MM;
   const physH = pageHeight * PX_PER_MM;
@@ -88,11 +100,17 @@ export default function TemplateDesigner() {
   const displayW = physW * displayScale;
   const displayH = physH * displayScale;
 
+  // Grid lines (every GRID_MM mm)
+  const gridLinesX: number[] = [];
+  const gridLinesY: number[] = [];
+  if (snapToGrid) {
+    for (let x = GRID_MM; x < pageWidth; x += GRID_MM) gridLinesX.push(x * PX_PER_MM * displayScale);
+    for (let y = GRID_MM; y < pageHeight; y += GRID_MM) gridLinesY.push(y * PX_PER_MM * displayScale);
+  }
+
   useEffect(() => {
     if (!containerRef.current) return;
-    const ro = new ResizeObserver((entries) => {
-      setContainerWidth(entries[0].contentRect.width);
-    });
+    const ro = new ResizeObserver((entries) => setContainerWidth(entries[0].contentRect.width));
     ro.observe(containerRef.current);
     return () => ro.disconnect();
   }, []);
@@ -108,16 +126,15 @@ export default function TemplateDesigner() {
       const dx = (e.clientX - d.startMX) / pxPerMm;
       const dy = (e.clientY - d.startMY) / pxPerMm;
       const MIN = 10;
+      const snap = snapRef.current;
 
       setFrames((prev) =>
         prev.map((f) => {
           if (f.id !== d.frameId) return f;
           if (d.type === "move") {
-            return {
-              ...f,
-              x: Math.max(0, Math.min(d.origX + dx, pageWRef.current - f.width)),
-              y: Math.max(0, Math.min(d.origY + dy, pageHRef.current - f.height)),
-            };
+            const nx = snapVal(Math.max(0, Math.min(d.origX + dx, pageWRef.current - f.width)), snap);
+            const ny = snapVal(Math.max(0, Math.min(d.origY + dy, pageHRef.current - f.height)), snap);
+            return { ...f, x: nx, y: ny };
           }
           let nx = d.origX, ny = d.origY, nw = d.origW, nh = d.origH;
           const h = d.handle;
@@ -125,8 +142,10 @@ export default function TemplateDesigner() {
           if (h.includes("w")) { nw = Math.max(MIN, d.origW - dx); nx = d.origX + (d.origW - nw); }
           if (h.includes("s")) nh = Math.max(MIN, d.origH + dy);
           if (h.includes("n")) { nh = Math.max(MIN, d.origH - dy); ny = d.origY + (d.origH - nh); }
-          nx = Math.max(0, Math.min(nx, pageWRef.current - nw));
-          ny = Math.max(0, Math.min(ny, pageHRef.current - nh));
+          nw = snapVal(Math.max(MIN, nw), snap);
+          nh = snapVal(Math.max(MIN, nh), snap);
+          nx = snapVal(Math.max(0, Math.min(nx, pageWRef.current - nw)), snap);
+          ny = snapVal(Math.max(0, Math.min(ny, pageHRef.current - nh)), snap);
           return { ...f, x: nx, y: ny, width: nw, height: nh };
         })
       );
@@ -177,7 +196,7 @@ export default function TemplateDesigner() {
 
   function addFrame() {
     const id = crypto.randomUUID();
-    const newFrame: TemplateFrame = { id, x: 10, y: 10, width: 50, height: 50, label: `Frame ${frames.length + 1}` };
+    const newFrame: TemplateFrame = { id, x: snapVal(10, snapToGrid), y: snapVal(10, snapToGrid), width: snapVal(50, snapToGrid), height: snapVal(50, snapToGrid), label: `Frame ${frames.length + 1}` };
     setFrames((prev) => [...prev, newFrame]);
     setSelectedFrameId(id);
     setIsDirty(true);
@@ -198,10 +217,14 @@ export default function TemplateDesigner() {
     setPagePreset(preset);
     const p = PAGE_PRESETS.find((x) => x.id === preset);
     if (p && preset !== "custom") {
-      setPageWidth(p.width);
-      setPageHeight(p.height);
-      setCustomW(toDisp(p.width, unit));
-      setCustomH(toDisp(p.height, unit));
+      // preserve current orientation when switching presets
+      const wantLandscape = isLandscape;
+      const pw = wantLandscape ? Math.max(p.width, p.height) : Math.min(p.width, p.height);
+      const ph = wantLandscape ? Math.min(p.width, p.height) : Math.max(p.width, p.height);
+      setPageWidth(pw);
+      setPageHeight(ph);
+      setCustomW(toDisp(pw, unit));
+      setCustomH(toDisp(ph, unit));
       setIsDirty(true);
     }
   }
@@ -214,6 +237,16 @@ export default function TemplateDesigner() {
     }
   }
 
+  function toggleOrientation() {
+    const newW = pageHeight;
+    const newH = pageWidth;
+    setPageWidth(newW);
+    setPageHeight(newH);
+    setCustomW(toDisp(newW, unit));
+    setCustomH(toDisp(newH, unit));
+    setIsDirty(true);
+  }
+
   const selectedFrame = frames.find((f) => f.id === selectedFrameId) ?? null;
 
   if (isLoading) {
@@ -222,6 +255,7 @@ export default function TemplateDesigner() {
 
   return (
     <div className="flex -mx-4 -mt-4 md:-mx-6 md:-mt-6 lg:-mx-8 lg:-mt-8" style={{ height: "calc(100vh - 3.5rem)" }}>
+      {/* Canvas area */}
       <div ref={containerRef} className="flex-1 bg-muted/40 overflow-auto flex flex-col items-center p-6 min-w-0">
         <div className="w-full max-w-3xl">
           <div
@@ -236,12 +270,28 @@ export default function TemplateDesigner() {
             }}
             onClick={() => setSelectedFrameId(null)}
           >
+            {/* Grid overlay */}
+            {snapToGrid && (
+              <svg
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 1 }}
+              >
+                {gridLinesX.map((x, i) => (
+                  <line key={`gx${i}`} x1={x} y1={0} x2={x} y2={displayH} stroke="hsl(var(--muted-foreground)/0.12)" strokeWidth={0.5} />
+                ))}
+                {gridLinesY.map((y, i) => (
+                  <line key={`gy${i}`} x1={0} y1={y} x2={displayW} y2={y} stroke="hsl(var(--muted-foreground)/0.12)" strokeWidth={0.5} />
+                ))}
+              </svg>
+            )}
+
+            {/* Frames */}
             {frames.map((frame, i) => {
               const isSelected = frame.id === selectedFrameId;
               const fx = frame.x * PX_PER_MM * displayScale;
               const fy = frame.y * PX_PER_MM * displayScale;
               const fw = frame.width * PX_PER_MM * displayScale;
               const fh = frame.height * PX_PER_MM * displayScale;
+              const labelFontSize = Math.max(9, 11 * displayScale);
               return (
                 <div
                   key={frame.id}
@@ -256,6 +306,10 @@ export default function TemplateDesigner() {
                       cursor: "move",
                       boxSizing: "border-box",
                       userSelect: "none",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
                     onMouseDown={(e) => {
                       e.preventDefault();
@@ -264,11 +318,12 @@ export default function TemplateDesigner() {
                       dragRef.current = { type: "move", frameId: frame.id, startMX: e.clientX, startMY: e.clientY, origX: frame.x, origY: frame.y };
                     }}
                   >
-                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-                      <span style={{ fontSize: Math.max(9, 11 * displayScale), color: "hsl(var(--muted-foreground))", fontWeight: 500 }}>
-                        {frame.label || `Frame ${i + 1}`}
-                      </span>
-                    </div>
+                    <span style={{ fontSize: labelFontSize, color: "hsl(var(--muted-foreground))", fontWeight: 500, pointerEvents: "none", textAlign: "center", padding: "0 4px" }}>
+                      {frame.label || `Frame ${i + 1}`}
+                    </span>
+                    <span style={{ fontSize: Math.max(8, 9 * displayScale), color: "hsl(var(--muted-foreground)/0.6)", pointerEvents: "none", marginTop: 2 }}>
+                      {toDisp(frame.width, unit)}×{toDisp(frame.height, unit)} {unit}
+                    </span>
                   </div>
                   {isSelected && RESIZE_HANDLES.map((rh) => (
                     <div
@@ -291,12 +346,13 @@ export default function TemplateDesigner() {
             })}
           </div>
           <p className="text-center text-xs text-muted-foreground mt-3">
-            {(pageWidth / MM_PER_IN).toFixed(2)}" × {(pageHeight / MM_PER_IN).toFixed(2)}" · {frames.length} frame{frames.length !== 1 ? "s" : ""}
+            {(pageWidth / MM_PER_IN).toFixed(2)}" × {(pageHeight / MM_PER_IN).toFixed(2)}" · {isLandscape ? "Landscape" : "Portrait"} · {frames.length} frame{frames.length !== 1 ? "s" : ""}
             {displayScale < 0.99 && ` · Zoom ${Math.round(displayScale * 100)}%`}
           </p>
         </div>
       </div>
 
+      {/* Right sidebar */}
       <div className="w-72 xl:w-80 border-l bg-background overflow-y-auto flex-shrink-0 flex flex-col">
         <div className="flex items-center justify-between px-4 py-3 border-b">
           <Button variant="ghost" size="sm" onClick={() => navigate("/templates")} className="gap-1.5 text-muted-foreground">
@@ -309,6 +365,7 @@ export default function TemplateDesigner() {
         </div>
 
         <div className="flex-1 overflow-y-auto">
+          {/* Template Info */}
           <section className="px-4 py-3 border-b space-y-3">
             <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">{t("templates.designer.templateInfo")}</h3>
             <div className="space-y-1.5">
@@ -325,6 +382,7 @@ export default function TemplateDesigner() {
             </div>
           </section>
 
+          {/* Page Size */}
           <section className="px-4 py-3 border-b space-y-3">
             <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">{t("templates.designer.pageSize")}</h3>
             <Select value={pagePreset} onValueChange={handlePagePreset}>
@@ -333,6 +391,32 @@ export default function TemplateDesigner() {
                 {PAGE_PRESETS.map((p) => <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>)}
               </SelectContent>
             </Select>
+
+            {/* Orientation toggle */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground mr-1">Orientation:</span>
+              <Button
+                variant="outline" size="sm"
+                className={cn("h-7 px-2.5 text-xs gap-1.5", !isLandscape && "bg-primary text-primary-foreground border-primary")}
+                onClick={() => isLandscape && toggleOrientation()}
+              >
+                <span style={{ display: "inline-block", width: 10, height: 13, border: "1.5px solid currentColor", borderRadius: 1, flexShrink: 0 }} />
+                Portrait
+              </Button>
+              <Button
+                variant="outline" size="sm"
+                className={cn("h-7 px-2.5 text-xs gap-1.5", isLandscape && "bg-primary text-primary-foreground border-primary")}
+                onClick={() => !isLandscape && toggleOrientation()}
+              >
+                <span style={{ display: "inline-block", width: 13, height: 10, border: "1.5px solid currentColor", borderRadius: 1, flexShrink: 0 }} />
+                Landscape
+              </Button>
+              <Button variant="ghost" size="sm" className="h-7 px-1.5 text-muted-foreground" title="Swap orientation" onClick={toggleOrientation}>
+                <RotateCcw className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+
+            {/* Unit toggle */}
             <div className="flex items-center gap-1.5">
               <Button variant="outline" size="sm" className={cn("h-6 px-2 text-xs", unit === "in" && "bg-primary text-primary-foreground")} onClick={() => { setUnit("in"); setCustomW(toDisp(pageWidth, "in")); setCustomH(toDisp(pageHeight, "in")); }}>in</Button>
               <Button variant="outline" size="sm" className={cn("h-6 px-2 text-xs", unit === "mm" && "bg-primary text-primary-foreground")} onClick={() => { setUnit("mm"); setCustomW(toDisp(pageWidth, "mm")); setCustomH(toDisp(pageHeight, "mm")); }}>mm</Button>
@@ -347,8 +431,24 @@ export default function TemplateDesigner() {
                 <Input value={customH} onChange={(e) => setCustomH(e.target.value)} onBlur={applyCustomSize} className="h-7 text-xs" />
               </div>
             </div>
+
+            {/* Snap to grid toggle */}
+            <button
+              className={cn(
+                "flex items-center gap-2 w-full rounded px-2 py-1.5 text-xs border transition-colors",
+                snapToGrid
+                  ? "bg-primary/10 border-primary/30 text-primary"
+                  : "border-border text-muted-foreground hover:bg-muted/60"
+              )}
+              onClick={() => setSnapToGrid((v) => !v)}
+            >
+              <Grid3X3 className="h-3.5 w-3.5 flex-shrink-0" />
+              <span className="font-medium">Snap to Grid</span>
+              <span className="ml-auto text-xs opacity-70">{snapToGrid ? `${GRID_MM}mm` : "Off"}</span>
+            </button>
           </section>
 
+          {/* Frames list */}
           <section className="px-4 py-3 border-b space-y-2">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide flex items-center gap-1.5">
@@ -371,7 +471,7 @@ export default function TemplateDesigner() {
                 >
                   <span className="truncate font-medium">{f.label || `Frame ${i + 1}`}</span>
                   <div className="flex items-center gap-1.5 text-muted-foreground flex-shrink-0">
-                    <span>{toDisp(f.width, unit)} × {toDisp(f.height, unit)} {unit}</span>
+                    <span>{toDisp(f.width, unit)}×{toDisp(f.height, unit)}</span>
                     <button className="hover:text-destructive p-0.5" onClick={(e) => { e.stopPropagation(); removeFrame(f.id); }}>
                       <Trash2 className="h-3 w-3" />
                     </button>
@@ -381,6 +481,7 @@ export default function TemplateDesigner() {
             </div>
           </section>
 
+          {/* Selected frame controls */}
           {selectedFrame && (
             <section className="px-4 py-3 space-y-3">
               <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">{t("templates.designer.selectedFrame")}</h3>
@@ -426,6 +527,38 @@ export default function TemplateDesigner() {
                   />
                 </div>
               </div>
+
+              {/* Copy / Paste size */}
+              <div className="flex gap-2">
+                <Button
+                  size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1.5"
+                  onClick={() => setCopiedSize({ width: selectedFrame.width, height: selectedFrame.height })}
+                >
+                  <Copy className="h-3 w-3" /> Copy Size
+                </Button>
+                {copiedSize && copiedSize.width !== selectedFrame.width || copiedSize && copiedSize.height !== selectedFrame.height ? (
+                  <Button
+                    size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1.5 text-primary border-primary/40"
+                    onClick={() => {
+                      if (copiedSize) {
+                        updateFrame(selectedFrame.id, { width: copiedSize.width, height: copiedSize.height });
+                      }
+                    }}
+                  >
+                    <ClipboardPaste className="h-3 w-3" /> Paste Size
+                  </Button>
+                ) : copiedSize ? (
+                  <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1.5 opacity-50" disabled>
+                    <ClipboardPaste className="h-3 w-3" /> Same Size
+                  </Button>
+                ) : null}
+              </div>
+              {copiedSize && (
+                <p className="text-xs text-muted-foreground">
+                  Copied: {toDisp(copiedSize.width, unit)} × {toDisp(copiedSize.height, unit)} {unit}
+                </p>
+              )}
+
               <Button size="sm" variant="outline" className="w-full h-7 text-xs text-destructive hover:text-destructive" onClick={() => removeFrame(selectedFrame.id)}>
                 <Trash2 className="h-3 w-3 mr-1.5" /> {t("templates.designer.removeFrame")}
               </Button>
