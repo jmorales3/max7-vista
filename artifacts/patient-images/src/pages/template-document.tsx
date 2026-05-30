@@ -364,7 +364,7 @@ export default function TemplateDocumentPage() {
             text-align: center !important;
             gap: 2mm !important;
           }
-          .print-header img { height: 15mm !important; max-width: 36mm !important; object-fit: contain !important; }
+          .print-header img { height: 24mm !important; max-width: 56mm !important; object-fit: contain !important; }
           .print-header-name { font-size: 13pt !important; }
           .print-header-info { font-size: 10pt !important; }
           .print-header-patient { font-size: 10pt !important; }
@@ -464,7 +464,7 @@ export default function TemplateDocumentPage() {
                 <img
                   src={template.logoData}
                   alt="logo"
-                  style={{ height: 38 * displayScale, maxWidth: 90 * displayScale, objectFit: "contain" }}
+                  style={{ height: 62 * displayScale, maxWidth: 148 * displayScale, objectFit: "contain" }}
                 />
               )}
               {template.officeName && (
