@@ -202,8 +202,25 @@ export default function TemplateDesigner() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      setLogoData(ev.target?.result as string ?? null);
-      setIsDirty(true);
+      const src = ev.target?.result as string;
+      const img = new Image();
+      img.onload = () => {
+        const MAX_W = 300;
+        const MAX_H = 120;
+        const scale = Math.min(1, MAX_W / img.width, MAX_H / img.height);
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, w, h);
+          setLogoData(canvas.toDataURL("image/png", 0.85));
+          setIsDirty(true);
+        }
+      };
+      img.src = src;
     };
     reader.readAsDataURL(file);
     e.target.value = "";
