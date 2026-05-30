@@ -1,0 +1,2 @@
+- [Drizzle-kit push in non-TTY shells](drizzle-no-tty.md) — drizzle-kit push asks interactive questions when new tables conflict; use executeSql directly for schema changes in CI/agent context.
+- [Stale .d.ts rebuild pattern](dist-rebuild.md) — workspace packages with composite:true + emitDeclarationOnly must be rebuilt with `pnpm exec tsc --noEmit false --emitDeclarationOnly --outDir dist` when source exports change, or downstream packages see stale types.

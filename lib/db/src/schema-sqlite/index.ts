@@ -11,3 +11,5 @@ export * from "./tags";
 export * from "./patient-tags";
 export * from "./presentations";
 export * from "./documents";
+export * from "./templates";
+export * from "./template-documents";

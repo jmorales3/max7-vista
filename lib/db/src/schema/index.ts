@@ -11,3 +11,5 @@ export * from "./user-roles";
 export * from "./users";
 export * from "./audit-log";
 export * from "./documents";
+export * from "./templates";
+export * from "./template-documents";

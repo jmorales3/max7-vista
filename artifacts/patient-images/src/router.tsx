@@ -16,6 +16,9 @@ import Manual from "@/pages/manual";
 import NotFound from "@/pages/not-found";
 import AdminUsers from "@/pages/admin/users";
 import BulkImport from "@/pages/bulk-import";
+import Templates from "@/pages/templates";
+import TemplateDesigner from "@/pages/template-designer";
+import TemplateDocumentPage from "@/pages/template-document";
 
 function NotAuthorized() {
   return (
@@ -47,6 +50,9 @@ function Router() {
         <Route path="/manual" component={Manual} />
         <Route path="/admin/users" component={isAdmin ? AdminUsers : NotAuthorized} />
         <Route path="/import" component={BulkImport} />
+        <Route path="/templates" component={Templates} />
+        <Route path="/templates/:id" component={TemplateDesigner} />
+        <Route path="/template-documents/:id" component={TemplateDocumentPage} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>
