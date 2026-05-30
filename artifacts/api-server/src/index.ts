@@ -158,7 +158,8 @@ async function initSqlite() {
 
     CREATE TABLE IF NOT EXISTS templates (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL DEFAULT 'Untitled Template',
+      title TEXT NOT NULL DEFAULT 'Untitled Template',
+      description TEXT,
       office_name TEXT,
       office_info TEXT,
       logo_data TEXT,
@@ -202,7 +203,8 @@ async function initPostgres() {
 
     CREATE TABLE IF NOT EXISTS templates (
       id SERIAL PRIMARY KEY,
-      name TEXT NOT NULL DEFAULT 'Untitled Template',
+      title TEXT NOT NULL DEFAULT 'Untitled Template',
+      description TEXT,
       office_name TEXT,
       office_info TEXT,
       logo_data TEXT,
