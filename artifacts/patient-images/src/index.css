@@ -335,3 +335,24 @@
     inset: -1px;
   }
 }
+
+/* ── Global print rules ────────────────────────────────────────────── */
+@media print {
+  /* Hide app chrome: sidebar, mobile header, chatbot, any no-print element */
+  aside,
+  header,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Remove padding so the print canvas fills the page from edge to edge */
+  main {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Let the content area expand to full page width after sidebar is gone */
+  .flex.min-h-screen.w-full {
+    display: block !important;
+  }
+}

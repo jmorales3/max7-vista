@@ -162,7 +162,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </main>
         </div>
       </div>
-      <ChatBot />
+      <div className="no-print">
+        <ChatBot />
+      </div>
     </SidebarProvider>
   );
 }

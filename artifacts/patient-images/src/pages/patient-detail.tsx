@@ -502,7 +502,9 @@ export default function PatientDetail() {
                   value={docName}
                   onChange={(e) => setDocName(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && docName.trim()) createDocMutation.mutate({ templateId: pendingTemplate.id, title: docName.trim() }); }}
+                  onFocus={(e) => e.target.select()}
                   autoFocus
+                  placeholder="e.g. Laser Treatment – Jan 2026"
                 />
               </div>
               <DialogFooter>
