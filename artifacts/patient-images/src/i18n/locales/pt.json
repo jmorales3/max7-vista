@@ -583,7 +583,8 @@
       "officeLogo": "Logo do consultório",
       "uploadLogo": "Carregar logo",
       "removeLogo": "Remover logo",
-      "logoHint": "Aparece no cabeçalho do documento"
+      "logoHint": "Aparece no cabeçalho do documento",
+      "headerReserved": "Cabeçalho reservado — logo · consultório · paciente"
     },
     "document": {
       "loading": "Carregando documento…",

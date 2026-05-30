@@ -583,7 +583,8 @@
       "officeLogo": "Logo du cabinet",
       "uploadLogo": "Charger le logo",
       "removeLogo": "Supprimer le logo",
-      "logoHint": "Apparaît dans l'en-tête du document"
+      "logoHint": "Apparaît dans l'en-tête du document",
+      "headerReserved": "En-tête réservé — logo · cabinet · patient"
     },
     "document": {
       "loading": "Chargement du document…",

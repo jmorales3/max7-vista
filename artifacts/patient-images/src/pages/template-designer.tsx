@@ -290,6 +290,57 @@ export default function TemplateDesigner() {
       {/* Canvas area */}
       <div ref={containerRef} className="flex-1 bg-muted/40 overflow-auto flex flex-col items-center p-6 min-w-0" style={{ scrollbarGutter: "stable" }}>
         <div className="w-full max-w-3xl">
+          {/* Header preview — mirrors document header so frames can be designed around it */}
+          <div
+            style={{
+              width: displayW, margin: "0 auto",
+              height: 48 * displayScale,
+              background: "hsl(var(--muted)/0.35)",
+              border: "1px solid hsl(var(--border)/0.6)",
+              borderBottom: "2px solid hsl(var(--primary)/0.25)",
+              boxSizing: "border-box",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: `${4 * displayScale}px ${8 * displayScale}px`,
+              overflow: "hidden",
+              position: "relative",
+            }}
+            title="Reserved header area — logo, office info, patient name and DOB appear here in the printed document"
+          >
+            {/* Left: logo + office info */}
+            <div style={{ display: "flex", alignItems: "center", gap: 5 * displayScale, overflow: "hidden", minWidth: 0 }}>
+              {logoData ? (
+                <img src={logoData} alt="logo" style={{ height: 28 * displayScale, maxWidth: 54 * displayScale, objectFit: "contain", flexShrink: 0 }} />
+              ) : (
+                <div style={{ width: 26 * displayScale, height: 26 * displayScale, background: "hsl(var(--muted))", border: "1px dashed hsl(var(--border))", borderRadius: 3, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: Math.max(5, 7 * displayScale), color: "hsl(var(--muted-foreground))", lineHeight: 1 }}>Logo</span>
+                </div>
+              )}
+              <div style={{ overflow: "hidden", minWidth: 0 }}>
+                <div style={{ fontSize: Math.max(6, 9 * displayScale), fontWeight: 600, color: "#222", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {officeName || "Office Name"}
+                </div>
+                {officeInfo && (
+                  <div style={{ fontSize: Math.max(5, 7.5 * displayScale), color: "#555", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {officeInfo.split("\n")[0]}
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Center label */}
+            <div style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", pointerEvents: "none" }}>
+              <span style={{ fontSize: Math.max(5, 7 * displayScale), color: "hsl(var(--primary)/0.5)", fontStyle: "italic", whiteSpace: "nowrap", background: "hsl(var(--muted)/0.6)", borderRadius: 2, padding: `1px ${3 * displayScale}px` }}>
+                {t("templates.designer.headerReserved")}
+              </span>
+            </div>
+            {/* Right: patient placeholder */}
+            <div style={{ textAlign: "right", flexShrink: 0, opacity: 0.55 }}>
+              <div style={{ fontSize: Math.max(6, 8 * displayScale), color: "#444", fontWeight: 600 }}>Patient Name</div>
+              <div style={{ fontSize: Math.max(5, 7 * displayScale), color: "#777" }}>DOB · Date</div>
+            </div>
+          </div>
+
           <div
             style={{
               width: displayW,

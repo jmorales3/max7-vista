@@ -12,7 +12,7 @@ import { format } from "date-fns";
 
 interface TemplateFrame { id: string; x: number; y: number; width: number; height: number; label?: string; }
 interface Template { id: number; title: string; officeName?: string | null; officeInfo?: string | null; logoData?: string | null; pageWidth: number; pageHeight: number; frames: TemplateFrame[]; }
-interface DocumentFrame { frameId: string; imageId?: number; panX: number; panY: number; }
+interface DocumentFrame { frameId: string; imageId?: number; panX: number; panY: number; fitMode?: "cover" | "contain"; }
 interface TemplateDocument { id: number; templateId: number; patientId?: number | null; title: string; frames: DocumentFrame[]; printedAt?: string | null; createdAt: string; updatedAt: string; }
 interface PatientData { id: number; name: string; dateOfBirth?: string | null; }
 interface ImageItem { id: number; fileName?: string; capturedAt: string; patientId?: number | null; }
@@ -20,10 +20,12 @@ interface ImageItem { id: number; fileName?: string; capturedAt: string; patient
 const PX_PER_MM = 96 / 25.4;
 
 function ImageInFrame({
-  frame, docFrame, pxPerMm, editing, onClick, onPanChange, clickToAddLabel, removeImageTitle,
+  frame, docFrame, pxPerMm, editing, onClick, onPanChange, onFitModeChange, clickToAddLabel, removeImageTitle,
 }: {
   frame: TemplateFrame; docFrame: DocumentFrame; pxPerMm: number;
-  editing: boolean; onClick: () => void; onPanChange: (x: number, y: number) => void;
+  editing: boolean; onClick: () => void;
+  onPanChange: (x: number, y: number) => void;
+  onFitModeChange: (mode: "cover" | "contain") => void;
   clickToAddLabel: string; removeImageTitle: string;
 }) {
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
@@ -32,20 +34,30 @@ function ImageInFrame({
   const frameW = frame.width * pxPerMm;
   const frameH = frame.height * pxPerMm;
   const hasImage = !!docFrame.imageId;
+  const fitMode = docFrame.fitMode ?? "cover";
+  const canPan = hasImage && fitMode === "cover";
 
   let imgLeft = 0, imgTop = 0, imgW = frameW, imgH = frameH;
   if (hasImage && naturalSize && naturalSize.w > 0 && naturalSize.h > 0) {
-    const coverScale = Math.max(frameW / naturalSize.w, frameH / naturalSize.h);
-    imgW = naturalSize.w * coverScale;
-    imgH = naturalSize.h * coverScale;
-    const maxOX = Math.max(0, imgW - frameW);
-    const maxOY = Math.max(0, imgH - frameH);
-    imgLeft = -((docFrame.panX / 100) * maxOX);
-    imgTop = -((docFrame.panY / 100) * maxOY);
+    if (fitMode === "contain") {
+      const containScale = Math.min(frameW / naturalSize.w, frameH / naturalSize.h);
+      imgW = naturalSize.w * containScale;
+      imgH = naturalSize.h * containScale;
+      imgLeft = (frameW - imgW) / 2;
+      imgTop = (frameH - imgH) / 2;
+    } else {
+      const coverScale = Math.max(frameW / naturalSize.w, frameH / naturalSize.h);
+      imgW = naturalSize.w * coverScale;
+      imgH = naturalSize.h * coverScale;
+      const maxOX = Math.max(0, imgW - frameW);
+      const maxOY = Math.max(0, imgH - frameH);
+      imgLeft = -((docFrame.panX / 100) * maxOX);
+      imgTop = -((docFrame.panY / 100) * maxOY);
+    }
   }
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!hasImage || !naturalSize) return;
+    if (!canPan || !naturalSize) return;
     e.preventDefault();
     panRef.current = { sx: e.clientX, sy: e.clientY, spx: docFrame.panX, spy: docFrame.panY };
     const coverScale = Math.max(frameW / naturalSize.w, frameH / naturalSize.h);
@@ -53,7 +65,6 @@ function ImageInFrame({
     const scaledH = naturalSize.h * coverScale;
     const maxOX = Math.max(1, scaledW - frameW);
     const maxOY = Math.max(1, scaledH - frameH);
-
     const onMove = (ev: MouseEvent) => {
       if (!panRef.current) return;
       const dx = ev.clientX - panRef.current.sx;
@@ -72,28 +83,22 @@ function ImageInFrame({
   };
 
   const labelFontPx = Math.max(7, 9 * (pxPerMm / PX_PER_MM));
+  const btnFontPx = Math.max(7, 9 * (pxPerMm / PX_PER_MM));
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        left: frame.x * pxPerMm,
-        top: frame.y * pxPerMm,
-        width: frameW,
-      }}
-    >
-      {/* Image frame box */}
+    <div style={{ position: "absolute", left: frame.x * pxPerMm, top: frame.y * pxPerMm, width: frameW }}>
       <div
         style={{
           width: frameW, height: frameH,
           overflow: "hidden",
           border: editing ? (hasImage ? "2px solid hsl(var(--primary)/0.6)" : "2px dashed hsl(var(--primary))") : "1px solid hsl(var(--border))",
           boxSizing: "border-box",
-          cursor: hasImage ? "grab" : "pointer",
+          cursor: hasImage ? (canPan ? "grab" : "default") : "pointer",
           position: "relative",
+          background: fitMode === "contain" && hasImage ? "hsl(var(--muted)/0.15)" : undefined,
         }}
         onClick={hasImage ? undefined : onClick}
-        onMouseDown={hasImage ? handleMouseDown : undefined}
+        onMouseDown={canPan ? handleMouseDown : undefined}
       >
         {hasImage ? (
           <img
@@ -102,14 +107,7 @@ function ImageInFrame({
               const img = e.target as HTMLImageElement;
               setNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
             }}
-            style={{
-              position: "absolute",
-              left: imgLeft, top: imgTop,
-              width: imgW, height: imgH,
-              userSelect: "none",
-              pointerEvents: "none",
-              objectFit: "none",
-            }}
+            style={{ position: "absolute", left: imgLeft, top: imgTop, width: imgW, height: imgH, userSelect: "none", pointerEvents: "none", objectFit: "none" }}
             draggable={false}
             alt=""
           />
@@ -126,6 +124,8 @@ function ImageInFrame({
             )}
           </div>
         )}
+
+        {/* Remove button */}
         {hasImage && editing && (
           <button
             style={{ position: "absolute", top: 2, right: 2, background: "hsl(var(--destructive))", color: "white", borderRadius: 4, border: "none", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 10 }}
@@ -136,24 +136,37 @@ function ImageInFrame({
             <X style={{ width: 10, height: 10 }} />
           </button>
         )}
+
+        {/* Fill / Fit toggle */}
+        {hasImage && editing && (
+          <div style={{ position: "absolute", bottom: 2, left: 2, display: "flex", gap: 2, zIndex: 10 }}>
+            <button
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); onFitModeChange("cover"); }}
+              title="Fill frame — crop and pan to reposition"
+              style={{ background: fitMode === "cover" ? "hsl(var(--primary))" : "rgba(0,0,0,0.45)", color: "white", border: "none", borderRadius: 3, fontSize: btnFontPx, padding: "1px 4px", cursor: "pointer", lineHeight: 1.4 }}
+            >Fill</button>
+            <button
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); onFitModeChange("contain"); }}
+              title="Fit — show entire image without cropping"
+              style={{ background: fitMode === "contain" ? "hsl(var(--primary))" : "rgba(0,0,0,0.45)", color: "white", border: "none", borderRadius: 3, fontSize: btnFontPx, padding: "1px 4px", cursor: "pointer", lineHeight: 1.4 }}
+            >Fit</button>
+          </div>
+        )}
+
+        {/* Pan hint */}
+        {canPan && editing && frameH > 50 && (
+          <div style={{ position: "absolute", bottom: 2, right: 2, background: "rgba(0,0,0,0.35)", color: "white", borderRadius: 3, fontSize: Math.max(6, 7 * (pxPerMm / PX_PER_MM)), padding: "1px 3px", pointerEvents: "none", lineHeight: 1.4 }}>
+            drag to pan
+          </div>
+        )}
       </div>
 
-      {/* Label below frame — shown when image is loaded and label exists */}
+      {/* Label below frame */}
       {hasImage && frame.label && (
         <div
-          style={{
-            width: "100%",
-            textAlign: "center",
-            fontSize: labelFontPx,
-            lineHeight: 1.3,
-            color: "#333",
-            padding: "2px 4px",
-            borderLeft: "1px solid hsl(var(--border))",
-            borderRight: "1px solid hsl(var(--border))",
-            borderBottom: "1px solid hsl(var(--border))",
-            background: "#fafafa",
-            boxSizing: "border-box",
-          }}
+          style={{ width: "100%", textAlign: "center", fontSize: labelFontPx, lineHeight: 1.3, color: "#333", padding: "2px 4px", borderLeft: "1px solid hsl(var(--border))", borderRight: "1px solid hsl(var(--border))", borderBottom: "1px solid hsl(var(--border))", background: "#fafafa", boxSizing: "border-box" }}
         >
           {frame.label}
         </div>
@@ -256,6 +269,11 @@ export default function TemplateDocumentPage() {
     } else {
       setDocFrames((prev) => prev.map((df) => df.frameId === frameId ? { ...df, panX, panY } : df));
     }
+    setDirty(true);
+  }
+
+  function updateFitMode(frameId: string, fitMode: "cover" | "contain") {
+    setDocFrames((prev) => prev.map((df) => df.frameId === frameId ? { ...df, fitMode } : df));
     setDirty(true);
   }
 
@@ -418,6 +436,7 @@ export default function TemplateDocumentPage() {
                       editing={true}
                       onClick={() => setPickerFrameId(frame.id)}
                       onPanChange={(px, py) => updatePan(frame.id, px, py)}
+                      onFitModeChange={(mode) => updateFitMode(frame.id, mode)}
                       clickToAddLabel={t("templates.document.clickToAdd")}
                       removeImageTitle={t("templates.document.removeImage")}
                     />
@@ -426,6 +445,22 @@ export default function TemplateDocumentPage() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Sticky Save + Print bar — always visible even when scrolled */}
+      <div className="no-print sticky bottom-0 bg-background/95 backdrop-blur-sm border-t py-2.5 px-4 flex items-center justify-between gap-2 -mx-4 md:-mx-6 lg:-mx-8">
+        <span className="text-sm font-medium text-foreground truncate max-w-xs">{document.title}</span>
+        <div className="flex items-center gap-2 shrink-0">
+          {dirty && <span className="text-xs text-muted-foreground">{t("templates.document.unsavedChanges")}</span>}
+          <Button variant="outline" size="sm" onClick={handleSave} disabled={saveMutation.isPending || !dirty}>
+            <Save className="h-3.5 w-3.5 mr-1.5" />
+            {saveMutation.isPending ? t("templates.document.saving") : t("templates.document.save")}
+          </Button>
+          <Button size="sm" onClick={handlePrint}>
+            <Printer className="h-3.5 w-3.5 mr-1.5" />
+            {t("templates.document.print")}
+          </Button>
         </div>
       </div>
 
@@ -441,17 +476,17 @@ export default function TemplateDocumentPage() {
               {document.patientId ? t("templates.document.noImages") : t("templates.document.noPatientImages")}
             </div>
           ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 max-h-96 overflow-y-auto py-2">
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 max-h-[28rem] overflow-y-auto py-2 pr-1">
               {(patientImages as ImageItem[]).filter((img) => !img.patientId || img.patientId === document.patientId).map((img) => (
                 <button
                   key={img.id}
-                  className="rounded-lg overflow-hidden border-2 border-transparent hover:border-primary focus:outline-none focus:border-primary aspect-square"
+                  className="relative block aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-primary focus:outline-none focus:border-primary"
                   onClick={() => pickerFrameId && assignImage(pickerFrameId, img.id)}
                 >
                   <img
                     src={`/api/images/${img.id}/file`}
                     alt={img.fileName ?? ""}
-                    className="w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-cover"
                   />
                 </button>
               ))}

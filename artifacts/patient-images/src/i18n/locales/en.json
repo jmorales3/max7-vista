@@ -583,7 +583,8 @@
       "officeLogo": "Office Logo",
       "uploadLogo": "Upload Logo",
       "removeLogo": "Remove Logo",
-      "logoHint": "Appears in document header"
+      "logoHint": "Appears in document header",
+      "headerReserved": "Header reserved — logo · office · patient"
     },
     "document": {
       "loading": "Loading document…",

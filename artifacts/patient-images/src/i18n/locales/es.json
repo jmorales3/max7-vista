@@ -583,7 +583,8 @@
       "officeLogo": "Logo de la clínica",
       "uploadLogo": "Subir logo",
       "removeLogo": "Eliminar logo",
-      "logoHint": "Aparece en el encabezado del documento"
+      "logoHint": "Aparece en el encabezado del documento",
+      "headerReserved": "Encabezado reservado — logo · consultorio · paciente"
     },
     "document": {
       "loading": "Cargando documento…",
