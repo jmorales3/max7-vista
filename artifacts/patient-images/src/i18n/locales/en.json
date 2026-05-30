@@ -90,6 +90,7 @@
     "updateSuccessDesc": "Changes saved successfully.",
     "updateError": "Error updating patient",
     "createTemplateDoc": "Create Template Document",
+    "templateDocuments": "Template Documents",
     "selectTemplate": "Pick a Template",
     "noTemplatesAvailable": "No templates yet. Create one in the Templates section first.",
     "createTemplateDocError": "Failed to create document"

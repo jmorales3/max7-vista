@@ -311,12 +311,7 @@ export default function TemplateDocumentPage() {
             margin: 0 !important;
           }
           .print-header { padding: 4mm 8mm 3mm !important; }
-          .print-frame img {
-            left: var(--img-left) !important;
-            top: var(--img-top) !important;
-            width: var(--img-w) !important;
-            height: var(--img-h) !important;
-          }
+          .print-frame img { object-fit: inherit; object-position: inherit; }
           @page { size: ${pageWidth}mm ${pageHeight}mm; margin: 0; }
         }
       `}</style>

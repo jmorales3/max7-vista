@@ -50,6 +50,7 @@ import {
   Plus,
   X,
   LayoutTemplate,
+  ExternalLink,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ImageGrid } from "@/components/image-grid";
@@ -160,6 +161,13 @@ export default function PatientDetail() {
     queryKey: ["templates"],
     queryFn: () => customFetch<TemplateItem[]>("/api/templates"),
     enabled: templateDocOpen,
+  });
+
+  interface TemplateDocItem { id: number; title: string; createdAt: string; updatedAt: string; }
+  const { data: patientDocs = [] } = useQuery<TemplateDocItem[]>({
+    queryKey: ["template-documents", "patient", id],
+    queryFn: () => customFetch<TemplateDocItem[]>(`/api/template-documents?patientId=${id}`),
+    enabled: !!id,
   });
 
   const createDocMutation = useMutation({
@@ -370,6 +378,32 @@ export default function PatientDetail() {
           </div>
         )}
       </div>
+
+      {/* Template photo documents for this patient */}
+      {patientDocs.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <LayoutTemplate className="h-5 w-5 text-primary" />
+            {t("patients.templateDocuments")}
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {patientDocs.map((doc) => (
+              <a
+                key={doc.id}
+                href={`/template-documents/${doc.id}`}
+                className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 hover:bg-accent hover:border-primary/40 transition-colors group"
+              >
+                <LayoutTemplate className="h-5 w-5 shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate text-sm">{doc.title}</div>
+                  <div className="text-xs text-muted-foreground">{format(new Date(doc.updatedAt), "MMM d, yyyy")}</div>
+                </div>
+                <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       <PatientDocuments patientId={patient.id} />
 

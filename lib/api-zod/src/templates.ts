@@ -42,7 +42,7 @@ export const DocumentFrameSchema = z.object({
   imageId: z.number().optional(),
   panX: z.number().default(50),
   panY: z.number().default(50),
-  fitMode: z.enum(["cover", "contain"]).default("cover"),
+  zoom: z.number().min(0).max(100).default(0),
 });
 
 export const ListTemplateDocumentsQueryParams = z.object({

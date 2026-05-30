@@ -7,7 +7,7 @@ export interface DocumentFrame {
   imageId?: number;
   panX: number;
   panY: number;
-  fitMode?: "cover" | "contain";
+  zoom?: number;
 }
 
 export const templateDocumentsTable = sqliteTable("template_documents", {
