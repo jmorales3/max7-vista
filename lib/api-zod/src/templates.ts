@@ -43,7 +43,7 @@ export const DocumentFrameSchema = z.object({
   panX: z.number().default(50),
   panY: z.number().default(50),
   zoom: z.number().min(0).max(100).default(0),
-});
+}).passthrough();
 
 export const ListTemplateDocumentsQueryParams = z.object({
   patientId: z.coerce.number().optional(),
