@@ -12,7 +12,7 @@ import { format } from "date-fns";
 
 interface TemplateFrame { id: string; x: number; y: number; width: number; height: number; label?: string; }
 interface Template { id: number; title: string; officeName?: string | null; officeInfo?: string | null; logoData?: string | null; pageWidth: number; pageHeight: number; frames: TemplateFrame[]; }
-interface DocumentFrame { frameId: string; imageId?: number; panX: number; panY: number; fitMode?: "cover" | "contain"; }
+interface DocumentFrame { frameId: string; imageId?: number; panX: number; panY: number; zoom?: number; }
 interface TemplateDocument { id: number; templateId: number; patientId?: number | null; title: string; frames: DocumentFrame[]; printedAt?: string | null; createdAt: string; updatedAt: string; }
 interface PatientData { id: number; name: string; dateOfBirth?: string | null; }
 interface ImageItem { id: number; fileName?: string; capturedAt: string; patientId?: number | null; }
@@ -20,12 +20,12 @@ interface ImageItem { id: number; fileName?: string; capturedAt: string; patient
 const PX_PER_MM = 96 / 25.4;
 
 function ImageInFrame({
-  frame, docFrame, pxPerMm, editing, onClick, onPanChange, onFitModeChange, clickToAddLabel, removeImageTitle,
+  frame, docFrame, pxPerMm, editing, onClick, onPanChange, onZoomChange, clickToAddLabel, removeImageTitle,
 }: {
   frame: TemplateFrame; docFrame: DocumentFrame; pxPerMm: number;
   editing: boolean; onClick: () => void;
   onPanChange: (x: number, y: number) => void;
-  onFitModeChange: (mode: "cover" | "contain") => void;
+  onZoomChange: (zoom: number) => void;
   clickToAddLabel: string; removeImageTitle: string;
 }) {
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
@@ -34,37 +34,29 @@ function ImageInFrame({
   const frameW = frame.width * pxPerMm;
   const frameH = frame.height * pxPerMm;
   const hasImage = !!docFrame.imageId;
-  const fitMode = docFrame.fitMode ?? "cover";
-  const canPan = hasImage && fitMode === "cover";
+  const zoom = docFrame.zoom ?? 0; // 0 = full image visible (contain), 100 = frame fully filled (cover)
 
   let imgLeft = 0, imgTop = 0, imgW = frameW, imgH = frameH;
+  let canPan = false;
   if (hasImage && naturalSize && naturalSize.w > 0 && naturalSize.h > 0) {
-    if (fitMode === "contain") {
-      const containScale = Math.min(frameW / naturalSize.w, frameH / naturalSize.h);
-      imgW = naturalSize.w * containScale;
-      imgH = naturalSize.h * containScale;
-      imgLeft = (frameW - imgW) / 2;
-      imgTop = (frameH - imgH) / 2;
-    } else {
-      const coverScale = Math.max(frameW / naturalSize.w, frameH / naturalSize.h);
-      imgW = naturalSize.w * coverScale;
-      imgH = naturalSize.h * coverScale;
-      const maxOX = Math.max(0, imgW - frameW);
-      const maxOY = Math.max(0, imgH - frameH);
-      imgLeft = -((docFrame.panX / 100) * maxOX);
-      imgTop = -((docFrame.panY / 100) * maxOY);
-    }
+    const containScale = Math.min(frameW / naturalSize.w, frameH / naturalSize.h);
+    const coverScale = Math.max(frameW / naturalSize.w, frameH / naturalSize.h);
+    const currentScale = containScale + (zoom / 100) * (coverScale - containScale);
+    imgW = naturalSize.w * currentScale;
+    imgH = naturalSize.h * currentScale;
+    const maxOX = Math.max(0, imgW - frameW);
+    const maxOY = Math.max(0, imgH - frameH);
+    canPan = maxOX > 0 || maxOY > 0;
+    imgLeft = maxOX > 0 ? -((docFrame.panX / 100) * maxOX) : (frameW - imgW) / 2;
+    imgTop = maxOY > 0 ? -((docFrame.panY / 100) * maxOY) : (frameH - imgH) / 2;
   }
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!canPan || !naturalSize) return;
     e.preventDefault();
     panRef.current = { sx: e.clientX, sy: e.clientY, spx: docFrame.panX, spy: docFrame.panY };
-    const coverScale = Math.max(frameW / naturalSize.w, frameH / naturalSize.h);
-    const scaledW = naturalSize.w * coverScale;
-    const scaledH = naturalSize.h * coverScale;
-    const maxOX = Math.max(1, scaledW - frameW);
-    const maxOY = Math.max(1, scaledH - frameH);
+    const maxOX = Math.max(1, imgW - frameW);
+    const maxOY = Math.max(1, imgH - frameH);
     const onMove = (ev: MouseEvent) => {
       if (!panRef.current) return;
       const dx = ev.clientX - panRef.current.sx;
@@ -83,7 +75,8 @@ function ImageInFrame({
   };
 
   const labelFontPx = Math.max(7, 9 * (pxPerMm / PX_PER_MM));
-  const btnFontPx = Math.max(7, 9 * (pxPerMm / PX_PER_MM));
+  const btnFontPx = Math.max(6, 8 * (pxPerMm / PX_PER_MM));
+  const hasLetterbox = hasImage && naturalSize && (imgW < frameW || imgH < frameH);
 
   return (
     <div style={{ position: "absolute", left: frame.x * pxPerMm, top: frame.y * pxPerMm, width: frameW }}>
@@ -95,7 +88,7 @@ function ImageInFrame({
           boxSizing: "border-box",
           cursor: hasImage ? (canPan ? "grab" : "default") : "pointer",
           position: "relative",
-          background: fitMode === "contain" && hasImage ? "#111" : undefined,
+          background: hasLetterbox ? "#111" : undefined,
         }}
         onClick={hasImage ? undefined : onClick}
         onMouseDown={canPan ? handleMouseDown : undefined}
@@ -137,21 +130,19 @@ function ImageInFrame({
           </button>
         )}
 
-        {/* Fill / Fit toggle */}
+        {/* Zoom control */}
         {hasImage && editing && (
-          <div style={{ position: "absolute", bottom: 2, left: 2, display: "flex", gap: 2, zIndex: 10 }}>
-            <button
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => { e.stopPropagation(); onFitModeChange("cover"); }}
-              title="Fill frame — crop and pan to reposition"
-              style={{ background: fitMode === "cover" ? "hsl(var(--primary))" : "rgba(0,0,0,0.45)", color: "white", border: "none", borderRadius: 3, fontSize: btnFontPx, padding: "1px 4px", cursor: "pointer", lineHeight: 1.4 }}
-            >Fill</button>
-            <button
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => { e.stopPropagation(); onFitModeChange("contain"); }}
-              title="Fit — show entire image without cropping"
-              style={{ background: fitMode === "contain" ? "hsl(var(--primary))" : "rgba(0,0,0,0.45)", color: "white", border: "none", borderRadius: 3, fontSize: btnFontPx, padding: "1px 4px", cursor: "pointer", lineHeight: 1.4 }}
-            >Fit</button>
+          <div
+            style={{ position: "absolute", bottom: 2, left: 2, right: canPan ? 52 : 2, display: "flex", alignItems: "center", gap: 3, zIndex: 10 }}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <span style={{ fontSize: btnFontPx, color: "white", background: "rgba(0,0,0,0.45)", borderRadius: 3, padding: "1px 3px", lineHeight: 1.4, whiteSpace: "nowrap", flexShrink: 0 }}>Fit</span>
+            <input
+              type="range" min={0} max={100} value={zoom}
+              onChange={(e) => onZoomChange(Number(e.target.value))}
+              style={{ flex: 1, minWidth: 0, height: 3, accentColor: "hsl(var(--primary))", cursor: "pointer" }}
+            />
+            <span style={{ fontSize: btnFontPx, color: "white", background: "rgba(0,0,0,0.45)", borderRadius: 3, padding: "1px 3px", lineHeight: 1.4, whiteSpace: "nowrap", flexShrink: 0 }}>Fill</span>
           </div>
         )}
 
@@ -272,8 +263,8 @@ export default function TemplateDocumentPage() {
     setDirty(true);
   }
 
-  function updateFitMode(frameId: string, fitMode: "cover" | "contain") {
-    setDocFrames((prev) => prev.map((df) => df.frameId === frameId ? { ...df, fitMode } : df));
+  function updateZoom(frameId: string, zoom: number) {
+    setDocFrames((prev) => prev.map((df) => df.frameId === frameId ? { ...df, zoom } : df));
     setDirty(true);
   }
 
@@ -433,7 +424,7 @@ export default function TemplateDocumentPage() {
                       editing={true}
                       onClick={() => setPickerFrameId(frame.id)}
                       onPanChange={(px, py) => updatePan(frame.id, px, py)}
-                      onFitModeChange={(mode) => updateFitMode(frame.id, mode)}
+                      onZoomChange={(z) => updateZoom(frame.id, z)}
                       clickToAddLabel={t("templates.document.clickToAdd")}
                       removeImageTitle={t("templates.document.removeImage")}
                     />
