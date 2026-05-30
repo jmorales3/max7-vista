@@ -105,18 +105,19 @@ function ImageInFrame({
           <img
             key={docFrame.imageId}
             src={`/api/images/${docFrame.imageId}/file`}
+            onLoad={(e) => setNatSize({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
+            draggable={false}
+            alt=""
             style={{
               position: "absolute",
               left: natSize ? imgLeft : 0,
               top:  natSize ? imgTop  : 0,
               width:  natSize ? displayW : "100%",
               height: natSize ? displayH : "100%",
+              maxWidth: "none",
               objectFit: natSize ? undefined : "contain",
               userSelect: "none", pointerEvents: "none",
             }}
-            onLoad={(e) => setNatSize({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
-            draggable={false}
-            alt=""
           />
         ) : (
           <div
