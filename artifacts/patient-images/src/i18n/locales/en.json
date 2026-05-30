@@ -326,6 +326,8 @@
       "settings": "Settings & Storage",
       "bulkImport": "Bulk Image Import",
       "documents": "Patient Documents",
+      "presentations": "Presentations",
+      "migration": "Migration (LAN ↔ Web)",
       "roles": "User Roles",
       "tenants": "Multi-Tenant Setup"
     },
@@ -351,7 +353,7 @@
     },
     "editor": {
       "heading": "Image Editing",
-      "body": "The Image Editor provides tools for cropping, zooming, rotating, freehand drawing, and erasing. Use the Arrow tool to draw directional arrows highlighting clinical structures. Use the Circle tool to draw circles marking areas of interest. Add text labels anywhere on the image — multiple annotations of any type are supported. Switch to the Pointer tool to click and drag any text label to reposition it. Use the colour picker to change annotation colour. When done, click Save to persist all edits to disk."
+      "body": "The Image Editor provides tools for cropping, zooming, rotating, freehand drawing, and erasing. Arrow: draw directional arrows highlighting clinical structures. Circle: draw circles marking areas of interest. Text labels: place anywhere on the image and drag to reposition in Pointer mode — multiple annotations of any type are supported. Eyedropper: sample a colour from the image for annotations. Ruler: draw measurement lines; Measure mode calibrates real-world scale (mm/px); Resize mode resizes the image so a landmark line matches a reference measurement. Angle: measure the angle formed by two lines — click three points. Overlay: pick any other patient image as a semi-transparent layer for visual comparison; when selected, a secondary toolbar below the main toolbar provides Opacity, Scale (10%–300%), and X/Y position controls with Reset. Smooth (Wand): smooth freehand strokes. Select: rectangle or freehand region to cut, copy, or move. Use the colour picker to change annotation colour. Save persists all edits to disk. Save as Copy creates a new image without modifying the original."
     },
     "bulkImport": {
       "heading": "Bulk Image Import",
@@ -372,6 +374,14 @@
     "tenants": {
       "heading": "Multi-Tenant Setup",
       "body": "Each organization using Max7 Vista operates as an independent tenant. Data is fully isolated between tenants. Super Admins can create and manage tenants, while Admins manage their own organization's data and users."
+    },
+    "presentations": {
+      "heading": "Presentations",
+      "body": "Build clinical slide presentations from patient images. Open Presentations in the sidebar to view or create presentations. Each presentation contains one or more slides, each linked to a patient image with its annotations and an optional caption. Use the slide editor to arrange content, then enter full-screen Presentation mode to display slides to a patient or colleague. Presentations can be patient-specific (created from a patient profile) or cross-patient (accessible from the Presentations hub)."
+    },
+    "migration": {
+      "heading": "Migration (LAN ↔ Web)",
+      "body": "Super Admins can transfer all data between the Electron desktop/LAN version and the cloud web version without data loss. Go to Settings → Migration. Click 'Download migration archive' to export a ZIP containing all patient records, image files, users (with encrypted passwords), and system settings. On the destination system, upload that ZIP using 'Import archive'. Existing patients and users are automatically skipped to prevent duplicates. The storage directory setting is intentionally excluded to preserve each system's own file paths. All export and import actions are recorded in the Audit Log."
     }
   },
   "bulkImport": {

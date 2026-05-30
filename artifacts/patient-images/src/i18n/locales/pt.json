@@ -326,6 +326,8 @@
       "settings": "Configurações e Armazenamento",
       "bulkImport": "Importação em Massa de Imagens",
       "documents": "Documentos do Paciente",
+      "presentations": "Apresentações",
+      "migration": "Migração (LAN ↔ Web)",
       "roles": "Funções de Usuário",
       "tenants": "Configuração Multitenant"
     },
@@ -351,7 +353,7 @@
     },
     "editor": {
       "heading": "Edição de Imagens",
-      "body": "O Editor de Imagens fornece ferramentas para recortar, ampliar, girar, desenho livre e apagar. Use a ferramenta Seta para traçar setas apontando estruturas clínicas. Use a ferramenta Círculo para marcar áreas de interesse. Adicione rótulos de texto em qualquer parte da imagem — múltiplas anotações de qualquer tipo são suportadas. Mude para o modo Ponteiro para clicar e arrastar qualquer rótulo de texto para uma nova posição. Use o seletor de cor para alterar a cor da anotação. Quando terminar, clique em Salvar para persistir todas as edições no disco."
+      "body": "O Editor de Imagens fornece ferramentas para recortar, ampliar, girar, desenho livre e apagar. Seta: trace setas apontando estruturas clínicas. Círculo: marque áreas de interesse. Rótulos de texto: coloque em qualquer parte da imagem e arraste no modo Ponteiro — múltiplas anotações de qualquer tipo são suportadas. Conta-gotas: amostre uma cor da imagem para anotações. Régua: trace linhas de medição; o modo Medir calibra a escala real (mm/px); o modo Redimensionar ajusta a imagem para que uma linha de referência corresponda a uma medida de referência. Ângulo: meça o ângulo entre duas linhas clicando em três pontos. Sobreposição: selecione outra imagem do paciente como camada semitransparente para comparação visual; ao selecionar, uma barra de ferramentas secundária abaixo da principal oferece controles de Opacidade, Escala (10%–300%) e posição X/Y com Redefinir. Suavizar (Varinha): suavize traços de desenho livre. Seleção: região retangular ou à mão livre para cortar, copiar ou mover. Use o seletor de cor para alterar a cor da anotação. Salvar persiste todas as edições no disco. Salvar como Cópia cria uma nova imagem sem modificar o original."
     },
     "bulkImport": {
       "heading": "Importação em Massa de Imagens",
@@ -372,6 +374,14 @@
     "tenants": {
       "heading": "Configuração Multitenant",
       "body": "Cada organização que usa o Max7 Vista opera como um tenant independente. Os dados são completamente isolados entre tenants. Os Superadministradores podem criar e gerenciar tenants, enquanto os Administradores gerenciam os dados e usuários de sua própria organização."
+    },
+    "presentations": {
+      "heading": "Apresentações",
+      "body": "Crie apresentações clínicas de slides a partir de imagens de pacientes. Abra Apresentações na barra lateral para visualizar ou criar apresentações. Cada apresentação contém um ou mais slides, cada um vinculado a uma imagem do paciente com suas anotações e uma legenda opcional. Use o editor de slides para organizar o conteúdo e entre no modo Apresentação em tela cheia para exibir os slides a um paciente ou colega. As apresentações podem ser específicas de um paciente (criadas a partir do perfil) ou entre pacientes (acessíveis pelo hub de Apresentações)."
+    },
+    "migration": {
+      "heading": "Migração (LAN ↔ Web)",
+      "body": "Os Superadministradores podem transferir todos os dados entre a versão desktop/LAN Electron e a versão web na nuvem sem perda de dados. Acesse Configurações → Migração. Clique em 'Baixar arquivo de migração' para exportar um ZIP contendo todos os registros de pacientes, arquivos de imagens, usuários (com senhas criptografadas) e configurações do sistema. No sistema de destino, importe esse ZIP usando 'Importar arquivo'. Pacientes e usuários existentes são ignorados automaticamente para evitar duplicatas. A configuração do diretório de armazenamento é intencionalmente excluída para preservar os caminhos próprios de cada sistema. Todas as ações de exportação e importação são registradas no Registro de Auditoria."
     }
   },
   "bulkImport": {

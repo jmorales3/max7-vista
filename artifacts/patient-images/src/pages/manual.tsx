@@ -15,6 +15,8 @@ type SectionKey =
   | "bulkImport"
   | "documents"
   | "settings"
+  | "presentations"
+  | "migration"
   | "roles"
   | "tenants";
 
@@ -28,6 +30,8 @@ const SECTIONS: SectionKey[] = [
   "bulkImport",
   "documents",
   "settings",
+  "presentations",
+  "migration",
   "roles",
   "tenants",
 ];

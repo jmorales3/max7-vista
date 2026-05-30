@@ -326,6 +326,8 @@
       "settings": "Configuración y Almacenamiento",
       "bulkImport": "Importación Masiva de Imágenes",
       "documents": "Documentos del Paciente",
+      "presentations": "Presentaciones",
+      "migration": "Migración (LAN ↔ Web)",
       "roles": "Roles de Usuario",
       "tenants": "Configuración Multiempresa"
     },
@@ -351,7 +353,7 @@
     },
     "editor": {
       "heading": "Edición de Imágenes",
-      "body": "El Editor de Imágenes proporciona herramientas para recortar, hacer zoom, rotar, dibujo libre y borrar. Use la herramienta Flecha para trazar flechas que señalen estructuras clínicas. Use la herramienta Círculo para marcar áreas de interés. Agregue etiquetas de texto en cualquier parte de la imagen: se admiten múltiples anotaciones de cualquier tipo. Cambie al modo Puntero para hacer clic y arrastrar cualquier etiqueta de texto a una nueva posición. Use el selector de color para cambiar el color de anotación. Cuando termine, haga clic en Guardar para persistir todas las ediciones en disco."
+      "body": "El Editor de Imágenes proporciona herramientas para recortar, hacer zoom, rotar, dibujo libre y borrar. Flecha: trace flechas que señalen estructuras clínicas. Círculo: marque áreas de interés. Etiquetas de texto: colóquelas en cualquier parte y arrástrelas en modo Puntero — se admiten múltiples anotaciones de cualquier tipo. Cuentagotas: muestree un color de la imagen para anotaciones. Regla: trace líneas de medición; el modo Medir calibra la escala real (mm/px); el modo Redimensionar ajusta la imagen para que una línea de referencia coincida con una medida de referencia. Ángulo: mida el ángulo entre dos líneas haciendo clic en tres puntos. Superposición: seleccione otra imagen del paciente como capa semitransparente para comparación visual; al seleccionarla, una barra de herramientas secundaria debajo de la principal ofrece controles de Opacidad, Escala (10%–300%) y posición X/Y con Restablecer. Suavizar (Varita): suavice trazos de dibujo libre. Selección: región rectangular o a mano alzada para cortar, copiar o mover. Use el selector de color para cambiar el color de anotación. Guardar persiste todas las ediciones en disco. Guardar como copia crea una nueva imagen sin modificar el original."
     },
     "bulkImport": {
       "heading": "Importación Masiva de Imágenes",
@@ -372,6 +374,14 @@
     "tenants": {
       "heading": "Configuración Multiempresa",
       "body": "Cada organización que usa Max7 Vista opera como un inquilino independiente. Los datos están completamente aislados entre inquilinos. Los Superadministradores pueden crear y gestionar inquilinos, mientras que los Administradores gestionan los datos y usuarios de su propia organización."
+    },
+    "presentations": {
+      "heading": "Presentaciones",
+      "body": "Cree presentaciones clínicas de diapositivas a partir de imágenes de pacientes. Abra Presentaciones en la barra lateral para ver o crear presentaciones. Cada presentación contiene una o más diapositivas, cada una vinculada a una imagen del paciente con sus anotaciones y un pie de foto opcional. Use el editor de diapositivas para organizar el contenido y luego entre en el modo Presentación a pantalla completa para mostrar las diapositivas a un paciente o colega. Las presentaciones pueden ser específicas de un paciente (creadas desde su perfil) o de varios pacientes (accesibles desde el hub de Presentaciones)."
+    },
+    "migration": {
+      "heading": "Migración (LAN ↔ Web)",
+      "body": "Los Superadministradores pueden transferir todos los datos entre la versión de escritorio/LAN Electron y la versión web en la nube sin pérdida de datos. Vaya a Configuración → Migración. Haga clic en 'Descargar archivo de migración' para exportar un ZIP con todos los registros de pacientes, archivos de imágenes, usuarios (con contraseñas cifradas) y configuración del sistema. En el sistema de destino, cargue ese ZIP mediante 'Importar archivo'. Los pacientes y usuarios existentes se omiten automáticamente para evitar duplicados. La configuración del directorio de almacenamiento se excluye intencionalmente para preservar las rutas propias de cada sistema. Todas las acciones de exportación e importación quedan registradas en el Registro de Auditoría."
     }
   },
   "bulkImport": {

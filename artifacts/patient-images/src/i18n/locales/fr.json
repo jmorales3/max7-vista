@@ -326,6 +326,8 @@
       "settings": "Paramètres et Stockage",
       "bulkImport": "Import en Masse d'Images",
       "documents": "Documents du Patient",
+      "presentations": "Présentations",
+      "migration": "Migration (LAN ↔ Web)",
       "roles": "Rôles Utilisateur",
       "tenants": "Configuration Multi-Organisation"
     },
@@ -351,7 +353,7 @@
     },
     "editor": {
       "heading": "Édition d'Images",
-      "body": "L'Éditeur d'Images fournit des outils pour recadrer, zoomer, pivoter, dessiner à main levée et effacer. Utilisez l'outil Flèche pour tracer des flèches indiquant des structures cliniques. Utilisez l'outil Cercle pour marquer des zones d'intérêt. Ajoutez des étiquettes de texte n'importe où sur l'image — plusieurs annotations de tout type sont prises en charge. Passez en mode Pointeur pour cliquer et faire glisser n'importe quelle étiquette de texte vers une nouvelle position. Utilisez le sélecteur de couleur pour changer la couleur d'annotation. Une fois terminé, cliquez sur Enregistrer pour persister toutes les modifications sur disque."
+      "body": "L'Éditeur d'Images fournit des outils pour recadrer, zoomer, pivoter, dessiner à main levée et effacer. Flèche : tracez des flèches indiquant des structures cliniques. Cercle : marquez des zones d'intérêt. Étiquettes de texte : placez-les n'importe où sur l'image et faites-les glisser en mode Pointeur — plusieurs annotations de tout type sont prises en charge. Pipette : prélevez une couleur de l'image pour les annotations. Règle : tracez des lignes de mesure ; le mode Mesurer calibre l'échelle réelle (mm/px) ; le mode Redimensionner ajuste l'image pour qu'une ligne de repère corresponde à une mesure de référence. Angle : mesurez l'angle entre deux lignes en cliquant sur trois points. Superposition : sélectionnez une autre image du patient comme couche semi-transparente pour la comparaison visuelle ; une barre d'outils secondaire sous la barre principale fournit des contrôles d'Opacité, d'Échelle (10%–300%) et de position X/Y avec Réinitialiser. Lissage (Baguette) : lissez les traits à main levée. Sélection : région rectangulaire ou à main levée pour couper, copier ou déplacer. Utilisez le sélecteur de couleur pour changer la couleur d'annotation. Enregistrer persiste toutes les modifications sur disque. Enregistrer comme copie crée une nouvelle image sans modifier l'original."
     },
     "bulkImport": {
       "heading": "Import en Masse d'Images",
@@ -372,6 +374,14 @@
     "tenants": {
       "heading": "Configuration Multi-Organisation",
       "body": "Chaque organisation utilisant Max7 Vista fonctionne comme un locataire indépendant. Les données sont entièrement isolées entre les locataires. Les Super Administrateurs peuvent créer et gérer des locataires, tandis que les Administrateurs gèrent les données et utilisateurs de leur propre organisation."
+    },
+    "presentations": {
+      "heading": "Présentations",
+      "body": "Créez des présentations de diapositives cliniques à partir d'images de patients. Ouvrez Présentations dans la barre latérale pour afficher ou créer des présentations. Chaque présentation contient une ou plusieurs diapositives, chacune liée à une image de patient avec ses annotations et une légende facultative. Utilisez l'éditeur de diapositives pour organiser le contenu, puis entrez en mode Présentation plein écran pour afficher les diapositives à un patient ou un collègue. Les présentations peuvent être spécifiques à un patient (créées depuis son profil) ou inter-patients (accessibles depuis le hub Présentations)."
+    },
+    "migration": {
+      "heading": "Migration (LAN ↔ Web)",
+      "body": "Les Super Administrateurs peuvent transférer toutes les données entre la version bureau/LAN Electron et la version web cloud sans perte de données. Allez dans Paramètres → Migration. Cliquez sur 'Télécharger l'archive de migration' pour exporter un ZIP contenant tous les dossiers patients, fichiers d'images, utilisateurs (avec mots de passe chiffrés) et paramètres système. Sur le système de destination, importez ce ZIP via 'Importer l'archive'. Les patients et utilisateurs existants sont automatiquement ignorés pour éviter les doublons. Le paramètre de répertoire de stockage est intentionnellement exclu pour préserver les chemins propres à chaque système. Toutes les actions d'exportation et d'importation sont enregistrées dans le Journal d'Audit."
     }
   },
   "bulkImport": {
