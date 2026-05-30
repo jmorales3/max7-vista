@@ -475,19 +475,25 @@ export default function TemplateDocumentPage() {
           ) : (
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 max-h-[28rem] overflow-y-auto py-2 pr-1">
               {(patientImages as ImageItem[]).filter((img) => !img.patientId || img.patientId === document.patientId).map((img) => (
-                <button
+                <div
                   key={img.id}
-                  className="block w-full rounded-lg overflow-hidden border-2 border-transparent hover:border-primary focus:outline-none focus:border-primary"
+                  role="button"
+                  tabIndex={0}
+                  style={{
+                    width: "100%",
+                    paddingTop: "100%",
+                    borderRadius: 8,
+                    border: "2px solid transparent",
+                    cursor: "pointer",
+                    backgroundImage: `url('/api/images/${img.id}/file')`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    backgroundRepeat: "no-repeat",
+                  }}
+                  className="hover:border-primary focus:outline-none focus:border-primary"
                   onClick={() => pickerFrameId && assignImage(pickerFrameId, img.id)}
-                >
-                  <div style={{ position: "relative", width: "100%", paddingTop: "100%" }}>
-                    <img
-                      src={`/api/images/${img.id}/file`}
-                      alt={img.fileName ?? ""}
-                      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                    />
-                  </div>
-                </button>
+                  onKeyDown={(e) => e.key === "Enter" && pickerFrameId && assignImage(pickerFrameId, img.id)}
+                />
               ))}
             </div>
           )}
