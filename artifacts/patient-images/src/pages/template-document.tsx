@@ -20,41 +20,59 @@ interface ImageItem { id: number; fileName?: string; capturedAt: string; patient
 const PX_PER_MM = 96 / 25.4;
 
 function ImageInFrame({
-  frame, docFrame, pxPerMm, editing, onClick, onPanChange, onZoomChange, clickToAddLabel, removeImageTitle,
+  frame, docFrame, pxPerMm, displayScale, editing, onClick, onPanChange, onZoomChange, onRemove, clickToAddLabel, removeImageTitle,
 }: {
-  frame: TemplateFrame; docFrame: DocumentFrame; pxPerMm: number;
+  frame: TemplateFrame; docFrame: DocumentFrame; pxPerMm: number; displayScale: number;
   editing: boolean; onClick: () => void;
   onPanChange: (x: number, y: number) => void;
   onZoomChange: (zoom: number) => void;
+  onRemove: () => void;
   clickToAddLabel: string; removeImageTitle: string;
 }) {
+  const [natSize, setNatSize] = useState<{ w: number; h: number } | null>(null);
   const panRef = useRef<{ sx: number; sy: number; spx: number; spy: number } | null>(null);
 
   const frameW = frame.width * pxPerMm;
   const frameH = frame.height * pxPerMm;
   const hasImage = !!docFrame.imageId;
-  const zoom = docFrame.zoom ?? 100; // default: fill frame (cover); 0 = show full image (contain)
-  // Use CSS objectFit so the browser handles EXIF orientation automatically.
-  const isCover = zoom > 0;
-  const canPan = hasImage && isCover;
 
-  // Pan using objectPosition (0%=top-left, 50%=center, 100%=bottom-right)
-  const objPos = `${docFrame.panX}% ${docFrame.panY}%`;
+  // zoom: float scale multiplier. 1.0 = show full image fitting inside frame.
+  // Legacy docs had zoom=0 (fit) or zoom=100 (fill) — treat any value ≥10 as legacy → reset to 1.
+  const zoomScale = docFrame.zoom && docFrame.zoom > 0 && docFrame.zoom < 10 ? docFrame.zoom : 1.0;
+
+  // Fit scale: largest multiplier that fits the full image inside the frame (with natural dims known)
+  const fitScale = natSize ? Math.min(frameW / natSize.w, frameH / natSize.h) : null;
+
+  // Rendered image dimensions in canvas pixels
+  const displayW = natSize && fitScale ? natSize.w * fitScale * zoomScale : frameW;
+  const displayH = natSize && fitScale ? natSize.h * fitScale * zoomScale : frameH;
+
+  // Pan clamp limits (canvas pixels from center; positive = shifted right/down)
+  const maxPanX = Math.max(0, (displayW - frameW) / 2);
+  const maxPanY = Math.max(0, (displayH - frameH) / 2);
+  const panX = Math.max(-maxPanX, Math.min(maxPanX, docFrame.panX));
+  const panY = Math.max(-maxPanY, Math.min(maxPanY, docFrame.panY));
+
+  // Top-left corner of image inside the frame (canvas pixels)
+  const imgLeft = (frameW - displayW) / 2 + panX;
+  const imgTop  = (frameH - displayH) / 2 + panY;
+
+  const canDrag = hasImage && natSize !== null && (maxPanX > 1 || maxPanY > 1);
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!canPan) return;
+    if (!hasImage) return;
     e.preventDefault();
-    // Approximate overflow for pan sensitivity; use frame size as proxy when natural size unknown
-    const panSensX = frameW * 0.5;
-    const panSensY = frameH * 0.5;
-    panRef.current = { sx: e.clientX, sy: e.clientY, spx: docFrame.panX, spy: docFrame.panY };
+    panRef.current = { sx: e.clientX, sy: e.clientY, spx: panX, spy: panY };
+    const mxX = maxPanX; const mxY = maxPanY;
     const onMove = (ev: MouseEvent) => {
       if (!panRef.current) return;
-      const dx = ev.clientX - panRef.current.sx;
-      const dy = ev.clientY - panRef.current.sy;
-      const npx = Math.max(0, Math.min(100, panRef.current.spx - (dx / panSensX) * 100));
-      const npy = Math.max(0, Math.min(100, panRef.current.spy - (dy / panSensY) * 100));
-      onPanChange(npx, npy);
+      // Convert screen-pixel delta → canvas-pixel delta (parent is scaled by displayScale)
+      const dx = (ev.clientX - panRef.current.sx) / displayScale;
+      const dy = (ev.clientY - panRef.current.sy) / displayScale;
+      onPanChange(
+        Math.max(-mxX, Math.min(mxX, panRef.current.spx + dx)),
+        Math.max(-mxY, Math.min(mxY, panRef.current.spy + dy)),
+      );
     };
     const onUp = () => {
       panRef.current = null;
@@ -66,10 +84,7 @@ function ImageInFrame({
   };
 
   const labelFontPx = Math.max(9, 13 * (pxPerMm / PX_PER_MM));
-  const btnFontPx = Math.max(6, 8 * (pxPerMm / PX_PER_MM));
-  // At zoom=0 → objectFit:contain (full image, EXIF handled by browser)
-  // At zoom>0 → objectFit:cover with objectPosition for panning
-  const hasLetterbox = hasImage && !isCover;
+  const ctrlFontPx  = Math.max(7, 8  * (pxPerMm / PX_PER_MM));
 
   return (
     <div style={{ position: "absolute", left: frame.x * pxPerMm, top: frame.y * pxPerMm, width: frameW }}>
@@ -79,23 +94,27 @@ function ImageInFrame({
           overflow: "hidden",
           border: editing ? (hasImage ? "2px solid hsl(var(--primary)/0.6)" : "2px dashed hsl(var(--primary))") : "1px solid hsl(var(--border))",
           boxSizing: "border-box",
-          cursor: hasImage ? (canPan ? "grab" : "default") : "pointer",
+          cursor: hasImage ? (canDrag ? "grab" : "default") : "pointer",
           position: "relative",
-          background: hasLetterbox ? "#111" : undefined,
+          background: "hsl(var(--muted)/0.5)",
         }}
         onClick={hasImage ? undefined : onClick}
-        onMouseDown={canPan ? handleMouseDown : undefined}
+        onMouseDown={hasImage ? handleMouseDown : undefined}
       >
         {hasImage ? (
           <img
+            key={docFrame.imageId}
             src={`/api/images/${docFrame.imageId}/file`}
             style={{
-              display: "block",
-              width: "100%", height: "100%",
-              objectFit: isCover ? "cover" : "contain",
-              objectPosition: isCover ? objPos : "center",
+              position: "absolute",
+              left: natSize ? imgLeft : 0,
+              top:  natSize ? imgTop  : 0,
+              width:  natSize ? displayW : "100%",
+              height: natSize ? displayH : "100%",
+              objectFit: natSize ? undefined : "contain",
               userSelect: "none", pointerEvents: "none",
             }}
+            onLoad={(e) => setNatSize({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
             draggable={false}
             alt=""
           />
@@ -119,52 +138,53 @@ function ImageInFrame({
             className="no-print"
             style={{ position: "absolute", top: 2, right: 2, background: "hsl(var(--destructive))", color: "white", borderRadius: 4, border: "none", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 10 }}
             onMouseDown={(e) => e.stopPropagation()}
-            onClick={(e) => { e.stopPropagation(); onPanChange(-1, -1); }}
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
             title={removeImageTitle}
           >
             <X style={{ width: 10, height: 10 }} />
           </button>
         )}
 
-        {/* Pan hint — hidden in print */}
-        {canPan && editing && frameH > 50 && (
-          <div className="no-print" style={{ position: "absolute", bottom: 2, left: "50%", transform: "translateX(-50%)", background: "rgba(0,0,0,0.45)", color: "white", borderRadius: 3, fontSize: Math.max(7, 8 * (pxPerMm / PX_PER_MM)), padding: "1px 5px", pointerEvents: "none", lineHeight: 1.5, whiteSpace: "nowrap" }}>
+        {/* Drag-to-pan hint — hidden in print */}
+        {canDrag && editing && frameH > 50 && (
+          <div className="no-print" style={{ position: "absolute", bottom: 2, left: "50%", transform: "translateX(-50%)", background: "rgba(0,0,0,0.45)", color: "white", borderRadius: 3, fontSize: ctrlFontPx, padding: "1px 5px", pointerEvents: "none", lineHeight: 1.5, whiteSpace: "nowrap" }}>
             drag to pan
           </div>
         )}
       </div>
 
-      {/* Fit / Fill toggle — outside the frame, hidden in print */}
+      {/* Zoom slider — outside frame, hidden in print */}
       {hasImage && editing && (
         <div
           className="no-print"
-          style={{ display: "flex", width: frameW, marginTop: 2 }}
+          style={{ display: "flex", alignItems: "center", width: frameW, marginTop: 3, gap: 4 }}
           onMouseDown={(e) => e.stopPropagation()}
         >
-          <button
-            onClick={() => onZoomChange(0)}
-            style={{
-              flex: 1, padding: "2px 0", fontSize: Math.max(8, 9 * (pxPerMm / PX_PER_MM)),
-              background: !isCover ? "hsl(var(--primary))" : "rgba(0,0,0,0.10)",
-              color: !isCover ? "white" : "hsl(var(--muted-foreground))",
-              border: "none", borderRadius: "3px 0 0 3px", cursor: "pointer", lineHeight: 1.5,
-              fontWeight: !isCover ? 600 : 400,
+          <span style={{ fontSize: ctrlFontPx, color: "hsl(var(--muted-foreground))", whiteSpace: "nowrap", userSelect: "none" }}>1×</span>
+          <input
+            type="range"
+            min={1}
+            max={5}
+            step={0.05}
+            value={zoomScale}
+            style={{ flex: 1, height: 14, cursor: "pointer", accentColor: "hsl(var(--primary))" }}
+            onChange={(e) => {
+              const newScale = parseFloat(e.target.value);
+              if (natSize && fitScale) {
+                const nW = natSize.w * fitScale * newScale;
+                const nH = natSize.h * fitScale * newScale;
+                const nMxX = Math.max(0, (nW - frameW) / 2);
+                const nMxY = Math.max(0, (nH - frameH) / 2);
+                const cPx = Math.max(-nMxX, Math.min(nMxX, docFrame.panX));
+                const cPy = Math.max(-nMxY, Math.min(nMxY, docFrame.panY));
+                if (cPx !== docFrame.panX || cPy !== docFrame.panY) onPanChange(cPx, cPy);
+              }
+              onZoomChange(newScale);
             }}
-          >
-            Fit
-          </button>
-          <button
-            onClick={() => onZoomChange(100)}
-            style={{
-              flex: 1, padding: "2px 0", fontSize: Math.max(8, 9 * (pxPerMm / PX_PER_MM)),
-              background: isCover ? "hsl(var(--primary))" : "rgba(0,0,0,0.10)",
-              color: isCover ? "white" : "hsl(var(--muted-foreground))",
-              border: "none", borderRadius: "0 3px 3px 0", cursor: "pointer", lineHeight: 1.5,
-              fontWeight: isCover ? 600 : 400,
-            }}
-          >
-            Fill
-          </button>
+          />
+          <span style={{ fontSize: ctrlFontPx, color: "hsl(var(--muted-foreground))", minWidth: "2.2em", textAlign: "right", userSelect: "none" }}>
+            {zoomScale.toFixed(1)}×
+          </span>
         </div>
       )}
 
@@ -231,7 +251,10 @@ export default function TemplateDocumentPage() {
     const existing = document.frames as DocumentFrame[];
     const merged = (template.frames as TemplateFrame[]).map((tf) => {
       const ex = existing.find((df) => df.frameId === tf.id);
-      return ex ?? { frameId: tf.id, panX: 50, panY: 50, zoom: 100 };
+      if (!ex) return { frameId: tf.id, panX: 0, panY: 0, zoom: 1 };
+      // Migrate legacy format (zoom was 0=fit or 100=fill)
+      if (!ex.zoom || ex.zoom === 0 || ex.zoom >= 10) return { ...ex, panX: 0, panY: 0, zoom: 1 };
+      return ex;
     });
     setDocFrames(merged);
     setDirty(false);
@@ -263,17 +286,18 @@ export default function TemplateDocumentPage() {
   }
 
   function assignImage(frameId: string, imageId: number) {
-    setDocFrames((prev) => prev.map((df) => df.frameId === frameId ? { ...df, imageId, panX: 50, panY: 50, zoom: 100 } : df));
+    setDocFrames((prev) => prev.map((df) => df.frameId === frameId ? { ...df, imageId, panX: 0, panY: 0, zoom: 1 } : df));
     setPickerFrameId(null);
     setDirty(true);
   }
 
+  function removeImage(frameId: string) {
+    setDocFrames((prev) => prev.map((df) => df.frameId === frameId ? { ...df, imageId: undefined, panX: 0, panY: 0, zoom: 1 } : df));
+    setDirty(true);
+  }
+
   function updatePan(frameId: string, panX: number, panY: number) {
-    if (panX === -1 && panY === -1) {
-      setDocFrames((prev) => prev.map((df) => df.frameId === frameId ? { ...df, imageId: undefined, panX: 50, panY: 50 } : df));
-    } else {
-      setDocFrames((prev) => prev.map((df) => df.frameId === frameId ? { ...df, panX, panY } : df));
-    }
+    setDocFrames((prev) => prev.map((df) => df.frameId === frameId ? { ...df, panX, panY } : df));
     setDirty(true);
   }
 
@@ -394,17 +418,19 @@ export default function TemplateDocumentPage() {
               }}
             >
               {(template.frames as TemplateFrame[]).map((frame) => {
-                const df = docFrames.find((d) => d.frameId === frame.id) ?? { frameId: frame.id, panX: 50, panY: 50, zoom: 100 };
+                const df = docFrames.find((d) => d.frameId === frame.id) ?? { frameId: frame.id, panX: 0, panY: 0, zoom: 1 };
                 return (
                   <ImageInFrame
                     key={frame.id}
                     frame={frame}
                     docFrame={df}
                     pxPerMm={PX_PER_MM}
+                    displayScale={displayScale}
                     editing={true}
                     onClick={() => setPickerFrameId(frame.id)}
                     onPanChange={(px, py) => updatePan(frame.id, px, py)}
                     onZoomChange={(z) => updateZoom(frame.id, z)}
+                    onRemove={() => removeImage(frame.id)}
                     clickToAddLabel={t("templates.document.clickToAdd")}
                     removeImageTitle={t("templates.document.removeImage")}
                   />
