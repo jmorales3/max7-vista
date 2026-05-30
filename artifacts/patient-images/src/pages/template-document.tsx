@@ -33,7 +33,7 @@ function ImageInFrame({
   const frameW = frame.width * pxPerMm;
   const frameH = frame.height * pxPerMm;
   const hasImage = !!docFrame.imageId;
-  const zoom = docFrame.zoom ?? 0; // 0 = full image (contain), 100 = frame filled (cover)
+  const zoom = docFrame.zoom ?? 100; // default: fill frame (cover); 0 = show full image (contain)
   // Use CSS objectFit so the browser handles EXIF orientation automatically.
   const isCover = zoom > 0;
   const canPan = hasImage && isCover;
@@ -212,7 +212,7 @@ export default function TemplateDocumentPage() {
     const existing = document.frames as DocumentFrame[];
     const merged = (template.frames as TemplateFrame[]).map((tf) => {
       const ex = existing.find((df) => df.frameId === tf.id);
-      return ex ?? { frameId: tf.id, panX: 50, panY: 50 };
+      return ex ?? { frameId: tf.id, panX: 50, panY: 50, zoom: 100 };
     });
     setDocFrames(merged);
     setDirty(false);
@@ -244,7 +244,7 @@ export default function TemplateDocumentPage() {
   }
 
   function assignImage(frameId: string, imageId: number) {
-    setDocFrames((prev) => prev.map((df) => df.frameId === frameId ? { ...df, imageId, panX: 50, panY: 50 } : df));
+    setDocFrames((prev) => prev.map((df) => df.frameId === frameId ? { ...df, imageId, panX: 50, panY: 50, zoom: 100 } : df));
     setPickerFrameId(null);
     setDirty(true);
   }
@@ -378,7 +378,7 @@ export default function TemplateDocumentPage() {
               }}
             >
               {(template.frames as TemplateFrame[]).map((frame) => {
-                const df = docFrames.find((d) => d.frameId === frame.id) ?? { frameId: frame.id, panX: 50, panY: 50 };
+                const df = docFrames.find((d) => d.frameId === frame.id) ?? { frameId: frame.id, panX: 50, panY: 50, zoom: 100 };
                 return (
                   <ImageInFrame
                     key={frame.id}
