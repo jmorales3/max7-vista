@@ -398,7 +398,7 @@
     },
     "templates": {
       "heading": "Templates",
-      "body": "The Templates feature lets you design reusable print layouts for patient documents. Each template defines a page size (Letter, A4, Legal, or custom), an optional clinic name and address, and one or more picture frames positioned anywhere on the page. Open Templates in the sidebar to create or manage templates. Click 'New Template' to set the title, page size, and clinic info, then click 'Create & Design' to open the Layout Designer. In the designer, click 'Add' to place frames on the page — drag them to move, drag the corner handles to resize, and set a label for each frame in the side panel. Save the template when done. To fill a template, click 'Create Document' on any template card, select an optional patient, and give the document a title. In the Document view, click an empty frame to pick a patient image for that slot, then drag the image to reposition it within the frame. Click Print to send the finished layout to the printer."
+      "body": "The Templates feature lets you design reusable print layouts for patient documents. Each template defines a page size (Letter, A4, Legal, or custom), an optional clinic name and address, and one or more picture frames positioned anywhere on the page. Open Templates in the sidebar to create or manage templates. Click 'New Template' to set the title, page size, and clinic info, then click 'Create & Design' to open the Layout Designer. In the designer, click 'Add' to place frames on the page — drag them to move, drag the corner handles to resize, and set a label for each frame in the side panel. Save the template when done. To fill a template, click 'Create Document' on any template card, select an optional patient, and give the document a title. In the Document view, click an empty frame to pick a patient image for that slot, then drag the image to reposition it within the frame. The clinic header block is fully movable and resizable — drag it anywhere on the print canvas to reposition it, and drag its right edge to change the width. Use the Header: On/Off toggle button in the toolbar to include or exclude the clinic header on a per-document basis. The header position, size, and visibility are saved with the document. Click Print to send the finished layout to the printer."
     }
   },
   "bulkImport": {
@@ -600,7 +600,7 @@
       "saving": "Saving…",
       "save": "Save",
       "print": "Print",
-      "hint": "Click an empty frame to assign a patient image. Drag an assigned image to reposition it within the frame.",
+      "hint": "Click an empty frame to assign a patient image. Drag an assigned image to reposition it within the frame. The clinic header block is movable — drag it anywhere on the page to reposition it and drag its right edge to resize it. Use the Header: On/Off button in the toolbar to show or hide it.",
       "selectImage": "Select Image for \"{{label}}\"",
       "noImages": "No images found for this patient.",
       "noPatientImages": "No patient assigned to this document — assign a patient to browse their images.",
