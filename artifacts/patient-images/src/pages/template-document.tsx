@@ -352,8 +352,8 @@ export default function TemplateDocumentPage() {
             top: 50% !important;
             left: 50% !important;
             transform: translate(-50%, -50%) !important;
-            width: 76.2mm !important;
-            max-width: 76.2mm !important;
+            width: 88.9mm !important;
+            max-width: 88.9mm !important;
             padding: 2mm 5mm !important;
             background: rgba(255,255,255,0.92) !important;
             border: none !important;
@@ -364,7 +364,7 @@ export default function TemplateDocumentPage() {
             text-align: center !important;
             gap: 2mm !important;
           }
-          .print-header img { height: 10mm !important; max-width: 24mm !important; object-fit: contain !important; }
+          .print-header img { height: 15mm !important; max-width: 36mm !important; object-fit: contain !important; }
           .print-header-name { font-size: 13pt !important; }
           .print-header-info { font-size: 10pt !important; }
           .print-header-patient { font-size: 10pt !important; }
