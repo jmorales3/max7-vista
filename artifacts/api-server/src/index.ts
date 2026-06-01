@@ -230,68 +230,78 @@ async function initPostgres() {
 }
 
 async function start() {
-  if (IS_SQLITE) {
-    await initSqlite();
-  } else {
-    await initPostgres();
-  }
+  // Open the port first so the deployment health-check passes immediately,
+  // then run DB initialisation in the background.
+  await new Promise<void>((resolve) => {
+    app.listen(port, "0.0.0.0", () => {
+      logger.info({ port }, "Server listening");
 
-  app.listen(port, "0.0.0.0", async () => {
-    logger.info({ port }, "Server listening");
-
-    // Print LAN addresses so clinic staff know what URL to use on phones/tablets
-    const nets = os.networkInterfaces();
-    const lanAddresses: string[] = [];
-    for (const ifaces of Object.values(nets)) {
-      for (const iface of ifaces ?? []) {
-        if (iface.family === "IPv4" && !iface.internal) {
-          lanAddresses.push(`http://${iface.address}:${port}`);
+      // Print LAN addresses so clinic staff know what URL to use on phones/tablets
+      const nets = os.networkInterfaces();
+      const lanAddresses: string[] = [];
+      for (const ifaces of Object.values(nets)) {
+        for (const iface of ifaces ?? []) {
+          if (iface.family === "IPv4" && !iface.internal) {
+            lanAddresses.push(`http://${iface.address}:${port}`);
+          }
         }
       }
-    }
-    if (lanAddresses.length > 0) {
-      logger.info(
-        { addresses: lanAddresses },
-        "LAN access — enter one of these addresses in the mobile app Server Setup",
-      );
+      if (lanAddresses.length > 0) {
+        logger.info(
+          { addresses: lanAddresses },
+          "LAN access — enter one of these addresses in the mobile app Server Setup",
+        );
+      }
+
+      resolve();
+    });
+  });
+
+  // DB init and first-run scan happen after the port is open.
+  (async () => {
+    try {
+      if (IS_SQLITE) {
+        await initSqlite();
+        scheduleAutoBackup();
+      } else {
+        await initPostgres();
+      }
+    } catch (err) {
+      logger.warn({ err }, "DB schema init failed — server continues without it");
     }
 
     if (IS_SQLITE) {
-      scheduleAutoBackup();
-    }
+      try {
+        const lastScanAt = await getSetting("lastScanAt");
+        if (!lastScanAt) {
+          const storageDir = await getStorageDirectory();
+          const IMAGE_EXTENSIONS = new Set([
+            ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff", ".tif",
+          ]);
 
-    try {
-      const lastScanAt = await getSetting("lastScanAt");
-      if (!lastScanAt) {
-        const storageDir = await getStorageDirectory();
-        const IMAGE_EXTENSIONS = new Set([
-          ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff", ".tif",
-        ]);
-
-        function hasImages(dir: string): boolean {
-          if (!fs.existsSync(dir)) return false;
-          for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-            if (entry.isDirectory()) {
-              if (hasImages(path.join(dir, entry.name))) return true;
-            } else if (IMAGE_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) {
-              return true;
+          function hasImages(dir: string): boolean {
+            if (!fs.existsSync(dir)) return false;
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              if (entry.isDirectory()) {
+                if (hasImages(path.join(dir, entry.name))) return true;
+              } else if (IMAGE_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) {
+                return true;
+              }
             }
+            return false;
           }
-          return false;
-        }
 
-        if (hasImages(storageDir)) {
-          logger.info({ storageDir }, "First run: unscanned image files found — triggering auto-scan");
-          // scanDirectory() is called directly (not via HTTP), so it bypasses
-          // auth middleware entirely — no token or service credential required.
-          const result = await scanDirectory(storageDir);
-          logger.info({ scanned: result.scanned, indexed: result.indexed }, "First-run auto-scan complete");
+          if (hasImages(storageDir)) {
+            logger.info({ storageDir }, "First run: unscanned image files found — triggering auto-scan");
+            const result = await scanDirectory(storageDir);
+            logger.info({ scanned: result.scanned, indexed: result.indexed }, "First-run auto-scan complete");
+          }
         }
+      } catch (e) {
+        logger.warn({ err: e }, "First-run scan check failed");
       }
-    } catch (e) {
-      logger.warn({ err: e }, "First-run scan check failed");
     }
-  });
+  })();
 }
 
 start().catch((err) => {

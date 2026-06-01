@@ -1,3 +1,4 @@
 - [Drizzle-kit push in non-TTY shells](drizzle-no-tty.md) — drizzle-kit push asks interactive questions when new tables conflict; use executeSql directly for schema changes in CI/agent context.
 - [Stale .d.ts rebuild pattern](dist-rebuild.md) — workspace packages with composite:true + emitDeclarationOnly must be rebuilt with `pnpm exec tsc --noEmit false --emitDeclarationOnly --outDir dist` when source exports change, or downstream packages see stale types.
 - [Workflow restart method](workflow-restart.md) — use code_execution restartWorkflow(), not the restart_workflow tool, to keep servers alive; the tool triggers a screenshot which causes a Replit checkpoint/SIGTERM cycle.
+- [Deployment startup: listen before DB init](listen-before-db-init.md) — call app.listen() before any async DB work; pool.query() can hang in prod and block port open, killing the deployment health-check.
