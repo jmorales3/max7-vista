@@ -56,6 +56,8 @@ export function fromGcsPath(filePath: string): string {
 /**
  * Upload a Buffer to GCS.
  * Returns the DB storage key (e.g. "gcs:images/4/2024-01-01/1234.jpg").
+ * Fails with a clear error after 90 seconds so callers never hang indefinitely
+ * (the sidecar auth-token fetch can stall if the environment is cold).
  */
 export async function uploadToGcs(
   buffer: Buffer,
@@ -64,7 +66,19 @@ export async function uploadToGcs(
 ): Promise<string> {
   const bucket = storageClient.bucket(getBucketName());
   const file = bucket.file(objectName);
-  await file.save(buffer, { contentType, resumable: false });
+
+  const uploadTimeout = new Promise<never>((_, reject) =>
+    setTimeout(
+      () => reject(new Error("GCS upload timed out after 90 s — please try again")),
+      90_000,
+    ),
+  );
+
+  await Promise.race([
+    file.save(buffer, { contentType, resumable: false }),
+    uploadTimeout,
+  ]);
+
   return toGcsPath(objectName);
 }
 

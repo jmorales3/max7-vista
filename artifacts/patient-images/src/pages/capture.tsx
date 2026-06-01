@@ -170,7 +170,9 @@ export default function Capture() {
     let successCount = 0;
     let lastId: number | null = null;
 
-    for (const item of queue) {
+    for (let i = 0; i < queue.length; i++) {
+      const item = queue[i];
+      setUploadProgress({ done: i, total: queue.length });
       try {
         const combined = [seriesNotes.trim(), item.notes.trim()]
           .filter(Boolean)
@@ -414,7 +416,7 @@ export default function Capture() {
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       {uploadProgress
-                        ? t("capture.uploadingProgress", { done: uploadProgress.done, total: uploadProgress.total })
+                        ? t("capture.uploadingProgress", { current: uploadProgress.done + 1, total: uploadProgress.total })
                         : "Uploading…"}
                     </>
                   ) : (
