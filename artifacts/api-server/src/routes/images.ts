@@ -136,6 +136,87 @@ router.get("/images", async (req, res): Promise<void> => {
   }
 });
 
+// JSON + base64 upload — used by the web app in production (Replit's deployment
+// proxy drops multipart bodies; JSON POSTs reach the server reliably).
+router.post("/images/upload", async (req, res): Promise<void> => {
+  const { fileBase64, fileName, mimeType, patientId: rawPatientId, notes, capturedAt: rawCapturedAt } = req.body ?? {};
+
+  if (!fileBase64 || typeof fileBase64 !== "string") {
+    res.status(400).json({ error: "fileBase64 is required" });
+    return;
+  }
+  if (!fileName || typeof fileName !== "string") {
+    res.status(400).json({ error: "fileName is required" });
+    return;
+  }
+  if (!mimeType || typeof mimeType !== "string" || !mimeType.startsWith("image/")) {
+    res.status(400).json({ error: "mimeType must be an image/ type" });
+    return;
+  }
+
+  // Accept both raw base64 and data-URL ("data:image/jpeg;base64,...") format
+  const base64Data = fileBase64.includes(",") ? fileBase64.split(",")[1] : fileBase64;
+  const buffer = Buffer.from(base64Data, "base64");
+
+  if (buffer.length > 50 * 1024 * 1024) {
+    res.status(413).json({ error: "File too large (max 50 MB)" });
+    return;
+  }
+
+  const patientId = rawPatientId != null ? parseInt(String(rawPatientId), 10) : null;
+  const capturedAt = rawCapturedAt ? new Date(rawCapturedAt) : new Date();
+
+  if (patientId !== null) {
+    const [patient] = await db
+      .select({ id: patientsTable.id })
+      .from(patientsTable)
+      .where(eq(patientsTable.id, patientId));
+    if (!patient) {
+      res.status(404).json({ error: `Patient ${patientId} not found` });
+      return;
+    }
+  }
+
+  const dateStr = capturedAt.toISOString().split("T")[0];
+  const ext = path.extname(fileName) || ".jpg";
+  const filename = `${Date.now()}${ext}`;
+  const objectName = patientId
+    ? `images/${patientId}/${dateStr}/${filename}`
+    : `images/unassigned/${dateStr}/${filename}`;
+
+  let filePath: string;
+  try {
+    filePath = await uploadToGcs(buffer, objectName, mimeType);
+  } catch (err) {
+    console.error("GCS upload failed:", err);
+    res.status(503).json({ error: "Storage upload failed — please try again", detail: String(err) });
+    return;
+  }
+
+  const [image] = await db
+    .insert(imagesTable)
+    .values({
+      patientId,
+      filePath,
+      fileName,
+      notes: notes ?? null,
+      capturedAt,
+      isUnassigned: patientId === null,
+    })
+    .returning();
+
+  let patientName: string | null = null;
+  let patientCode: string | null = null;
+  if (patientId) {
+    const [patient] = await db.select().from(patientsTable).where(eq(patientsTable.id, patientId));
+    patientName = patient?.name ?? null;
+    patientCode = patient?.patientCode ?? null;
+  }
+
+  await logAudit(req, "upload", "image", image.id, JSON.stringify({ fileName, patientId }));
+  res.status(201).json(buildImageRow({ ...image, patientName, patientCode }));
+});
+
 router.post("/images", upload.single("file"), async (req, res): Promise<void> => {
   if (!req.file) {
     res.status(400).json({ error: "No file uploaded" });

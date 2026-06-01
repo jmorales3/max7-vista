@@ -72,8 +72,8 @@ app.use(
   }),
 );
 
-app.use(express.json({ limit: "5mb" }));
-app.use(express.urlencoded({ extended: true, limit: "5mb" }));
+app.use(express.json({ limit: "20mb" }));
+app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
 // Authentication note: this server uses express-session with a custom
 // username/password flow (see routes/auth.ts and middlewares/requireAuth.ts).
