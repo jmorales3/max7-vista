@@ -12,12 +12,15 @@ export async function uploadPatientImage(
   notes?: string,
   capturedAt?: string,
 ) {
-  const result = await uploadImage({
-    file,
-    patientId,
-    notes,
-    capturedAt: capturedAt ?? new Date().toISOString(),
-  });
+  const result = await uploadImage(
+    {
+      file,
+      patientId,
+      notes,
+      capturedAt: capturedAt ?? new Date().toISOString(),
+    },
+    { signal: AbortSignal.timeout(30_000) },
+  );
 
   queryClient.invalidateQueries({ queryKey: getListImagesQueryKey() });
   queryClient.invalidateQueries({ queryKey: getListPatientImagesQueryKey(patientId) });
