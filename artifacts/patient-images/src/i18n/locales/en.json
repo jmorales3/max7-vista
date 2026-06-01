@@ -128,7 +128,7 @@
     "addMore": "Add more",
     "clearAll": "Clear all",
     "uploadPhotos": "Upload {{count}} photos",
-    "uploadingProgress": "Uploading photo {{current}} of {{total}}…",
+    "uploadingProgress": "Uploading photo {{done}} of {{total}}…",
     "allSaved": "{{count}} images uploaded",
     "allSavedDesc": "All {{count}} images have been saved to the patient's gallery."
   },

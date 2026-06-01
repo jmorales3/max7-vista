@@ -165,7 +165,14 @@ router.post("/images", upload.single("file"), async (req, res): Promise<void> =>
     ? `images/${patientId}/${dateStr}/${filename}`
     : `images/unassigned/${dateStr}/${filename}`;
 
-  const filePath = await uploadToGcs(req.file.buffer, objectName, req.file.mimetype);
+  let filePath: string;
+  try {
+    filePath = await uploadToGcs(req.file.buffer, objectName, req.file.mimetype);
+  } catch (err) {
+    console.error("GCS upload failed:", err);
+    res.status(503).json({ error: "Storage upload failed — please try again", detail: String(err) });
+    return;
+  }
 
   const [image] = await db
     .insert(imagesTable)

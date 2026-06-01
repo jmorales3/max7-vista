@@ -416,7 +416,7 @@ export default function Capture() {
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       {uploadProgress
-                        ? t("capture.uploadingProgress", { current: uploadProgress.done + 1, total: uploadProgress.total })
+                        ? t("capture.uploadingProgress", { done: uploadProgress.done + 1, total: uploadProgress.total })
                         : "Uploading…"}
                     </>
                   ) : (

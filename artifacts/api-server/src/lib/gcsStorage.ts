@@ -69,8 +69,8 @@ export async function uploadToGcs(
 
   const uploadTimeout = new Promise<never>((_, reject) =>
     setTimeout(
-      () => reject(new Error("GCS upload timed out after 90 s — please try again")),
-      90_000,
+      () => reject(new Error("GCS upload timed out after 30 s — please try again")),
+      30_000,
     ),
   );
 
