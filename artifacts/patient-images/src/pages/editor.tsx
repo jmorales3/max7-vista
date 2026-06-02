@@ -62,6 +62,7 @@ import {
   Minimize2,
   Move,
   Bookmark,
+  Undo2,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -415,6 +416,7 @@ export default function Editor() {
   const [notes, setNotes] = useState("");
   const [tool, setTool] = useState<Tool>("pointer");
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const [canUndo, setCanUndo] = useState(false);
   const [scale, setScale] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -502,6 +504,37 @@ export default function Editor() {
 
   const annotationsRef = useRef<Annotation[]>([]);
   useEffect(() => { annotationsRef.current = annotations; }, [annotations]);
+
+  const annotationHistoryRef = useRef<Annotation[][]>([]);
+
+  const pushHistory = useCallback(() => {
+    annotationHistoryRef.current = [
+      ...annotationHistoryRef.current,
+      [...annotationsRef.current],
+    ].slice(-50);
+    setCanUndo(true);
+  }, []);
+
+  const undoAnnotation = useCallback(() => {
+    const hist = annotationHistoryRef.current;
+    if (hist.length === 0) return;
+    const prev = hist[hist.length - 1];
+    annotationHistoryRef.current = hist.slice(0, -1);
+    setAnnotations(prev);
+    setCanUndo(annotationHistoryRef.current.length > 0);
+  }, []);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (!((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey)) return;
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+      e.preventDefault();
+      undoAnnotation();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [undoAnnotation]);
 
   const { data: image, isLoading } = useGetImage(id, {
     query: { enabled: !!id, queryKey: getGetImageQueryKey(id) },
@@ -935,6 +968,7 @@ export default function Editor() {
         const [[vx, vy], [p1x, p1y], [p2x, p2y]] = newPts as [[number,number],[number,number],[number,number]];
         if (Math.hypot(p1x - vx, p1y - vy) > 3 && Math.hypot(p2x - vx, p2y - vy) > 3) {
           const newAngleAnn: DrawAngle = { type: "angle", vx, vy, p1x, p1y, p2x, p2y, color: penColor, id: Date.now().toString() };
+          pushHistory();
           setAnnotations((prev) => [...prev, newAngleAnn]);
         }
         anglePointsRef.current = [];
@@ -1151,6 +1185,7 @@ export default function Editor() {
           width: strokeWidth,
           id: Date.now().toString(),
         };
+        pushHistory();
         setAnnotations((prev) => [...prev, newArrow]);
       }
       return;
@@ -1169,6 +1204,7 @@ export default function Editor() {
           width: strokeWidth,
           id: Date.now().toString(),
         };
+        pushHistory();
         setAnnotations((prev) => [...prev, newCircle]);
       }
       return;
@@ -1186,6 +1222,7 @@ export default function Editor() {
           width: strokeWidth,
           id: Date.now().toString(),
         };
+        pushHistory();
         setAnnotations((prev) => [...prev, newLine]);
       }
       return;
@@ -1205,6 +1242,7 @@ export default function Editor() {
         setCalibratingPx(dist);
       } else {
         const newRuler: DrawRuler = { type: "ruler", x1, y1, x2, y2, color: penColor, pxPerMm, id: Date.now().toString() };
+        pushHistory();
         setAnnotations((prev) => [...prev, newRuler]);
         if (resizeMode) {
           setShowResizePanel(true);
@@ -1298,6 +1336,7 @@ export default function Editor() {
       draggingTextRef.current = null;
       const dx = mx - mouseStartX;
       const dy = my - mouseStartY;
+      pushHistory();
       setAnnotations((prev) =>
         prev.map((ann) =>
           ann.type === "text" && ann.id === id
@@ -1318,6 +1357,7 @@ export default function Editor() {
         color: tool === "eraser" ? "#ffffff" : penColor,
         width: tool === "eraser" ? 20 : strokeWidth,
       };
+      pushHistory();
       setAnnotations((prev) => [...prev, newLine]);
     }
     currentLineRef.current = [];
@@ -1375,6 +1415,7 @@ export default function Editor() {
       size: textSize,
       id: Date.now().toString(),
     };
+    pushHistory();
     setAnnotations((prev) => [...prev, newText]);
     setPendingText(null);
     setTextInput("");
@@ -2070,10 +2111,22 @@ export default function Editor() {
             variant="ghost"
             size="sm"
             className="h-8 text-xs"
-            onClick={() => setAnnotations([])}
+            onClick={() => { pushHistory(); setAnnotations([]); }}
             title={t("editor.clearAnnotations")}
           >
             {t("editor.clearAnnotations")}
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1.5 text-xs"
+            onClick={undoAnnotation}
+            disabled={!canUndo}
+            title={`${t("editor.undoAnnotation")} (Ctrl+Z)`}
+          >
+            <Undo2 className="h-4 w-4" />
+            {t("editor.undoAnnotation")}
           </Button>
         </div>
 
