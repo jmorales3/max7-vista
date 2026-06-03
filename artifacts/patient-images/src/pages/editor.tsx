@@ -430,6 +430,7 @@ export default function Editor() {
   const [cutRect, setCutRect] = useState<CropRect | null>(null);
   const [floater, setFloater] = useState<{
     dataUrl: string; x: number; y: number; w: number; h: number;
+    path?: [number, number][];
   } | null>(null);
   const [pendingText, setPendingText] = useState<{ x: number; y: number } | null>(null);
   const [textInput, setTextInput] = useState("");
@@ -1297,7 +1298,8 @@ export default function Editor() {
         setCutPath(path);
         setCutRect({ x: bx, y: by, w: bw, h: bh });
       }
-      setFloater({ dataUrl, x: bx, y: by, w: bw, h: bh });
+      const localPath = path.map(p => [p[0] - bx, p[1] - by] as [number, number]);
+      setFloater({ dataUrl, x: bx, y: by, w: bw, h: bh, path: localPath });
       return;
     }
 
@@ -2362,7 +2364,7 @@ export default function Editor() {
                 height: floater.h,
                 cursor: "move",
                 zIndex: 20,
-                outline: "2px dashed #f97316",
+                outline: floater.path ? "none" : "2px dashed #f97316",
                 outlineOffset: "1px",
               }}
               onMouseDown={startFloaterDrag}
@@ -2373,6 +2375,21 @@ export default function Editor() {
                 style={{ width: floater.w, height: floater.h, display: "block" }}
                 alt=""
               />
+              {floater.path && (
+                <svg
+                  style={{ position: "absolute", inset: 0, overflow: "visible", pointerEvents: "none" }}
+                  width={floater.w}
+                  height={floater.h}
+                >
+                  <polygon
+                    points={floater.path.map(([x, y]) => `${x},${y}`).join(" ")}
+                    fill="none"
+                    stroke="#f97316"
+                    strokeWidth="2"
+                    strokeDasharray="5,4"
+                  />
+                </svg>
+              )}
             </div>
           )}
         </div>
