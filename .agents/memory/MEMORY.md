@@ -3,3 +3,4 @@
 - [Workflow restart method](workflow-restart.md) — use code_execution restartWorkflow(), not the restart_workflow tool, to keep servers alive; the tool triggers a screenshot which causes a Replit checkpoint/SIGTERM cycle.
 - [Deployment startup: listen before DB init](listen-before-db-init.md) — call app.listen() before any async DB work; pool.query() can hang in prod and block port open, killing the deployment health-check.
 - [Replit proxy drops multipart POST bodies](replit-multipart-proxy.md) — Replit deployment proxy silently drops multipart/form-data POST bodies; use JSON+base64 for file uploads instead.
+- [Max7 Feature Transfer Register](max7-transfer-register.md) — confirmed working Vista features to replicate in Max7's image management section; update whenever a feature is approved.
