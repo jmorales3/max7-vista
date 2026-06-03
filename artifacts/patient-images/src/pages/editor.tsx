@@ -437,7 +437,8 @@ export default function Editor() {
   const [pendingSmoothPath, setPendingSmoothPath] = useState<[number, number][] | null>(null);
   const smoothDrawingRef = useRef(false);
   const smoothPathRef = useRef<[number, number][]>([]);
-  const [selectMode, setSelectMode] = useState<"rect" | "freehand">("rect");
+  const [selectMode, setSelectMode] = useState<"rect" | "freehand">("freehand");
+  const [selectTransferMode, setSelectTransferMode] = useState<"cut" | "copy">("cut");
   const selectPathRef = useRef<[number, number][]>([]);
   const selectDrawingRef = useRef(false);
   const [cutPath, setCutPath] = useState<[number, number][] | null>(null);
@@ -1282,18 +1283,20 @@ export default function Editor() {
       octx.clip();
       octx.drawImage(canvas, bx, by, bw, bh, 0, 0, bw, bh);
       const dataUrl = offscreen.toDataURL("image/png");
-      // Fill the freehand shape with white on the canvas
-      const ctx = canvas.getContext("2d")!;
-      ctx.save();
-      ctx.fillStyle = "#ffffff";
-      ctx.beginPath();
-      ctx.moveTo(path[0][0], path[0][1]);
-      for (let i = 1; i < path.length; i++) ctx.lineTo(path[i][0], path[i][1]);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-      setCutPath(path);
-      setCutRect({ x: bx, y: by, w: bw, h: bh });
+      if (selectTransferMode === "cut") {
+        // Fill the freehand shape with white on the canvas
+        const ctx = canvas.getContext("2d")!;
+        ctx.save();
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.moveTo(path[0][0], path[0][1]);
+        for (let i = 1; i < path.length; i++) ctx.lineTo(path[i][0], path[i][1]);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        setCutPath(path);
+        setCutRect({ x: bx, y: by, w: bw, h: bh });
+      }
       setFloater({ dataUrl, x: bx, y: by, w: bw, h: bh });
       return;
     }
@@ -1320,11 +1323,13 @@ export default function Editor() {
       const octx = offscreen.getContext("2d")!;
       octx.drawImage(canvas, sel.x, sel.y, sel.w, sel.h, 0, 0, sel.w, sel.h);
       const dataUrl = offscreen.toDataURL("image/png");
-      // Cut: white hole at selection site
-      const ctx = canvas.getContext("2d")!;
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(sel.x, sel.y, sel.w, sel.h);
-      setCutRect(sel);
+      if (selectTransferMode === "cut") {
+        // Cut: white hole at selection site
+        const ctx = canvas.getContext("2d")!;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(sel.x, sel.y, sel.w, sel.h);
+        setCutRect(sel);
+      }
       setFloater({ dataUrl, x: sel.x, y: sel.y, w: sel.w, h: sel.h });
       setSelectionRect(null);
       return;
@@ -1501,6 +1506,14 @@ export default function Editor() {
   }
 
   function cancelSelection() {
+    if (selectTransferMode === "copy") {
+      setCutRect(null);
+      setCutPath(null);
+      setFloater(null);
+      setSelectionRect(null);
+      preCutStateRef.current = null;
+      return;
+    }
     const prev = preCutStateRef.current;
     if (!prev || !canvasRef.current) {
       setCutRect(null);
@@ -1735,35 +1748,57 @@ export default function Editor() {
           )}
 
           {tool === "select" && !floater && (
-            <div className="flex items-center gap-0.5 border rounded-md p-0.5 bg-muted/30">
-              <Button
-                size="icon"
-                variant={selectMode === "rect" ? "secondary" : "ghost"}
-                className="h-7 w-7"
-                title={t("editor.selectModeRect")}
-                onClick={() => {
-                  setSelectMode("rect");
-                  selectDrawingRef.current = false;
-                  selectPathRef.current = [];
-                  clearBrushCursor();
-                }}
-              >
-                <RectangleHorizontal className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                size="icon"
-                variant={selectMode === "freehand" ? "secondary" : "ghost"}
-                className="h-7 w-7"
-                title={t("editor.selectModeFreehand")}
-                onClick={() => {
-                  setSelectMode("freehand");
-                  selectionStartRef.current = null;
-                  setSelectionRect(null);
-                }}
-              >
-                <Lasso className="h-3.5 w-3.5" />
-              </Button>
-            </div>
+            <>
+              <div className="flex items-center gap-0.5 border rounded-md p-0.5 bg-muted/30">
+                <Button
+                  size="icon"
+                  variant={selectMode === "rect" ? "secondary" : "ghost"}
+                  className="h-7 w-7"
+                  title={t("editor.selectModeRect")}
+                  onClick={() => {
+                    setSelectMode("rect");
+                    selectDrawingRef.current = false;
+                    selectPathRef.current = [];
+                    clearBrushCursor();
+                  }}
+                >
+                  <RectangleHorizontal className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant={selectMode === "freehand" ? "secondary" : "ghost"}
+                  className="h-7 w-7"
+                  title={t("editor.selectModeFreehand")}
+                  onClick={() => {
+                    setSelectMode("freehand");
+                    selectionStartRef.current = null;
+                    setSelectionRect(null);
+                  }}
+                >
+                  <Lasso className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <div className="flex items-center gap-0.5 border rounded-md p-0.5 bg-muted/30">
+                <Button
+                  size="sm"
+                  variant={selectTransferMode === "cut" ? "secondary" : "ghost"}
+                  className="h-7 px-2 text-xs"
+                  title={t("editor.selectTransferCut")}
+                  onClick={() => setSelectTransferMode("cut")}
+                >
+                  {t("editor.selectTransferCut")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant={selectTransferMode === "copy" ? "secondary" : "ghost"}
+                  className="h-7 px-2 text-xs"
+                  title={t("editor.selectTransferCopy")}
+                  onClick={() => setSelectTransferMode("copy")}
+                >
+                  {t("editor.selectTransferCopy")}
+                </Button>
+              </div>
+            </>
           )}
 
           {tool === "select" && floater && (
@@ -2327,6 +2362,8 @@ export default function Editor() {
                 height: floater.h,
                 cursor: "move",
                 zIndex: 20,
+                outline: "2px dashed #f97316",
+                outlineOffset: "1px",
               }}
               onMouseDown={startFloaterDrag}
             >

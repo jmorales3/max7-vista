@@ -285,7 +285,9 @@
     "smoothHint": "Desenhe um contorno ao redor da área e solte para suavizar",
     "selectModeRect": "Seleção retangular",
     "selectModeFreehand": "Seleção à mão livre",
-    "selectFreehandHint": "Desenhe um contorno ao redor da área e solte para recortar"
+    "selectFreehandHint": "Desenhe um contorno ao redor da área e solte para mover ou copiar",
+    "selectTransferCut": "Mover",
+    "selectTransferCopy": "Copiar"
   },
   "settings": {
     "title": "Configurações",

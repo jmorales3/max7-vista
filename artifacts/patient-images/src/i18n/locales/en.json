@@ -285,7 +285,9 @@
     "smoothHint": "Draw a freehand outline around the area, then release to smooth",
     "selectModeRect": "Rectangle selection",
     "selectModeFreehand": "Freehand selection",
-    "selectFreehandHint": "Draw a freehand outline around the area, then release to cut"
+    "selectFreehandHint": "Draw a freehand outline around the area, then release to move or copy",
+    "selectTransferCut": "Move",
+    "selectTransferCopy": "Copy"
   },
   "settings": {
     "title": "Settings",

@@ -285,7 +285,9 @@
     "smoothHint": "Tracez un contour autour de la zone, puis relâchez pour lisser",
     "selectModeRect": "Sélection rectangulaire",
     "selectModeFreehand": "Sélection à main levée",
-    "selectFreehandHint": "Tracez un contour autour de la zone, puis relâchez pour couper"
+    "selectFreehandHint": "Tracez un contour autour de la zone, puis relâchez pour déplacer ou copier",
+    "selectTransferCut": "Déplacer",
+    "selectTransferCopy": "Copier"
   },
   "settings": {
     "title": "Paramètres",
