@@ -1785,7 +1785,7 @@ export default function Editor() {
     <div className="flex flex-col h-[calc(100vh-theme(spacing.14))] -m-4 md:-m-6 lg:-m-8">
       {/* Toolbar */}
       <div className="h-14 border-b bg-card flex items-center justify-between px-4 shrink-0 gap-2">
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 overflow-x-auto min-w-0">
           <Button variant="ghost" size="icon" asChild>
             <Link href={image.patientId ? `/patients/${image.patientId}` : "/gallery"}>
               <ChevronLeft className="h-4 w-4" />
