@@ -1,8 +1,13 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "FrlWoTONTIaSfu6HQ8U_v"
 uri = "file://artifacts/patient-images-mobile/assets/images/icon.png"
 type = "image"
 title = "generated_image"
+
+[[outputs]]
+id = "c8OWldxMwGFi85JKJmVFg"
+uri = "file://.agents/memory/max7-transfer-register.md"
+type = "text"
+title = "Max7 Feature Transfer Register"
