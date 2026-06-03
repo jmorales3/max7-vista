@@ -63,6 +63,7 @@ import {
   Move,
   Bookmark,
   Undo2,
+  ClipboardPaste,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -537,6 +538,18 @@ export default function Editor() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [undoAnnotation]);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (!((e.ctrlKey || e.metaKey) && e.key === "v")) return;
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+      e.preventDefault();
+      pasteFromClipboard();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [floater]);
 
   const { data: image, isLoading } = useGetImage(id, {
     query: { enabled: !!id, queryKey: getGetImageQueryKey(id) },
@@ -1507,6 +1520,60 @@ export default function Editor() {
     }
   }
 
+  async function pasteFromClipboard() {
+    if (floater) {
+      toast({ title: t("editor.pasteApplyFirst") });
+      return;
+    }
+    try {
+      const items = await navigator.clipboard.read();
+      let blob: Blob | null = null;
+      for (const item of items) {
+        const imageType = item.types.find((type) => type.startsWith("image/"));
+        if (imageType) {
+          blob = await item.getType(imageType);
+          break;
+        }
+      }
+      if (!blob) {
+        toast({ title: t("editor.clipboardEmpty") });
+        return;
+      }
+      const objectUrl = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const container = containerRef.current;
+        const cw = container?.offsetWidth ?? 800;
+        const ch = container?.offsetHeight ?? 600;
+        let w = img.naturalWidth;
+        let h = img.naturalHeight;
+        const maxW = Math.round(cw * 0.8);
+        const maxH = Math.round(ch * 0.8);
+        if (w > maxW || h > maxH) {
+          const ratio = Math.min(maxW / w, maxH / h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        const x = Math.round((cw - w) / 2);
+        const y = Math.round((ch - h) / 2);
+        const reader = new FileReader();
+        reader.onload = () => {
+          setFloater({ dataUrl: reader.result as string, x, y, w, h });
+          setTool("select");
+        };
+        reader.readAsDataURL(blob!);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        toast({ variant: "destructive", title: t("editor.clipboardReadFailed") });
+      };
+      img.src = objectUrl;
+    } catch {
+      toast({ variant: "destructive", title: t("editor.clipboardReadFailed") });
+    }
+  }
+
   function cancelSelection() {
     if (selectTransferMode === "copy") {
       setCutRect(null);
@@ -2164,6 +2231,16 @@ export default function Editor() {
           >
             <Undo2 className="h-4 w-4" />
             {t("editor.undoAnnotation")}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1.5 text-xs"
+            onClick={pasteFromClipboard}
+            title={`${t("editor.pasteFromClipboard")} (Ctrl+V)`}
+          >
+            <ClipboardPaste className="h-4 w-4" />
+            {t("editor.pasteFromClipboard")}
           </Button>
         </div>
 
