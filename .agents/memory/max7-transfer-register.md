@@ -132,4 +132,143 @@ style={{ outline: "2px dashed #f97316", outlineOffset: "1px", cursor: "move", zI
 
 ---
 
+## FEAT-003 — Freehand Floater: SVG Polygon Border
+
+**Status:** ✅ Confirmed working in Vista  
+**Date:** 2026-06-03  
+**Vista file:** `artifacts/patient-images/src/pages/editor.tsx`
+
+### What it does
+After a freehand lasso selection is lifted into a floater, the dashed orange border traces the **exact drawn outline** (not the rectangular bounding box). Rectangle selections keep their rectangular border.
+
+### How it works
+1. Store the freehand path in **floater-local coordinates** when creating the floater:
+   ```typescript
+   const localPath = path.map(p => [p[0] - bx, p[1] - by] as [number, number]);
+   setFloater({ dataUrl, x: bx, y: by, w: bw, h: bh, path: localPath });
+   ```
+2. Extend the floater type: `path?: [number, number][]`
+3. Inside the floater `<div>`, render an SVG overlay when `floater.path` exists:
+   ```jsx
+   {floater.path && (
+     <svg style={{ position: "absolute", inset: 0, overflow: "visible", pointerEvents: "none" }}
+       width={floater.w} height={floater.h}>
+       <polygon
+         points={floater.path.map(([x, y]) => `${x},${y}`).join(" ")}
+         fill="none" stroke="#f97316" strokeWidth="2" strokeDasharray="5,4"
+       />
+     </svg>
+   )}
+   ```
+4. The `div` outline is `"none"` when `floater.path` exists, `"2px dashed #f97316"` otherwise (rect mode).
+5. The SVG uses `overflow: visible` so the stroke renders outside the bounding box if the path is near the edge.
+6. Since the SVG is inside the floater div, it automatically moves with the floater during drag.
+
+### Notes for Max7 agent
+- `bx/by` = min x/y of the freehand path; local coords = `path[i] - [bx, by]`.
+- For rect selections, `path` is not set on the floater — use CSS `outline` instead.
+
+---
+
+## FEAT-004 — Paste Image from Clipboard (Ctrl+V)
+
+**Status:** ✅ Confirmed working in Vista  
+**Date:** 2026-06-03  
+**Vista file:** `artifacts/patient-images/src/pages/editor.tsx`
+
+### What it does
+Reads an image from the system clipboard and places it as a draggable floater centered on the canvas. Works within the same image or across different images/patients. Triggered by Ctrl+V (Cmd+V on Mac) or a toolbar "Paste" button.
+
+### How it works
+```typescript
+async function pasteFromClipboard() {
+  if (floater) { toast({ title: "Apply or cancel first" }); return; }
+  const items = await navigator.clipboard.read();
+  let blob: Blob | null = null;
+  for (const item of items) {
+    const imageType = item.types.find(t => t.startsWith("image/"));
+    if (imageType) { blob = await item.getType(imageType); break; }
+  }
+  if (!blob) { toast({ title: "Nothing to paste" }); return; }
+  const objectUrl = URL.createObjectURL(blob);
+  const img = new Image();
+  img.onload = () => {
+    URL.revokeObjectURL(objectUrl);
+    // Scale to fit 80% of canvas
+    let w = img.naturalWidth, h = img.naturalHeight;
+    const ratio = Math.min((cw * 0.8) / w, (ch * 0.8) / h);
+    if (ratio < 1) { w = Math.round(w * ratio); h = Math.round(h * ratio); }
+    // Center
+    const x = Math.round((cw - w) / 2), y = Math.round((ch - h) / 2);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFloater({ dataUrl: reader.result as string, x, y, w, h });
+      setTool("select");
+    };
+    reader.readAsDataURL(blob!);
+  };
+  img.src = objectUrl;
+}
+```
+
+**Keyboard shortcut** — separate `useEffect` that re-registers when `floater` changes (fresh closure):
+```typescript
+useEffect(() => {
+  function onKeyDown(e: KeyboardEvent) {
+    if (!((e.ctrlKey || e.metaKey) && e.key === "v")) return;
+    const target = e.target as HTMLElement;
+    if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+    e.preventDefault();
+    pasteFromClipboard();
+  }
+  window.addEventListener("keydown", onKeyDown);
+  return () => window.removeEventListener("keydown", onKeyDown);
+}, [floater]);
+```
+
+**Toolbar button** — `<ClipboardPaste>` icon next to Undo.
+
+### i18n keys added (all 4 locales)
+| Key | en | es | fr | pt |
+|-----|----|----|----|----|
+| `editor.pasteFromClipboard` | Paste | Pegar | Coller | Colar |
+| `editor.clipboardEmpty` | Nothing to paste | Nada que pegar | Rien à coller | Nada para colar |
+| `editor.clipboardReadFailed` | Could not read clipboard | … | … | … |
+| `editor.pasteApplyFirst` | Apply or cancel the current selection first | … | … | … |
+
+### Notes for Max7 agent
+- `navigator.clipboard.read()` requires `clipboard-read` permission — browser prompts the first time on HTTPS.
+- The pasted image goes through the same floater workflow as a copied selection (drag, apply, cancel all work the same way).
+- Cross-image paste works because the clipboard is OS-level — paste from a completely different image.
+
+---
+
+## FEAT-005 — Toolbar Overflow Fix (overflow-x-auto)
+
+**Status:** ✅ Confirmed working in Vista  
+**Date:** 2026-06-03  
+**Vista file:** `artifacts/patient-images/src/pages/editor.tsx`
+
+### What it does
+Prevents toolbar buttons from being hidden when tool-specific context controls push the toolbar past the container width.
+
+### Root cause
+The toolbar left section used `flex-wrap`. In narrow viewports (≤700px), extra context controls (select-mode toggles, ruler controls, etc.) caused the row to wrap onto a second line that was **clipped by the parent's fixed `h-14` height**. Buttons like Smooth, Undo, Paste would silently disappear.
+
+### Fix
+```jsx
+// Before
+<div className="flex items-center gap-2 flex-wrap">
+// After
+<div className="flex items-center gap-2 overflow-x-auto min-w-0">
+```
+
+Single-line change. All content stays on one row; the bar scrolls horizontally if it gets too wide.
+
+### Notes for Max7 agent
+- Apply `overflow-x-auto min-w-0` (not `flex-wrap`) on any fixed-height toolbar left section.
+- `min-w-0` prevents flex children from overflowing without triggering the scroll.
+
+---
+
 <!-- Add new entries below as features are confirmed in Vista -->
