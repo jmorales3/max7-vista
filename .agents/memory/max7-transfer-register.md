@@ -271,4 +271,110 @@ Single-line change. All content stays on one row; the bar scrolls horizontally i
 
 ---
 
+## FEAT-006 — Direct-to-GCS Upload (Bypass Replit Proxy)
+
+**Status:** ✅ Confirmed working in Vista (production)
+**Date:** 2026-06-04
+**Vista files:**
+- `artifacts/patient-images/src/lib/upload.ts` — client-side three-step flow
+- `artifacts/api-server/src/lib/gcsStorage.ts` — `getSignedUploadUrl()` added
+- `artifacts/api-server/src/routes/images.ts` — two new endpoints added
+
+### Why this was needed
+The Replit deployment proxy stalls large POST bodies (JSON+base64 or multipart) before they reach the Express server. This causes a silent timeout with no error in server logs. Any image upload that goes through the proxy will fail in production for files over ~100 KB.
+
+### Architecture — three steps, all tiny except the GCS PUT
+
+```
+Browser                     API Server              Google Cloud Storage
+  │                              │                          │
+  │ POST /api/images/upload-url  │                          │
+  │ { fileName, mimeType,        │                          │
+  │   patientId }  (~100 bytes)  │                          │
+  │──────────────────────────────>                          │
+  │                              │ sidecar: signed PUT URL  │
+  │                              │<─────────────────────────│ (sidecar call)
+  │ { signedUrl, objectName }    │                          │
+  │<─────────────────────────────│                          │
+  │                              │                          │
+  │ PUT <signedUrl>  (raw bytes) │                          │
+  │  *** BYPASSES PROXY ***      │                          │
+  │─────────────────────────────────────────────────────────>
+  │ 200 OK                       │                          │
+  │<─────────────────────────────────────────────────────────
+  │                              │                          │
+  │ POST /api/images/register    │                          │
+  │ { objectName, fileName, …}   │                          │
+  │──────────────────────────────>                          │
+  │ 201 image row JSON           │                          │
+  │<─────────────────────────────│                          │
+```
+
+### New server endpoint: `POST /api/images/upload-url`
+Accepts `{ fileName, mimeType, patientId }`. Validates patient exists, builds an `objectName` path (`images/<patientId>/<date>/<timestamp>.ext`), calls `getSignedUploadUrl(objectName)`, and returns `{ signedUrl, objectName }`.
+
+### New server endpoint: `POST /api/images/register`
+Accepts `{ objectName, fileName, mimeType, patientId, notes, capturedAt }`. Converts `objectName` to a `gcs:` path via `toGcsPath()`, inserts the DB record, returns the full image row. This is called only after the client's GCS PUT succeeds.
+
+### New gcsStorage function: `getSignedUploadUrl(objectName, ttlSec = 900)`
+Calls the Replit sidecar at `REPLIT_SIDECAR_ENDPOINT/object-storage/signed-object-url` with `method: "PUT"` — same pattern as the existing `getSignedDownloadUrl` but using PUT. TTL defaults to 15 minutes.
+
+```typescript
+export async function getSignedUploadUrl(objectName: string, ttlSec = 900): Promise<string> {
+  const response = await fetch(`${REPLIT_SIDECAR_ENDPOINT}/object-storage/signed-object-url`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      bucket_name: getBucketName(),
+      object_name: objectName,
+      method: "PUT",
+      expires_at: new Date(Date.now() + ttlSec * 1000).toISOString(),
+    }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) throw new Error(`Sidecar signed-url error ${response.status}`);
+  const { signed_url } = await response.json();
+  return signed_url as string;
+}
+```
+
+### Client upload flow (upload.ts)
+```typescript
+// Step 1 — tiny metadata → get signed URL
+const { signedUrl, objectName } = await fetch("/api/images/upload-url", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ fileName, mimeType, patientId }),
+  signal: AbortSignal.timeout(30_000),
+}).then(r => r.json());
+
+// Step 2 — PUT raw bytes DIRECTLY to GCS (no proxy involved)
+await fetch(signedUrl, {
+  method: "PUT",
+  headers: { "Content-Type": mimeType },
+  body: uploadBlob,               // Blob, not base64
+  signal: AbortSignal.timeout(120_000),
+});
+
+// Step 3 — tiny confirmation → creates DB record
+const image = await fetch("/api/images/register", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ objectName, fileName, mimeType, patientId, notes, capturedAt }),
+  signal: AbortSignal.timeout(30_000),
+}).then(r => r.json());
+```
+
+### Image compression
+The client compresses images over 512 KB before upload using `canvas.toBlob()` (returns a `Blob`, not a data URL). Max dimension 1920px, JPEG quality 0.85. The Blob is used directly as the PUT body.
+
+### Notes for Max7 agent
+- **Do NOT use the old `/api/images/upload` (base64 JSON) path for any web client.** Keep it only as a fallback for mobile / migration import CLI callers.
+- The old base64 endpoint is kept in the router but the web app no longer uses it.
+- `toGcsPath(objectName)` converts a bare object name (`images/1/2026-06-04/123.jpg`) to the `gcs:` prefixed path used in the DB (`gcs:images/1/2026-06-04/123.jpg`). Use the existing `toGcsPath` export from `gcsStorage.ts`.
+- Invalidate `getListImagesQueryKey()` and `getListPatientImagesQueryKey(patientId)` from `@workspace/api-client-react` after step 3 to refresh the gallery.
+- GCS SDK writes give 403 in production (Replit sidecar auth change). Only use the **sidecar signed URL** approach for writes; reads via `createReadStream` still work.
+
+---
+
 <!-- Add new entries below as features are confirmed in Vista -->
