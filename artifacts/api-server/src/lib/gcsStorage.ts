@@ -54,10 +54,13 @@ export function fromGcsPath(filePath: string): string {
 }
 
 /**
- * Upload a Buffer to GCS.
- * Returns the DB storage key (e.g. "gcs:images/4/2024-01-01/1234.jpg").
- * Fails with a clear error after 90 seconds so callers never hang indefinitely
- * (the sidecar auth-token fetch can stall if the environment is cold).
+ * Ask the Replit sidecar for a short-lived signed PUT URL for the given object,
+ * then stream the buffer directly to GCS via that URL.
+ *
+ * This avoids the @google-cloud/storage SDK credential chain for writes, which
+ * can produce 403 errors in production when the external_account token exchange
+ * stalls or lacks write permissions. The sidecar-issued signed URL is
+ * self-contained and bypasses all SDK auth.
  */
 async function uploadToGcsOnce(
   buffer: Buffer,
@@ -65,20 +68,43 @@ async function uploadToGcsOnce(
   contentType: string,
   timeoutMs: number,
 ): Promise<void> {
-  const bucket = storageClient.bucket(getBucketName());
-  const file = bucket.file(objectName);
+  const bucketName = getBucketName();
 
-  const uploadTimeout = new Promise<never>((_, reject) =>
-    setTimeout(
-      () => reject(new Error(`GCS upload timed out after ${timeoutMs / 1000} s`)),
-      timeoutMs,
-    ),
+  // 1. Request a signed PUT URL from the sidecar (same endpoint used for GET signed URLs).
+  const signedUrlRes = await fetch(
+    `${REPLIT_SIDECAR_ENDPOINT}/object-storage/signed-object-url`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        bucket_name: bucketName,
+        object_name: objectName,
+        method: "PUT",
+        expires_at: new Date(Date.now() + timeoutMs + 60_000).toISOString(),
+      }),
+      signal: AbortSignal.timeout(15_000),
+    },
   );
 
-  await Promise.race([
-    file.save(buffer, { contentType, resumable: false }),
-    uploadTimeout,
-  ]);
+  if (!signedUrlRes.ok) {
+    const detail = await signedUrlRes.text().catch(() => "");
+    throw new Error(`Sidecar signed-url error ${signedUrlRes.status}: ${detail}`);
+  }
+
+  const { signed_url } = (await signedUrlRes.json()) as { signed_url: string };
+
+  // 2. PUT the buffer directly to GCS using the signed URL.
+  const putRes = await fetch(signed_url, {
+    method: "PUT",
+    headers: { "Content-Type": contentType },
+    body: buffer,
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+
+  if (!putRes.ok) {
+    const detail = await putRes.text().catch(() => "");
+    throw new Error(`GCS PUT failed (${putRes.status}): ${detail}`);
+  }
 }
 
 export async function uploadToGcs(
