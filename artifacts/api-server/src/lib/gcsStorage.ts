@@ -59,18 +59,19 @@ export function fromGcsPath(filePath: string): string {
  * Fails with a clear error after 90 seconds so callers never hang indefinitely
  * (the sidecar auth-token fetch can stall if the environment is cold).
  */
-export async function uploadToGcs(
+async function uploadToGcsOnce(
   buffer: Buffer,
   objectName: string,
   contentType: string,
-): Promise<string> {
+  timeoutMs: number,
+): Promise<void> {
   const bucket = storageClient.bucket(getBucketName());
   const file = bucket.file(objectName);
 
   const uploadTimeout = new Promise<never>((_, reject) =>
     setTimeout(
-      () => reject(new Error("GCS upload timed out after 30 s — please try again")),
-      30_000,
+      () => reject(new Error(`GCS upload timed out after ${timeoutMs / 1000} s`)),
+      timeoutMs,
     ),
   );
 
@@ -78,8 +79,33 @@ export async function uploadToGcs(
     file.save(buffer, { contentType, resumable: false }),
     uploadTimeout,
   ]);
+}
 
-  return toGcsPath(objectName);
+export async function uploadToGcs(
+  buffer: Buffer,
+  objectName: string,
+  contentType: string,
+): Promise<string> {
+  const PER_ATTEMPT_MS = 25_000;
+  const MAX_ATTEMPTS = 3;
+  let lastErr: unknown;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      await uploadToGcsOnce(buffer, objectName, contentType, PER_ATTEMPT_MS);
+      return toGcsPath(objectName);
+    } catch (err) {
+      lastErr = err;
+      console.warn(`GCS upload attempt ${attempt}/${MAX_ATTEMPTS} failed:`, err);
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise((r) => setTimeout(r, 1_500 * attempt));
+      }
+    }
+  }
+
+  throw new Error(
+    `Storage upload failed after ${MAX_ATTEMPTS} attempts — please try again. Detail: ${String(lastErr)}`,
+  );
 }
 
 /**

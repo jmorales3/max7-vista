@@ -82,7 +82,7 @@ export async function uploadPatientImage(
       notes,
       capturedAt: capturedAt ?? new Date().toISOString(),
     }),
-    signal: AbortSignal.timeout(60_000),
+    signal: AbortSignal.timeout(120_000),
   });
 
   if (!response.ok) {
