@@ -15,7 +15,7 @@ import {
   ReplaceImageFileParams,
 } from "@workspace/api-zod";
 import { logAudit } from "../lib/audit";
-import { uploadToGcs, streamFile, deleteFile, isGcsPath } from "../lib/gcsStorage";
+import { uploadToGcs, streamFile, deleteFile, isGcsPath, toGcsPath, getSignedUploadUrl } from "../lib/gcsStorage";
 
 const router: IRouter = Router();
 
@@ -136,8 +136,97 @@ router.get("/images", async (req, res): Promise<void> => {
   }
 });
 
-// JSON + base64 upload — used by the web app in production (Replit's deployment
-// proxy drops multipart bodies; JSON POSTs reach the server reliably).
+// Step 1 of the direct-to-GCS upload flow.
+// Accepts only small metadata (no file body), returns a short-lived signed PUT
+// URL so the browser can PUT the file directly to GCS — bypassing the Replit
+// proxy entirely and avoiding the body-size stall that plagued the old approach.
+router.post("/images/upload-url", async (req, res): Promise<void> => {
+  const { fileName, mimeType, patientId: rawPatientId } = req.body ?? {};
+
+  if (!fileName || typeof fileName !== "string") {
+    res.status(400).json({ error: "fileName is required" });
+    return;
+  }
+  if (!mimeType || typeof mimeType !== "string" || !mimeType.startsWith("image/")) {
+    res.status(400).json({ error: "mimeType must be an image/ type" });
+    return;
+  }
+
+  const patientId = rawPatientId != null ? parseInt(String(rawPatientId), 10) : null;
+
+  if (patientId !== null) {
+    const [patient] = await db
+      .select({ id: patientsTable.id })
+      .from(patientsTable)
+      .where(eq(patientsTable.id, patientId));
+    if (!patient) {
+      res.status(404).json({ error: `Patient ${patientId} not found` });
+      return;
+    }
+  }
+
+  const dateStr = new Date().toISOString().split("T")[0];
+  const ext = path.extname(fileName) || ".jpg";
+  const filename = `${Date.now()}${ext}`;
+  const objectName = patientId
+    ? `images/${patientId}/${dateStr}/${filename}`
+    : `images/unassigned/${dateStr}/${filename}`;
+
+  try {
+    const signedUrl = await getSignedUploadUrl(objectName);
+    res.json({ signedUrl, objectName });
+  } catch (err) {
+    console.error("Failed to get signed upload URL:", err);
+    res.status(503).json({ error: "Could not prepare upload — please try again", detail: String(err) });
+  }
+});
+
+// Step 3 of the direct-to-GCS upload flow.
+// Called by the browser AFTER it has successfully PUT the file to GCS via the
+// signed URL. Creates the database record and returns the image row.
+router.post("/images/register", async (req, res): Promise<void> => {
+  const { objectName, fileName, mimeType, patientId: rawPatientId, notes, capturedAt: rawCapturedAt } = req.body ?? {};
+
+  if (!objectName || typeof objectName !== "string") {
+    res.status(400).json({ error: "objectName is required" });
+    return;
+  }
+  if (!fileName || typeof fileName !== "string") {
+    res.status(400).json({ error: "fileName is required" });
+    return;
+  }
+
+  const patientId = rawPatientId != null ? parseInt(String(rawPatientId), 10) : null;
+  const capturedAt = rawCapturedAt ? new Date(rawCapturedAt) : new Date();
+  const filePath = toGcsPath(objectName);
+
+  const [image] = await db
+    .insert(imagesTable)
+    .values({
+      patientId,
+      filePath,
+      fileName,
+      notes: notes ?? null,
+      capturedAt,
+      isUnassigned: patientId === null,
+    })
+    .returning();
+
+  let patientName: string | null = null;
+  let patientCode: string | null = null;
+  if (patientId) {
+    const [patient] = await db.select().from(patientsTable).where(eq(patientsTable.id, patientId));
+    patientName = patient?.name ?? null;
+    patientCode = patient?.patientCode ?? null;
+  }
+
+  await logAudit(req, "upload", "image", image.id, JSON.stringify({ fileName, patientId }));
+  res.status(201).json(buildImageRow({ ...image, patientName, patientCode }));
+});
+
+// JSON + base64 upload — kept as fallback for non-browser callers (e.g. mobile,
+// migration import). The deployment proxy stalls large bodies so this path is
+// no longer used by the web app; web uploads go through /images/upload-url instead.
 router.post("/images/upload", async (req, res): Promise<void> => {
   const { fileBase64, fileName, mimeType, patientId: rawPatientId, notes, capturedAt: rawCapturedAt } = req.body ?? {};
 

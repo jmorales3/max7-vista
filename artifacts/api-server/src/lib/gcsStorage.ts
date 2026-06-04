@@ -181,6 +181,41 @@ export async function streamFile(
 }
 
 /**
+ * Generate a short-lived signed PUT URL so a browser client can upload a file
+ * directly to GCS without routing the body through the Replit proxy.
+ * ttlSec defaults to 15 minutes — enough time for the client to start the PUT.
+ */
+export async function getSignedUploadUrl(
+  objectName: string,
+  ttlSec = 900,
+): Promise<string> {
+  const bucketName = getBucketName();
+
+  const response = await fetch(
+    `${REPLIT_SIDECAR_ENDPOINT}/object-storage/signed-object-url`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        bucket_name: bucketName,
+        object_name: objectName,
+        method: "PUT",
+        expires_at: new Date(Date.now() + ttlSec * 1000).toISOString(),
+      }),
+      signal: AbortSignal.timeout(15_000),
+    },
+  );
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`Sidecar signed-url error ${response.status}: ${detail}`);
+  }
+
+  const { signed_url } = await response.json();
+  return signed_url as string;
+}
+
+/**
  * Generate a time-limited signed GET URL for a file stored in GCS.
  * The returned URL is publicly accessible for `ttlSec` seconds (default 1 hour)
  * and can be passed to Microsoft Office Online viewer or opened in a browser tab.
