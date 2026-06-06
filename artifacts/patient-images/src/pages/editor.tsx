@@ -245,7 +245,7 @@ function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation, scale: n
     }
     const dist = Math.hypot(x2 - x1, y2 - y1);
     const label = annPxPerMm != null ? `${(dist / annPxPerMm).toFixed(1)} mm` : `${Math.round(dist)} px`;
-    const fontSize = 12 / scale;
+    const fontSize = 22 / scale;
     const offsetDist = tickLen + fontSize * 0.9;
     const midX = (x1 + x2) / 2;
     const midY = (y1 + y2) / 2;
@@ -255,7 +255,7 @@ function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation, scale: n
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     const tw = ctx.measureText(label).width;
-    const pad = 2 / scale;
+    const pad = 4 / scale;
     ctx.fillStyle = "rgba(0,0,0,0.72)";
     ctx.fillRect(lx - tw / 2 - pad, ly - fontSize / 2 - pad, tw + pad * 2, fontSize + pad * 2);
     ctx.fillStyle = color;
@@ -295,12 +295,12 @@ function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation, scale: n
     const lx = vx + Math.cos(midAngle) * labelDist;
     const ly = vy + Math.sin(midAngle) * labelDist;
     const label = `${angleDeg.toFixed(1)}°`;
-    const fontSize = 12 / scale;
+    const fontSize = 22 / scale;
     ctx.font = `bold ${fontSize}px sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     const tw = ctx.measureText(label).width;
-    const pad = 2 / scale;
+    const pad = 4 / scale;
     ctx.fillStyle = "rgba(0,0,0,0.72)";
     ctx.fillRect(lx - tw / 2 - pad, ly - fontSize / 2 - pad, tw + pad * 2, fontSize + pad * 2);
     ctx.fillStyle = color;
