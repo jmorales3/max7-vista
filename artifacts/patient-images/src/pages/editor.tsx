@@ -1711,6 +1711,9 @@ export default function Editor() {
         title: t("editor.savedAsCopy"),
         description: t("editor.savedAsCopyDesc"),
       });
+      setAnnotations([]);
+      setScale(1);
+      setRotation(0);
       setLocation(`/editor/${result.id}`);
     } catch (err) {
       toast({
