@@ -64,6 +64,7 @@ import {
   Bookmark,
   Undo2,
   ClipboardPaste,
+  GripVertical,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -423,6 +424,8 @@ export default function Editor() {
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const panOffsetRef = useRef({ x: 0, y: 0 });
   const panDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
+  const [hudPos, setHudPos] = useState<{ left: number; top: number } | null>(null);
+  const hudRef = useRef<HTMLDivElement>(null);
   const [penColor, setPenColor] = useState("#ff0000");
   const [strokeWidth, setStrokeWidth] = useState(4);
   const [textSize, setTextSize] = useState(36);
@@ -1468,6 +1471,33 @@ export default function Editor() {
     window.addEventListener("mouseup", onUp);
   }
 
+  function startHudDrag(e: React.MouseEvent) {
+    e.preventDefault();
+    const el = hudRef.current;
+    const container = containerRef.current;
+    if (!el || !container) return;
+    const elRect = el.getBoundingClientRect();
+    const cRect = container.getBoundingClientRect();
+    const origLeft = elRect.left - cRect.left;
+    const origTop = elRect.top - cRect.top;
+    const startX = e.clientX;
+    const startY = e.clientY;
+    function onMove(ev: MouseEvent) {
+      if (!containerRef.current || !hudRef.current) return;
+      const cr = containerRef.current.getBoundingClientRect();
+      const hr = hudRef.current.getBoundingClientRect();
+      const newLeft = Math.max(0, Math.min(cr.width - hr.width, origLeft + (ev.clientX - startX)));
+      const newTop = Math.max(0, Math.min(cr.height - hr.height, origTop + (ev.clientY - startY)));
+      setHudPos({ left: newLeft, top: newTop });
+    }
+    function onUp() {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }
+
   function applyFloater() {
     if (!floater || !canvasRef.current) return;
     const canvas = canvasRef.current;
@@ -2082,28 +2112,6 @@ export default function Editor() {
             </div>
           )}
 
-          {tool === "angle" && (
-            <div className="flex items-center gap-2">
-              {angleStep > 0 ? (
-                <>
-                  <span className="text-xs text-muted-foreground bg-muted/40 px-2 py-0.5 rounded">
-                    {angleStep === 1 ? t("editor.angleClickArm1") : t("editor.angleClickArm2")}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 gap-1"
-                    onClick={() => { setAngleStep(0); anglePointsRef.current = []; }}
-                  >
-                    <X className="h-3 w-3" />
-                    {t("common.cancel")}
-                  </Button>
-                </>
-              ) : (
-                <span className="text-xs text-muted-foreground">{t("editor.angleHint")}</span>
-              )}
-            </div>
-          )}
 
           {tool === "smooth" && (
             <div className="flex items-center gap-2">
@@ -2178,73 +2186,6 @@ export default function Editor() {
             </div>
           )}
 
-          <div className="h-4 w-px bg-border mx-1" />
-
-          <div className="flex items-center gap-0.5">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setScale((s) => Math.max(0.1, +(s - 0.1).toFixed(1)))}
-              title={t("editor.zoomOut")}
-            >
-              <ZoomOut className="h-4 w-4" />
-            </Button>
-            <span className="text-xs font-mono w-10 text-center">{Math.round(scale * 100)}%</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setScale((s) => Math.min(5, +(s + 0.1).toFixed(1)))}
-              title={t("editor.zoomIn")}
-            >
-              <ZoomIn className="h-4 w-4" />
-            </Button>
-          </div>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setRotation((r) => (r + 90) % 360)}
-            title={t("editor.rotate")}
-          >
-            <RotateCw className="h-4 w-4" />
-          </Button>
-
-          <div className="h-4 w-px bg-border mx-1" />
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 text-xs"
-            onClick={() => { pushHistory(); setAnnotations([]); }}
-            title={t("editor.clearAnnotations")}
-          >
-            {t("editor.clearAnnotations")}
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 gap-1.5 text-xs"
-            onClick={undoAnnotation}
-            disabled={!canUndo}
-            title={`${t("editor.undoAnnotation")} (Ctrl+Z)`}
-          >
-            <Undo2 className="h-4 w-4" />
-            {t("editor.undoAnnotation")}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 gap-1.5 text-xs"
-            onClick={pasteFromClipboard}
-            title={`${t("editor.pasteFromClipboard")} (Ctrl+V)`}
-          >
-            <ClipboardPaste className="h-4 w-4" />
-            {t("editor.pasteFromClipboard")}
-          </Button>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
@@ -2409,29 +2350,94 @@ export default function Editor() {
             </div>
           )}
 
-          {tool === "pointer" && annotations.some((a) => a.type === "text") && (
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-none">
-              <span className="bg-black/50 text-white text-xs px-2 py-1 rounded-full">
-                {t("editor.pointerHint")}
-              </span>
-            </div>
-          )}
-
-          {tool === "select" && !floater && (
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-none">
-              <span className="bg-black/50 text-white text-xs px-2 py-1 rounded-full">
-                {selectMode === "rect" ? t("editor.selectHint") : t("editor.selectFreehandHint")}
-              </span>
-            </div>
-          )}
-
-          {tool === "smooth" && !pendingSmoothPath && (
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-none">
-              <span className="bg-black/50 text-white text-xs px-2 py-1 rounded-full">
-                {t("editor.smoothHint")}
-              </span>
-            </div>
-          )}
+          {/* Floating HUD — tool info, zoom, utilities */}
+          {(() => {
+            let instruction = "";
+            if (tool === "angle") {
+              if (angleStep === 1) instruction = t("editor.angleClickArm1");
+              else if (angleStep === 2) instruction = t("editor.angleClickArm2");
+              else instruction = t("editor.angleHint");
+            } else if (tool === "ruler") {
+              instruction = t("editor.rulerDrawHint");
+            } else if (tool === "select" && !floater) {
+              instruction = selectMode === "rect" ? t("editor.selectHint") : t("editor.selectFreehandHint");
+            } else if (tool === "pointer" && annotations.some((a) => a.type === "text")) {
+              instruction = t("editor.pointerHint");
+            } else if (tool === "smooth" && !pendingSmoothPath) {
+              instruction = t("editor.smoothHint");
+            }
+            const toolLabel = tools.find((tt) => tt.id === tool)?.label ?? tool;
+            return (
+              <div
+                ref={hudRef}
+                className="absolute z-30 bg-card/95 backdrop-blur-sm border rounded-xl shadow-lg select-none w-52"
+                style={hudPos ? { left: hudPos.left, top: hudPos.top } : { left: 12, bottom: 12 }}
+              >
+                {/* Drag handle + tool name */}
+                <div
+                  className="flex items-center gap-1.5 px-2 py-1.5 cursor-grab active:cursor-grabbing border-b rounded-t-xl"
+                  onMouseDown={startHudDrag}
+                >
+                  <GripVertical className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="text-xs font-semibold truncate">{toolLabel}</span>
+                </div>
+                {/* Instruction text */}
+                {instruction && (
+                  <div className="px-2.5 py-1.5 border-b">
+                    <p className="text-xs text-muted-foreground leading-snug">{instruction}</p>
+                  </div>
+                )}
+                {/* Angle cancel when mid-placement */}
+                {tool === "angle" && angleStep > 0 && (
+                  <div className="px-2 py-1 border-b">
+                    <Button
+                      size="sm" variant="ghost"
+                      className="h-7 gap-1 w-full text-xs"
+                      onClick={() => { setAngleStep(0); anglePointsRef.current = []; }}
+                    >
+                      <X className="h-3 w-3" />
+                      {t("common.cancel")}
+                    </Button>
+                  </div>
+                )}
+                {/* Zoom */}
+                <div className="flex items-center gap-0.5 px-1.5 py-1 border-b">
+                  <Button
+                    variant="ghost" size="icon" className="h-7 w-7"
+                    onClick={() => setScale((s) => Math.max(0.1, +(s - 0.1).toFixed(1)))}
+                    title={t("editor.zoomOut")}
+                  ><ZoomOut className="h-3.5 w-3.5" /></Button>
+                  <span className="text-xs font-mono w-10 text-center">{Math.round(scale * 100)}%</span>
+                  <Button
+                    variant="ghost" size="icon" className="h-7 w-7"
+                    onClick={() => setScale((s) => Math.min(5, +(s + 0.1).toFixed(1)))}
+                    title={t("editor.zoomIn")}
+                  ><ZoomIn className="h-3.5 w-3.5" /></Button>
+                </div>
+                {/* Utilities */}
+                <div className="flex flex-col px-1.5 py-1.5 gap-0.5">
+                  <Button
+                    variant="ghost" size="sm"
+                    className="h-7 text-xs justify-start px-2"
+                    onClick={() => { pushHistory(); setAnnotations([]); }}
+                  >{t("editor.clearAnnotations")}</Button>
+                  <Button
+                    variant="ghost" size="sm"
+                    className="h-7 gap-1.5 text-xs justify-start px-2"
+                    onClick={undoAnnotation}
+                    disabled={!canUndo}
+                    title={`${t("editor.undoAnnotation")} (Ctrl+Z)`}
+                  ><Undo2 className="h-3.5 w-3.5" />{t("editor.undoAnnotation")}</Button>
+                  <Button
+                    variant="ghost" size="sm"
+                    className="h-7 gap-1.5 text-xs justify-start px-2"
+                    onClick={pasteFromClipboard}
+                    title={`${t("editor.pasteFromClipboard")} (Ctrl+V)`}
+                  ><ClipboardPaste className="h-3.5 w-3.5" />{t("editor.pasteFromClipboard")}</Button>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Floating selection — draggable cut region */}
           {floater && (
