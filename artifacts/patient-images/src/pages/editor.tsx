@@ -1967,65 +1967,6 @@ export default function Editor() {
           )}
 
 
-          {tool === "overlay" && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-muted-foreground">{t("editor.overlayPickHint")}:</span>
-              {overlayImageId && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 gap-1 text-xs"
-                  onClick={() => { setOverlayImageId(null); overlayImgRef.current = null; redrawOverlay(); }}
-                >
-                  <X className="h-3 w-3" />
-                  {t("editor.overlayNone")}
-                </Button>
-              )}
-              {patientImages.filter((pi) => String(pi.id) !== String(id)).length === 0 ? (
-                <span className="text-xs text-muted-foreground italic">{t("editor.overlayNoImages")}</span>
-              ) : (
-                <div className="flex items-center gap-1">
-                  <button
-                    className="shrink-0 h-7 w-5 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground"
-                    onClick={() => overlayScrollRef.current?.scrollBy({ left: -160, behavior: "smooth" })}
-                  >
-                    <ChevronLeft className="h-3 w-3" />
-                  </button>
-                  <div
-                    ref={overlayScrollRef}
-                    className="flex gap-1 overflow-x-auto w-[320px] scroll-smooth"
-                    style={{ scrollbarWidth: "none" }}
-                  >
-                    {patientImages
-                      .filter((pi) => String(pi.id) !== String(id))
-                      .map((pi) => (
-                        <button
-                          key={pi.id}
-                          title={pi.notes ?? String(pi.id)}
-                          className={`shrink-0 w-9 h-9 rounded border-2 overflow-hidden transition-colors ${
-                            overlayImageId === String(pi.id) ? "border-primary" : "border-transparent hover:border-muted-foreground/40"
-                          }`}
-                          onClick={() => setOverlayImageId(overlayImageId === String(pi.id) ? null : String(pi.id))}
-                        >
-                          <img
-                            src={`/api/images/${pi.id}/file`}
-                            alt=""
-                            className="w-full h-full object-cover"
-                            crossOrigin="anonymous"
-                          />
-                        </button>
-                      ))}
-                  </div>
-                  <button
-                    className="shrink-0 h-7 w-5 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground"
-                    onClick={() => overlayScrollRef.current?.scrollBy({ left: 160, behavior: "smooth" })}
-                  >
-                    <ChevronRight className="h-3 w-3" />
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
 
 
           {tool === "smooth" && (
@@ -2452,6 +2393,65 @@ export default function Editor() {
               </div>
             );
           })()}
+
+          {/* Overlay image picker — floating strip at bottom-center of canvas */}
+          {tool === "overlay" && (
+            <div className="absolute z-30 bottom-3 left-1/2 -translate-x-1/2 bg-card/95 backdrop-blur-sm border rounded-xl shadow-lg px-2 py-1.5 flex items-center gap-2 select-none max-w-[90%]">
+              <span className="text-xs text-muted-foreground shrink-0">{t("editor.overlayPickHint")}:</span>
+              {overlayImageId && (
+                <button
+                  className="shrink-0 h-7 px-2 text-xs rounded border hover:bg-muted flex items-center gap-1 text-muted-foreground"
+                  onClick={() => { setOverlayImageId(null); overlayImgRef.current = null; redrawOverlay(); }}
+                >
+                  <X className="h-3 w-3" />
+                  {t("editor.overlayNone")}
+                </button>
+              )}
+              {patientImages.filter((pi) => String(pi.id) !== String(id)).length === 0 ? (
+                <span className="text-xs text-muted-foreground italic">{t("editor.overlayNoImages")}</span>
+              ) : (
+                <>
+                  <button
+                    className="shrink-0 h-7 w-5 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground"
+                    onClick={() => overlayScrollRef.current?.scrollBy({ left: -160, behavior: "smooth" })}
+                  >
+                    <ChevronLeft className="h-3 w-3" />
+                  </button>
+                  <div
+                    ref={overlayScrollRef}
+                    className="flex gap-1 overflow-x-auto scroll-smooth"
+                    style={{ scrollbarWidth: "none", maxWidth: 320 }}
+                  >
+                    {patientImages
+                      .filter((pi) => String(pi.id) !== String(id))
+                      .map((pi) => (
+                        <button
+                          key={pi.id}
+                          title={pi.notes ?? String(pi.id)}
+                          className={`shrink-0 w-10 h-10 rounded border-2 overflow-hidden transition-colors ${
+                            overlayImageId === String(pi.id) ? "border-primary" : "border-transparent hover:border-muted-foreground/40"
+                          }`}
+                          onClick={() => setOverlayImageId(overlayImageId === String(pi.id) ? null : String(pi.id))}
+                        >
+                          <img
+                            src={`/api/images/${pi.id}/file`}
+                            alt=""
+                            className="w-full h-full object-cover"
+                            crossOrigin="anonymous"
+                          />
+                        </button>
+                      ))}
+                  </div>
+                  <button
+                    className="shrink-0 h-7 w-5 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground"
+                    onClick={() => overlayScrollRef.current?.scrollBy({ left: 160, behavior: "smooth" })}
+                  >
+                    <ChevronRight className="h-3 w-3" />
+                  </button>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Floating selection — draggable cut region */}
           {floater && (
