@@ -191,7 +191,8 @@ function drawArrow(
   ctx.fill();
 }
 
-function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation, scale: number = 1) {
+// hoveredAngleIdx: undefined = show-all mode (save/export), null = hover mode nothing near, number = that annotation index is hovered
+function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation, scale: number = 1, hoveredAngleIdx?: number | null, annIdx?: number) {
   if (ann.type === "line") {
     if (ann.points.length < 4) return;
     ctx.beginPath();
@@ -267,7 +268,11 @@ function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation, scale: n
     const arm1Len = Math.hypot(p1x - vx, p1y - vy);
     const arm2Len = Math.hypot(p2x - vx, p2y - vy);
     if (arm1Len < 0.5 || arm2Len < 0.5) return;
+    // showFull: undefined = save/export (always show), null = hover mode nothing near, number = specific index hovered
+    const showFull = hoveredAngleIdx === undefined || hoveredAngleIdx === annIdx;
     const lw = 1.5 / scale;
+    // Arms + vertex dot — always visible (full opacity when hovered, faint when not)
+    ctx.globalAlpha = showFull ? 1 : 0.25;
     ctx.strokeStyle = color;
     ctx.lineWidth = lw;
     ctx.lineCap = "round";
@@ -281,6 +286,9 @@ function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation, scale: n
     ctx.arc(vx, vy, 3 / scale, 0, 2 * Math.PI);
     ctx.fillStyle = color;
     ctx.fill();
+    ctx.globalAlpha = 1;
+    if (!showFull) return;
+    // Arc + label — only when hovered (or save mode)
     const a1 = Math.atan2(p1y - vy, p1x - vx);
     const a2 = Math.atan2(p2y - vy, p2x - vx);
     const arcR = Math.min(24 / scale, arm1Len * 0.38, arm2Len * 0.38);
@@ -288,6 +296,8 @@ function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation, scale: n
     const anticlockwise = span > Math.PI;
     const angleDeg = anticlockwise ? (2 * Math.PI - span) * 180 / Math.PI : span * 180 / Math.PI;
     ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lw;
     ctx.arc(vx, vy, arcR, a1, a2, anticlockwise);
     ctx.stroke();
     const midAngle = anticlockwise ? a1 - (2 * Math.PI - span) / 2 : a1 + span / 2;
@@ -322,6 +332,7 @@ function renderCanvas(
   selectionOverlay?: CropRect | null,
   panOffset?: { x: number; y: number },
   cutPath?: [number, number][] | null,
+  hoveredAngleIdx?: number | null,
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -339,8 +350,8 @@ function renderCanvas(
   }
 
   const allAnns: Annotation[] = previewAnn ? [...annotations, previewAnn] : annotations;
-  for (const ann of allAnns) {
-    drawAnnotation(ctx, ann, scale);
+  for (let i = 0; i < allAnns.length; i++) {
+    drawAnnotation(ctx, allAnns[i], scale, hoveredAngleIdx, i);
   }
 
   ctx.restore();
@@ -373,7 +384,7 @@ function renderCanvas(
     ctx.rotate((rotation * Math.PI) / 180);
     ctx.scale(scale, scale);
     if (img) ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
-    for (const ann of allAnns) drawAnnotation(ctx, ann, scale);
+    for (let i = 0; i < allAnns.length; i++) drawAnnotation(ctx, allAnns[i], scale, hoveredAngleIdx, i);
     ctx.restore();
     ctx.strokeStyle = "#0ea5e9";
     ctx.lineWidth = 2;
@@ -510,6 +521,11 @@ export default function Editor() {
 
   const annotationsRef = useRef<Annotation[]>([]);
   useEffect(() => { annotationsRef.current = annotations; }, [annotations]);
+
+  // Angle hover: null = nothing near cursor, number = that annotation index is hovered
+  // renderCanvas called for save/export passes hoveredAngleIdx=undefined (omitted) → show all
+  const [hoveredAngleIdx, setHoveredAngleIdx] = useState<number | null>(null);
+  const hoveredAngleIdxRef = useRef<number | null>(null);
 
   const annotationHistoryRef = useRef<Annotation[][]>([]);
 
@@ -675,9 +691,9 @@ export default function Editor() {
       overlayCanvasRef.current.width = container.offsetWidth;
       overlayCanvasRef.current.height = container.offsetHeight;
     }
-    renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, panOffsetRef.current, cutPath);
+    renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, panOffsetRef.current, cutPath, hoveredAngleIdx);
     redrawOverlay();
-  }, [scale, rotation, cropRect, cutRect, selectionRect, cutPath, redrawOverlay]);
+  }, [scale, rotation, cropRect, cutRect, selectionRect, cutPath, redrawOverlay, hoveredAngleIdx]);
 
   useEffect(() => {
     panOffsetRef.current = panOffset;
@@ -1036,6 +1052,27 @@ export default function Editor() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    // Angle hover detection — check proximity to each angle vertex in image coordinates
+    {
+      const rect = canvas.getBoundingClientRect();
+      const cx = (e.clientX - rect.left - canvas.width / 2 - panOffsetRef.current.x) / scale;
+      const cy = (e.clientY - rect.top - canvas.height / 2 - panOffsetRef.current.y) / scale;
+      const ANGLE_HOVER_PX = 60;
+      let newHoveredIdx: number | null = null;
+      const anns = annotationsRef.current;
+      for (let i = 0; i < anns.length; i++) {
+        const ann = anns[i];
+        if (ann.type === "angle" && Math.hypot(cx - ann.vx, cy - ann.vy) < ANGLE_HOVER_PX) {
+          newHoveredIdx = i;
+          break;
+        }
+      }
+      if (newHoveredIdx !== hoveredAngleIdxRef.current) {
+        hoveredAngleIdxRef.current = newHoveredIdx;
+        setHoveredAngleIdx(newHoveredIdx);
+      }
+    }
+
     if (tool === "pen" || tool === "eraser") {
       const [sx, sy] = getScreenPoint(e);
       drawBrushCursor(sx, sy);
@@ -1066,7 +1103,7 @@ export default function Editor() {
       const dy = e.clientY - panDragRef.current.startY;
       const newPan = { x: panDragRef.current.origX + dx, y: panDragRef.current.origY + dy };
       panOffsetRef.current = newPan;
-      renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, newPan, cutPath);
+      renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, newPan, cutPath, hoveredAngleIdx);
       return;
     }
 
@@ -1074,7 +1111,7 @@ export default function Editor() {
       const [x2, y2] = getCanvasPoint(e);
       const [x1, y1] = arrowStartRef.current;
       const preview: DrawArrow = { type: "arrow", x1, y1, x2, y2, color: penColor, width: strokeWidth, id: "__preview__" };
-      renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview, null, undefined, panOffsetRef.current);
+      renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview, null, undefined, panOffsetRef.current, undefined, hoveredAngleIdx);
       return;
     }
 
@@ -1083,7 +1120,7 @@ export default function Editor() {
       const [mx, my] = getCanvasPoint(e);
       const r = Math.hypot(mx - cx, my - cy);
       const preview: DrawCircle = { type: "circle", cx, cy, r, color: penColor, width: strokeWidth, id: "__preview__" };
-      renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview, null, undefined, panOffsetRef.current);
+      renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview, null, undefined, panOffsetRef.current, undefined, hoveredAngleIdx);
       return;
     }
 
@@ -1091,7 +1128,7 @@ export default function Editor() {
       const [x2, y2] = getCanvasPoint(e);
       const [x1, y1] = straightLineStartRef.current;
       const preview: DrawStraightLine = { type: "straightline", x1, y1, x2, y2, color: penColor, width: strokeWidth, id: "__preview__" };
-      renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview, null, undefined, panOffsetRef.current);
+      renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview, null, undefined, panOffsetRef.current, undefined, hoveredAngleIdx);
       return;
     }
 
@@ -1099,7 +1136,7 @@ export default function Editor() {
       const [x2, y2] = getCanvasPoint(e);
       const [x1, y1] = rulerStartRef.current;
       const preview: DrawRuler = { type: "ruler", x1, y1, x2, y2, color: penColor, pxPerMm: calibrating ? null : pxPerMm, id: "__preview__" };
-      renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview, null, undefined, panOffsetRef.current);
+      renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview, null, undefined, panOffsetRef.current, undefined, hoveredAngleIdx);
       return;
     }
 
@@ -1109,10 +1146,10 @@ export default function Editor() {
       if (anglePointsRef.current.length >= 2) {
         const [p1x, p1y] = anglePointsRef.current[1];
         const preview: DrawAngle = { type: "angle", vx, vy, p1x, p1y, p2x: mx, p2y: my, color: penColor, id: "__preview__" };
-        renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview, null, undefined, panOffsetRef.current);
+        renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview, null, undefined, panOffsetRef.current, undefined, hoveredAngleIdx);
       } else {
         const preview: DrawStraightLine = { type: "straightline", x1: vx, y1: vy, x2: mx, y2: my, color: penColor, width: 1.5, id: "__preview__" };
-        renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview, null, undefined, panOffsetRef.current);
+        renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview, null, undefined, panOffsetRef.current, undefined, hoveredAngleIdx);
       }
       return;
     }
@@ -1789,6 +1826,11 @@ export default function Editor() {
   function handlePointerLeave(e: React.PointerEvent<HTMLCanvasElement>) {
     clearBrushCursor();
     handlePointerUp(e);
+    // Reset angle hover when mouse leaves canvas
+    if (hoveredAngleIdxRef.current !== null) {
+      hoveredAngleIdxRef.current = null;
+      setHoveredAngleIdx(null);
+    }
   }
 
   const tools: { id: Tool; Icon: React.ElementType; label: string }[] = [
