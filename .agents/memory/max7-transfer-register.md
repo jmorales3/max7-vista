@@ -377,4 +377,228 @@ The client compresses images over 512 KB before upload using `canvas.toBlob()` (
 
 ---
 
+## FEAT-007 — Angle Label Hover Visibility
+
+**Status:** ✅ Confirmed working in Vista  
+**Date:** 2026-06-07  
+**Vista file:** `artifacts/patient-images/src/pages/editor.tsx`
+
+### What it does
+Angle annotations are visually quiet by default — the two arm lines are drawn at 25% opacity and no label is shown. When the user hovers within 60px of the vertex, the full annotation (solid arms + degree label) fades in. Save/export always renders the full annotation regardless of hover state.
+
+### How it works
+1. Track mouse position in `mousePosRef = useRef<{x:number,y:number}>({x:0,y:0})`.
+2. In `drawAnnotation` for `type === "angle"`, accept a `hoverVertex?: {x,y}` parameter.
+3. Compute `const dist = Math.hypot(vertex.x - hoverVertex.x, vertex.y - hoverVertex.y)`.
+4. If `dist > 60` (no hover): draw arms with `ctx.globalAlpha = 0.25`, skip the label.
+5. If `dist ≤ 60` (hover): draw arms at full opacity + draw the degree label.
+6. For save/export calls, always pass a fake `hoverVertex` that matches the vertex exactly (distance = 0) so labels always render in saved images.
+7. In the canvas `onMouseMove` handler, update `mousePosRef` and call `redrawCanvas()` to refresh the hover state.
+
+### Notes for Max7 agent
+- The 60px threshold is in **canvas-pixel** space (before scale). If your canvas uses a device-pixel-ratio transform, adjust accordingly.
+- Only angle annotations use this pattern — rulers and other annotations are always fully visible.
+- Save/export override: pass `hoverVertex: annotation.vertex` (or equivalent center point) so the label is never suppressed in exported images.
+
+---
+
+## FEAT-008 — Ruler HUD: Stacked Buttons & Context-Aware Instruction
+
+**Status:** ✅ Confirmed working in Vista  
+**Date:** 2026-06-07  
+**Vista file:** `artifacts/patient-images/src/pages/editor.tsx`
+
+### What it does
+Two UX fixes for the ruler tool inside the floating HUD:
+1. **Stacked buttons** — "Measure" and "Resize" buttons are arranged vertically (flex-col) inside the HUD so they never overflow horizontally.
+2. **Context-aware instruction text** — when neither mode is active the HUD shows *"Press Measure or Resize first, then draw a line"*; once a mode is active it switches to *"Draw a line on the image"*.
+
+### Correct ruler workflow (important — previous doc was wrong)
+The correct order is:
+1. User clicks **Measure** (or **Resize**) in the HUD **first**.
+2. User **draws a line** on the canvas.
+3. A dialog prompts for the real-world length.
+
+**Do NOT** instruct users to draw a line first and then click Measure.
+
+### Implementation
+```jsx
+// Buttons inside HUD — stacked vertically
+<div className="flex flex-col gap-1">
+  <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs w-full justify-start"
+    onClick={() => { setCalibrating(true); setResizeMode(false); }}>
+    <Ruler className="h-3 w-3" />{t("editor.rulerMeasure")}
+  </Button>
+  <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs w-full justify-start"
+    onClick={() => { setResizeMode(true); setCalibrating(false); }}>
+    <Minimize2 className="h-3 w-3" />{t("editor.rulerResize")}
+  </Button>
+</div>
+```
+
+```typescript
+// Instruction logic
+if (tool === "ruler") {
+  instruction = (calibrating || resizeMode)
+    ? t("editor.rulerDrawHint")      // "Draw a line on the image"
+    : t("editor.rulerSelectModeHint"); // "Press Measure or Resize first, then draw a line"
+}
+```
+
+### i18n keys added (all 4 locales: en / es / fr / pt)
+| Key | en |
+|-----|----|
+| `editor.rulerSelectModeHint` | Press Measure or Resize first, then draw a line |
+
+### Notes for Max7 agent
+- The HUD buttons replace any ruler controls that were previously in the secondary toolbar.
+- Ruler buttons must only appear when `tool === "ruler"` — gate the HUD section accordingly.
+
+---
+
+## FEAT-009 — Angle Tool Auto-Reverts to Pointer After Completion
+
+**Status:** ✅ Confirmed working in Vista  
+**Date:** 2026-06-07  
+**Vista file:** `artifacts/patient-images/src/pages/editor.tsx`
+
+### What it does
+After the user clicks the 3rd point to complete an angle annotation, the active tool automatically switches back to the pointer tool. This avoids the user being stuck in angle-drawing mode after finishing.
+
+### How it works
+In the angle tool's 3rd-click handler, after `setAnnotations(...)` and `pushHistory()`:
+```typescript
+setAngleStep(0);
+anglePointsRef.current = [];
+setTool("pointer"); // ← auto-revert
+```
+
+### Notes for Max7 agent
+- Apply the same pattern to other "place-and-done" tools if desired (e.g. text placement).
+- The cancel button in the HUD (`angleStep > 0`) should still be available for steps 1 and 2.
+
+---
+
+## FEAT-010 — Overlay Thumbnail Picker: Floating Canvas Strip
+
+**Status:** ✅ Confirmed working in Vista  
+**Date:** 2026-06-07  
+**Vista file:** `artifacts/patient-images/src/pages/editor.tsx`
+
+### What it does
+When the overlay tool is active, a frosted-glass pill floats at the **bottom-center of the canvas** showing thumbnails of other patient images the user can pick as the overlay. Previously this was crammed into the secondary toolbar; moving it to the canvas gives more space and keeps it visually associated with the canvas rather than the toolbar.
+
+### How it works
+The strip is an `absolute z-30` div anchored to the canvas container:
+```jsx
+{tool === "overlay" && (
+  <div className="absolute z-30 bottom-3 left-1/2 -translate-x-1/2
+                  bg-card/95 backdrop-blur-sm border rounded-xl shadow-lg
+                  px-2 py-1.5 flex items-center gap-2 select-none max-w-[90%]">
+    <span className="text-xs text-muted-foreground shrink-0">{pickHintLabel}:</span>
+
+    {/* "None" button — only shown when an overlay is active */}
+    {overlayImageId && (
+      <button className="shrink-0 h-7 px-2 text-xs rounded border hover:bg-muted flex items-center gap-1"
+        onClick={clearOverlay}>
+        <X className="h-3 w-3" />{t("editor.overlayNone")}
+      </button>
+    )}
+
+    {/* Scrollable thumbnail strip with prev/next chevrons */}
+    <button onClick={() => scrollRef.current?.scrollBy({ left: -160, behavior:"smooth" })}>
+      <ChevronLeft className="h-3 w-3" />
+    </button>
+    <div ref={scrollRef} className="flex gap-1 overflow-x-auto scroll-smooth"
+         style={{ scrollbarWidth:"none", maxWidth:320 }}>
+      {otherImages.map(pi => (
+        <button key={pi.id}
+          className={`shrink-0 w-10 h-10 rounded border-2 overflow-hidden ${
+            overlayImageId === String(pi.id) ? "border-primary" : "border-transparent hover:border-muted-foreground/40"
+          }`}
+          onClick={() => toggleOverlay(pi.id)}>
+          <img src={`/api/images/${pi.id}/file`} crossOrigin="anonymous"
+               className="w-full h-full object-cover" />
+        </button>
+      ))}
+    </div>
+    <button onClick={() => scrollRef.current?.scrollBy({ left: 160, behavior:"smooth" })}>
+      <ChevronRight className="h-3 w-3" />
+    </button>
+  </div>
+)}
+```
+
+The parent canvas container must be `position: relative` and `overflow: hidden`. Place this JSX inside it (not in the toolbar).
+
+### Notes for Max7 agent
+- The secondary toolbar still holds the opacity/scale/XY offset controls for the active overlay — only the picker (thumbnail chooser) moves to the canvas strip.
+- `max-w-[90%]` prevents the strip from overflowing on narrow canvases.
+
+---
+
+## FEAT-011 — Built-in Chatbot (GPT-4o-mini, SSE Streaming)
+
+**Status:** ✅ Confirmed working in Vista  
+**Date:** 2026-06-07  
+**Vista files:**
+- `artifacts/api-server/src/routes/chat.ts` — SSE streaming endpoint
+- `artifacts/patient-images/src/components/ChatBot.tsx` — floating chat UI
+
+### What it does
+A floating chat bubble (bottom-right corner) opens a panel where staff can ask questions about how to use Max7 Vista. Responses stream token-by-token via SSE. The bot uses a detailed system prompt covering every feature.
+
+### API endpoint — `POST /chat` (mounted at `/api/chat`)
+**Critical:** the router is already mounted at `/api` — register the route as `/chat` (not `/api/chat`) or the path becomes `/api/api/chat` and returns 404.
+
+```typescript
+import { openai } from "@workspace/integrations-openai-ai-server";
+
+router.post("/chat", async (req, res) => {
+  if (!openai) return res.status(503).json({ error: "AI chat not available." });
+
+  const { messages } = req.body;
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  const stream = await openai.chat.completions.create({
+    model: "gpt-4o-mini",          // ← must be "gpt-4o-mini", not "gpt-5-mini"
+    max_completion_tokens: 1024,
+    messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
+    stream: true,
+  });
+
+  for await (const chunk of stream) {
+    const content = chunk.choices[0]?.delta?.content ?? "";
+    if (content) res.write(`data: ${JSON.stringify({ content })}\n\n`);
+  }
+  res.write("data: {\"done\":true}\n\n");
+  res.end();
+});
+```
+
+### System prompt — ruler section (correct wording)
+```
+Ruler: To use Measure mode: click "Measure" in the HUD first, then draw a line
+over a known reference structure, then enter its real-world length — this
+calibrates the mm/px scale. To use Resize mode: click "Resize" in the HUD
+first, then draw a line over a landmark, then enter the desired length — the
+image is rescaled so that line matches the target measurement.
+```
+
+### Chat UI — `ChatBot.tsx`
+- Fixed bottom-right button (`h-14 w-14 rounded-full`) toggles the panel.
+- Panel: `fixed bottom-24 right-6 w-[360px] max-h-[520px]`, flex-col with header / scroll area / input row.
+- **Scrollable message area**: use a plain `<div className="flex-1 overflow-y-auto min-h-0">` — do **not** use the `ScrollArea` shadcn component; its custom scrollbar overlay does not render reliably in this layout.
+- Auto-scroll on new messages: `scrollRef.current.scrollTop = scrollRef.current.scrollHeight` in a `useEffect([messages])`.
+- SSE read loop: split on `\n`, parse `data: {...}` lines, append `content` tokens to the active assistant message.
+
+### Notes for Max7 agent
+- The `openai` client comes from `@workspace/integrations-openai-ai-server` (Replit-managed proxy). In Max7's Electron context use the OpenAI SDK directly with the clinic's API key from settings.
+- Keep the system prompt updated whenever a workflow changes (e.g. ruler order, new features).
+- `max_completion_tokens: 1024` keeps responses concise; increase if needed.
+
+---
+
 <!-- Add new entries below as features are confirmed in Vista -->
