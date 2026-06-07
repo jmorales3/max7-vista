@@ -192,7 +192,9 @@ function drawArrow(
 }
 
 // hoveredAngleIdx: undefined = show-all mode (save/export), null = hover mode nothing near, number = that annotation index is hovered
-function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation, scale: number = 1, hoveredAngleIdx?: number | null, annIdx?: number) {
+// labelScale: override for font/pad sizing (pass display scale when saving at scale=1 so labels match what user saw on screen)
+function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation, scale: number = 1, hoveredAngleIdx?: number | null, annIdx?: number, labelScale?: number) {
+  const ls = labelScale ?? scale;
   if (ann.type === "line") {
     if (ann.points.length < 4) return;
     ctx.beginPath();
@@ -246,7 +248,7 @@ function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation, scale: n
     }
     const dist = Math.hypot(x2 - x1, y2 - y1);
     const label = annPxPerMm != null ? `${(dist / annPxPerMm).toFixed(1)} mm` : `${Math.round(dist)} px`;
-    const fontSize = 16 / scale;
+    const fontSize = 16 / ls;
     const offsetDist = tickLen + fontSize * 0.9;
     const midX = (x1 + x2) / 2;
     const midY = (y1 + y2) / 2;
@@ -256,7 +258,7 @@ function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation, scale: n
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     const tw = ctx.measureText(label).width;
-    const pad = 4 / scale;
+    const pad = 4 / ls;
     ctx.fillStyle = "rgba(0,0,0,0.72)";
     ctx.fillRect(lx - tw / 2 - pad, ly - fontSize / 2 - pad, tw + pad * 2, fontSize + pad * 2);
     ctx.fillStyle = color;
@@ -301,16 +303,16 @@ function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation, scale: n
     ctx.arc(vx, vy, arcR, a1, a2, anticlockwise);
     ctx.stroke();
     const midAngle = anticlockwise ? a1 - (2 * Math.PI - span) / 2 : a1 + span / 2;
-    const labelDist = arcR + 14 / scale;
+    const labelDist = arcR + 14 / ls;
     const lx = vx + Math.cos(midAngle) * labelDist;
     const ly = vy + Math.sin(midAngle) * labelDist;
     const label = `${angleDeg.toFixed(1)}°`;
-    const fontSize = 16 / scale;
+    const fontSize = 16 / ls;
     ctx.font = `bold ${fontSize}px sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     const tw = ctx.measureText(label).width;
-    const pad = 4 / scale;
+    const pad = 4 / ls;
     ctx.fillStyle = "rgba(0,0,0,0.72)";
     ctx.fillRect(lx - tw / 2 - pad, ly - fontSize / 2 - pad, tw + pad * 2, fontSize + pad * 2);
     ctx.fillStyle = color;
@@ -333,6 +335,7 @@ function renderCanvas(
   panOffset?: { x: number; y: number },
   cutPath?: [number, number][] | null,
   hoveredAngleIdx?: number | null,
+  labelScale?: number,
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -351,7 +354,7 @@ function renderCanvas(
 
   const allAnns: Annotation[] = previewAnn ? [...annotations, previewAnn] : annotations;
   for (let i = 0; i < allAnns.length; i++) {
-    drawAnnotation(ctx, allAnns[i], scale, hoveredAngleIdx, i);
+    drawAnnotation(ctx, allAnns[i], scale, hoveredAngleIdx, i, labelScale);
   }
 
   ctx.restore();
@@ -384,7 +387,7 @@ function renderCanvas(
     ctx.rotate((rotation * Math.PI) / 180);
     ctx.scale(scale, scale);
     if (img) ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
-    for (let i = 0; i < allAnns.length; i++) drawAnnotation(ctx, allAnns[i], scale, hoveredAngleIdx, i);
+    for (let i = 0; i < allAnns.length; i++) drawAnnotation(ctx, allAnns[i], scale, hoveredAngleIdx, i, labelScale);
     ctx.restore();
     ctx.strokeStyle = "#0ea5e9";
     ctx.lineWidth = 2;
@@ -881,7 +884,7 @@ export default function Editor() {
     const flatCanvas = document.createElement("canvas");
     flatCanvas.width = img.naturalWidth;
     flatCanvas.height = img.naturalHeight;
-    renderCanvas(flatCanvas, img, nonRulerAnnotations, 1, 0, null, null, null, undefined, { x: 0, y: 0 });
+    renderCanvas(flatCanvas, img, nonRulerAnnotations, 1, 0, null, null, null, undefined, { x: 0, y: 0 }, undefined, undefined, scale);
     const newW = Math.max(1, Math.round(img.naturalWidth * factor));
     const newH = Math.max(1, Math.round(img.naturalHeight * factor));
     const scaledCanvas = document.createElement("canvas");
@@ -1738,7 +1741,7 @@ export default function Editor() {
     const flat = document.createElement("canvas");
     flat.width = outW;
     flat.height = outH;
-    renderCanvas(flat, img, annotations, 1, rotation, null, null, null, undefined, { x: 0, y: 0 });
+    renderCanvas(flat, img, annotations, 1, rotation, null, null, null, undefined, { x: 0, y: 0 }, undefined, undefined, scale);
     return new Promise<Blob | null>((resolve) => flat.toBlob(resolve, "image/png"));
   }
 
