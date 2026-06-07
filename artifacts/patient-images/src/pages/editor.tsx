@@ -1010,6 +1010,7 @@ export default function Editor() {
         }
         anglePointsRef.current = [];
         setAngleStep(0);
+        setTool("pointer");
       }
       return;
     } else if (tool === "eyedropper") {
