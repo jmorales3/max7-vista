@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { MessageCircle, X, Send, Loader2, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { getApiUrl } from "@/lib/apiUrl";
 
 interface Message {
@@ -124,7 +123,7 @@ export function ChatBot() {
             </Button>
           </div>
 
-          <ScrollArea className="flex-1 px-3 py-3" ref={scrollRef as React.RefObject<HTMLDivElement>}>
+          <div className="flex-1 overflow-y-auto px-3 py-3 min-h-0" ref={scrollRef}>
             <div className="space-y-3">
               {messages.map((msg) => (
                 <div
@@ -148,7 +147,7 @@ export function ChatBot() {
                 </div>
               ))}
             </div>
-          </ScrollArea>
+          </div>
 
           <div className="p-3 border-t flex gap-2">
             <Input
