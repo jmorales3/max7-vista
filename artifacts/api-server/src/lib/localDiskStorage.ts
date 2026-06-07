@@ -123,6 +123,20 @@ export async function readFileAsBuffer(filePath: string): Promise<Buffer | null>
 }
 
 /**
+ * Not applicable in the LAN build — signed upload URLs are a GCS/cloud concept.
+ * The LAN app writes files directly via uploadToGcs (local disk).
+ * This stub satisfies the import in images.ts without breaking the build.
+ */
+export async function getSignedUploadUrl(
+  _objectName: string,
+  _ttlSec = 900,
+): Promise<string> {
+  throw new Error(
+    "getSignedUploadUrl is not supported in the LAN build. Use the direct upload endpoint instead.",
+  );
+}
+
+/**
  * Delete a locally-stored file. Silently ignores missing files.
  */
 export async function deleteFile(filePath: string): Promise<void> {
