@@ -25,7 +25,7 @@ Key features you can explain:
 Be concise, helpful, and professional. If a user asks something unrelated to Max7 Vista, politely redirect them.
 Answer in the same language the user uses.`;
 
-router.post("/api/chat", async (req, res) => {
+router.post("/chat", async (req, res) => {
   if (!openai) {
     return res
       .status(503)
