@@ -2273,7 +2273,9 @@ export default function Editor() {
               else if (angleStep === 2) instruction = t("editor.angleClickArm2");
               else instruction = t("editor.angleHint");
             } else if (tool === "ruler") {
-              instruction = t("editor.rulerDrawHint");
+              instruction = (calibrating || resizeMode)
+                ? t("editor.rulerDrawHint")
+                : t("editor.rulerSelectModeHint");
             } else if (tool === "select" && !floater) {
               instruction = selectMode === "rect" ? t("editor.selectHint") : t("editor.selectFreehandHint");
             } else if (tool === "pointer" && annotations.some((a) => a.type === "text")) {
@@ -2393,12 +2395,12 @@ export default function Editor() {
                       </Button>
                     ) : (
                       <>
-                        <div className="flex gap-1">
-                          <Button size="sm" variant="outline" className="h-7 gap-1 text-xs flex-1"
+                        <div className="flex flex-col gap-1">
+                          <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs w-full justify-start"
                             onClick={() => { setCalibrating(true); setResizeMode(false); }}>
                             <Ruler className="h-3 w-3" />{t("editor.rulerMeasure")}
                           </Button>
-                          <Button size="sm" variant="outline" className="h-7 gap-1 text-xs flex-1"
+                          <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs w-full justify-start"
                             onClick={() => { setResizeMode(true); setCalibrating(false); }}>
                             <Minimize2 className="h-3 w-3" />{t("editor.rulerResize")}
                           </Button>

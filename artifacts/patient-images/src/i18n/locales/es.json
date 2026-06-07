@@ -259,6 +259,7 @@
     "angle": "Ángulo",
     "rulerMeasure": "Medir (mm)",
     "rulerResize": "Escalar imagen",
+    "rulerSelectModeHint": "1. Presione Medir o Escalar.  2. Luego trace una línea de referencia.",
     "rulerDrawHint": "Dibuje una línea de referencia en la imagen…",
     "calibrate": "Establecer escala",
     "calibratingDraw": "Dibuje línea de referencia…",

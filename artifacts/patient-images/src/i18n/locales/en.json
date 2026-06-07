@@ -259,6 +259,7 @@
     "angle": "Angle",
     "rulerMeasure": "Measure (mm)",
     "rulerResize": "Resize Image",
+    "rulerSelectModeHint": "1. Press Measure or Resize.  2. Then draw a reference line.",
     "rulerDrawHint": "Draw a reference line on the image…",
     "calibrate": "Set Scale",
     "calibratingDraw": "Draw reference line…",
