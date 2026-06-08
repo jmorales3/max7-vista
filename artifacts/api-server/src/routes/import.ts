@@ -7,6 +7,7 @@ import { db, imagesTable, patientsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { getStorageDirectory } from "../lib/storage";
 import { logAudit } from "../lib/audit";
+import { getSignedUploadUrl, uploadToGcs, toGcsPath, readFileAsBuffer } from "../lib/gcsStorage";
 
 const router: IRouter = Router();
 
@@ -305,6 +306,145 @@ router.post(
     res.json(summary);
   },
 );
+
+// ─── GCS-bypass ZIP import (cloud version) ────────────────────────────────────
+// Uploading large ZIPs through the Replit proxy causes HTTP 413.
+// These two endpoints implement the same 3-step bypass used by image uploads:
+//   1. POST /import/bulk-upload-url  → signed GCS PUT URL
+//   2. Browser PUTs the ZIP directly to GCS (bypasses proxy)
+//   3. POST /import/bulk-from-gcs   → server reads ZIP from GCS, runs import
+
+router.post("/import/bulk-upload-url", async (req, res): Promise<void> => {
+  try {
+    const objectName = `imports/bulk/${Date.now()}_${Math.random().toString(36).slice(2, 7)}.zip`;
+    const signedUrl = await getSignedUploadUrl(objectName, 3600);
+    res.json({ signedUrl, objectName });
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ error: `Could not generate upload URL: ${reason}` });
+  }
+});
+
+router.post("/import/bulk-from-gcs", async (req, res): Promise<void> => {
+  const { objectName, csvContent } = req.body as {
+    objectName?: string;
+    csvContent?: string;
+  };
+
+  if (!objectName) {
+    res.status(400).json({ error: "objectName is required" });
+    return;
+  }
+
+  const summary: ImportSummary = {
+    patientsCreated: 0,
+    patientsMatched: 0,
+    imagesImported: 0,
+    errors: [],
+  };
+
+  const patientMap = csvContent
+    ? parseCSV(csvContent)
+    : new Map<string, PatientInfo>();
+
+  // Download the ZIP from GCS (server → GCS, no proxy involved)
+  let zipBuffer: Buffer | null;
+  try {
+    zipBuffer = await readFileAsBuffer(toGcsPath(objectName));
+    if (!zipBuffer) throw new Error("File not found in storage");
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    res.status(400).json({ error: `Could not read ZIP from storage: ${reason}` });
+    return;
+  }
+
+  let zip: AdmZip;
+  try {
+    zip = new AdmZip(zipBuffer);
+  } catch {
+    res.status(400).json({ error: "Could not open ZIP archive" });
+    return;
+  }
+
+  // Detect single root wrapper folder
+  const topLevelNames = new Set<string>();
+  for (const entry of zip.getEntries()) {
+    if (entry.isDirectory) continue;
+    const parts = entry.entryName.replace(/\\/g, "/").split("/");
+    if (parts.length < 2) continue;
+    const ext = path.extname(parts[parts.length - 1]).toLowerCase();
+    if (!IMAGE_EXTENSIONS.has(ext)) continue;
+    topLevelNames.add(parts[0]);
+  }
+  const patientDepth = topLevelNames.size === 1 ? 1 : 0;
+
+  const byPatient = new Map<string, AdmZip.IZipEntry[]>();
+  for (const entry of zip.getEntries()) {
+    if (entry.isDirectory) continue;
+    const parts = entry.entryName.replace(/\\/g, "/").split("/");
+    if (parts.length < patientDepth + 2) continue;
+    const patientCode = parts[patientDepth];
+    const ext = path.extname(parts[parts.length - 1]).toLowerCase();
+    if (!IMAGE_EXTENSIONS.has(ext)) continue;
+    if (!byPatient.has(patientCode)) byPatient.set(patientCode, []);
+    byPatient.get(patientCode)!.push(entry);
+  }
+
+  for (const [patientCode, entries] of byPatient) {
+    const dbPatient = await upsertPatient(req, patientCode, patientMap, summary);
+
+    for (const entry of entries) {
+      const fileName = path.basename(entry.entryName);
+      try {
+        const buffer = entry.getData();
+        let capturedAt = await extractExifDate(buffer);
+        if (!capturedAt) {
+          const zipDate = entry.header.time;
+          capturedAt =
+            zipDate instanceof Date && !isNaN(zipDate.getTime()) ? zipDate : new Date();
+        }
+
+        // Save to GCS (cloud path — persists across deployments)
+        const ext = path.extname(fileName) || ".jpg";
+        const dateStr = capturedAt.toISOString().split("T")[0];
+        const storedName = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}${ext}`;
+        const imgObjectName = `images/${dbPatient.id}/${dateStr}/${storedName}`;
+        const gcsPath = await uploadToGcs(buffer, imgObjectName, `image/${ext.slice(1)}`);
+
+        const legend = path.basename(fileName, ext).replace(/[_-]+/g, " ").trim();
+        await db.insert(imagesTable).values({
+          patientId: dbPatient.id,
+          filePath: gcsPath,
+          fileName,
+          notes: legend || null,
+          capturedAt,
+          isUnassigned: 0 as unknown as boolean,
+        });
+
+        summary.imagesImported++;
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : String(err);
+        summary.errors.push({ file: entry.entryName, reason });
+      }
+    }
+  }
+
+  // Clean up the temporary ZIP from GCS (best-effort)
+  try {
+    const { deleteFile } = await import("../lib/gcsStorage");
+    await deleteFile(toGcsPath(objectName));
+  } catch { /* ignore */ }
+
+  await logAudit(req, "bulk_import", "image", 0, JSON.stringify({
+    patientsCreated: summary.patientsCreated,
+    patientsMatched: summary.patientsMatched,
+    imagesImported: summary.imagesImported,
+    errors: summary.errors.length,
+    source: "zip-gcs",
+  }));
+
+  res.json(summary);
+});
 
 // ─── Server-folder import ─────────────────────────────────────────────────────
 

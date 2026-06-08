@@ -175,15 +175,33 @@ function ZipImportTab() {
     setSummary(null);
     setImportError(null);
 
-    const formData = new FormData();
-    formData.append("archive", archiveFile);
-    if (csvFile) formData.append("patients", csvFile);
-
     try {
-      const res = await fetch(getApiUrl("/api/import/bulk"), {
+      // Step 1 — get a signed GCS URL (bypasses Replit proxy size limit)
+      const urlRes = await fetch(getApiUrl("/api/import/bulk-upload-url"), {
         method: "POST",
-        body: formData,
         credentials: "include",
+      });
+      if (!urlRes.ok) {
+        const body = await urlRes.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? `HTTP ${urlRes.status}`);
+      }
+      const { signedUrl, objectName } = await urlRes.json() as { signedUrl: string; objectName: string };
+
+      // Step 2 — PUT the ZIP directly to GCS (no proxy)
+      const putRes = await fetch(signedUrl, {
+        method: "PUT",
+        headers: { "Content-Type": "application/zip" },
+        body: archiveFile,
+      });
+      if (!putRes.ok) throw new Error(`ZIP upload failed: HTTP ${putRes.status}`);
+
+      // Step 3 — tell the server to process the ZIP from GCS
+      const csvContent = csvFile ? await csvFile.text() : undefined;
+      const res = await fetch(getApiUrl("/api/import/bulk-from-gcs"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ objectName, csvContent }),
       });
 
       if (!res.ok) {
