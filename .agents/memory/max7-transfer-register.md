@@ -601,4 +601,112 @@ image is rescaled so that line matches the target measurement.
 
 ---
 
+## FEAT-012 — Bulk ZIP Import: GCS Signed-URL Bypass (Cloud Deployment)
+
+**Status:** ✅ Confirmed working in Vista (dev + production)
+**Date:** 2026-06-08
+**Vista files:**
+- `artifacts/api-server/src/routes/import.ts` — two new endpoints
+- `artifacts/patient-images/src/pages/bulk-import.tsx` — updated `ZipImportTab.handleSubmit`
+
+### Why this was needed
+The Replit deployment proxy rejects large POST bodies with HTTP 413. A ZIP of patient images can easily be 50–500 MB — far over the proxy limit. The same GCS signed-URL bypass pattern from FEAT-006 (single image upload) is applied here for bulk ZIP import.
+
+### Architecture — three steps, all tiny except the GCS PUT
+
+```
+Browser                        API Server               Google Cloud Storage
+  │                                │                            │
+  │ POST /api/import/bulk-upload-url│                            │
+  │ (empty body)                   │                            │
+  │────────────────────────────────>                            │
+  │ { signedUrl, objectName }      │ sidecar: signed PUT URL    │
+  │<────────────────────────────────│<───────────────────────────│
+  │                                │                            │
+  │ PUT <signedUrl>  (raw ZIP bytes)│                            │
+  │  *** BYPASSES PROXY ***         │                            │
+  │─────────────────────────────────────────────────────────────>
+  │ 200 OK                         │                            │
+  │<─────────────────────────────────────────────────────────────
+  │                                │                            │
+  │ POST /api/import/bulk-from-gcs │                            │
+  │ { objectName, csvContent? }    │                            │
+  │ (small JSON, proxy-safe)       │                            │
+  │────────────────────────────────>                            │
+  │                                │ reads ZIP from GCS         │
+  │                                │────────────────────────────>
+  │                                │ extracts + saves images    │
+  │                                │────────────────────────────>
+  │ ImportSummary JSON             │                            │
+  │<────────────────────────────────│                            │
+```
+
+### New server endpoint: `POST /api/import/bulk-upload-url`
+No request body. Generates a temporary object name (`imports/bulk/<timestamp>_<random>.zip`), calls `getSignedUploadUrl(objectName, 3600)` (1-hour TTL for large ZIPs), and returns `{ signedUrl, objectName }`.
+
+```typescript
+router.post("/import/bulk-upload-url", async (req, res): Promise<void> => {
+  try {
+    const objectName = `imports/bulk/${Date.now()}_${Math.random().toString(36).slice(2, 7)}.zip`;
+    const signedUrl = await getSignedUploadUrl(objectName, 3600);
+    res.json({ signedUrl, objectName });
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ error: `Could not generate upload URL: ${reason}` });
+  }
+});
+```
+
+### New server endpoint: `POST /api/import/bulk-from-gcs`
+Accepts `{ objectName, csvContent? }` (JSON body, proxy-safe). Reads the ZIP from GCS with `readFileAsBuffer(toGcsPath(objectName))`, opens it with `AdmZip`, extracts patient folders and image files, saves each image to GCS with `uploadToGcs(buffer, imgObjectName, mimeType)`, inserts DB records, and returns an `ImportSummary`. Deletes the temporary ZIP from GCS at the end (best-effort).
+
+Key steps inside the handler:
+1. Download ZIP: `await readFileAsBuffer(toGcsPath(objectName))`
+2. Parse: `new AdmZip(zipBuffer)`
+3. Detect single root wrapper folder (same logic as the original `/import/bulk`)
+4. For each patient folder → each image entry:
+   - `entry.getData()` → Buffer
+   - Extract EXIF date (or fall back to ZIP entry timestamp)
+   - Build `imgObjectName = images/<patientId>/<dateStr>/<timestamp>_<random>.ext`
+   - `await uploadToGcs(buffer, imgObjectName, mimeType)` → `gcs:` path
+   - Insert DB record with `filePath = gcsPath`
+5. Delete temp ZIP: `await deleteFile(toGcsPath(objectName))`
+
+### Frontend: `ZipImportTab.handleSubmit` (bulk-import.tsx)
+Replace the single multipart POST with the 3-step flow:
+
+```typescript
+// Step 1 — get signed URL (empty body)
+const { signedUrl, objectName } = await fetch(getApiUrl("/api/import/bulk-upload-url"), {
+  method: "POST", credentials: "include",
+}).then(r => r.json());
+
+// Step 2 — PUT ZIP directly to GCS (bypasses proxy)
+await fetch(signedUrl, {
+  method: "PUT",
+  headers: { "Content-Type": "application/zip" },
+  body: archiveFile,                    // the File object from <input type="file">
+});
+
+// Step 3 — trigger server-side processing (small JSON body)
+const csvContent = csvFile ? await csvFile.text() : undefined;
+const result = await fetch(getApiUrl("/api/import/bulk-from-gcs"), {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  credentials: "include",
+  body: JSON.stringify({ objectName, csvContent }),
+}).then(r => r.json());
+```
+
+Note: the CSV file is read as a text string (`csvFile.text()`) and sent in the small JSON body in step 3 — it never goes through multipart.
+
+### Notes for Max7 agent
+- **Do NOT send the ZIP through the API proxy** — it will always 413 on large files in a cloud deployment.
+- The `getSignedUploadUrl` function is shared with FEAT-006 (single image upload). No new GCS functions needed beyond `readFileAsBuffer`, `uploadToGcs`, `toGcsPath`, and `deleteFile` — all already in `gcsStorage.ts`.
+- In the Electron/LAN build, `gcsStorage.ts` is aliased to `localDiskStorage.ts`. The `localDiskStorage` stub must export `getSignedUploadUrl`, `uploadToGcs`, `toGcsPath`, `readFileAsBuffer`, and `deleteFile` with matching signatures (they can operate on the local `uploads/` directory).
+- The original `POST /import/bulk` (multipart) endpoint can be kept for LAN builds where the proxy is not involved.
+- Image MIME type for `uploadToGcs`: derive from file extension — `image/${ext.slice(1)}` (e.g. `.jpg` → `image/jpg`; use `image/jpeg` for correctness if preferred).
+
+---
+
 <!-- Add new entries below as features are confirmed in Vista -->
