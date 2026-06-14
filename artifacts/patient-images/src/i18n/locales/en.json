@@ -12,7 +12,8 @@
     "manual": "Manual",
     "bulkImport": "Bulk Import",
     "menu": "Menu",
-    "templates": "Templates"
+    "templates": "Templates",
+    "library": "Image Library"
   },
   "common": {
     "save": "Save",
@@ -196,6 +197,19 @@
     "captureImage": "Capture Image",
     "columns": "{{count}} column",
     "columns_plural": "{{count}} columns"
+  },
+  "library": {
+    "title": "Image Library",
+    "subtitle": "Browse and select images to include in your presentations.",
+    "noImages": "No images found",
+    "selectedCount": "{{count}} selected",
+    "addToPresentation": "Add to Presentation",
+    "clearSelection": "Clear Selection",
+    "selectPresentation": "Select a Presentation",
+    "selectPresentationDesc": "Choose a presentation to add the selected images to as slides.",
+    "newPresentation": "New Presentation",
+    "addedSuccess": "Added {{count}} image(s) to presentation",
+    "noPresentations": "No presentations yet"
   },
   "editor": {
     "pointer": "Pointer",

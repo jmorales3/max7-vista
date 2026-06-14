@@ -16,6 +16,7 @@ import Manual from "@/pages/manual";
 import NotFound from "@/pages/not-found";
 import AdminUsers from "@/pages/admin/users";
 import BulkImport from "@/pages/bulk-import";
+import ImageLibrary from "@/pages/image-library";
 import Templates from "@/pages/templates";
 import TemplateDesigner from "@/pages/template-designer";
 import TemplateDocumentPage from "@/pages/template-document";
@@ -43,6 +44,7 @@ function Router() {
         <Route path="/patients/:id" component={PatientDetail} />
         <Route path="/capture" component={Capture} />
         <Route path="/gallery" component={Gallery} />
+        <Route path="/library" component={ImageLibrary} />
         <Route path="/editor/:id" component={Editor} />
         <Route path="/presentation/:id" component={Presentation} />
         <Route path="/presentations" component={Presentations} />

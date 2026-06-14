@@ -709,4 +709,194 @@ Note: the CSV file is read as a text string (`csvFile.text()`) and sent in the s
 
 ---
 
+## FEAT-012 — Canvas Coordinate Scale Fix (getCanvasPoint)
+
+**Status:** ✅ Confirmed working in Vista  
+**Date:** 2026-06-14  
+**Vista file:** `artifacts/patient-images/src/pages/editor.tsx`
+
+### What it does
+Fixes a systematic offset where ALL annotations (pen strokes, arrows, circles, straight lines, rulers, angles, text) appeared to the right of the cursor. The offset was proportional to the mismatch between the canvas buffer pixel size and its CSS display size.
+
+### Root cause
+`getCanvasPoint` computed:
+```typescript
+// WRONG — mixes CSS pixels and buffer pixels
+const cx = (e.clientX - rect.left - canvas.width / 2) / scale;
+```
+`canvas.width` is the buffer size in device/buffer pixels. `e.clientX - rect.left` is the offset in CSS display pixels. When the canvas is displayed at a different size than its buffer (flex layout, sub-pixel rounding, device pixel ratio), these two measurements do not share the same unit and subtracting them produces a wrong result.
+
+### Fix
+```typescript
+function getCanvasPoint(e: React.PointerEvent<HTMLCanvasElement>): [number, number] {
+  const canvas = canvasRef.current!;
+  const rect = canvas.getBoundingClientRect();
+  const rx = canvas.width / rect.width;   // buffer px per CSS px (X)
+  const ry = canvas.height / rect.height; // buffer px per CSS px (Y)
+  const cx = ((e.clientX - rect.left) * rx - canvas.width / 2 - panOffsetRef.current.x) / scale;
+  const cy = ((e.clientY - rect.top)  * ry - canvas.height / 2 - panOffsetRef.current.y) / scale;
+  // then apply rotation as before
+}
+```
+Multiply the CSS-pixel offset by the ratio `canvas.width / rect.width` before subtracting the canvas center. This converts the CSS-pixel mouse position into buffer pixels before doing arithmetic.
+
+### Scope
+Every drawing tool and annotation placement goes through `getCanvasPoint`, so a single fix here covers the entire editor: pen, eraser, arrow, circle, straight line, ruler, angle, text, and pointer (annotation drag).
+
+The same inline formula existed in one other place (angle-hover detection in `handlePointerMove`) and was fixed there too — look for the `cx = ((e.clientX - rect.left) * rx - canvas.width / 2 …` block.
+
+### Notes for Max7 agent
+- `getScreenPoint()` is a separate helper that returns raw CSS pixel coords — used only for operations that intentionally work in screen space (brush cursor, crop, eyedropper, select path). Do **not** apply this scaling fix there.
+- If the canvas uses a `devicePixelRatio` transform as well, the `rx`/`ry` computation already accounts for it via `getBoundingClientRect()`.
+
+---
+
+## FEAT-013 — General Annotation Drag/Move (All Types)
+
+**Status:** ✅ Confirmed working in Vista  
+**Date:** 2026-06-14  
+**Vista file:** `artifacts/patient-images/src/pages/editor.tsx`
+
+### What it does
+The pointer tool can now drag and reposition any annotation type — straight lines, arrows, circles, rulers, angles, and freehand pen strokes — not just text labels. Undoable via Ctrl+Z.
+
+### How it works
+
+**Three helpers added:**
+```typescript
+function distToSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
+  const dx = x2 - x1, dy = y2 - y1;
+  const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)));
+  return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+}
+
+function findAnnotationAt(x: number, y: number): Annotation | null {
+  const HIT = 12; // pixels
+  const anns = annotationsRef.current;
+  for (let i = anns.length - 1; i >= 0; i--) {
+    const ann = anns[i];
+    if (ann.type === "text") { /* existing text hit-test */ }
+    else if (ann.type === "arrow" || ann.type === "straightline" || ann.type === "ruler") {
+      if (distToSegment(x, y, ann.x1, ann.y1, ann.x2, ann.y2) < HIT) return ann;
+    } else if (ann.type === "circle") {
+      if (Math.abs(Math.hypot(x - ann.cx, y - ann.cy) - ann.r) < HIT) return ann;
+    } else if (ann.type === "angle") {
+      if (distToSegment(x, y, ann.vx, ann.vy, ann.p1x, ann.p1y) < HIT) return ann;
+      if (distToSegment(x, y, ann.vx, ann.vy, ann.p2x, ann.p2y) < HIT) return ann;
+    } else if (ann.type === "line") {
+      for (let j = 0; j < ann.points.length - 3; j += 2) {
+        if (distToSegment(x, y, ann.points[j], ann.points[j+1], ann.points[j+2], ann.points[j+3]) < HIT) return ann;
+      }
+    }
+  }
+  return null;
+}
+
+function moveAnnotation(ann: Annotation, dx: number, dy: number): Annotation {
+  switch (ann.type) {
+    case "text": return { ...ann, x: ann.x + dx, y: ann.y + dy };
+    case "arrow": case "straightline": case "ruler":
+      return { ...ann, x1: ann.x1 + dx, y1: ann.y1 + dy, x2: ann.x2 + dx, y2: ann.y2 + dy };
+    case "circle": return { ...ann, cx: ann.cx + dx, cy: ann.cy + dy };
+    case "angle": return { ...ann, vx: ann.vx + dx, vy: ann.vy + dy,
+                           p1x: ann.p1x + dx, p1y: ann.p1y + dy,
+                           p2x: ann.p2x + dx, p2y: ann.p2y + dy };
+    case "line": return { ...ann, points: ann.points.map((v, i) => i % 2 === 0 ? v + dx : v + dy) };
+  }
+}
+```
+
+**Drag ref added:**
+```typescript
+const draggingAnnRef = useRef<{
+  id: string; origAnn: Annotation; mouseStartX: number; mouseStartY: number;
+} | null>(null);
+```
+
+**handlePointerDown** — when `tool === "pointer"`:
+- Call `findAnnotationAt(x, y)` (searches all types, text still handled by `draggingTextRef`)
+- If hit and not text: `draggingAnnRef.current = { id: hit.id, origAnn: hit, mouseStartX: x, mouseStartY: y }`
+
+**handlePointerMove** — if `draggingAnnRef.current`:
+- Compute `dx = mx - mouseStartX`, `dy = my - mouseStartY`
+- Live-preview by calling `renderCanvas` with `annotationsRef.current.map(ann => ann.id === id ? moveAnnotation(origAnn, dx, dy) : ann)`
+
+**handlePointerUp** — if `draggingAnnRef.current`:
+- Call `pushHistory()`, then `setAnnotations(prev => prev.map(ann => ann.id === id ? moveAnnotation(origAnn, dx, dy) : ann))`
+- Clear `draggingAnnRef.current = null`
+
+### Key requirement: DrawLine needs an `id` field
+`DrawLine` previously lacked `id`. Add it to the interface and generate it at creation:
+```typescript
+interface DrawLine {
+  type: "line"; points: number[]; color: string; width: number; id: string;
+}
+// At creation:
+const newLine: DrawLine = { ..., id: Date.now().toString() };
+```
+
+### Notes for Max7 agent
+- The existing `draggingTextRef` for text is kept as-is — `findAnnotationAt` returns the annotation, then the pointer-down handler checks `hit.type === "text"` and branches to the appropriate ref.
+- `distToSegment` returns `Infinity` when the segment has zero length (division by zero guarded by the `dx*dx + dy*dy` check via `isNaN` fallback — add `|| 0` or guard before using).
+- Drag is only committed to history if `Math.hypot(dx, dy) > 0.5` (prevents a click from creating a spurious undo entry).
+
+---
+
+## FEAT-014 — Image Library Page
+
+**Status:** ✅ Confirmed working in Vista  
+**Date:** 2026-06-14  
+**Vista files:**
+- `artifacts/patient-images/src/pages/image-library.tsx` — new page
+- `artifacts/patient-images/src/router.tsx` — route `/library` added
+- `artifacts/patient-images/src/components/layout.tsx` — nav item added
+- `artifacts/patient-images/src/i18n/locales/{en,es,fr,pt}.json` — `nav.library` + `library.*` keys added
+
+### What it does
+A dedicated image repository page (`/library`) where the user browses ALL images across all patients in a large thumbnail grid. They can filter by patient, multi-select images, and add the selection to any existing presentation (or create a new one) with a single dialog interaction.
+
+### How it works
+
+**Grid with multi-select:**
+- Loads `useListImages({})` (all images) and `useListPatients({})` for the filter dropdown.
+- `patientFilter` state drives filtering client-side (`"all"` | `"unassigned"` | `"<patientId>"`).
+- `selected: Set<number>` tracks selected image IDs. Clicking a thumbnail toggles membership.
+- Selected thumbnails show a primary-coloured checkmark badge and a ring + scale-down effect.
+- Hovering an "all patients" thumbnail shows a patient name label (bottom overlay, opacity transition).
+
+**Add to Presentation dialog:**
+- Visible when `selected.size > 0`.
+- Opens a `<Dialog>` listing all presentations (fetched with `useListPresentations({})`).
+- First row is "New Presentation" (creates via `useCreatePresentation`).
+- Subsequent rows are existing presentations with their slide count.
+- On selection: calls `useUpdatePresentation` with the existing slides merged with new `{ type: "single", imageId }` entries, deduplicating by imageId.
+- On success: toast, clears selection, closes dialog.
+
+**Nav:**
+- Route: `/library`
+- Sidebar item: "Image Library" (`Library` icon from lucide-react), placed between Gallery and Presentations.
+
+### i18n keys added (all 4 locales: en / es / fr / pt)
+| Key | en |
+|-----|----|
+| `nav.library` | Image Library |
+| `library.title` | Image Library |
+| `library.subtitle` | Browse and select images to include in your presentations. |
+| `library.noImages` | No images found |
+| `library.selectedCount` | {{count}} selected |
+| `library.addToPresentation` | Add to Presentation |
+| `library.clearSelection` | Clear Selection |
+| `library.selectPresentation` | Select a Presentation |
+| `library.selectPresentationDesc` | Choose a presentation to add the selected images to as slides. |
+| `library.newPresentation` | New Presentation |
+| `library.addedSuccess` | Added {{count}} image(s) to presentation |
+| `library.noPresentations` | No presentations yet |
+
+### Notes for Max7 agent
+- Slide deduplication: filter new slides to exclude any imageId already in an existing `{ type: "single" }` slide.
+- `CompareSlide` members are left untouched during the merge — only single slides are deduplicated.
+- The page reuses the same `imageUrl = (id) => /api/images/${id}/file` pattern as the rest of the app.
+
+---
+
 <!-- Add new entries below as features are confirmed in Vista -->

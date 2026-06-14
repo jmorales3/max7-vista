@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   FolderUp,
   LayoutTemplate,
+  Library,
 } from "lucide-react";
 import {
   Sidebar,
@@ -43,6 +44,7 @@ export function AppSidebar() {
     { title: t("nav.patients"), url: "/patients", icon: Users },
     { title: t("nav.capture"), url: "/capture", icon: Camera },
     { title: t("nav.gallery"), url: "/gallery", icon: ImageIcon },
+    { title: t("nav.library"), url: "/library", icon: Library },
     { title: t("nav.presentations"), url: "/presentations", icon: MonitorPlay },
     { title: t("nav.templates"), url: "/templates", icon: LayoutTemplate },
     { title: t("nav.bulkImport"), url: "/import", icon: FolderUp },

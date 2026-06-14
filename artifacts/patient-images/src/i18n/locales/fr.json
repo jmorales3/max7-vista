@@ -12,7 +12,8 @@
     "manual": "Manuel",
     "bulkImport": "Import en Masse",
     "menu": "Menu",
-    "templates": "Modèles"
+    "templates": "Modèles",
+    "library": "Bibliothèque d'Images"
   },
   "common": {
     "save": "Enregistrer",
@@ -196,6 +197,19 @@
     "captureImage": "Capturer une Image",
     "columns": "{{count}} colonne",
     "columns_plural": "{{count}} colonnes"
+  },
+  "library": {
+    "title": "Bibliothèque d'Images",
+    "subtitle": "Parcourez et sélectionnez des images à inclure dans vos présentations.",
+    "noImages": "Aucune image trouvée",
+    "selectedCount": "{{count}} sélectionnée(s)",
+    "addToPresentation": "Ajouter à la Présentation",
+    "clearSelection": "Effacer la Sélection",
+    "selectPresentation": "Sélectionner une Présentation",
+    "selectPresentationDesc": "Choisissez une présentation pour y ajouter les images sélectionnées en tant que diapositives.",
+    "newPresentation": "Nouvelle Présentation",
+    "addedSuccess": "{{count}} image(s) ajoutée(s) à la présentation",
+    "noPresentations": "Aucune présentation pour l'instant"
   },
   "editor": {
     "pointer": "Pointeur",
