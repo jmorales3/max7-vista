@@ -376,7 +376,8 @@
       "migration": "Migration (LAN ↔ Web)",
       "roles": "Rôles Utilisateur",
       "tenants": "Configuration Multi-Organisation",
-      "templates": "Modèles"
+      "templates": "Modèles",
+      "imageLibrary": "Bibliothèque d'Images"
     },
     "overview": {
       "heading": "Qu'est-ce que Max7 Vista ?",
@@ -433,6 +434,10 @@
     "templates": {
       "heading": "Modèles",
       "body": "La fonctionnalité Modèles vous permet de concevoir des mises en page d'impression réutilisables pour les documents patients. Chaque modèle définit un format de page (Lettre, A4, Légal ou personnalisé), un nom et une adresse de clinique facultatifs, et un ou plusieurs cadres photo positionnés n'importe où sur la page. Ouvrez Modèles dans la barre latérale pour créer ou gérer des modèles. Cliquez sur 'Nouveau Modèle' pour définir le titre, le format de page et les informations de la clinique, puis cliquez sur 'Créer et Concevoir' pour ouvrir le Concepteur de Mise en Page. Dans le concepteur, cliquez sur 'Ajouter' pour placer des cadres sur la page — faites-les glisser pour les déplacer, faites glisser les poignées d'angle pour les redimensionner, et définissez une étiquette pour chaque cadre dans le panneau latéral. Enregistrez le modèle une fois terminé. Pour remplir un modèle, cliquez sur 'Créer un Document' sur une carte de modèle, sélectionnez un patient facultatif et donnez un titre au document. Dans la vue Document, cliquez sur un cadre vide pour sélectionner une image patient pour cet emplacement, puis faites glisser l'image pour la repositionner dans le cadre. Le bloc d'en-tête de la clinique est entièrement déplaçable et redimensionnable — faites-le glisser n'importe où sur le canevas pour le repositionner et faites glisser son bord droit pour modifier la largeur. Utilisez le bouton En-tête : Activé/Désactivé dans la barre d'outils pour inclure ou exclure l'en-tête de la clinique document par document. La position, la taille et la visibilité de l'en-tête sont sauvegardées avec le document. Cliquez sur Imprimer pour envoyer la mise en page terminée à l'imprimante."
+    },
+    "imageLibrary": {
+      "heading": "Bibliothèque d'Images",
+      "body": "La Bibliothèque d'Images est un référentiel autonome pour les images décoratives et non cliniques — diapositives de titre, paysages, en-têtes de section, image de marque de la clinique — que le personnel téléverse une fois et réutilise dans les présentations. Elle est entièrement séparée de la Galerie des patients ; rien ici n'est lié à un dossier patient.\n\nPour téléverser, cliquez sur 'Téléverser des Images' dans le coin supérieur droit, ou faites glisser-déposer des fichiers image directement sur la grille. Plusieurs fichiers peuvent être téléversés à la fois. Un pourcentage de progression s'affiche pendant le téléversement.\n\nChaque image téléversée peut recevoir un titre descriptif : survolez une vignette et cliquez sur l'icône crayon pour le modifier. Le titre apparaît comme étiquette au bas de la vignette.\n\nPour inclure des images dans une présentation, cliquez sur une ou plusieurs vignettes pour les sélectionner (une coche bleue apparaît et un compteur de sélection s'affiche dans l'en-tête). Cliquez ensuite sur 'Ajouter à la Présentation' pour ouvrir la boîte de dialogue d'affectation — choisissez une présentation existante dans la liste ou sélectionnez 'Nouvelle Présentation' et saisissez un titre pour en créer une immédiatement. Les images sélectionnées sont ajoutées en tant que diapositives individuelles.\n\nPour supprimer une image, survolez sa vignette et cliquez sur l'icône poubelle rouge. Cela supprime définitivement le fichier du stockage et l'enregistrement de la base de données ; cette action est irréversible."
     }
   },
   "bulkImport": {

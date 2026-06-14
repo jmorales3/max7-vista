@@ -16,6 +16,7 @@ type SectionKey =
   | "documents"
   | "settings"
   | "presentations"
+  | "imageLibrary"
   | "migration"
   | "roles"
   | "tenants"
@@ -32,6 +33,7 @@ const SECTIONS: SectionKey[] = [
   "documents",
   "settings",
   "presentations",
+  "imageLibrary",
   "migration",
   "roles",
   "tenants",

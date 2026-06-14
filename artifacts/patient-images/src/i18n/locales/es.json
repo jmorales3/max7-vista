@@ -376,7 +376,8 @@
       "migration": "Migración (LAN ↔ Web)",
       "roles": "Roles de Usuario",
       "tenants": "Configuración Multiempresa",
-      "templates": "Plantillas"
+      "templates": "Plantillas",
+      "imageLibrary": "Biblioteca de Imágenes"
     },
     "overview": {
       "heading": "¿Qué es Max7 Vista?",
@@ -433,6 +434,10 @@
     "templates": {
       "heading": "Plantillas",
       "body": "La función Plantillas le permite diseñar maquetas de impresión reutilizables para documentos de pacientes. Cada plantilla define un tamaño de página (Carta, A4, Legal o personalizado), nombre y dirección opcionales de la clínica, y uno o más marcos de imagen posicionados en cualquier lugar de la página. Abra Plantillas en la barra lateral para crear o gestionar plantillas. Haga clic en 'Nueva Plantilla' para establecer el título, el tamaño de página y la información de la clínica, luego haga clic en 'Crear y Diseñar' para abrir el Diseñador de Maquetas. En el diseñador, haga clic en 'Agregar' para colocar marcos en la página — arrástrelos para moverlos, arrastre las esquinas para redimensionarlos, y establezca una etiqueta para cada marco en el panel lateral. Guarde la plantilla cuando termine. Para rellenar una plantilla, haga clic en 'Crear Documento' en cualquier tarjeta de plantilla, seleccione un paciente opcional y asigne un título al documento. En la vista del Documento, haga clic en un marco vacío para elegir una imagen del paciente para ese espacio, luego arrastre la imagen para reposicionarla dentro del marco. El bloque del encabezado de la clínica es completamente movible y redimensionable — arrástrelo a cualquier lugar del lienzo para reposicionarlo y arrastre su borde derecho para cambiar el ancho. Use el botón Encabezado: Activado/Desactivado en la barra de herramientas para incluir o excluir el encabezado por documento. La posición, el tamaño y la visibilidad del encabezado se guardan con el documento. Haga clic en Imprimir para enviar el diseño terminado a la impresora."
+    },
+    "imageLibrary": {
+      "heading": "Biblioteca de Imágenes",
+      "body": "La Biblioteca de Imágenes es un repositorio independiente para imágenes decorativas y no clínicas — diapositivas de título, paisajes, encabezados de sección, marca de la clínica — que el personal sube una vez y reutiliza en presentaciones. Está completamente separada de la Galería de pacientes; nada aquí está vinculado a un registro de paciente.\n\nPara subir, haga clic en 'Subir Imágenes' en la esquina superior derecha, o arrastre y suelte archivos de imagen directamente en la cuadrícula. Se pueden subir varios archivos a la vez. Se muestra un porcentaje de progreso durante la carga.\n\nA cada imagen subida se le puede asignar un título descriptivo: pase el cursor sobre una miniatura y haga clic en el ícono de lápiz para editarlo. El título aparece como etiqueta en la parte inferior de la miniatura.\n\nPara incluir imágenes en una presentación, haga clic en una o más miniaturas para seleccionarlas (aparece una marca de verificación azul y se muestra un recuento de selección en el encabezado). Luego haga clic en 'Añadir a Presentación' para abrir el diálogo de asignación — elija una presentación existente de la lista o seleccione 'Nueva Presentación' e ingrese un título para crear una en el momento. Las imágenes seleccionadas se agregan como diapositivas individuales.\n\nPara eliminar una imagen, pase el cursor sobre su miniatura y haga clic en el ícono de papelera roja. Esto elimina permanentemente tanto el archivo del almacenamiento como el registro de la base de datos y no se puede deshacer."
     }
   },
   "bulkImport": {

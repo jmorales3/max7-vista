@@ -376,7 +376,8 @@
       "migration": "Migration (LAN ↔ Web)",
       "roles": "User Roles",
       "tenants": "Multi-Tenant Setup",
-      "templates": "Templates"
+      "templates": "Templates",
+      "imageLibrary": "Image Library"
     },
     "overview": {
       "heading": "What is Max7 Vista?",
@@ -433,6 +434,10 @@
     "templates": {
       "heading": "Templates",
       "body": "The Templates feature lets you design reusable print layouts for patient documents. Each template defines a page size (Letter, A4, Legal, or custom), an optional clinic name and address, and one or more picture frames positioned anywhere on the page. Open Templates in the sidebar to create or manage templates. Click 'New Template' to set the title, page size, and clinic info, then click 'Create & Design' to open the Layout Designer. In the designer, click 'Add' to place frames on the page — drag them to move, drag the corner handles to resize, and set a label for each frame in the side panel. Save the template when done. To fill a template, click 'Create Document' on any template card, select an optional patient, and give the document a title. In the Document view, click an empty frame to pick a patient image for that slot, then drag the image to reposition it within the frame. The clinic header block is fully movable and resizable — drag it anywhere on the print canvas to reposition it, and drag its right edge to change the width. Use the Header: On/Off toggle button in the toolbar to include or exclude the clinic header on a per-document basis. The header position, size, and visibility are saved with the document. Click Print to send the finished layout to the printer."
+    },
+    "imageLibrary": {
+      "heading": "Image Library",
+      "body": "The Image Library is a standalone repository for decorative, non-clinical images — title slides, landscapes, section headers, clinic branding — that staff upload once and reuse across presentations. It is entirely separate from the patient Gallery; nothing here is linked to a patient record.\n\nTo upload, click 'Upload Images' in the top-right corner, or drag and drop image files directly onto the grid. Multiple files can be uploaded at once. A progress percentage is shown during the upload.\n\nEach uploaded image can be given a descriptive title: hover over a thumbnail and click the pencil icon to edit it. The title appears as a label at the bottom of the thumbnail.\n\nTo include images in a presentation, click one or more thumbnails to select them (a blue checkmark appears and a selection count is shown in the header). Then click 'Add to Presentation' to open the assignment dialog — choose an existing presentation from the list or select 'New Presentation' and enter a title to create one on the spot. The selected images are added as individual slides.\n\nTo delete an image, hover over its thumbnail and click the red trash icon. This permanently removes both the file from storage and the database record and cannot be undone."
     }
   },
   "bulkImport": {
