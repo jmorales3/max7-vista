@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useRoute, useLocation, Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -38,7 +38,11 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function PatientEdit() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const dateExample = useMemo(
+    () => new Intl.DateTimeFormat(i18n.language, { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(1990, 0, 31)),
+    [i18n.language],
+  );
   const [, params] = useRoute("/patients/:id/edit");
   const id = parseInt(params?.id || "0", 10);
   const [, setLocation] = useLocation();
@@ -159,6 +163,9 @@ export default function PatientEdit() {
                     <FormControl>
                       <Input type="date" {...field} value={field.value || ""} />
                     </FormControl>
+                    <FormDescription className="text-xs">
+                      {t("patients.dateFormatHint", { example: dateExample })}
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

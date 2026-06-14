@@ -394,7 +394,7 @@ export default function Capture() {
                   <FileText className="h-4 w-4 text-primary" />
                   {t("capture.seriesNotes")}
                   <span className="text-xs font-normal text-muted-foreground ml-1">
-                    — applies to all images above
+                    {t("capture.seriesNotesAppliesTo")}
                   </span>
                 </Label>
                 <Textarea

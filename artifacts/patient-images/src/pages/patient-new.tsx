@@ -2,6 +2,7 @@ import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useCreatePatient, getListPatientsQueryKey } from "@workspace/api-client-react";
 import { queryClient } from "@/lib/queryClient";
@@ -32,7 +33,11 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function PatientNew() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const dateExample = useMemo(
+    () => new Intl.DateTimeFormat(i18n.language, { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(1990, 0, 31)),
+    [i18n.language],
+  );
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -131,6 +136,9 @@ export default function PatientNew() {
                     <FormControl>
                       <Input type="date" {...field} value={field.value || ""} />
                     </FormControl>
+                    <FormDescription className="text-xs">
+                      {t("patients.dateFormatHint", { example: dateExample })}
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
