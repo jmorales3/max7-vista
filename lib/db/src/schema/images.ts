@@ -12,6 +12,7 @@ export const imagesTable = pgTable("images", {
   annotation: text("annotation"),
   capturedAt: timestamp("captured_at", { withTimezone: true }).notNull().defaultNow(),
   isUnassigned: boolean("is_unassigned").notNull().default(false),
+  isLibraryAsset: boolean("is_library_asset").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

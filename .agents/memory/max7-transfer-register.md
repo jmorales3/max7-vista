@@ -853,49 +853,81 @@ const newLine: DrawLine = { ..., id: Date.now().toString() };
 - `artifacts/patient-images/src/i18n/locales/{en,es,fr,pt}.json` — `nav.library` + `library.*` keys added
 
 ### What it does
-A dedicated image repository page (`/library`) where the user browses ALL images across all patients in a large thumbnail grid. They can filter by patient, multi-select images, and add the selection to any existing presentation (or create a new one) with a single dialog interaction.
+A standalone media asset repository (`/library`) for NON-clinical decorative images (title slides, landscapes, section headers, etc.) that staff upload and reuse across presentations. Completely separate from patient Gallery images — users upload their own decorative images here and add them to any presentation as slides.
 
-### How it works
+### DB change
+Added `is_library_asset BOOLEAN NOT NULL DEFAULT FALSE` column to the `images` table. Library assets are regular image rows with this flag set to `true`. Both Drizzle schemas were updated (`lib/db/src/schema/images.ts` and `lib/db/src/schema-sqlite/images.ts`), and the SQLite CREATE TABLE IF NOT EXISTS in `artifacts/api-server/src/index.ts` was updated. Applied via `ALTER TABLE images ADD COLUMN IF NOT EXISTS is_library_asset BOOLEAN NOT NULL DEFAULT FALSE`.
 
-**Grid with multi-select:**
-- Loads `useListImages({})` (all images) and `useListPatients({})` for the filter dropdown.
-- `patientFilter` state drives filtering client-side (`"all"` | `"unassigned"` | `"<patientId>"`).
-- `selected: Set<number>` tracks selected image IDs. Clicking a thumbnail toggles membership.
-- Selected thumbnails show a primary-coloured checkmark badge and a ring + scale-down effect.
-- Hovering an "all patients" thumbnail shows a patient name label (bottom overlay, opacity transition).
+### API routes (`artifacts/api-server/src/routes/library.ts`)
+All routes registered in `routes/index.ts` as `libraryRouter`.
 
-**Add to Presentation dialog:**
-- Visible when `selected.size > 0`.
-- Opens a `<Dialog>` listing all presentations (fetched with `useListPresentations({})`).
-- First row is "New Presentation" (creates via `useCreatePresentation`).
-- Subsequent rows are existing presentations with their slide count.
-- On selection: calls `useUpdatePresentation` with the existing slides merged with new `{ type: "single", imageId }` entries, deduplicating by imageId.
-- On success: toast, clears selection, closes dialog.
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/library-assets` | List all library assets (`isLibraryAsset = true`) |
+| POST | `/api/library-assets/upload-url` | Get GCS signed PUT URL (same pattern as FEAT-006) |
+| POST | `/api/library-assets/register` | Register after GCS PUT; sets `isLibraryAsset=true` |
+| PATCH | `/api/library-assets/:id` | Update title (stored in `notes` column) |
+| DELETE | `/api/library-assets/:id` | Delete GCS object + DB row |
+| GET | `/api/library-assets/:id/file` | Stream file via `streamFile(filePath, fileName, res)` |
 
-**Nav:**
-- Route: `/library`
-- Sidebar item: "Image Library" (`Library` icon from lucide-react), placed between Gallery and Presentations.
+GCS object path: `library/YYYY-MM-DD/<timestamp>.<ext>`
 
-### i18n keys added (all 4 locales: en / es / fr / pt)
+Response shape: `{ id, title, filePath, fileName, uploadedAt, createdAt }`
+
+### Frontend (`artifacts/patient-images/src/pages/image-library.tsx`)
+Uses raw `fetch()` calls to `/api/library-assets/*` (no generated API client for these routes). Uses `@tanstack/react-query` with key `["library-assets"]`.
+
+**Upload flow** (3-step GCS bypass, same as FEAT-006):
+1. POST `/api/library-assets/upload-url` → `{ signedUrl, objectName }`
+2. PUT raw bytes to `signedUrl` (bypasses Replit proxy)
+3. POST `/api/library-assets/register` → DB record
+
+Supports file input and **drag-and-drop** onto the grid. Batches multiple file uploads sequentially and shows `uploadProgress` percentage.
+
+**Grid features:**
+- `aspect-square` thumbnail grid (responsive 2–6 columns)
+- Click to toggle multi-select (primary ring + checkmark badge)
+- Hover shows edit-title (Pencil) and delete (Trash2) action buttons
+- Title overlay at image bottom (gradient, truncated)
+- "Upload" tile always shown as last grid item (dashed border button)
+- Empty state: full-width dashed drop zone
+
+**Presentation integration** (reuses existing hooks from `@workspace/api-client-react`):
+- Select assets → "Add to Presentation" button in header
+- Dialog: pick existing presentation or create new one with optional title
+- Merges selected `{ type: "single", imageId: id }` slides into existing presentation slides
+- Uses `useCreatePresentation` + `useUpdatePresentation` hooks
+
+### i18n keys (all 4 locales: en / es / fr / pt)
 | Key | en |
 |-----|----|
-| `nav.library` | Image Library |
 | `library.title` | Image Library |
-| `library.subtitle` | Browse and select images to include in your presentations. |
-| `library.noImages` | No images found |
+| `library.subtitle` | Upload and manage decorative images for use as presentation slides. |
+| `library.upload` | Upload Images |
+| `library.uploadedCount` | Uploaded {{count}} image(s) |
+| `library.noAssets` | No images in the library yet |
+| `library.dropHint` | Drag & drop images here, or click Upload |
 | `library.selectedCount` | {{count}} selected |
 | `library.addToPresentation` | Add to Presentation |
 | `library.clearSelection` | Clear Selection |
 | `library.selectPresentation` | Select a Presentation |
 | `library.selectPresentationDesc` | Choose a presentation to add the selected images to as slides. |
 | `library.newPresentation` | New Presentation |
+| `library.newPresentationPlaceholder` | Presentation title… |
+| `library.defaultPresentationTitle` | Untitled Presentation |
 | `library.addedSuccess` | Added {{count}} image(s) to presentation |
 | `library.noPresentations` | No presentations yet |
+| `library.deleteTitle` | Delete Image |
+| `library.deleteDesc` | This will permanently remove the image from your library. |
+| `library.deleted` | Image deleted |
+| `library.editTitle` | Edit Title |
+| `library.titlePlaceholder` | Enter a title for this image… |
 
 ### Notes for Max7 agent
-- Slide deduplication: filter new slides to exclude any imageId already in an existing `{ type: "single" }` slide.
-- `CompareSlide` members are left untouched during the merge — only single slides are deduplicated.
-- The page reuses the same `imageUrl = (id) => /api/images/${id}/file` pattern as the rest of the app.
+- Library assets share the `images` table — filter by `is_library_asset = true` when listing.
+- Title is stored in the `notes` column of the images table (no separate column added).
+- File serving uses the same `streamFile(filePath, fileName, res)` from `gcsStorage.ts`.
+- The presentation `{ type: "single", imageId: id }` slide format works for library asset IDs too — no slide type change needed since image IDs are globally unique.
 
 ---
 

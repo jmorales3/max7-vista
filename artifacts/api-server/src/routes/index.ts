@@ -16,6 +16,7 @@ import migrationRouter from "./migration";
 import documentsRouter from "./documents";
 import localFileRouter from "./localFile";
 import templatesRouter from "./templates";
+import libraryRouter from "./library";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use(migrationRouter);
 router.use(documentsRouter);
 router.use(localFileRouter);
 router.use(templatesRouter);
+router.use(libraryRouter);
 
 export default router;
