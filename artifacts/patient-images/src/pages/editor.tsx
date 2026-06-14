@@ -84,6 +84,7 @@ interface DrawLine {
   points: number[];
   color: string;
   width: number;
+  id: string;
 }
 
 interface DrawText {
@@ -522,6 +523,13 @@ export default function Editor() {
     mouseStartY: number;
   } | null>(null);
 
+  const draggingAnnRef = useRef<{
+    id: string;
+    origAnn: Annotation;
+    mouseStartX: number;
+    mouseStartY: number;
+  } | null>(null);
+
   const annotationsRef = useRef<Annotation[]>([]);
   useEffect(() => { annotationsRef.current = annotations; }, [annotations]);
 
@@ -718,8 +726,10 @@ export default function Editor() {
   function getCanvasPoint(e: React.PointerEvent<HTMLCanvasElement>): [number, number] {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
-    const cx = (e.clientX - rect.left - canvas.width / 2 - panOffsetRef.current.x) / scale;
-    const cy = (e.clientY - rect.top - canvas.height / 2 - panOffsetRef.current.y) / scale;
+    const rx = canvas.width / rect.width;
+    const ry = canvas.height / rect.height;
+    const cx = ((e.clientX - rect.left) * rx - canvas.width / 2 - panOffsetRef.current.x) / scale;
+    const cy = ((e.clientY - rect.top) * ry - canvas.height / 2 - panOffsetRef.current.y) / scale;
     const rad = (-rotation * Math.PI) / 180;
     return [
       cx * Math.cos(rad) - cy * Math.sin(rad),
@@ -750,6 +760,57 @@ export default function Editor() {
       }
     }
     return null;
+  }
+
+  function distToSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
+    const dx = x2 - x1, dy = y2 - y1;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq === 0) return Math.hypot(px - x1, py - y1);
+    const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
+    return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+  }
+
+  function findAnnotationAt(x: number, y: number): Annotation | null {
+    const anns = annotationsRef.current;
+    const THRESH = 12 / scale;
+    for (let i = anns.length - 1; i >= 0; i--) {
+      const ann = anns[i];
+      if (ann.type === "text") {
+        const approxWidth = ann.size * 0.55 * ann.text.length;
+        const pad = 8 / scale;
+        if (x >= ann.x - pad && x <= ann.x + approxWidth + pad && y >= ann.y - ann.size - pad && y <= ann.y + pad) return ann;
+      } else if (ann.type === "straightline" || ann.type === "arrow" || ann.type === "ruler") {
+        if (distToSegment(x, y, ann.x1, ann.y1, ann.x2, ann.y2) < THRESH) return ann;
+      } else if (ann.type === "circle") {
+        if (Math.abs(Math.hypot(x - ann.cx, y - ann.cy) - ann.r) < THRESH) return ann;
+      } else if (ann.type === "angle") {
+        if (
+          distToSegment(x, y, ann.vx, ann.vy, ann.p1x, ann.p1y) < THRESH ||
+          distToSegment(x, y, ann.vx, ann.vy, ann.p2x, ann.p2y) < THRESH
+        ) return ann;
+      } else if (ann.type === "line") {
+        const pts = ann.points;
+        for (let j = 2; j < pts.length; j += 2) {
+          if (distToSegment(x, y, pts[j - 2], pts[j - 1], pts[j], pts[j + 1]) < THRESH) return ann;
+        }
+      }
+    }
+    return null;
+  }
+
+  function moveAnnotation(ann: Annotation, dx: number, dy: number): Annotation {
+    if (ann.type === "text") return { ...ann, x: ann.x + dx, y: ann.y + dy };
+    if (ann.type === "straightline" || ann.type === "arrow" || ann.type === "ruler")
+      return { ...ann, x1: ann.x1 + dx, y1: ann.y1 + dy, x2: ann.x2 + dx, y2: ann.y2 + dy };
+    if (ann.type === "circle") return { ...ann, cx: ann.cx + dx, cy: ann.cy + dy };
+    if (ann.type === "angle")
+      return { ...ann, vx: ann.vx + dx, vy: ann.vy + dy, p1x: ann.p1x + dx, p1y: ann.p1y + dy, p2x: ann.p2x + dx, p2y: ann.p2y + dy };
+    if (ann.type === "line") {
+      const pts = ann.points.slice();
+      for (let i = 0; i < pts.length; i += 2) { pts[i] += dx; pts[i + 1] += dy; }
+      return { ...ann, points: pts };
+    }
+    return ann;
   }
 
   function drawSmoothOverlay(path: [number, number][], closed = false) {
@@ -1039,15 +1100,24 @@ export default function Editor() {
       }
     } else if (tool === "pointer") {
       const [x, y] = getCanvasPoint(e);
-      const hit = findTextAt(x, y);
+      const hit = findAnnotationAt(x, y);
       if (hit) {
-        draggingTextRef.current = {
-          id: hit.id,
-          origX: hit.x,
-          origY: hit.y,
-          mouseStartX: x,
-          mouseStartY: y,
-        };
+        if (hit.type === "text") {
+          draggingTextRef.current = {
+            id: hit.id,
+            origX: hit.x,
+            origY: hit.y,
+            mouseStartX: x,
+            mouseStartY: y,
+          };
+        } else {
+          draggingAnnRef.current = {
+            id: hit.id,
+            origAnn: hit,
+            mouseStartX: x,
+            mouseStartY: y,
+          };
+        }
       }
     }
   }
@@ -1059,8 +1129,10 @@ export default function Editor() {
     // Angle hover detection — check proximity to each angle vertex in image coordinates
     {
       const rect = canvas.getBoundingClientRect();
-      const cx = (e.clientX - rect.left - canvas.width / 2 - panOffsetRef.current.x) / scale;
-      const cy = (e.clientY - rect.top - canvas.height / 2 - panOffsetRef.current.y) / scale;
+      const rx = canvas.width / rect.width;
+      const ry = canvas.height / rect.height;
+      const cx = ((e.clientX - rect.left) * rx - canvas.width / 2 - panOffsetRef.current.x) / scale;
+      const cy = ((e.clientY - rect.top) * ry - canvas.height / 2 - panOffsetRef.current.y) / scale;
       const ANGLE_HOVER_PX = 60;
       let newHoveredIdx: number | null = null;
       const anns = annotationsRef.current;
@@ -1177,6 +1249,18 @@ export default function Editor() {
         ann.type === "text" && ann.id === id
           ? { ...ann, x: origX + dx, y: origY + dy }
           : ann,
+      );
+      renderCanvas(canvas, imgRef.current, updated, scale, rotation, null, null, null, undefined, panOffsetRef.current);
+      return;
+    }
+
+    if (tool === "pointer" && draggingAnnRef.current) {
+      const [mx, my] = getCanvasPoint(e);
+      const { origAnn, mouseStartX, mouseStartY } = draggingAnnRef.current;
+      const dx = mx - mouseStartX;
+      const dy = my - mouseStartY;
+      const updated = annotationsRef.current.map((ann) =>
+        ann.id === draggingAnnRef.current!.id ? moveAnnotation(origAnn, dx, dy) : ann,
       );
       renderCanvas(canvas, imgRef.current, updated, scale, rotation, null, null, null, undefined, panOffsetRef.current);
       return;
@@ -1411,6 +1495,21 @@ export default function Editor() {
       return;
     }
 
+    if (tool === "pointer" && draggingAnnRef.current) {
+      const [mx, my] = getCanvasPoint(e);
+      const { id, origAnn, mouseStartX, mouseStartY } = draggingAnnRef.current;
+      draggingAnnRef.current = null;
+      const dx = mx - mouseStartX;
+      const dy = my - mouseStartY;
+      if (Math.hypot(dx, dy) > 0.5) {
+        pushHistory();
+        setAnnotations((prev) =>
+          prev.map((ann) => (ann.id === id ? moveAnnotation(origAnn, dx, dy) : ann)),
+        );
+      }
+      return;
+    }
+
     if (!isDrawingRef.current) return;
     isDrawingRef.current = false;
     const pts = currentLineRef.current;
@@ -1420,6 +1519,7 @@ export default function Editor() {
         points: pts,
         color: tool === "eraser" ? "#ffffff" : penColor,
         width: tool === "eraser" ? 20 : strokeWidth,
+        id: Date.now().toString(),
       };
       pushHistory();
       setAnnotations((prev) => [...prev, newLine]);
