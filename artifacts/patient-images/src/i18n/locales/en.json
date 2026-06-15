@@ -318,7 +318,14 @@
     "selectModeFreehand": "Freehand selection",
     "selectFreehandHint": "Draw a freehand outline around the area, then release to move or copy",
     "selectTransferCut": "Move",
-    "selectTransferCopy": "Copy"
+    "selectTransferCopy": "Copy",
+    "ellipse": "Ellipse",
+    "rectangle": "Rectangle",
+    "filled": "Filled",
+    "outline": "Outline",
+    "circleShapeEllipse": "Switch to ellipse",
+    "circleShapeRect": "Switch to rectangle",
+    "circleFill": "Toggle fill"
   },
   "settings": {
     "title": "Settings",

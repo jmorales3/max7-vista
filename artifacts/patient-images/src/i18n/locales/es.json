@@ -318,7 +318,14 @@
     "selectModeFreehand": "Selección a mano alzada",
     "selectFreehandHint": "Dibuja un contorno alrededor del área y suelta para mover o copiar",
     "selectTransferCut": "Mover",
-    "selectTransferCopy": "Copiar"
+    "selectTransferCopy": "Copiar",
+    "ellipse": "Elipse",
+    "rectangle": "Rectángulo",
+    "filled": "Relleno",
+    "outline": "Contorno",
+    "circleShapeEllipse": "Cambiar a elipse",
+    "circleShapeRect": "Cambiar a rectángulo",
+    "circleFill": "Alternar relleno"
   },
   "settings": {
     "title": "Configuración",

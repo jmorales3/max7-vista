@@ -65,6 +65,8 @@ import {
   Undo2,
   ClipboardPaste,
   GripVertical,
+  Square,
+  PaintBucket,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -112,9 +114,12 @@ interface DrawCircle {
   type: "circle";
   cx: number;
   cy: number;
-  r: number;
+  rx: number;
+  ry: number;
   color: string;
   width: number;
+  filled: boolean;
+  shape: "ellipse" | "rect";
   id: string;
 }
 
@@ -194,7 +199,7 @@ function drawArrow(
 
 // hoveredAngleIdx: undefined = show-all mode (save/export), null = hover mode nothing near, number = that annotation index is hovered
 // labelScale: override for font/pad sizing (pass display scale when saving at scale=1 so labels match what user saw on screen)
-function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation, scale: number = 1, hoveredAngleIdx?: number | null, annIdx?: number, labelScale?: number) {
+function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation, scale: number = 1, hoveredAngleIdx?: number | null, annIdx?: number, labelScale?: number, isSelected?: boolean) {
   const ls = labelScale ?? scale;
   if (ann.type === "line") {
     if (ann.points.length < 4) return;
@@ -215,11 +220,43 @@ function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation, scale: n
   } else if (ann.type === "arrow") {
     drawArrow(ctx, ann.x1, ann.y1, ann.x2, ann.y2, ann.color, ann.width);
   } else if (ann.type === "circle") {
+    const rx = ann.rx ?? (ann as any).r ?? 0;
+    const ry = ann.ry ?? (ann as any).r ?? 0;
+    const filled = ann.filled ?? false;
+    const shape = ann.shape ?? "ellipse";
     ctx.beginPath();
     ctx.strokeStyle = ann.color;
     ctx.lineWidth = ann.width;
-    ctx.arc(ann.cx, ann.cy, ann.r, 0, 2 * Math.PI);
+    if (shape === "rect") {
+      ctx.rect(ann.cx - rx, ann.cy - ry, rx * 2, ry * 2);
+    } else {
+      ctx.ellipse(ann.cx, ann.cy, Math.max(rx, 1), Math.max(ry, 1), 0, 0, 2 * Math.PI);
+    }
+    if (filled) {
+      ctx.fillStyle = ann.color;
+      ctx.fill();
+    }
     ctx.stroke();
+    if (isSelected) {
+      const hs = 6 / scale;
+      const handles: [number, number][] = [
+        [ann.cx, ann.cy - ry],
+        [ann.cx, ann.cy + ry],
+        [ann.cx + rx, ann.cy],
+        [ann.cx - rx, ann.cy],
+      ];
+      ctx.save();
+      ctx.lineWidth = 1.5 / scale;
+      for (const [hx, hy] of handles) {
+        ctx.beginPath();
+        ctx.rect(hx - hs, hy - hs, hs * 2, hs * 2);
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+        ctx.strokeStyle = "#0ea5e9";
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
   } else if (ann.type === "straightline") {
     ctx.beginPath();
     ctx.strokeStyle = ann.color;
@@ -337,6 +374,7 @@ function renderCanvas(
   cutPath?: [number, number][] | null,
   hoveredAngleIdx?: number | null,
   labelScale?: number,
+  selectedCircleId?: string | null,
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -355,7 +393,7 @@ function renderCanvas(
 
   const allAnns: Annotation[] = previewAnn ? [...annotations, previewAnn] : annotations;
   for (let i = 0; i < allAnns.length; i++) {
-    drawAnnotation(ctx, allAnns[i], scale, hoveredAngleIdx, i, labelScale);
+    drawAnnotation(ctx, allAnns[i], scale, hoveredAngleIdx, i, labelScale, selectedCircleId != null && allAnns[i].id === selectedCircleId);
   }
 
   ctx.restore();
@@ -388,7 +426,7 @@ function renderCanvas(
     ctx.rotate((rotation * Math.PI) / 180);
     ctx.scale(scale, scale);
     if (img) ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
-    for (let i = 0; i < allAnns.length; i++) drawAnnotation(ctx, allAnns[i], scale, hoveredAngleIdx, i, labelScale);
+    for (let i = 0; i < allAnns.length; i++) drawAnnotation(ctx, allAnns[i], scale, hoveredAngleIdx, i, labelScale, selectedCircleId != null && allAnns[i].id === selectedCircleId);
     ctx.restore();
     ctx.strokeStyle = "#0ea5e9";
     ctx.lineWidth = 2;
@@ -466,6 +504,9 @@ export default function Editor() {
     const v = localStorage.getItem("max7_pxPerMm");
     return v ? parseFloat(v) : null;
   });
+  const [selectedCircleId, setSelectedCircleId] = useState<string | null>(null);
+  const [circleFilled, setCircleFilled] = useState(false);
+  const [circleShape, setCircleShape] = useState<"ellipse" | "rect">("ellipse");
   const [calibrating, setCalibrating] = useState(false);
   const [calibratingPx, setCalibratingPx] = useState<number | null>(null);
   const [calibratingMmInput, setCalibratingMmInput] = useState("");
@@ -503,6 +544,14 @@ export default function Editor() {
 
   const arrowStartRef = useRef<[number, number] | null>(null);
   const circleStartRef = useRef<[number, number] | null>(null);
+  const circleHandleDragRef = useRef<{
+    id: string;
+    handle: "N" | "S" | "E" | "W";
+    origRx: number;
+    origRy: number;
+    mouseStartX: number;
+    mouseStartY: number;
+  } | null>(null);
   const straightLineStartRef = useRef<[number, number] | null>(null);
   const selectionStartRef = useRef<{ x: number; y: number } | null>(null);
   const preCutStateRef = useRef<{
@@ -702,9 +751,9 @@ export default function Editor() {
       overlayCanvasRef.current.width = container.offsetWidth;
       overlayCanvasRef.current.height = container.offsetHeight;
     }
-    renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, panOffsetRef.current, cutPath, hoveredAngleIdx);
+    renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, panOffsetRef.current, cutPath, hoveredAngleIdx, undefined, selectedCircleId);
     redrawOverlay();
-  }, [scale, rotation, cropRect, cutRect, selectionRect, cutPath, redrawOverlay, hoveredAngleIdx]);
+  }, [scale, rotation, cropRect, cutRect, selectionRect, cutPath, redrawOverlay, hoveredAngleIdx, selectedCircleId]);
 
   useEffect(() => {
     panOffsetRef.current = panOffset;
@@ -713,9 +762,9 @@ export default function Editor() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    renderCanvas(canvas, imgRef.current, annotations, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, panOffset, cutPath);
+    renderCanvas(canvas, imgRef.current, annotations, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, panOffset, cutPath, undefined, undefined, selectedCircleId);
     redrawOverlay();
-  }, [annotations, scale, rotation, cropRect, cutRect, selectionRect, panOffset, cutPath, redrawOverlay]);
+  }, [annotations, scale, rotation, cropRect, cutRect, selectionRect, panOffset, cutPath, redrawOverlay, selectedCircleId]);
 
   useEffect(() => {
     const observer = new ResizeObserver(resizeCanvas);
@@ -782,7 +831,17 @@ export default function Editor() {
       } else if (ann.type === "straightline" || ann.type === "arrow" || ann.type === "ruler") {
         if (distToSegment(x, y, ann.x1, ann.y1, ann.x2, ann.y2) < THRESH) return ann;
       } else if (ann.type === "circle") {
-        if (Math.abs(Math.hypot(x - ann.cx, y - ann.cy) - ann.r) < THRESH) return ann;
+        const crx = ann.rx ?? (ann as any).r ?? 0;
+        const cry = ann.ry ?? (ann as any).r ?? 0;
+        const cshape = ann.shape ?? "ellipse";
+        if (cshape === "rect") {
+          const dx = Math.abs(x - ann.cx);
+          const dy = Math.abs(y - ann.cy);
+          if (dx <= crx + THRESH && dy <= cry + THRESH && (dx >= crx - THRESH || dy >= cry - THRESH)) return ann;
+        } else {
+          const nDist = Math.sqrt(((x - ann.cx) / crx) ** 2 + ((y - ann.cy) / cry) ** 2);
+          if (Math.abs(nDist - 1) * Math.min(crx, cry) < THRESH) return ann;
+        }
       } else if (ann.type === "angle") {
         if (
           distToSegment(x, y, ann.vx, ann.vy, ann.p1x, ann.p1y) < THRESH ||
@@ -794,6 +853,25 @@ export default function Editor() {
           if (distToSegment(x, y, pts[j - 2], pts[j - 1], pts[j], pts[j + 1]) < THRESH) return ann;
         }
       }
+    }
+    return null;
+  }
+
+  function findCircleHandleAt(x: number, y: number): { id: string; handle: "N" | "S" | "E" | "W"; origRx: number; origRy: number } | null {
+    if (!selectedCircleId) return null;
+    const ann = annotationsRef.current.find(a => a.id === selectedCircleId);
+    if (!ann || ann.type !== "circle") return null;
+    const crx = ann.rx ?? (ann as any).r ?? 0;
+    const cry = ann.ry ?? (ann as any).r ?? 0;
+    const HTHR = 12 / scale;
+    const handles: ["N" | "S" | "E" | "W", number, number][] = [
+      ["N", ann.cx, ann.cy - cry],
+      ["S", ann.cx, ann.cy + cry],
+      ["E", ann.cx + crx, ann.cy],
+      ["W", ann.cx - crx, ann.cy],
+    ];
+    for (const [name, hx, hy] of handles) {
+      if (Math.hypot(x - hx, y - hy) < HTHR) return { id: ann.id, handle: name, origRx: crx, origRy: cry };
     }
     return null;
   }
@@ -1100,8 +1178,20 @@ export default function Editor() {
       }
     } else if (tool === "pointer") {
       const [x, y] = getCanvasPoint(e);
+      const handleHit = findCircleHandleAt(x, y);
+      if (handleHit) {
+        circleHandleDragRef.current = { ...handleHit, mouseStartX: x, mouseStartY: y };
+        return;
+      }
       const hit = findAnnotationAt(x, y);
       if (hit) {
+        if (hit.type === "circle") {
+          setSelectedCircleId(hit.id);
+          setCircleFilled(hit.filled ?? false);
+          setCircleShape(hit.shape ?? "ellipse");
+        } else {
+          setSelectedCircleId(null);
+        }
         if (hit.type === "text") {
           draggingTextRef.current = {
             id: hit.id,
@@ -1118,6 +1208,8 @@ export default function Editor() {
             mouseStartY: y,
           };
         }
+      } else {
+        setSelectedCircleId(null);
       }
     }
   }
@@ -1194,9 +1286,25 @@ export default function Editor() {
     if (tool === "circle" && circleStartRef.current) {
       const [cx, cy] = circleStartRef.current;
       const [mx, my] = getCanvasPoint(e);
-      const r = Math.hypot(mx - cx, my - cy);
-      const preview: DrawCircle = { type: "circle", cx, cy, r, color: penColor, width: strokeWidth, id: "__preview__" };
+      const rx = Math.abs(mx - cx);
+      const ry = Math.abs(my - cy);
+      const preview: DrawCircle = { type: "circle", cx, cy, rx, ry, color: penColor, width: strokeWidth, filled: circleFilled, shape: circleShape, id: "__preview__" };
       renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview, null, undefined, panOffsetRef.current, undefined, hoveredAngleIdx);
+      return;
+    }
+
+    if (tool === "pointer" && circleHandleDragRef.current) {
+      const [mx, my] = getCanvasPoint(e);
+      const { id, handle, origRx, origRy, mouseStartX, mouseStartY } = circleHandleDragRef.current;
+      const dx = mx - mouseStartX;
+      const dy = my - mouseStartY;
+      const updated = annotationsRef.current.map((ann) => {
+        if (ann.id !== id || ann.type !== "circle") return ann;
+        const newRx = handle === "E" ? Math.max(5, origRx + dx) : handle === "W" ? Math.max(5, origRx - dx) : ann.rx ?? origRx;
+        const newRy = handle === "S" ? Math.max(5, origRy + dy) : handle === "N" ? Math.max(5, origRy - dy) : ann.ry ?? origRy;
+        return { ...ann, rx: newRx, ry: newRy };
+      });
+      renderCanvas(canvas, imgRef.current, updated, scale, rotation, null, null, null, undefined, panOffsetRef.current, undefined, hoveredAngleIdx, undefined, id);
       return;
     }
 
@@ -1334,17 +1442,38 @@ export default function Editor() {
       return;
     }
 
+    if (tool === "pointer" && circleHandleDragRef.current) {
+      const [mx, my] = getCanvasPoint(e);
+      const { id, handle, origRx, origRy, mouseStartX, mouseStartY } = circleHandleDragRef.current;
+      circleHandleDragRef.current = null;
+      const dx = mx - mouseStartX;
+      const dy = my - mouseStartY;
+      pushHistory();
+      setAnnotations((prev) => prev.map((ann) => {
+        if (ann.id !== id || ann.type !== "circle") return ann;
+        const newRx = handle === "E" ? Math.max(5, origRx + dx) : handle === "W" ? Math.max(5, origRx - dx) : ann.rx ?? origRx;
+        const newRy = handle === "S" ? Math.max(5, origRy + dy) : handle === "N" ? Math.max(5, origRy - dy) : ann.ry ?? origRy;
+        return { ...ann, rx: newRx, ry: newRy };
+      }));
+      return;
+    }
+
     if (tool === "circle" && circleStartRef.current) {
       const [cx, cy] = circleStartRef.current;
       const [mx, my] = getCanvasPoint(e);
       circleStartRef.current = null;
-      const r = Math.hypot(mx - cx, my - cy);
-      if (r > 5) {
+      const rx = Math.abs(mx - cx);
+      const ry = Math.abs(my - cy);
+      if (rx > 5 || ry > 5) {
         const newCircle: DrawCircle = {
           type: "circle",
-          cx, cy, r,
+          cx, cy,
+          rx: Math.max(5, rx),
+          ry: Math.max(5, ry),
           color: penColor,
           width: strokeWidth,
+          filled: circleFilled,
+          shape: circleShape,
           id: Date.now().toString(),
         };
         pushHistory();
@@ -2110,6 +2239,57 @@ export default function Editor() {
                 title={t("editor.pickColor")}
               />
             </div>
+          )}
+
+          {(tool === "circle" || (tool === "pointer" && selectedCircleId)) && (
+            <>
+              <Button
+                size="sm"
+                variant={circleShape === "ellipse" ? "default" : "outline"}
+                className="h-8 gap-1 text-xs px-2"
+                title={t("editor.circleShapeEllipse")}
+                onClick={() => {
+                  setCircleShape("ellipse");
+                  if (tool === "pointer" && selectedCircleId) {
+                    setAnnotations(prev => prev.map(a => a.id === selectedCircleId && a.type === "circle" ? { ...a, shape: "ellipse" } : a));
+                  }
+                }}
+              >
+                <CircleIcon className="h-3.5 w-3.5" />
+                {t("editor.ellipse")}
+              </Button>
+              <Button
+                size="sm"
+                variant={circleShape === "rect" ? "default" : "outline"}
+                className="h-8 gap-1 text-xs px-2"
+                title={t("editor.circleShapeRect")}
+                onClick={() => {
+                  setCircleShape("rect");
+                  if (tool === "pointer" && selectedCircleId) {
+                    setAnnotations(prev => prev.map(a => a.id === selectedCircleId && a.type === "circle" ? { ...a, shape: "rect" } : a));
+                  }
+                }}
+              >
+                <Square className="h-3.5 w-3.5" />
+                {t("editor.rectangle")}
+              </Button>
+              <Button
+                size="sm"
+                variant={circleFilled ? "default" : "outline"}
+                className="h-8 gap-1 text-xs px-2"
+                title={t("editor.circleFill")}
+                onClick={() => {
+                  const next = !circleFilled;
+                  setCircleFilled(next);
+                  if (tool === "pointer" && selectedCircleId) {
+                    setAnnotations(prev => prev.map(a => a.id === selectedCircleId && a.type === "circle" ? { ...a, filled: next } : a));
+                  }
+                }}
+              >
+                <PaintBucket className="h-3.5 w-3.5" />
+                {circleFilled ? t("editor.filled") : t("editor.outline")}
+              </Button>
+            </>
           )}
 
           {(tool === "pen" || tool === "arrow" || tool === "circle" || tool === "eraser" || tool === "straightline") && (
