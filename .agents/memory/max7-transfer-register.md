@@ -931,4 +931,272 @@ Supports file input and **drag-and-drop** onto the grid. Batches multiple file u
 
 ---
 
+## FEAT-015 — Admin-Only Patient Image Export (ZIP Download)
+
+**Status:** ✅ Confirmed working in Vista  
+**Date:** 2026-06-15  
+**Vista files:**
+- `artifacts/api-server/src/routes/images.ts` — new export endpoint
+- `artifacts/patient-images/src/pages/patient-detail.tsx` — export dialog UI
+- `artifacts/patient-images/src/i18n/locales/{en,es,fr,pt}.json` — 15 new keys
+- `artifacts/api-server/src/routes/chat.ts` — system prompt updated
+- `artifacts/patient-images/src/pages/manual.tsx` — new "exportImages" section
+
+### What it does
+Admins and Super Admins can select one or more of a patient's images and download them as a ZIP archive. The option is hidden from regular users. The export is recorded in the Audit Log.
+
+### API endpoint — `POST /api/patients/:id/export-images`
+
+```typescript
+import AdmZip from "adm-zip";
+import { requireRole } from "../middlewares/requireAuth";
+import { readFileAsBuffer } from "../lib/gcsStorage";
+import { inArray } from "drizzle-orm";
+
+router.post(
+  "/patients/:id/export-images",
+  requireRole("admin", "superadmin"),
+  async (req, res): Promise<void> => {
+    const patientId = parseInt(String(req.params.id), 10);
+    if (isNaN(patientId)) { res.status(400).json({ error: "Invalid patient ID" }); return; }
+
+    const [patient] = await db
+      .select({ id: patientsTable.id, name: patientsTable.name, patientCode: patientsTable.patientCode })
+      .from(patientsTable)
+      .where(eq(patientsTable.id, patientId))
+      .limit(1);
+    if (!patient) { res.status(404).json({ error: "Patient not found" }); return; }
+
+    const { imageIds } = (req.body ?? {}) as { imageIds?: number[] };
+    const hasFilter = Array.isArray(imageIds) && imageIds.length > 0;
+
+    const rows = await db
+      .select()
+      .from(imagesTable)
+      .where(
+        hasFilter
+          ? and(eq(imagesTable.patientId, patientId), inArray(imagesTable.id, imageIds!))
+          : eq(imagesTable.patientId, patientId)
+      )
+      .orderBy(imagesTable.capturedAt);
+
+    if (rows.length === 0) { res.status(404).json({ error: "No images found for export" }); return; }
+
+    const zip = new AdmZip();
+    let added = 0;
+
+    for (const image of rows) {
+      const buffer = await readFileAsBuffer(image.filePath);
+      if (!buffer) continue;
+      const ext = path.extname(image.fileName) || ".jpg";
+      const dateStr = new Date(image.capturedAt).toISOString().slice(0, 10);
+      const baseName = path.basename(image.fileName, ext).replace(/[^a-zA-Z0-9._-]/g, "_");
+      zip.addFile(`${image.id}_${dateStr}_${baseName}${ext}`, buffer);
+      added++;
+    }
+
+    if (added === 0) { res.status(404).json({ error: "No image files could be retrieved" }); return; }
+
+    const zipBuffer = zip.toBuffer();
+    const safeCode = patient.patientCode.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const filename = `patient_${safeCode}_images_${new Date().toISOString().slice(0, 10)}.zip`;
+
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(filename)}"`);
+    res.setHeader("Content-Length", String(zipBuffer.length));
+    res.end(zipBuffer);
+
+    await logAudit(req, "export", "patient", patientId,
+      JSON.stringify({ imageCount: added, imageIds: rows.map(r => r.id) }));
+  }
+);
+```
+
+**Key points:**
+- `adm-zip` is already a dependency — no new package needed.
+- `readFileAsBuffer` handles both GCS (`gcs:` prefix) and legacy local-disk paths.
+- Each ZIP entry is named `{id}_{YYYY-MM-DD}_{sanitisedOriginalName}.ext` to be both unique and human-readable.
+- The endpoint is added to the existing `images.ts` router which is already mounted under `/api` — no change to `routes/index.ts` needed.
+- `requireRole` comes from `../middlewares/requireAuth` — also exports `requireAuth` (already used). Import it alongside the existing import.
+
+### Frontend — export dialog in `patient-detail.tsx`
+
+**New imports:**
+```typescript
+import { useAuth } from "@/contexts/AuthContext";
+import { getApiUrl } from "@/lib/apiUrl";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Download } from "lucide-react"; // add to existing lucide import
+```
+
+**New state (inside the component):**
+```typescript
+const { user } = useAuth();
+const isAdmin = user?.role === "admin" || user?.role === "superadmin";
+
+const [exportOpen, setExportOpen] = useState(false);
+const [selectedExportIds, setSelectedExportIds] = useState<Set<number>>(new Set());
+const [exporting, setExporting] = useState(false);
+```
+
+**openExportDialog** — pre-selects all images:
+```typescript
+const openExportDialog = () => {
+  setSelectedExportIds(new Set((images ?? []).map(img => img.id)));
+  setExportOpen(true);
+};
+```
+
+**handleExport** — fetch → blob → anchor click:
+```typescript
+const handleExport = async () => {
+  setExporting(true);
+  try {
+    const res = await fetch(getApiUrl(`/api/patients/${id}/export-images`), {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageIds: Array.from(selectedExportIds) }),
+    });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `patient-${patient?.patientCode ?? id}-images.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setExportOpen(false);
+    toast({ title: t("patients.exportSuccess") });
+  } catch (err) {
+    toast({ variant: "destructive", title: t("patients.exportError"),
+      description: err instanceof Error ? err.message : String(err) });
+  } finally {
+    setExporting(false);
+  }
+};
+```
+
+**Dropdown item** — inside the existing `DropdownMenuContent`, shown only when admin AND patient has images:
+```jsx
+{isAdmin && (images?.length ?? 0) > 0 && (
+  <>
+    <DropdownMenuSeparator />
+    <DropdownMenuItem onClick={openExportDialog}>
+      <Download className="mr-2 h-4 w-4" />
+      {t("patients.exportImages")}
+    </DropdownMenuItem>
+  </>
+)}
+```
+
+**Export dialog** — placed before the existing `<AlertDialog open={showDeleteDialog}…>`:
+```jsx
+<Dialog open={exportOpen} onOpenChange={(o) => { if (!o) setExportOpen(false); }}>
+  <DialogContent className="max-w-md">
+    <DialogHeader>
+      <DialogTitle className="flex items-center gap-2">
+        <Download className="h-5 w-5 text-primary" />
+        {t("patients.exportImagesTitle")}
+      </DialogTitle>
+    </DialogHeader>
+
+    {(images ?? []).length === 0 ? (
+      <p className="text-sm text-muted-foreground py-4 text-center">
+        {t("patients.exportNoImages")}
+      </p>
+    ) : (
+      <>
+        <p className="text-sm text-muted-foreground">{t("patients.exportImagesDesc")}</p>
+
+        <div className="flex items-center justify-between py-1">
+          <span className="text-xs font-medium text-muted-foreground">
+            {t("patients.exportSelected", { count: selectedExportIds.size })}
+          </span>
+          <div className="flex items-center gap-2">
+            <button className="text-xs text-primary underline-offset-2 hover:underline"
+              onClick={() => setSelectedExportIds(new Set((images ?? []).map(img => img.id)))}>
+              {t("patients.exportSelectAll")}
+            </button>
+            <span className="text-muted-foreground">·</span>
+            <button className="text-xs text-primary underline-offset-2 hover:underline"
+              onClick={() => setSelectedExportIds(new Set())}>
+              {t("patients.exportDeselectAll")}
+            </button>
+          </div>
+        </div>
+
+        <div className="max-h-64 overflow-y-auto space-y-1 border rounded-md p-2 bg-muted/30">
+          {(images ?? []).map(img => (
+            <label key={img.id}
+              className="flex items-center gap-3 px-2 py-1.5 rounded cursor-pointer hover:bg-accent transition-colors">
+              <Checkbox
+                checked={selectedExportIds.has(img.id)}
+                onCheckedChange={() => toggleExportId(img.id)} />
+              <span className="text-sm truncate flex-1">{img.fileName}</span>
+              <span className="text-xs text-muted-foreground shrink-0">
+                {format(new Date(img.capturedAt), "MMM d, yyyy")}
+              </span>
+            </label>
+          ))}
+        </div>
+      </>
+    )}
+
+    <DialogFooter>
+      <Button variant="outline" onClick={() => setExportOpen(false)}>{t("common.cancel")}</Button>
+      <Button onClick={handleExport} disabled={exporting || selectedExportIds.size === 0}>
+        {exporting ? t("patients.exportPreparing") : (
+          <><Download className="mr-2 h-4 w-4" />{t("patients.exportDownload")}</>
+        )}
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+```
+
+### i18n keys — add to `patients` section in all 4 locales
+
+| Key | en | es | fr | pt |
+|-----|----|----|----|----|
+| `exportImages` | Export Images | Exportar imágenes | Exporter les images | Exportar imagens |
+| `exportImagesTitle` | Export Patient Images | Exportar imágenes del paciente | Exporter les images du patient | Exportar imagens do paciente |
+| `exportImagesDesc` | Select the images to include in the ZIP download. All images are pre-selected by default. | Seleccione las imágenes… | Sélectionnez les images… | Selecione as imagens… |
+| `exportSelectAll` | Select All | Seleccionar todas | Tout sélectionner | Selecionar todas |
+| `exportDeselectAll` | Deselect All | Deseleccionar todas | Tout désélectionner | Desmarcar todas |
+| `exportSelected` | {{count}} image(s) selected | {{count}} imagen(es) seleccionada(s) | {{count}} image(s) sélectionnée(s) | {{count}} imagem(ns) selecionada(s) |
+| `exportDownload` | Download ZIP | Descargar ZIP | Télécharger le ZIP | Baixar ZIP |
+| `exportNoImages` | No images available for this patient. | No hay imágenes… | Aucune image… | Nenhuma imagem… |
+| `exportSuccess` | Export complete | Exportación completada | Exportation terminée | Exportação concluída |
+| `exportError` | Export failed | Error en la exportación | Échec de l'exportation | Falha na exportação |
+| `exportPreparing` | Preparing… | Preparando… | Préparation… | Preparando… |
+
+Also add to `manual.sections` and a new `manual.exportImages` object in all 4 locales (heading + body explaining the admin-only restriction, how to open the dialog, and that the action is audited).
+
+### Manual section — add `"exportImages"` to `manual.tsx`
+
+In the `SectionKey` type and `SECTIONS` array, insert `"exportImages"` right after `"patients"`. The manual renders it with `t("manual.exportImages.heading")` and `t("manual.exportImages.body")` automatically — no JSX changes needed beyond adding it to the type and array.
+
+### Chatbot system prompt update
+
+Add this bullet to `SYSTEM_PROMPT` in `chat.ts` (before the Migration bullet):
+```
+- Image Export (Admin only): Admins and Super Admins can export one or more of a patient's
+  images as a ZIP archive from the patient detail page. Click the ⋮ menu → "Export Images".
+  A dialog lists all images (all pre-selected). Tick/untick individually or use Select All /
+  Deselect All. Click "Download ZIP". The archive is named with the patient code and today's
+  date; each file inside is named with its ID, capture date, and original filename. The export
+  is recorded in the Audit Log. Hidden from regular users.
+```
+
+### Notes for Max7 agent
+- `adm-zip` is already installed in Vista's API server — verify it is in Max7's `package.json` before assuming it's available.
+- `readFileAsBuffer` handles both GCS and local-disk paths transparently — the same function used by migration export. No new storage helpers needed.
+- The endpoint lives in the images router (already registered in `routes/index.ts`) — do not add it to a separate router file.
+- Role check: use `requireRole("admin", "superadmin")` from `requireAuth.ts`. In Electron/LAN mode, `requireRole` calls `next()` unconditionally — all users can export locally, which is acceptable for a clinic-local deployment without role separation.
+- The frontend uses raw `fetch` + `getApiUrl` (not the generated API client) because the generated client does not include this endpoint. Follow the same `blob → URL.createObjectURL → anchor.click` pattern used by the migration export in `settings.tsx`.
+- ZIP entry naming convention: `{imageId}_{YYYY-MM-DD}_{sanitisedFilename}{ext}` — sanitise with `/[^a-zA-Z0-9._-]/g → "_"`.
+
+---
+
 <!-- Add new entries below as features are confirmed in Vista -->
