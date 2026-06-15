@@ -515,7 +515,19 @@
     "loginFailed": "Invalid credentials",
     "loginFailedDesc": "Please check your username and password.",
     "welcome": "Welcome to Max7 Vista",
-    "subtitle": "Clinical Image Management System"
+    "subtitle": "Clinical Image Management System",
+    "requestAccessTitle": "Request Access",
+    "setupTitle": "Create Administrator Account",
+    "setupInfo": "No accounts exist yet. Create your administrator account to get started. You will have full superadmin access.",
+    "pendingApproval": "New accounts require admin approval before you can sign in.",
+    "setupSuccess": "Administrator account created! You can now sign in.",
+    "passwordMinLength": "Minimum 6 characters",
+    "confirmPassword": "Confirm Password",
+    "confirmPasswordPlaceholder": "Re-enter your password",
+    "requestAccessButton": "Request Access",
+    "setupButton": "Create Account & Get Started",
+    "noAccount": "Don't have an account? Request access",
+    "alreadyHaveAccount": "Already have an account? Sign in"
   },
   "documents": {
     "title": "Documents",

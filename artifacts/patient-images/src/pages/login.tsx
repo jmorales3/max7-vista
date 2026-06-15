@@ -60,7 +60,7 @@ export default function LoginPage() {
         });
         const body = await res.json();
         if (!res.ok) throw new Error(body.error ?? "Setup failed");
-        setSuccess("Administrator account created! You can now sign in.");
+        setSuccess(t("auth.setupSuccess"));
         setMode("login");
         setPassword("");
         setConfirmPassword("");
@@ -110,23 +110,21 @@ export default function LoginPage() {
         >
           <h2 className="text-lg font-semibold text-center text-white">
             {mode === "login" && t("auth.welcome")}
-            {mode === "register" && "Request Access"}
-            {mode === "setup" && "Create Administrator Account"}
+            {mode === "register" && t("auth.requestAccessTitle")}
+            {mode === "setup" && t("auth.setupTitle")}
           </h2>
 
           {mode === "setup" && (
             <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-500/15 border border-blue-400/30 text-blue-200 text-xs">
               <ShieldCheck className="h-3.5 w-3.5 mt-0.5 shrink-0 text-blue-400" />
-              <span>
-                No accounts exist yet. Create your administrator account to get started. You will have full superadmin access.
-              </span>
+              <span>{t("auth.setupInfo")}</span>
             </div>
           )}
 
           {mode === "register" && (
             <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-200 text-xs">
               <Clock className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-              <span>New accounts require admin approval before you can sign in.</span>
+              <span>{t("auth.pendingApproval")}</span>
             </div>
           )}
 
@@ -155,7 +153,7 @@ export default function LoginPage() {
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={mode === "login" ? t("auth.passwordPlaceholder") : "Minimum 6 characters"}
+                placeholder={mode === "login" ? t("auth.passwordPlaceholder") : t("auth.passwordMinLength")}
                 disabled={loading}
                 required
                 className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus-visible:ring-blue-400"
@@ -164,14 +162,14 @@ export default function LoginPage() {
 
             {mode === "setup" && (
               <div className="space-y-1.5">
-                <Label htmlFor="confirmPassword" className="text-blue-100">Confirm Password</Label>
+                <Label htmlFor="confirmPassword" className="text-blue-100">{t("auth.confirmPassword")}</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
                   autoComplete="new-password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Re-enter your password"
+                  placeholder={t("auth.confirmPasswordPlaceholder")}
                   disabled={loading}
                   required
                   className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus-visible:ring-blue-400"
@@ -200,8 +198,8 @@ export default function LoginPage() {
             >
               {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               {mode === "login" && t("auth.loginButton")}
-              {mode === "register" && "Request Access"}
-              {mode === "setup" && "Create Account & Get Started"}
+              {mode === "register" && t("auth.requestAccessButton")}
+              {mode === "setup" && t("auth.setupButton")}
             </Button>
           </form>
 
@@ -212,7 +210,7 @@ export default function LoginPage() {
                 onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); setSuccess(""); }}
                 className="text-xs text-blue-300/60 hover:text-blue-200 transition-colors"
               >
-                {mode === "login" ? "Don't have an account? Request access" : "Already have an account? Sign in"}
+                {mode === "login" ? t("auth.noAccount") : t("auth.alreadyHaveAccount")}
               </button>
             </div>
           )}

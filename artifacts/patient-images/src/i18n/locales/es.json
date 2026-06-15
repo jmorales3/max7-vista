@@ -515,7 +515,19 @@
     "loginFailed": "Credenciales inválidas",
     "loginFailedDesc": "Por favor verifique su usuario y contraseña.",
     "welcome": "Bienvenido a Max7 Vista",
-    "subtitle": "Sistema de Gestión de Imágenes Clínicas"
+    "subtitle": "Sistema de Gestión de Imágenes Clínicas",
+    "requestAccessTitle": "Solicitar Acceso",
+    "setupTitle": "Crear Cuenta de Administrador",
+    "setupInfo": "No existe ninguna cuenta todavía. Cree su cuenta de administrador para comenzar. Tendrá acceso completo de superadministrador.",
+    "pendingApproval": "Las cuentas nuevas requieren aprobación del administrador antes de poder iniciar sesión.",
+    "setupSuccess": "¡Cuenta de administrador creada! Ya puede iniciar sesión.",
+    "passwordMinLength": "Mínimo 6 caracteres",
+    "confirmPassword": "Confirmar Contraseña",
+    "confirmPasswordPlaceholder": "Vuelva a ingresar su contraseña",
+    "requestAccessButton": "Solicitar Acceso",
+    "setupButton": "Crear Cuenta y Comenzar",
+    "noAccount": "¿No tiene una cuenta? Solicitar acceso",
+    "alreadyHaveAccount": "¿Ya tiene una cuenta? Iniciar sesión"
   },
   "documents": {
     "title": "Documentos",
