@@ -684,7 +684,10 @@
       "clickToAdd": "Haga clic para agregar imagen",
       "frame": "Marco",
       "dob": "Nac.:",
-      "date": "Fecha:"
+      "date": "Fecha:",
+      "headerOn": "Encabezado: Activado",
+      "headerOff": "Encabezado: Desactivado",
+      "documentDefault": "Documento"
     }
   }
 }

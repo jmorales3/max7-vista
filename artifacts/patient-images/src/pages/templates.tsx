@@ -101,7 +101,7 @@ export default function Templates() {
 
   function handleUse(tmpl: Template) {
     setUseTemplate(tmpl);
-    setUseDocTitle(`${tmpl.title} — Document`);
+    setUseDocTitle(`${tmpl.title} — ${t("templates.document.documentDefault")}`);
     setUsePatientId("none");
     setUseOpen(true);
   }
@@ -109,7 +109,7 @@ export default function Templates() {
   function handleCreateDoc() {
     if (!useTemplate) return;
     const frames = useTemplate.frames.map((f) => ({ frameId: f.id, panX: 50, panY: 50 }));
-    createDocMutation.mutate({ templateId: useTemplate.id, patientId: usePatientId !== "none" ? parseInt(usePatientId) : undefined, title: useDocTitle || "Document", frames });
+    createDocMutation.mutate({ templateId: useTemplate.id, patientId: usePatientId !== "none" ? parseInt(usePatientId) : undefined, title: useDocTitle || t("templates.document.documentDefault"), frames });
   }
 
   return (

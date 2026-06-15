@@ -541,7 +541,7 @@ export default function TemplateDocumentPage() {
             <span className="text-sm font-medium text-foreground truncate max-w-48">{document.title}</span>
             {dirty && <span className="text-xs text-muted-foreground">{t("templates.document.unsavedChanges")}</span>}
             <Button variant={headerEnabled ? "secondary" : "outline"} size="sm" onClick={toggleHeader} title={headerEnabled ? "Hide header block" : "Show header block"}>
-              {headerEnabled ? "Header: On" : "Header: Off"}
+              {headerEnabled ? t("templates.document.headerOn") : t("templates.document.headerOff")}
             </Button>
             <Button variant="outline" size="sm" onClick={handleSave} disabled={saveMutation.isPending || !dirty}>
               <Save className="h-3.5 w-3.5 mr-1.5" />
@@ -627,7 +627,7 @@ export default function TemplateDocumentPage() {
         <div className="flex items-center gap-2 shrink-0">
           {dirty && <span className="text-xs text-muted-foreground">{t("templates.document.unsavedChanges")}</span>}
           <Button variant={headerEnabled ? "secondary" : "outline"} size="sm" onClick={toggleHeader}>
-            {headerEnabled ? "Header: On" : "Header: Off"}
+            {headerEnabled ? t("templates.document.headerOn") : t("templates.document.headerOff")}
           </Button>
           <Button variant="outline" size="sm" onClick={handleSave} disabled={saveMutation.isPending || !dirty}>
             <Save className="h-3.5 w-3.5 mr-1.5" />

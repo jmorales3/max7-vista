@@ -684,7 +684,10 @@
       "clickToAdd": "Click to add image",
       "frame": "Frame",
       "dob": "DOB:",
-      "date": "Date:"
+      "date": "Date:",
+      "headerOn": "Header: On",
+      "headerOff": "Header: Off",
+      "documentDefault": "Document"
     }
   }
 }

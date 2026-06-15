@@ -684,7 +684,10 @@
       "clickToAdd": "Cliquez pour ajouter une image",
       "frame": "Cadre",
       "dob": "Né(e) :",
-      "date": "Date :"
+      "date": "Date :",
+      "headerOn": "En-tête : Activé",
+      "headerOff": "En-tête : Désactivé",
+      "documentDefault": "Document"
     }
   }
 }

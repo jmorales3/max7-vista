@@ -684,7 +684,10 @@
       "clickToAdd": "Clique para adicionar imagem",
       "frame": "Moldura",
       "dob": "Nasc.:",
-      "date": "Data:"
+      "date": "Data:",
+      "headerOn": "Cabeçalho: Ligado",
+      "headerOff": "Cabeçalho: Desligado",
+      "documentDefault": "Documento"
     }
   }
 }
