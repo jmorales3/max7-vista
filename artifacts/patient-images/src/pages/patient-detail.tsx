@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link, useRoute } from "wouter";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "@/contexts/AuthContext";
+import { getApiUrl } from "@/lib/apiUrl";
 import {
   useGetPatient,
   getGetPatientQueryKey,
@@ -53,8 +55,10 @@ import {
   X,
   LayoutTemplate,
   ExternalLink,
+  Download,
 } from "lucide-react";
 import { format } from "date-fns";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ImageGrid } from "@/components/image-grid";
 import { PatientDocuments } from "@/components/patient-documents";
 import {
@@ -84,6 +88,8 @@ interface TemplateItem {
 
 export default function PatientDetail() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin" || user?.role === "superadmin";
   const [, params] = useRoute("/patients/:id");
   const id = parseInt(params?.id || "0", 10);
   const [, setLocation] = useLocation();
@@ -95,6 +101,57 @@ export default function PatientDetail() {
   const [pendingTemplate, setPendingTemplate] = useState<TemplateItem | null>(null);
   const [docName, setDocName] = useState("");
   const [deleteDocId, setDeleteDocId] = useState<number | null>(null);
+
+  const [exportOpen, setExportOpen] = useState(false);
+  const [selectedExportIds, setSelectedExportIds] = useState<Set<number>>(new Set());
+  const [exporting, setExporting] = useState(false);
+
+  const openExportDialog = () => {
+    setSelectedExportIds(new Set((images ?? []).map((img) => img.id)));
+    setExportOpen(true);
+  };
+
+  const toggleExportId = (imgId: number) => {
+    setSelectedExportIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(imgId)) next.delete(imgId);
+      else next.add(imgId);
+      return next;
+    });
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await fetch(getApiUrl(`/api/patients/${id}/export-images`), {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageIds: Array.from(selectedExportIds) }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `patient-${patient?.patientCode ?? id}-images.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setExportOpen(false);
+      toast({ title: t("patients.exportSuccess") });
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: t("patients.exportError"),
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const { data: patient, isLoading: patientLoading } = useGetPatient(id, {
     query: { enabled: !!id, queryKey: getGetPatientQueryKey(id) }
@@ -270,6 +327,15 @@ export default function PatientDetail() {
                 <LayoutTemplate className="mr-2 h-4 w-4" />
                 {t("patients.createTemplateDoc")}
               </DropdownMenuItem>
+              {isAdmin && (images?.length ?? 0) > 0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={openExportDialog}>
+                    <Download className="mr-2 h-4 w-4" />
+                    {t("patients.exportImages")}
+                  </DropdownMenuItem>
+                </>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
@@ -520,6 +586,88 @@ export default function PatientDetail() {
               </DialogFooter>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Export Images Dialog — admin/superadmin only */}
+      <Dialog open={exportOpen} onOpenChange={(o) => { if (!o) setExportOpen(false); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5 text-primary" />
+              {t("patients.exportImagesTitle")}
+            </DialogTitle>
+          </DialogHeader>
+
+          {(images ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">
+              {t("patients.exportNoImages")}
+            </p>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                {t("patients.exportImagesDesc")}
+              </p>
+
+              <div className="flex items-center justify-between py-1">
+                <span className="text-xs font-medium text-muted-foreground">
+                  {t("patients.exportSelected", { count: selectedExportIds.size })}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    className="text-xs text-primary underline-offset-2 hover:underline"
+                    onClick={() => setSelectedExportIds(new Set((images ?? []).map((img) => img.id)))}
+                  >
+                    {t("patients.exportSelectAll")}
+                  </button>
+                  <span className="text-muted-foreground">·</span>
+                  <button
+                    className="text-xs text-primary underline-offset-2 hover:underline"
+                    onClick={() => setSelectedExportIds(new Set())}
+                  >
+                    {t("patients.exportDeselectAll")}
+                  </button>
+                </div>
+              </div>
+
+              <div className="max-h-64 overflow-y-auto space-y-1 border rounded-md p-2 bg-muted/30">
+                {(images ?? []).map((img) => (
+                  <label
+                    key={img.id}
+                    className="flex items-center gap-3 px-2 py-1.5 rounded cursor-pointer hover:bg-accent transition-colors"
+                  >
+                    <Checkbox
+                      checked={selectedExportIds.has(img.id)}
+                      onCheckedChange={() => toggleExportId(img.id)}
+                    />
+                    <span className="text-sm truncate flex-1">{img.fileName}</span>
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {format(new Date(img.capturedAt), "MMM d, yyyy")}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExportOpen(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              onClick={handleExport}
+              disabled={exporting || selectedExportIds.size === 0}
+            >
+              {exporting ? (
+                t("patients.exportPreparing")
+              ) : (
+                <>
+                  <Download className="mr-2 h-4 w-4" />
+                  {t("patients.exportDownload")}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

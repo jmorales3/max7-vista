@@ -101,7 +101,18 @@
     "deleteDocTitle": "Supprimer le document ?",
     "deleteDocDesc": "Ce document de modèle sera supprimé définitivement. Cette action est irréversible.",
     "deleteDocSuccess": "Document supprimé",
-    "deleteDocError": "Échec de la suppression du document"
+    "deleteDocError": "Échec de la suppression du document",
+    "exportImages": "Exporter les images",
+    "exportImagesTitle": "Exporter les images du patient",
+    "exportImagesDesc": "Sélectionnez les images à inclure dans l'archive ZIP. Toutes sont présélectionnées par défaut.",
+    "exportSelectAll": "Tout sélectionner",
+    "exportDeselectAll": "Tout désélectionner",
+    "exportSelected": "{{count}} image(s) sélectionnée(s)",
+    "exportDownload": "Télécharger le ZIP",
+    "exportNoImages": "Aucune image disponible pour ce patient.",
+    "exportSuccess": "Exportation terminée",
+    "exportError": "Échec de l'exportation",
+    "exportPreparing": "Préparation…"
   },
   "capture": {
     "title": "Capturer une Image",
@@ -384,7 +395,8 @@
       "roles": "Rôles Utilisateur",
       "tenants": "Configuration Multi-Organisation",
       "templates": "Modèles",
-      "imageLibrary": "Bibliothèque d'Images"
+      "imageLibrary": "Bibliothèque d'Images",
+      "exportImages": "Export d’images"
     },
     "overview": {
       "heading": "Qu'est-ce que Max7 Vista ?",
@@ -445,6 +457,10 @@
     "imageLibrary": {
       "heading": "Bibliothèque d'Images",
       "body": "La Bibliothèque d'Images est un référentiel autonome pour les images décoratives et non cliniques — diapositives de titre, paysages, en-têtes de section, image de marque de la clinique — que le personnel téléverse une fois et réutilise dans les présentations. Elle est entièrement séparée de la Galerie des patients ; rien ici n'est lié à un dossier patient.\n\nPour téléverser, cliquez sur 'Téléverser des Images' dans le coin supérieur droit, ou faites glisser-déposer des fichiers image directement sur la grille. Plusieurs fichiers peuvent être téléversés à la fois. Un pourcentage de progression s'affiche pendant le téléversement.\n\nChaque image téléversée peut recevoir un titre descriptif : survolez une vignette et cliquez sur l'icône crayon pour le modifier. Le titre apparaît comme étiquette au bas de la vignette.\n\nPour inclure des images dans une présentation, cliquez sur une ou plusieurs vignettes pour les sélectionner (une coche bleue apparaît et un compteur de sélection s'affiche dans l'en-tête). Cliquez ensuite sur 'Ajouter à la Présentation' pour ouvrir la boîte de dialogue d'affectation — choisissez une présentation existante dans la liste ou sélectionnez 'Nouvelle Présentation' et saisissez un titre pour en créer une immédiatement. Les images sélectionnées sont ajoutées en tant que diapositives individuelles.\n\nPour supprimer une image, survolez sa vignette et cliquez sur l'icône poubelle rouge. Cela supprime définitivement le fichier du stockage et l'enregistrement de la base de données ; cette action est irréversible."
+    },
+    "exportImages": {
+      "heading": "Exporter les images d’un patient",
+      "body": "Les administrateurs et super-administrateurs peuvent exporter une ou plusieurs images d’un patient sous forme d’archive ZIP. Ouvrez la fiche d’un patient, cliquez sur le menu ⋮ (Plus) en haut à droite et choisissez « Exporter les images ». Une boîte de dialogue liste toutes les images du patient — toutes présélectionnées par défaut. Cochez ou décochez les images individuellement, ou utilisez « Tout sélectionner » / « Tout désélectionner ». Cliquez sur « Télécharger le ZIP » pour générer et télécharger l’archive. Le nom du fichier inclut le code patient et la date du jour ; chaque entrée porte son ID, sa date de capture et son nom d’origine. L’exportation est enregistrée dans le Journal d’audit. Cette option est masquée pour les utilisateurs ordinaires."
     }
   },
   "bulkImport": {

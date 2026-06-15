@@ -101,7 +101,18 @@
     "deleteDocTitle": "¿Eliminar documento?",
     "deleteDocDesc": "Este documento de plantilla se eliminará permanentemente. Esta acción no se puede deshacer.",
     "deleteDocSuccess": "Documento eliminado",
-    "deleteDocError": "Error al eliminar el documento"
+    "deleteDocError": "Error al eliminar el documento",
+    "exportImages": "Exportar imágenes",
+    "exportImagesTitle": "Exportar imágenes del paciente",
+    "exportImagesDesc": "Seleccione las imágenes a incluir en el archivo ZIP. Todas están preseleccionadas por defecto.",
+    "exportSelectAll": "Seleccionar todas",
+    "exportDeselectAll": "Deseleccionar todas",
+    "exportSelected": "{{count}} imagen(es) seleccionada(s)",
+    "exportDownload": "Descargar ZIP",
+    "exportNoImages": "No hay imágenes disponibles para este paciente.",
+    "exportSuccess": "Exportación completada",
+    "exportError": "Error en la exportación",
+    "exportPreparing": "Preparando…"
   },
   "capture": {
     "title": "Capturar Imagen",
@@ -384,7 +395,8 @@
       "roles": "Roles de Usuario",
       "tenants": "Configuración Multiempresa",
       "templates": "Plantillas",
-      "imageLibrary": "Biblioteca de Imágenes"
+      "imageLibrary": "Biblioteca de Imágenes",
+      "exportImages": "Exportación de imágenes"
     },
     "overview": {
       "heading": "¿Qué es Max7 Vista?",
@@ -445,6 +457,10 @@
     "imageLibrary": {
       "heading": "Biblioteca de Imágenes",
       "body": "La Biblioteca de Imágenes es un repositorio independiente para imágenes decorativas y no clínicas — diapositivas de título, paisajes, encabezados de sección, marca de la clínica — que el personal sube una vez y reutiliza en presentaciones. Está completamente separada de la Galería de pacientes; nada aquí está vinculado a un registro de paciente.\n\nPara subir, haga clic en 'Subir Imágenes' en la esquina superior derecha, o arrastre y suelte archivos de imagen directamente en la cuadrícula. Se pueden subir varios archivos a la vez. Se muestra un porcentaje de progreso durante la carga.\n\nA cada imagen subida se le puede asignar un título descriptivo: pase el cursor sobre una miniatura y haga clic en el ícono de lápiz para editarlo. El título aparece como etiqueta en la parte inferior de la miniatura.\n\nPara incluir imágenes en una presentación, haga clic en una o más miniaturas para seleccionarlas (aparece una marca de verificación azul y se muestra un recuento de selección en el encabezado). Luego haga clic en 'Añadir a Presentación' para abrir el diálogo de asignación — elija una presentación existente de la lista o seleccione 'Nueva Presentación' e ingrese un título para crear una en el momento. Las imágenes seleccionadas se agregan como diapositivas individuales.\n\nPara eliminar una imagen, pase el cursor sobre su miniatura y haga clic en el ícono de papelera roja. Esto elimina permanentemente tanto el archivo del almacenamiento como el registro de la base de datos y no se puede deshacer."
+    },
+    "exportImages": {
+      "heading": "Exportar imágenes del paciente",
+      "body": "Los administradores y superadministradores pueden exportar una o varias imágenes de cualquier paciente como archivo ZIP. Abra la ficha del paciente, haga clic en el menú ⋮ (Más) en la esquina superior derecha y elija \"Exportar imágenes\". Un cuadro de diálogo muestra todas las imágenes del paciente — todas preseleccionadas por defecto. Marque o desmarque imágenes individualmente, o use \"Seleccionar todas\" / \"Deseleccionar todas\". Haga clic en \"Descargar ZIP\" para generar y descargar el archivo. El nombre incluye el código del paciente y la fecha actual; cada archivo dentro lleva su ID, fecha de captura y nombre original. La exportación queda registrada en el Registro de auditoría. Esta opción no es visible para usuarios regulares."
     }
   },
   "bulkImport": {

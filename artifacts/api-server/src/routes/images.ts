@@ -1,8 +1,9 @@
 import { Router, type IRouter } from "express";
-import { eq, and, gte, lte, sql } from "drizzle-orm";
+import { eq, and, gte, lte, sql, inArray } from "drizzle-orm";
 import path from "path";
 import fs from "fs";
 import multer from "multer";
+import AdmZip from "adm-zip";
 import { db, imagesTable, patientsTable } from "@workspace/db";
 import {
   ListImagesQueryParams,
@@ -15,7 +16,8 @@ import {
   ReplaceImageFileParams,
 } from "@workspace/api-zod";
 import { logAudit } from "../lib/audit";
-import { uploadToGcs, streamFile, deleteFile, isGcsPath, toGcsPath, getSignedUploadUrl } from "../lib/gcsStorage";
+import { requireRole } from "../middlewares/requireAuth";
+import { uploadToGcs, streamFile, deleteFile, isGcsPath, toGcsPath, getSignedUploadUrl, readFileAsBuffer } from "../lib/gcsStorage";
 
 const router: IRouter = Router();
 
@@ -601,5 +603,86 @@ router.delete("/images/:id", async (req, res): Promise<void> => {
   await logAudit(req, "delete", "image", params.data.id, JSON.stringify({ fileName: image.fileName, patientId: image.patientId }));
   res.sendStatus(204);
 });
+
+// POST /api/patients/:id/export-images — admin/superadmin only
+// Body: { imageIds?: number[] }  (omit or send [] to export all patient images)
+// Returns: application/zip
+router.post(
+  "/patients/:id/export-images",
+  requireRole("admin", "superadmin"),
+  async (req, res): Promise<void> => {
+    const patientId = parseInt(String(req.params.id), 10);
+    if (isNaN(patientId)) {
+      res.status(400).json({ error: "Invalid patient ID" });
+      return;
+    }
+
+    const [patient] = await db
+      .select({ id: patientsTable.id, name: patientsTable.name, patientCode: patientsTable.patientCode })
+      .from(patientsTable)
+      .where(eq(patientsTable.id, patientId))
+      .limit(1);
+
+    if (!patient) {
+      res.status(404).json({ error: "Patient not found" });
+      return;
+    }
+
+    const { imageIds } = (req.body ?? {}) as { imageIds?: number[] };
+    const hasFilter = Array.isArray(imageIds) && imageIds.length > 0;
+
+    const rows = await db
+      .select()
+      .from(imagesTable)
+      .where(
+        hasFilter
+          ? and(eq(imagesTable.patientId, patientId), inArray(imagesTable.id, imageIds!))
+          : eq(imagesTable.patientId, patientId)
+      )
+      .orderBy(imagesTable.capturedAt);
+
+    if (rows.length === 0) {
+      res.status(404).json({ error: "No images found for export" });
+      return;
+    }
+
+    const zip = new AdmZip();
+    let added = 0;
+
+    for (const image of rows) {
+      const buffer = await readFileAsBuffer(image.filePath);
+      if (!buffer) continue;
+      const ext = path.extname(image.fileName) || ".jpg";
+      const dateStr = new Date(image.capturedAt).toISOString().slice(0, 10);
+      const baseName = path.basename(image.fileName, ext).replace(/[^a-zA-Z0-9._-]/g, "_");
+      const entryName = `${image.id}_${dateStr}_${baseName}${ext}`;
+      zip.addFile(entryName, buffer);
+      added++;
+    }
+
+    if (added === 0) {
+      res.status(404).json({ error: "No image files could be retrieved" });
+      return;
+    }
+
+    const zipBuffer = zip.toBuffer();
+    const safeCode = patient.patientCode.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const today = new Date().toISOString().slice(0, 10);
+    const filename = `patient_${safeCode}_images_${today}.zip`;
+
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(filename)}"`);
+    res.setHeader("Content-Length", String(zipBuffer.length));
+    res.end(zipBuffer);
+
+    await logAudit(
+      req,
+      "export",
+      "patient",
+      patientId,
+      JSON.stringify({ imageCount: added, imageIds: rows.map((r) => r.id) })
+    );
+  }
+);
 
 export default router;

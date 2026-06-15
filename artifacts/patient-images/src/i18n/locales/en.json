@@ -101,7 +101,18 @@
     "deleteDocTitle": "Delete document?",
     "deleteDocDesc": "This template document will be permanently deleted. This action cannot be undone.",
     "deleteDocSuccess": "Document deleted",
-    "deleteDocError": "Failed to delete document"
+    "deleteDocError": "Failed to delete document",
+    "exportImages": "Export Images",
+    "exportImagesTitle": "Export Patient Images",
+    "exportImagesDesc": "Select the images to include in the ZIP download. All images are pre-selected by default.",
+    "exportSelectAll": "Select All",
+    "exportDeselectAll": "Deselect All",
+    "exportSelected": "{{count}} image(s) selected",
+    "exportDownload": "Download ZIP",
+    "exportNoImages": "No images available for this patient.",
+    "exportSuccess": "Export complete",
+    "exportError": "Export failed",
+    "exportPreparing": "Preparing…"
   },
   "capture": {
     "title": "Capture Image",
@@ -384,7 +395,8 @@
       "roles": "User Roles",
       "tenants": "Multi-Tenant Setup",
       "templates": "Templates",
-      "imageLibrary": "Image Library"
+      "imageLibrary": "Image Library",
+      "exportImages": "Image Export"
     },
     "overview": {
       "heading": "What is Max7 Vista?",
@@ -445,6 +457,10 @@
     "imageLibrary": {
       "heading": "Image Library",
       "body": "The Image Library is a standalone repository for decorative, non-clinical images — title slides, landscapes, section headers, clinic branding — that staff upload once and reuse across presentations. It is entirely separate from the patient Gallery; nothing here is linked to a patient record.\n\nTo upload, click 'Upload Images' in the top-right corner, or drag and drop image files directly onto the grid. Multiple files can be uploaded at once. A progress percentage is shown during the upload.\n\nEach uploaded image can be given a descriptive title: hover over a thumbnail and click the pencil icon to edit it. The title appears as a label at the bottom of the thumbnail.\n\nTo include images in a presentation, click one or more thumbnails to select them (a blue checkmark appears and a selection count is shown in the header). Then click 'Add to Presentation' to open the assignment dialog — choose an existing presentation from the list or select 'New Presentation' and enter a title to create one on the spot. The selected images are added as individual slides.\n\nTo delete an image, hover over its thumbnail and click the red trash icon. This permanently removes both the file from storage and the database record and cannot be undone."
+    },
+    "exportImages": {
+      "heading": "Exporting Patient Images",
+      "body": "Admins and Super Admins can export one or more images for any patient as a ZIP archive. Open a patient detail page, click the ⋮ (More) menu in the top-right corner, and choose \"Export Images\". A dialog lists all images for that patient — all are pre-selected by default. Tick or untick individual images, or use \"Select All\" / \"Deselect All\". Click \"Download ZIP\" to generate and download the archive. The file is named with the patient code and today’s date; each entry inside is named with its ID, capture date, and original filename. The export is recorded in the Audit Log. This option is hidden from regular users."
     }
   },
   "bulkImport": {

@@ -9,6 +9,7 @@ type SectionKey =
   | "overview"
   | "gettingStarted"
   | "patients"
+  | "exportImages"
   | "capture"
   | "gallery"
   | "editor"
@@ -26,6 +27,7 @@ const SECTIONS: SectionKey[] = [
   "overview",
   "gettingStarted",
   "patients",
+  "exportImages",
   "capture",
   "gallery",
   "editor",
