@@ -92,7 +92,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <img
-            src="/max7-vista-logo.png"
+            src="/max7-vista-logo.png?v=2"
             alt="Max7 Vista"
             className="mx-auto w-full max-w-xs"
             style={{ mixBlendMode: "screen" }}

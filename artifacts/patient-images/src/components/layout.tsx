@@ -59,7 +59,7 @@ export function AppSidebar() {
         style={{ background: "linear-gradient(135deg, #0a1628 0%, #0d2145 100%)" }}
       >
         <img
-          src="/max7-vista-logo.png"
+          src="/max7-vista-logo.png?v=2"
           alt="Max7 Vista"
           className="w-full h-auto"
           style={{ mixBlendMode: "screen" }}
