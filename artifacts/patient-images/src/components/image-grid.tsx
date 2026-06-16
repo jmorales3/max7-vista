@@ -96,7 +96,7 @@ export function ImageGrid({ images, columns, showPatientName = false, profileIma
                     className={`absolute top-1.5 right-1.5 p-1 rounded-full transition-all shadow-sm ${
                       profileImageId === image.id
                         ? "bg-primary text-primary-foreground opacity-100"
-                        : "bg-black/50 text-white opacity-0 group-hover:opacity-100"
+                        : "bg-black/40 text-white opacity-60 hover:opacity-100 hover:bg-black/70"
                     }`}
                   >
                     <Star className={`h-3.5 w-3.5 ${profileImageId === image.id ? "fill-current" : ""}`} />
