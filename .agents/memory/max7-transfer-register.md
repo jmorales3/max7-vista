@@ -1247,4 +1247,58 @@ When `onSetProfile` is not provided the star button is hidden entirely (safe to 
 
 ---
 
+## FEAT-017 — Superimpose Presentation Slide Type
+
+**Status:** ✅ Confirmed working in Vista  
+**Date:** 2026-06-16  
+**Vista files:**
+- `artifacts/patient-images/src/components/PresentationBuilder.tsx` — new `SuperimposeSlide` type + `SuperimposeViewer` component; updated viewer, slide list, dot navigation
+- `artifacts/patient-images/src/pages/editor.tsx` — "Save to Presentation" button in overlay HUD; dialog to pick/create presentation; `handleSaveOverlayToPresentation`; presentation hooks
+- `artifacts/patient-images/src/pages/presentations.tsx` — thumbnail strip narrowed for superimpose slides
+- All 4 locale files — `presentation.superimposeSlide` + 8 `editor.overlay*` keys
+
+### What it does
+When the user activates the Overlay tool in the editor and loads an image on top of the base image, a **Save to Presentation** button appears in the overlay toolbar. Clicking it opens a dialog where the user can add the superimposition as a new slide in an existing presentation, or create a new presentation with it as the first slide. The slide stores both image IDs plus `overlayOpacity`, `overlayOffsetX`, `overlayOffsetY`, `overlayScaleCorrection` — the full overlay state.
+
+During the presentation viewer, **Superimpose slides** render a canvas-based component (`SuperimposeViewer`) that draws the base image with the overlay on top. A live **opacity slider** floats at the bottom center so the presenter can sweep transparency in real time without leaving the viewer. A "SUPERIMPOSE" label appears at the top.
+
+### Slide type added
+```typescript
+export type SuperimposeSlide = {
+  type: "superimpose";
+  baseId: number;
+  overlayId: number;
+  overlayOpacity: number;     // 0.0 – 1.0
+  overlayOffsetX: number;     // pixels, relative to canvas center
+  overlayOffsetY: number;
+  overlayScaleCorrection: number; // multiplier on top of fit-to-container scale
+};
+```
+The API's `slides` column uses `zod.array(zod.unknown())` so no schema migration is needed — the new type round-trips as plain JSON.
+
+### SuperimposeViewer rendering approach
+Uses a `<canvas>` element with a `ResizeObserver` for responsive sizing. Stores a mutable `drawRef.current` closure (updated each render) so effects called from hooks never see stale closure values. The canvas draws:
+1. Base image — `object-contain` equivalent via `Math.min(W/natW, H/natH)` scale
+2. Overlay image — same base scale × `scaleCorrection`, offset by `offsetX/Y` from center, `globalAlpha = opacity`
+
+### i18n keys added (all 4 locales)
+```
+presentation.superimposeSlide       — "Superimpose" / "Superposición" / "Superposition" / "Sobreposição"
+editor.saveOverlayToPresentation    — "Save to Presentation"
+editor.overlayPresentationTitle     — dialog title
+editor.overlayPresentationDesc      — dialog description
+editor.overlayPresentationAddTo     — select label
+editor.overlayPresentationNewLabel  — "— New presentation —" option
+editor.overlayPresentationNewName   — input label
+editor.overlaySavedOk               — success toast
+```
+
+### Notes for Max7 agent
+- The `drawRef.current = () => { ... }` pattern (updating a ref each render) keeps the draw function always-fresh without stale closures — preferred for canvas components that need to read React state from effects.
+- Dot navigation in the viewer uses a different colour for superimpose slides (violet) vs compare (primary) vs single (white/grey).
+- The "Save to Presentation" button is always visible when `tool === "overlay" && overlayImageId` — no extra condition needed.
+- The offset values are in canvas/screen pixels from the time the overlay was positioned. They will look approximately correct at other screen sizes; exact pixel-perfect alignment is not guaranteed across sizes (the opacity sweep is the primary presentation value).
+
+---
+
 <!-- Add new entries below as features are confirmed in Vista -->

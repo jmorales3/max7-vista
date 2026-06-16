@@ -6,12 +6,21 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   ChevronLeft, ChevronRight, Play, X, ArrowUp, ArrowDown,
-  ArrowLeftRight, ChevronsLeftRight, Camera, Save, Pencil, Check,
+  ArrowLeftRight, ChevronsLeftRight, Camera, Save, Pencil, Check, Layers,
 } from "lucide-react";
 
 export type SingleSlide = { type: "single"; imageId: number };
 export type CompareSlide = { type: "compare"; beforeId: number; afterId: number };
-export type Slide = SingleSlide | CompareSlide;
+export type SuperimposeSlide = {
+  type: "superimpose";
+  baseId: number;
+  overlayId: number;
+  overlayOpacity: number;
+  overlayOffsetX: number;
+  overlayOffsetY: number;
+  overlayScaleCorrection: number;
+};
+export type Slide = SingleSlide | CompareSlide | SuperimposeSlide;
 
 export interface PickerImage {
   id: number;
@@ -70,6 +79,112 @@ export function BeforeAfterSlider({ beforeUrl, afterUrl }: { beforeUrl: string; 
   );
 }
 
+/* ─── Superimpose Viewer ────────────────────────────────────── */
+export function SuperimposeViewer({ baseUrl, overlayUrl, initialOpacity, offsetX, offsetY, scaleCorrection }: {
+  baseUrl: string;
+  overlayUrl: string;
+  initialOpacity: number;
+  offsetX: number;
+  offsetY: number;
+  scaleCorrection: number;
+}) {
+  const { t } = useTranslation();
+  const [opacity, setOpacity] = useState(initialOpacity);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const dataRef = useRef({
+    opacity: initialOpacity,
+    baseImg: null as HTMLImageElement | null,
+    overlayImg: null as HTMLImageElement | null,
+  });
+
+  // Always-fresh draw function stored in a ref so effects never go stale
+  const drawRef = useRef<() => void>(() => {});
+  drawRef.current = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+    const W = canvas.width, H = canvas.height;
+    if (!W || !H) return;
+    const { baseImg, overlayImg, opacity: op } = dataRef.current;
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, W, H);
+    if (baseImg && baseImg.complete) {
+      const bs = Math.min(W / baseImg.naturalWidth, H / baseImg.naturalHeight);
+      const bW = baseImg.naturalWidth * bs;
+      const bH = baseImg.naturalHeight * bs;
+      ctx.drawImage(baseImg, (W - bW) / 2, (H - bH) / 2, bW, bH);
+      if (overlayImg && overlayImg.complete) {
+        const os = bs * scaleCorrection;
+        const oW = overlayImg.naturalWidth * os;
+        const oH = overlayImg.naturalHeight * os;
+        ctx.globalAlpha = op;
+        ctx.drawImage(overlayImg, (W - oW) / 2 + offsetX, (H - oH) / 2 + offsetY, oW, oH);
+        ctx.globalAlpha = 1;
+      }
+    }
+  };
+
+  // Resize observer — sets canvas dimensions and redraws
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const resize = () => {
+      if (!canvasRef.current) return;
+      canvasRef.current.width = container.clientWidth;
+      canvasRef.current.height = container.clientHeight;
+      drawRef.current();
+    };
+    resize();
+    const obs = new ResizeObserver(resize);
+    obs.observe(container);
+    return () => obs.disconnect();
+  }, []);
+
+  // Load images
+  useEffect(() => {
+    const bImg = new Image();
+    const oImg = new Image();
+    let alive = true;
+    bImg.onload = () => { if (!alive) return; dataRef.current.baseImg = bImg; drawRef.current(); };
+    oImg.onload = () => { if (!alive) return; dataRef.current.overlayImg = oImg; drawRef.current(); };
+    bImg.src = baseUrl;
+    oImg.src = overlayUrl;
+    return () => { alive = false; };
+  }, [baseUrl, overlayUrl]);
+
+  return (
+    <div ref={containerRef} className="relative w-full h-full bg-black select-none">
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-black/70 backdrop-blur-sm px-4 py-2.5 rounded-full z-10">
+        <Layers className="h-3.5 w-3.5 text-white/60 shrink-0" />
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={opacity}
+          onChange={(e) => {
+            const v = parseFloat(e.target.value);
+            dataRef.current.opacity = v;
+            setOpacity(v);
+            drawRef.current();
+          }}
+          className="w-36 accent-white cursor-pointer"
+        />
+        <span className="text-white/80 text-xs font-mono w-8 text-center shrink-0">
+          {Math.round(opacity * 100)}%
+        </span>
+      </div>
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs font-bold px-3 py-1.5 rounded-full tracking-widest uppercase flex items-center gap-1.5">
+        <Layers className="h-3 w-3" />
+        {t("presentation.superimposeSlide")}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Builder ───────────────────────────────────────────────── */
 export interface PresentationBuilderProps {
   images: PickerImage[];
@@ -108,7 +223,11 @@ export function PresentationBuilder({
 
   const imageUrl = (id: number) => `/api/images/${id}/file`;
 
-  const usedIds = new Set(slides.flatMap((s) => s.type === "single" ? [s.imageId] : [s.beforeId, s.afterId]));
+  const usedIds = new Set(slides.flatMap((s) => {
+    if (s.type === "single") return [s.imageId];
+    if (s.type === "compare") return [s.beforeId, s.afterId];
+    return [s.baseId, s.overlayId];
+  }));
 
   function toggleImage(imgId: number) {
     const existingIdx = slides.findIndex((s) => s.type === "single" && s.imageId === imgId);
@@ -135,7 +254,7 @@ export function PresentationBuilder({
   function selectPairImage(idx: number, afterId: number) {
     setSlides((prev) => prev.map((s, i) => {
       if (i !== idx) return s;
-      const beforeId = s.type === "single" ? s.imageId : s.beforeId;
+      const beforeId = s.type === "single" ? s.imageId : s.type === "compare" ? s.beforeId : s.baseId;
       return { type: "compare", beforeId, afterId } as CompareSlide;
     }));
     setPairingSlideIdx(null);
@@ -191,6 +310,9 @@ export function PresentationBuilder({
             {slide.type === "compare" && (
               <span className="ml-2 text-xs text-white/40">{t("presentation.compareSlide")}</span>
             )}
+            {slide.type === "superimpose" && (
+              <span className="ml-2 text-xs text-white/40">{t("presentation.superimposeSlide")}</span>
+            )}
           </span>
           <Button variant="ghost" size="icon" className="text-white/70 hover:text-white hover:bg-white/10" onClick={() => setViewerOpen(false)}>
             <X className="h-5 w-5" />
@@ -200,8 +322,17 @@ export function PresentationBuilder({
         <div className="flex-1 relative overflow-hidden">
           {slide.type === "single" ? (
             <img src={imageUrl(slide.imageId)} className="absolute inset-0 w-full h-full object-contain" />
-          ) : (
+          ) : slide.type === "compare" ? (
             <BeforeAfterSlider beforeUrl={imageUrl(slide.beforeId)} afterUrl={imageUrl(slide.afterId)} />
+          ) : (
+            <SuperimposeViewer
+              baseUrl={imageUrl(slide.baseId)}
+              overlayUrl={imageUrl(slide.overlayId)}
+              initialOpacity={slide.overlayOpacity}
+              offsetX={slide.overlayOffsetX}
+              offsetY={slide.overlayOffsetY}
+              scaleCorrection={slide.overlayScaleCorrection}
+            />
           )}
         </div>
 
@@ -211,8 +342,14 @@ export function PresentationBuilder({
           </Button>
           <div className="flex items-center gap-2">
             {slides.map((s, i) => (
-              <button key={i} onClick={() => setCurrentIdx(i)} title={s.type === "compare" ? t("presentation.compareSlide") : ""}
-                className={`rounded-full transition-all duration-200 ${i === currentIdx ? "w-7 h-2.5 bg-white" : s.type === "compare" ? "w-2.5 h-2.5 bg-primary/60 hover:bg-primary" : "w-2.5 h-2.5 bg-white/30 hover:bg-white/60"}`}
+              <button key={i} onClick={() => setCurrentIdx(i)}
+                title={s.type === "compare" ? t("presentation.compareSlide") : s.type === "superimpose" ? t("presentation.superimposeSlide") : ""}
+                className={`rounded-full transition-all duration-200 ${
+                  i === currentIdx ? "w-7 h-2.5 bg-white" :
+                  s.type === "compare" ? "w-2.5 h-2.5 bg-primary/60 hover:bg-primary" :
+                  s.type === "superimpose" ? "w-2.5 h-2.5 bg-violet-400/70 hover:bg-violet-400" :
+                  "w-2.5 h-2.5 bg-white/30 hover:bg-white/60"
+                }`}
               />
             ))}
           </div>
@@ -337,8 +474,8 @@ export function PresentationBuilder({
           ) : (
             <div className="space-y-2">
               {slides.map((slide, idx) => {
-                const mainId = slide.type === "single" ? slide.imageId : slide.beforeId;
-                const afterId = slide.type === "compare" ? slide.afterId : null;
+                const mainId = slide.type === "single" ? slide.imageId : slide.type === "compare" ? slide.beforeId : slide.baseId;
+                const secondId = slide.type === "compare" ? slide.afterId : slide.type === "superimpose" ? slide.overlayId : null;
                 const isPairing = pairingSlideIdx === idx;
                 return (
                   <div key={idx}>
@@ -349,11 +486,15 @@ export function PresentationBuilder({
                           <div className="w-14 h-10 rounded-md overflow-hidden bg-muted">
                             <img src={imageUrl(mainId)} className="w-full h-full object-cover" />
                           </div>
-                          {afterId && (
+                          {secondId && (
                             <>
-                              <ChevronsLeftRight className="h-3 w-3 text-muted-foreground" />
-                              <div className="w-14 h-10 rounded-md overflow-hidden bg-muted">
-                                <img src={imageUrl(afterId)} className="w-full h-full object-cover" />
+                              {slide.type === "compare" ? (
+                                <ChevronsLeftRight className="h-3 w-3 text-muted-foreground" />
+                              ) : (
+                                <Layers className="h-3 w-3 text-violet-500" />
+                              )}
+                              <div className={`w-14 h-10 rounded-md overflow-hidden bg-muted ${slide.type === "superimpose" ? "opacity-70" : ""}`}>
+                                <img src={imageUrl(secondId)} className="w-full h-full object-cover" />
                               </div>
                             </>
                           )}
@@ -363,6 +504,11 @@ export function PresentationBuilder({
                             <Badge variant="secondary" className="text-[10px] gap-1 bg-primary/10 text-primary border-primary/20">
                               <ArrowLeftRight className="h-2.5 w-2.5" />
                               {t("presentation.compareSlide")}
+                            </Badge>
+                          ) : slide.type === "superimpose" ? (
+                            <Badge variant="secondary" className="text-[10px] gap-1 bg-violet-500/10 text-violet-600 border-violet-500/20">
+                              <Layers className="h-2.5 w-2.5" />
+                              {t("presentation.superimposeSlide")}
                             </Badge>
                           ) : (
                             <span className="text-xs text-muted-foreground">{t("presentation.imageSlide")}</span>
@@ -380,11 +526,13 @@ export function PresentationBuilder({
                               onClick={() => setPairingSlideIdx(isPairing ? null : idx)} title={t("presentation.addCompare")}>
                               <ArrowLeftRight className="h-3.5 w-3.5" />
                             </Button>
-                          ) : (
+                          ) : slide.type === "compare" ? (
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground"
                               onClick={() => removeCompare(idx)} title={t("presentation.removeCompare")}>
                               <X className="h-3 w-3" />
                             </Button>
+                          ) : (
+                            <div className="w-7" />
                           )}
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => removeSlide(idx)}>
                             <X className="h-3.5 w-3.5" />

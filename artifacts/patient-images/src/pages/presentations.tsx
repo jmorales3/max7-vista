@@ -147,7 +147,7 @@ export default function Presentations() {
         {/* Thumbnail strip */}
         <div className="flex h-24 bg-muted overflow-hidden">
           {slides.slice(0, 4).map((s, i) => {
-            const imgId = s.type === "single" ? s.imageId : s.beforeId;
+            const imgId = s.type === "single" ? s.imageId : s.type === "compare" ? s.beforeId : s.baseId;
             return (
               <div key={i} className="flex-1 overflow-hidden">
                 <img src={`/api/images/${imgId}/file`} className="w-full h-full object-cover" loading="lazy" />

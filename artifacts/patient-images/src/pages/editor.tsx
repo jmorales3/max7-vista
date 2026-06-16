@@ -13,6 +13,10 @@ import {
   getListImagesQueryKey,
   getListPatientImagesQueryKey,
   getListPatientsQueryKey,
+  useListPresentations,
+  useCreatePresentation,
+  useUpdatePresentation,
+  getListPresentationsQueryKey,
 } from "@workspace/api-client-react";
 import {
   Select,
@@ -78,6 +82,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { type Slide } from "@/components/PresentationBuilder";
 
 type Tool = "pointer" | "pen" | "text" | "eraser" | "crop" | "arrow" | "circle" | "straightline" | "select" | "eyedropper" | "hand" | "smooth" | "ruler" | "angle" | "overlay";
 
@@ -467,6 +480,9 @@ export default function Editor() {
   const { toast } = useToast();
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showSaveOverlayDialog, setShowSaveOverlayDialog] = useState(false);
+  const [saveOverlayPickId, setSaveOverlayPickId] = useState<string>("new");
+  const [saveOverlayNewTitle, setSaveOverlayNewTitle] = useState("");
   const [isSavingCopy, setIsSavingCopy] = useState(false);
   const [notes, setNotes] = useState("");
   const [tool, setTool] = useState<Tool>("pointer");
@@ -642,6 +658,10 @@ export default function Editor() {
     image?.patientId ?? 0,
     { query: { enabled: !!image?.patientId, queryKey: getListPatientImagesQueryKey(image?.patientId ?? 0) } },
   );
+
+  const { data: presentations = [] } = useListPresentations();
+  const createPresentation = useCreatePresentation();
+  const updatePresentation = useUpdatePresentation();
 
   useEffect(() => {
     if (!id) return;
@@ -2026,6 +2046,46 @@ export default function Editor() {
     }
   }
 
+  function handleSaveOverlayToPresentation() {
+    if (!overlayImageId) return;
+    const slide: Slide = {
+      type: "superimpose",
+      baseId: id,
+      overlayId: parseInt(overlayImageId, 10),
+      overlayOpacity,
+      overlayOffsetX,
+      overlayOffsetY,
+      overlayScaleCorrection,
+    };
+    if (saveOverlayPickId === "new") {
+      const title = saveOverlayNewTitle.trim() || t("presentation.untitled");
+      createPresentation.mutate(
+        { data: { title, slides: [slide] } },
+        {
+          onSuccess: () => {
+            setShowSaveOverlayDialog(false);
+            queryClient.invalidateQueries({ queryKey: getListPresentationsQueryKey() });
+            toast({ title: t("editor.overlaySavedOk") });
+          },
+        },
+      );
+    } else {
+      const existing = presentations.find((p) => p.id === parseInt(saveOverlayPickId, 10));
+      if (!existing) return;
+      const currentSlides = (existing.slides as Slide[] | undefined) ?? [];
+      updatePresentation.mutate(
+        { id: existing.id, data: { title: existing.title, slides: [...currentSlides, slide] } },
+        {
+          onSuccess: () => {
+            setShowSaveOverlayDialog(false);
+            queryClient.invalidateQueries({ queryKey: getListPresentationsQueryKey() });
+            toast({ title: t("editor.overlaySavedOk") });
+          },
+        },
+      );
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="p-6 h-full flex flex-col">
@@ -2429,6 +2489,20 @@ export default function Editor() {
               {t("editor.overlayOffsetReset")}
             </Button>
           )}
+          <div className="h-4 w-px bg-border mx-0.5" />
+          <Button
+            size="sm"
+            variant="secondary"
+            className="h-6 text-xs px-2 gap-1"
+            onClick={() => {
+              setSaveOverlayPickId("new");
+              setSaveOverlayNewTitle("");
+              setShowSaveOverlayDialog(true);
+            }}
+          >
+            <Layers className="h-3 w-3" />
+            {t("editor.saveOverlayToPresentation")}
+          </Button>
         </div>
       )}
 
@@ -2867,6 +2941,53 @@ export default function Editor() {
           </div>
         </div>
       </div>
+
+      <Dialog open={showSaveOverlayDialog} onOpenChange={setShowSaveOverlayDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("editor.overlayPresentationTitle")}</DialogTitle>
+            <DialogDescription>{t("editor.overlayPresentationDesc")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>{t("editor.overlayPresentationAddTo")}</Label>
+              <Select value={saveOverlayPickId} onValueChange={setSaveOverlayPickId}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">{t("editor.overlayPresentationNewLabel")}</SelectItem>
+                  {presentations.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>{p.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {saveOverlayPickId === "new" && (
+              <div className="space-y-2">
+                <Label>{t("editor.overlayPresentationNewName")}</Label>
+                <Input
+                  placeholder={t("editor.overlayPresentationNewName")}
+                  value={saveOverlayNewTitle}
+                  onChange={(e) => setSaveOverlayNewTitle(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleSaveOverlayToPresentation(); }}
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSaveOverlayDialog(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              onClick={handleSaveOverlayToPresentation}
+              disabled={createPresentation.isPending || updatePresentation.isPending}
+            >
+              {t("presentation.addToPresentation")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
