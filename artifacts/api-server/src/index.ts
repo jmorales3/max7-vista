@@ -228,6 +228,80 @@ async function initPostgres() {
     );
   `);
   logger.info("PostgreSQL tables ensured");
+
+  await seedPostgres(pool);
+}
+
+async function seedPostgres(pool: import("pg").Pool) {
+  const bcrypt = (await import("bcryptjs")).default;
+
+  // Step 1: ensure tenant_id columns exist (one call each — pool.query rejects multi-statement)
+  await pool.query(`ALTER TABLE patients  ADD COLUMN IF NOT EXISTS tenant_id INTEGER`);
+  await pool.query(`ALTER TABLE tags      ADD COLUMN IF NOT EXISTS tenant_id INTEGER`);
+  await pool.query(`ALTER TABLE templates ADD COLUMN IF NOT EXISTS tenant_id INTEGER`);
+
+  // Step 2: fix unique constraints
+  await pool.query(`ALTER TABLE patients DROP CONSTRAINT IF EXISTS patients_patient_code_unique`);
+  await pool.query(`ALTER TABLE tags     DROP CONSTRAINT IF EXISTS tags_name_unique`);
+  await pool.query(`ALTER TABLE tags     DROP CONSTRAINT IF EXISTS tags_name_key`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS patients_code_tenant_unique ON patients(patient_code, tenant_id)`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS tags_name_tenant_unique ON tags(name, tenant_id)`);
+
+  // Step 3: create the two canonical tenants
+  await pool.query(
+    `INSERT INTO tenants (name, slug, is_active)
+     VALUES ('Main Clinic', 'main-clinic', true), ('Demo Clinic', 'demo', true)
+     ON CONFLICT (slug) DO NOTHING`
+  );
+
+  const { rows: tenantRows } = await pool.query<{ id: number; slug: string }>(
+    `SELECT id, slug FROM tenants WHERE slug IN ('main-clinic', 'demo')`
+  );
+  const mainId = tenantRows.find((r) => r.slug === "main-clinic")!.id;
+  const demoId = tenantRows.find((r) => r.slug === "demo")!.id;
+
+  // Step 4: assign any orphan rows to the main tenant (one call each)
+  await pool.query(`UPDATE users     SET tenant_id = $1 WHERE tenant_id IS NULL`, [mainId]);
+  await pool.query(`UPDATE patients  SET tenant_id = $1 WHERE tenant_id IS NULL`, [mainId]);
+  await pool.query(`UPDATE tags      SET tenant_id = $1 WHERE tenant_id IS NULL`, [mainId]);
+  await pool.query(`UPDATE templates SET tenant_id = $1 WHERE tenant_id IS NULL`, [mainId]);
+
+  // Step 5: add FK constraints if not already present (DO block — IF NOT EXISTS not valid for constraints)
+  await pool.query(`
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'patients_tenant_id_fkey') THEN
+        ALTER TABLE patients ADD CONSTRAINT patients_tenant_id_fkey
+          FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+      END IF;
+    END $$
+  `);
+  await pool.query(`
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'tags_tenant_id_fkey') THEN
+        ALTER TABLE tags ADD CONSTRAINT tags_tenant_id_fkey
+          FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+      END IF;
+    END $$
+  `);
+  await pool.query(`
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'templates_tenant_id_fkey') THEN
+        ALTER TABLE templates ADD CONSTRAINT templates_tenant_id_fkey
+          FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+      END IF;
+    END $$
+  `);
+
+  // Step 6: create the demo user (password: admin123)
+  const demoHash = await bcrypt.hash("admin123", 10);
+  await pool.query(
+    `INSERT INTO users (username, password_hash, tenant_id, role, is_active)
+     VALUES ('demo', $1, $2, 'superadmin', true)
+     ON CONFLICT (username) DO NOTHING`,
+    [demoHash, demoId]
+  );
+
+  logger.info("PostgreSQL seed complete (tenants + demo user ensured)");
 }
 
 async function start() {
