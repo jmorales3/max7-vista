@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, like, sql } from "drizzle-orm";
+import { eq, ilike, sql } from "drizzle-orm";
 import { db, patientsTable, imagesTable } from "@workspace/db";
 import {
   ListPatientsQueryParams,
@@ -32,7 +32,7 @@ router.get("/patients", async (req, res): Promise<void> => {
       .leftJoin(imagesTable, eq(imagesTable.patientId, patientsTable.id))
       .where(
         search
-          ? sql`(${like(patientsTable.name, `%${search}%`)} OR ${like(patientsTable.patientCode, `%${search}%`)})`
+          ? sql`(${ilike(patientsTable.name, `%${search}%`)} OR ${ilike(patientsTable.patientCode, `%${search}%`)})`
           : undefined
       )
       .groupBy(patientsTable.id)
