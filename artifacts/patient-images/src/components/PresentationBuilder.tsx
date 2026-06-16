@@ -19,6 +19,8 @@ export type SuperimposeSlide = {
   overlayOffsetX: number;
   overlayOffsetY: number;
   overlayScaleCorrection: number;
+  /** The editor's base image scale (px/image-px) at save time — used to normalize offsetX/Y */
+  overlayBaseScale?: number;
 };
 export type Slide = SingleSlide | CompareSlide | SuperimposeSlide;
 
@@ -80,13 +82,15 @@ export function BeforeAfterSlider({ beforeUrl, afterUrl }: { beforeUrl: string; 
 }
 
 /* ─── Superimpose Viewer ────────────────────────────────────── */
-export function SuperimposeViewer({ baseUrl, overlayUrl, initialOpacity, offsetX, offsetY, scaleCorrection }: {
+export function SuperimposeViewer({ baseUrl, overlayUrl, initialOpacity, offsetX, offsetY, scaleCorrection, baseScale }: {
   baseUrl: string;
   overlayUrl: string;
   initialOpacity: number;
   offsetX: number;
   offsetY: number;
   scaleCorrection: number;
+  /** Editor base-image scale at save time — used to re-scale the raw pixel offsets */
+  baseScale?: number;
 }) {
   const { t } = useTranslation();
   const [opacity, setOpacity] = useState(initialOpacity);
@@ -119,8 +123,11 @@ export function SuperimposeViewer({ baseUrl, overlayUrl, initialOpacity, offsetX
         const os = bs * scaleCorrection;
         const oW = overlayImg.naturalWidth * os;
         const oH = overlayImg.naturalHeight * os;
+        // Re-scale raw pixel offsets from editor-canvas-space to presentation-canvas-space.
+        // If baseScale is not stored (old slides) fall back to raw offset to preserve old behaviour.
+        const scaleFactor = baseScale ? bs / baseScale : 1;
         ctx.globalAlpha = op;
-        ctx.drawImage(overlayImg, (W - oW) / 2 + offsetX, (H - oH) / 2 + offsetY, oW, oH);
+        ctx.drawImage(overlayImg, (W - oW) / 2 + offsetX * scaleFactor, (H - oH) / 2 + offsetY * scaleFactor, oW, oH);
         ctx.globalAlpha = 1;
       }
     }
@@ -332,6 +339,7 @@ export function PresentationBuilder({
               offsetX={slide.overlayOffsetX}
               offsetY={slide.overlayOffsetY}
               scaleCorrection={slide.overlayScaleCorrection}
+              baseScale={slide.overlayBaseScale}
             />
           )}
         </div>

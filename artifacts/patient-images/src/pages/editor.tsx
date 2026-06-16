@@ -2056,6 +2056,7 @@ export default function Editor() {
       overlayOffsetX,
       overlayOffsetY,
       overlayScaleCorrection,
+      overlayBaseScale: scale,
     };
     if (saveOverlayPickId === "new") {
       const title = saveOverlayNewTitle.trim() || t("presentation.untitled");
