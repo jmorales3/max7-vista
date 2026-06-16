@@ -103,7 +103,7 @@ export function AppSidebar() {
 
         {isAdmin && (
           <SidebarGroup>
-            <SidebarGroupLabel>Administration</SidebarGroupLabel>
+            <SidebarGroupLabel>{t("nav.administration")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
@@ -113,7 +113,7 @@ export function AppSidebar() {
                   >
                     <Link href="/admin/users">
                       <ShieldCheck />
-                      <span>User Management</span>
+                      <span>{t("nav.userManagement")}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
