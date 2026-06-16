@@ -250,7 +250,8 @@
     "patientSection": "Patient Presentations",
     "slides": "slides",
     "deleteTitle": "Delete Presentation",
-    "deleteDesc": "Are you sure you want to delete \"{{title}}\"? This cannot be undone."
+    "deleteDesc": "Are you sure you want to delete \"{{title}}\"? This cannot be undone.",
+    "addToPresentation": "Add to Presentation"
   },
   "gallery": {
     "title": "Gallery",

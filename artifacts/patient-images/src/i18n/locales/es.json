@@ -250,7 +250,8 @@
     "patientSection": "Presentaciones por Paciente",
     "slides": "diapositivas",
     "deleteTitle": "Eliminar Presentación",
-    "deleteDesc": "¿Está seguro de que desea eliminar \"{{title}}\"? Esta acción no se puede deshacer."
+    "deleteDesc": "¿Está seguro de que desea eliminar \"{{title}}\"? Esta acción no se puede deshacer.",
+    "addToPresentation": "Añadir a Presentación"
   },
   "gallery": {
     "title": "Galería",

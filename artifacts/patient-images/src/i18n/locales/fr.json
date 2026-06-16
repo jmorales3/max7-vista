@@ -250,7 +250,8 @@
     "patientSection": "Présentations par Patient",
     "slides": "diapositives",
     "deleteTitle": "Supprimer la Présentation",
-    "deleteDesc": "Êtes-vous sûr de vouloir supprimer \"{{title}}\" ? Cette action est irréversible."
+    "deleteDesc": "Êtes-vous sûr de vouloir supprimer \"{{title}}\" ? Cette action est irréversible.",
+    "addToPresentation": "Ajouter à la Présentation"
   },
   "gallery": {
     "title": "Galerie",
