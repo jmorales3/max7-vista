@@ -347,21 +347,23 @@ async function seedPostgres(pool: import("pg").Pool) {
     ["Fernando Pasco",           "92816",   "1972-10-30", null],
   ];
 
+  // Always ensure seed patients exist — ON CONFLICT (patient_code, tenant_id) DO NOTHING
+  // guarantees real patients with any other patient_code are never touched or deleted.
+  // Removing the old "if count === 0" guard: that guard caused data loss when the DB was
+  // reset because a fresh count of 0 would overwrite any surviving real patients.
   for (const tenantId of [mainId, demoId]) {
-    const { rows: pc } = await pool.query<{ count: string }>(
-      `SELECT count(*)::text AS count FROM patients WHERE tenant_id = $1`,
-      [tenantId]
-    );
-    if (parseInt(pc[0]?.count ?? "0") === 0) {
-      for (const [name, code, dob, notes] of realPatients) {
-        await pool.query(
-          `INSERT INTO patients (tenant_id, name, patient_code, date_of_birth, notes, created_at, updated_at)
-           VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-           ON CONFLICT DO NOTHING`,
-          [tenantId, name, code, dob, notes]
-        );
-      }
-      logger.info({ tenantId, count: realPatients.length }, "Patients seeded for tenant");
+    let seededCount = 0;
+    for (const [name, code, dob, notes] of realPatients) {
+      const res = await pool.query(
+        `INSERT INTO patients (tenant_id, name, patient_code, date_of_birth, notes, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+         ON CONFLICT (patient_code, tenant_id) DO NOTHING`,
+        [tenantId, name, code, dob, notes]
+      );
+      if (res.rowCount && res.rowCount > 0) seededCount++;
+    }
+    if (seededCount > 0) {
+      logger.info({ tenantId, seededCount }, "Seed patients inserted for tenant");
     }
   }
 

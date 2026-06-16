@@ -277,6 +277,16 @@ export async function readFileAsBuffer(filePath: string): Promise<Buffer | null>
 }
 
 /**
+ * List all objects under a GCS prefix (e.g. "images/").
+ * Returns object names relative to the bucket root.
+ */
+export async function listGcsFiles(prefix = ""): Promise<string[]> {
+  const bucket = storageClient.bucket(getBucketName());
+  const [files] = await bucket.getFiles({ prefix });
+  return files.map((f) => f.name);
+}
+
+/**
  * Delete a file from GCS (or local disk for legacy paths).
  * Silently ignores missing files.
  */

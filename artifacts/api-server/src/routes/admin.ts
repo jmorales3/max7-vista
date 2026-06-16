@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { db, pool, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireRole, invalidateActiveCache } from "../middlewares/requireAuth";
+import { listGcsFiles } from "../lib/gcsStorage";
 
 const router: IRouter = Router();
 
@@ -168,6 +169,44 @@ router.delete("/admin/users/:id", requireRole("admin", "superadmin"), async (req
     res.json({ ok: true });
   } catch {
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * GET /admin/orphaned-images
+ * Lists GCS image files that have no matching record in the images table.
+ * Used to recover images after a database reset.
+ * Groups orphans by the patient-ID directory segment in their path.
+ */
+router.get("/admin/orphaned-images", requireRole("admin", "superadmin"), async (_req, res) => {
+  try {
+    // All GCS object names under images/
+    const allObjects = await listGcsFiles("images/");
+
+    // All file_paths currently in the DB
+    const { rows } = await pool.query<{ file_path: string }>(
+      `SELECT DISTINCT file_path FROM images WHERE file_path LIKE 'gcs:%'`
+    );
+    const knownPaths = new Set(rows.map((r) => r.file_path.slice(4))); // strip "gcs:"
+
+    // Find GCS objects not referenced by any DB record
+    const orphans = allObjects.filter((name) => !knownPaths.has(name));
+
+    // Group by the patient-id directory (e.g. "images/34/2026-06-10/file.jpg" → patientDir "34")
+    const grouped: Record<string, string[]> = {};
+    for (const name of orphans) {
+      const parts = name.split("/"); // ["images", "<patientId>", "<date>", "<file>"]
+      const patientDir = parts[1] ?? "unknown";
+      if (!grouped[patientDir]) grouped[patientDir] = [];
+      grouped[patientDir].push(name);
+    }
+
+    res.json({
+      totalOrphans: orphans.length,
+      byPatientDir: grouped,
+    });
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
   }
 });
 
