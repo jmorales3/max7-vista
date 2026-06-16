@@ -251,6 +251,14 @@ async function seedPostgres(pool: import("pg").Pool) {
   await pool.query(`ALTER TABLE tags     DROP CONSTRAINT IF EXISTS tags_name_key`);
   await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS patients_code_tenant_unique ON patients(patient_code, tenant_id)`);
   await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS tags_name_tenant_unique ON tags(name, tenant_id)`);
+  // Remove duplicate image rows before enforcing uniqueness (keeps the oldest record per patient+path)
+  await pool.query(`
+    DELETE FROM images
+    WHERE id NOT IN (
+      SELECT MIN(id) FROM images GROUP BY patient_id, file_path
+    )
+  `);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS images_patient_file_unique ON images(patient_id, file_path)`);
 
   // Step 3: create the two canonical tenants
   await pool.query(
@@ -643,7 +651,7 @@ async function seedPostgres(pool: import("pg").Pool) {
 
   // Version stamp: bump this string whenever imageSeeds data changes.
   // On mismatch the seed deletes all images for seeded patients and re-inserts the correct ones.
-  const IMAGE_SEED_VERSION = "3";
+  const IMAGE_SEED_VERSION = "4";
   const { rows: svRows } = await pool.query<{ value: string }>(
     `SELECT value FROM seed_state WHERE key = 'image_seed_version'`
   );
@@ -676,22 +684,22 @@ async function seedPostgres(pool: import("pg").Pool) {
           [seededPatientIds]
         );
       }
-    }
 
-    // Insert seed images that are not already present
-    let seeded = 0;
-    for (const [patCode, filePath, fileName, notes, capturedAt, isUnassigned, isLibrary] of imageSeeds) {
-      const patientId = codeToId.get(patCode);
-      if (!patientId) continue;
-      await pool.query(
-        `INSERT INTO images (patient_id, file_path, file_name, notes, captured_at, is_unassigned, is_library_asset, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-         ON CONFLICT DO NOTHING`,
-        [patientId, filePath, fileName, notes, capturedAt, isUnassigned, isLibrary]
-      );
-      seeded++;
+      // Insert seed images (only runs on version change, not every startup)
+      let seeded = 0;
+      for (const [patCode, filePath, fileName, notes, capturedAt, isUnassigned, isLibrary] of imageSeeds) {
+        const patientId = codeToId.get(patCode);
+        if (!patientId) continue;
+        await pool.query(
+          `INSERT INTO images (patient_id, file_path, file_name, notes, captured_at, is_unassigned, is_library_asset, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+           ON CONFLICT (patient_id, file_path) DO NOTHING`,
+          [patientId, filePath, fileName, notes, capturedAt, isUnassigned, isLibrary]
+        );
+        seeded++;
+      }
+      logger.info({ tenantId, seeded }, "Images seeded for tenant");
     }
-    logger.info({ tenantId, seeded, needsReseed }, "Images seeded for tenant");
   }
 
   // Record current seed version
