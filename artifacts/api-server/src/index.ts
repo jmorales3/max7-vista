@@ -304,36 +304,63 @@ async function seedPostgres(pool: import("pg").Pool) {
     [demoHash, demoId]
   );
 
-  // Step 7: seed sample patients for the demo tenant (idempotent)
-  const { rows: existingPatients } = await pool.query<{ count: string }>(
-    `SELECT count(*)::text AS count FROM patients WHERE tenant_id = $1`,
-    [demoId]
-  );
-  if (parseInt(existingPatients[0]?.count ?? "0") === 0) {
-    const demoPatients = [
-      ["Ana Martínez",      "PT-D001", "1985-03-12"],
-      ["Carlos Rodríguez",  "PT-D002", "1972-07-25"],
-      ["Sofia Hernández",   "PT-D003", "1990-11-03"],
-      ["Miguel Torres",     "PT-D004", "1968-01-18"],
-      ["Valentina García",  "PT-D005", "1995-06-30"],
-      ["Luis Pérez",        "PT-D006", "1955-09-14"],
-      ["Isabella López",    "PT-D007", "1988-04-22"],
-      ["Andrés Gómez",      "PT-D008", "2001-12-08"],
-      ["Camila Díaz",       "PT-D009", "1978-02-17"],
-      ["Sebastián Morales", "PT-D010", "1963-08-05"],
-    ];
-    for (const [name, code, dob] of demoPatients) {
-      await pool.query(
-        `INSERT INTO patients (tenant_id, name, patient_code, date_of_birth, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, NOW(), NOW())
-         ON CONFLICT DO NOTHING`,
-        [demoId, name, code, dob]
-      );
+  // Step 7: seed real clinic patients into both tenants (idempotent — only runs when tenant has 0 patients)
+  const realPatients: [string, string, string, string | null][] = [
+    // [name, patient_code, date_of_birth (YYYY-MM-DD), notes]
+    ["Maria Gonzalez",           "PT-001",  "1978-03-15", "Routine dermatology follow-up"],
+    ["James Okafor",             "PT-002",  "1965-07-22", "Post-surgical wound monitoring"],
+    ["Sarah Chen",               "PT-003",  "1990-11-08", "Pediatric skin condition tracking"],
+    ["Juan Morales",             "1224",    "1954-06-29", null],
+    ["Nouhad Omais",             "22204",   "2012-08-20", null],
+    ["Carmen Croston",           "10709",   "1963-09-01", null],
+    ["Natasha Pasco",            "174813",  "2014-01-30", null],
+    ["Fabia Abrahams",           "20450",   "1962-02-05", null],
+    ["Ann Marie Broce",          "21083",   "2014-08-26", null],
+    ["Nathaniel Jean Francois",  "21768",   "1989-05-03", null],
+    ["Luis Adolfo Franco",       "21869",   "2013-08-22", null],
+    ["Jesus Armando Cerrud",     "22414",   "2013-11-27", null],
+    ["Emilie Marin",             "22448",   "2010-03-15", null],
+    ["Kenia Caballero",          "22500",   "1975-10-06", null],
+    ["Rita de Vasquez",          "22536",   "1968-04-09", null],
+    ["Alejandro Echevers",       "22591",   "1999-07-28", null],
+    ["Muhammad Hasan",           "22669",   "2013-11-26", null],
+    ["Asinat Omais",             "22795",   "2012-06-30", null],
+    ["Virginia Rivera",          "22810",   "2010-01-03", null],
+    ["Derek Cisneros",           "22812",   "2006-02-20", null],
+    ["Lisbeth Pernia",           "22814",   "1978-08-28", null],
+    ["Brandon Pineda",           "22821",   "2011-09-28", null],
+    ["Jacobo Helueni",           "22838",   "2010-05-06", null],
+    ["Micael Escobar",           "22839",   "2009-02-03", null],
+    ["Juan Pablo Segovia",       "22851",   "1991-01-08", null],
+    ["Christopher Arauz",        "22852",   "1999-04-04", null],
+    ["Anat Antebi",              "22864",   "2013-11-21", null],
+    ["Lia Camila Arauz",         "22891",   "2017-03-21", null],
+    ["Analee Spencer",           "22900",   "2008-04-11", null],
+    ["Christopher Caolo",        "22907",   "2003-03-05", null],
+    ["David Pan",                "22935",   "2012-10-15", null],
+    ["Sayida Omais",             "22936",   "2007-07-25", null],
+    ["Fernando Pasco",           "92816",   "1972-10-30", null],
+  ];
+
+  for (const tenantId of [mainId, demoId]) {
+    const { rows: pc } = await pool.query<{ count: string }>(
+      `SELECT count(*)::text AS count FROM patients WHERE tenant_id = $1`,
+      [tenantId]
+    );
+    if (parseInt(pc[0]?.count ?? "0") === 0) {
+      for (const [name, code, dob, notes] of realPatients) {
+        await pool.query(
+          `INSERT INTO patients (tenant_id, name, patient_code, date_of_birth, notes, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+           ON CONFLICT DO NOTHING`,
+          [tenantId, name, code, dob, notes]
+        );
+      }
+      logger.info({ tenantId, count: realPatients.length }, "Patients seeded for tenant");
     }
-    logger.info({ count: demoPatients.length }, "Demo patients seeded");
   }
 
-  logger.info("PostgreSQL seed complete (tenants + demo user + demo patients ensured)");
+  logger.info("PostgreSQL seed complete (tenants + users + patients ensured)");
 }
 
 async function start() {
