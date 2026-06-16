@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Plus, Calendar, FileText, Image as ImageIcon, Users, Star } from "lucide-react";
+import { Search, Plus, Calendar, FileText, Image as ImageIcon, Users } from "lucide-react";
 import { format } from "date-fns";
 
 export default function Patients() {
@@ -64,34 +64,41 @@ export default function Patients() {
           {patients.map((patient) => (
             <Link key={patient.id} href={`/patients/${patient.id}`}>
               <Card className="hover-elevate cursor-pointer transition-colors hover:border-primary/50 group h-full overflow-hidden">
-                {patient.profileImageId && (
-                  <div className="h-28 w-full overflow-hidden bg-muted relative">
-                    <img
-                      src={`/api/images/${patient.profileImageId}/file`}
-                      alt={patient.name}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                    <div className="absolute bottom-1.5 right-1.5 bg-primary/80 text-primary-foreground text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex items-center gap-1">
-                      <Star className="h-2.5 w-2.5 fill-current" />
-                    </div>
-                  </div>
-                )}
                 <CardHeader className="p-4 pb-2">
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-xl group-hover:text-primary transition-colors">
-                      {patient.name}
-                    </CardTitle>
-                    <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
-                      <ImageIcon className="h-3 w-3" />
-                      {patient.imageCount || 0}
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-xl group-hover:text-primary transition-colors">
+                        {patient.name}
+                      </CardTitle>
+                      <CardDescription className="font-mono text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
+                        <FileText className="h-3 w-3" />
+                        {patient.patientCode}
+                      </CardDescription>
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      {patient.profileImageId ? (
+                        <div className="h-12 w-12 rounded-lg overflow-hidden border-2 border-primary/30 shadow-sm">
+                          <img
+                            src={`/api/images/${patient.profileImageId}/file`}
+                            alt={patient.name}
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                            loading="lazy"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
+                          <ImageIcon className="h-3 w-3" />
+                          {patient.imageCount || 0}
+                        </div>
+                      )}
+                      {patient.profileImageId && (
+                        <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
+                          <ImageIcon className="h-3 w-3" />
+                          {patient.imageCount || 0}
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <CardDescription className="font-mono text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
-                    <FileText className="h-3 w-3" />
-                    {patient.patientCode}
-                  </CardDescription>
                 </CardHeader>
                 <CardContent className="p-4 pt-2">
                   {patient.dateOfBirth && (
