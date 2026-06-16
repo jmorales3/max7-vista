@@ -670,7 +670,24 @@ export default function Editor() {
     img.src = `/api/images/${id}/file`;
     img.onload = () => {
       imgRef.current = img;
-      resizeCanvas();
+      const canvas = canvasRef.current;
+      const container = containerRef.current;
+      if (canvas && container && img.naturalWidth > 0 && img.naturalHeight > 0) {
+        const fitScale = Math.min(
+          container.offsetWidth / img.naturalWidth,
+          container.offsetHeight / img.naturalHeight,
+        );
+        const w = container.offsetWidth;
+        const h = container.offsetHeight;
+        canvas.width = w;
+        canvas.height = h;
+        if (cursorCanvasRef.current) { cursorCanvasRef.current.width = w; cursorCanvasRef.current.height = h; }
+        if (overlayCanvasRef.current) { overlayCanvasRef.current.width = w; overlayCanvasRef.current.height = h; }
+        setScale(fitScale);
+        renderCanvas(canvas, img, [], fitScale, 0, null);
+      } else {
+        resizeCanvas();
+      }
     };
   }, [id]);
 
