@@ -281,4 +281,35 @@ router.post("/admin/recover-images", requireRole("admin", "superadmin"), async (
   }
 });
 
+/**
+ * POST /admin/bulk-reassign-images
+ * Body: { mapping: { "109": 106, "106": 108, "108": 109 } }
+ * Reassigns images from one patient_id to another in a single atomic UPDATE.
+ */
+router.post("/admin/bulk-reassign-images", requireRole("admin", "superadmin"), async (req, res) => {
+  const { mapping } = req.body as { mapping: Record<string, number> };
+  if (!mapping || Object.keys(mapping).length === 0) {
+    res.status(400).json({ error: "mapping object required" });
+    return;
+  }
+
+  const fromIds = Object.keys(mapping).map(Number);
+  const caseStatements = fromIds
+    .map((from) => `WHEN patient_id = ${from} THEN ${mapping[String(from)]}`)
+    .join(" ");
+
+  const sql = `
+    UPDATE images
+    SET patient_id = CASE ${caseStatements} END
+    WHERE patient_id = ANY($1::int[])
+  `;
+
+  try {
+    const result = await pool.query(sql, [fromIds]);
+    res.json({ ok: true, rowsUpdated: result.rowCount });
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+});
+
 export default router;
