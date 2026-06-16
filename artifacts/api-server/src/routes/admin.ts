@@ -210,4 +210,75 @@ router.get("/admin/orphaned-images", requireRole("admin", "superadmin"), async (
   }
 });
 
+/**
+ * POST /admin/recover-images
+ * Body: { assignments: [{ gcsDir: "36", patientId: 106 }, ...] }
+ * For each assignment, inserts image records for every GCS file in that directory
+ * that is not already in the DB. Returns counts of what was inserted.
+ */
+router.post("/admin/recover-images", requireRole("admin", "superadmin"), async (req, res) => {
+  const { assignments } = req.body as {
+    assignments: Array<{ gcsDir: string; patientId: number }>;
+  };
+
+  if (!Array.isArray(assignments) || assignments.length === 0) {
+    res.status(400).json({ error: "assignments array required" });
+    return;
+  }
+
+  try {
+    // Get all currently-known GCS paths so we skip duplicates
+    const { rows: known } = await pool.query<{ file_path: string }>(
+      `SELECT DISTINCT file_path FROM images WHERE file_path LIKE 'gcs:%'`
+    );
+    const knownPaths = new Set(known.map((r) => r.file_path.slice(4)));
+
+    // Fetch all orphaned GCS objects once
+    const allObjects = await listGcsFiles("images/");
+
+    const results: Record<string, { inserted: number; skipped: number }> = {};
+
+    for (const { gcsDir, patientId } of assignments) {
+      const prefix = `images/${gcsDir}/`;
+      const files = allObjects.filter((name) => name.startsWith(prefix) && !knownPaths.has(name));
+
+      let inserted = 0;
+      let skipped = 0;
+
+      for (const objectName of files) {
+        // Extract filename from path: images/<dir>/<date>/<filename>
+        const fileName = objectName.split("/").pop() ?? objectName;
+
+        // Derive captured_at from the timestamp embedded in the filename (ms epoch)
+        const tsMatch = fileName.match(/^(\d{13})/);
+        const capturedAt = tsMatch
+          ? new Date(parseInt(tsMatch[1], 10)).toISOString()
+          : new Date().toISOString();
+
+        const filePath = `gcs:${objectName}`;
+
+        try {
+          const r = await pool.query(
+            `INSERT INTO images
+               (patient_id, file_path, file_name, notes, captured_at, is_unassigned, is_library_asset, created_at, updated_at)
+             VALUES ($1, $2, $3, NULL, $4, false, false, NOW(), NOW())
+             ON CONFLICT DO NOTHING`,
+            [patientId, filePath, fileName, capturedAt]
+          );
+          if (r.rowCount && r.rowCount > 0) inserted++;
+          else skipped++;
+        } catch {
+          skipped++;
+        }
+      }
+
+      results[`dir${gcsDir}→patient${patientId}`] = { inserted, skipped };
+    }
+
+    res.json({ ok: true, results });
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+});
+
 export default router;
