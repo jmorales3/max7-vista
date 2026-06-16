@@ -1199,4 +1199,52 @@ Add this bullet to `SYSTEM_PROMPT` in `chat.ts` (before the Migration bullet):
 
 ---
 
+## FEAT-016 — Patient Profile Photo
+
+**Status:** ✅ Confirmed working in Vista  
+**Date:** 2026-06-16  
+**Vista files:**
+- `lib/db/src/schema/patients.ts` — `profileImageId` column
+- `lib/api-zod/src/generated/api.ts` — Zod schemas updated
+- `lib/api-client-react/src/generated/api.schemas.ts` — `Patient` + `PatientUpdate` interfaces updated
+- `artifacts/api-server/src/routes/patients.ts` — `profileImageId` in all SELECT + PATCH
+- `artifacts/patient-images/src/components/image-grid.tsx` — star button + badge overlay
+- `artifacts/patient-images/src/pages/patient-detail.tsx` — `setProfileMutation` + props passed to ImageGrid
+- `artifacts/patient-images/src/pages/patients.tsx` — cover image banner on patient cards
+
+### What it does
+Lets users designate one of a patient's images as the official profile photo. On the patient gallery page, hovering any image reveals a ⭐ button in the top-right corner; clicking it sets that image as the profile photo. The active profile photo shows a filled-star badge and a "Profile photo" label at the bottom-left of its thumbnail. On the patient list page, cards for patients with a profile photo display a 112px-tall cover image banner at the top of the card with a smooth hover-zoom effect.
+
+### DB change
+```sql
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS profile_image_id INTEGER REFERENCES images(id) ON DELETE SET NULL;
+```
+
+### API changes
+- `GET /api/patients` and `GET /api/patients/:id` — now return `profileImageId` in the response object.
+- `PATCH /api/patients/:id` — accepts `profileImageId` in the body (already handled by the generic `.set(parsed.data)` pattern; only the Zod `UpdatePatientBody` schema needed updating).
+
+### i18n keys added (all 4 locales)
+```
+patients.setAsProfile   — "Set as profile photo"
+patients.profilePhoto   — "Profile photo"
+patients.profileSet     — "Profile photo updated"
+patients.removeProfile  — "Remove profile photo"
+```
+
+### ImageGrid props added
+```tsx
+profileImageId?: number | null   // which image is currently the profile
+onSetProfile?: (imageId: number) => void  // callback — only passed on patient detail page
+```
+When `onSetProfile` is not provided the star button is hidden entirely (safe to use ImageGrid in gallery/library views).
+
+### Notes for Max7 agent
+- The star button is a plain `<button>` inside the image `<div>` (not a `<Link>`) — both `e.preventDefault()` and `e.stopPropagation()` are required to prevent the card navigation link from triggering.
+- The profile image is fetched via the same `/api/images/:id/file` route already used for thumbnails — no new endpoint needed.
+- The `ON DELETE SET NULL` FK ensures removing an image automatically clears the patient's profile pointer without requiring application-level cleanup.
+- In the patient list, each card now has `overflow-hidden` on the `<Card>` element — make sure it was not already removed for a different styling reason before adding the cover banner.
+
+---
+
 <!-- Add new entries below as features are confirmed in Vista -->

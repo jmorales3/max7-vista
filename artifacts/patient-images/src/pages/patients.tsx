@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Plus, Calendar, FileText, Image as ImageIcon, Users } from "lucide-react";
+import { Search, Plus, Calendar, FileText, Image as ImageIcon, Users, Star } from "lucide-react";
 import { format } from "date-fns";
 
 export default function Patients() {
@@ -63,7 +63,21 @@ export default function Patients() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {patients.map((patient) => (
             <Link key={patient.id} href={`/patients/${patient.id}`}>
-              <Card className="hover-elevate cursor-pointer transition-colors hover:border-primary/50 group h-full">
+              <Card className="hover-elevate cursor-pointer transition-colors hover:border-primary/50 group h-full overflow-hidden">
+                {patient.profileImageId && (
+                  <div className="h-28 w-full overflow-hidden bg-muted relative">
+                    <img
+                      src={`/api/images/${patient.profileImageId}/file`}
+                      alt={patient.name}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                    <div className="absolute bottom-1.5 right-1.5 bg-primary/80 text-primary-foreground text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                      <Star className="h-2.5 w-2.5 fill-current" />
+                    </div>
+                  </div>
+                )}
                 <CardHeader className="p-4 pb-2">
                   <div className="flex justify-between items-start">
                     <CardTitle className="text-xl group-hover:text-primary transition-colors">

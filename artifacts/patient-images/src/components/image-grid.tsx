@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { format } from "date-fns";
+import { useTranslation } from "react-i18next";
 import {
   Image,
   useUpdateImage,
@@ -19,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Calendar, User, FileText, Pencil, Loader2 } from "lucide-react";
+import { Calendar, User, FileText, Pencil, Loader2, Star } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -27,9 +28,12 @@ interface ImageGridProps {
   images: Image[];
   columns: 1 | 2 | 4 | 8;
   showPatientName?: boolean;
+  profileImageId?: number | null;
+  onSetProfile?: (imageId: number) => void;
 }
 
-export function ImageGrid({ images, columns, showPatientName = false }: ImageGridProps) {
+export function ImageGrid({ images, columns, showPatientName = false, profileImageId, onSetProfile }: ImageGridProps) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [editingImage, setEditingImage] = useState<Image | null>(null);
   const [draftNotes, setDraftNotes] = useState("");
@@ -78,13 +82,32 @@ export function ImageGrid({ images, columns, showPatientName = false }: ImageGri
         {images.map((image) => (
           <Link key={image.id} href={`/editor/${image.id}`}>
             <Card className="group overflow-hidden cursor-pointer hover-elevate transition-all border-muted-foreground/20 hover:border-primary/50 relative">
-              <div className="aspect-square overflow-hidden">
+              <div className="aspect-square overflow-hidden relative">
                 <img
                   src={`/api/images/${image.id}/file`}
                   alt={image.notes || "Clinical image"}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   loading="lazy"
                 />
+                {onSetProfile && (
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onSetProfile(image.id); }}
+                    title={t("patients.setAsProfile")}
+                    className={`absolute top-1.5 right-1.5 p-1 rounded-full transition-all shadow-sm ${
+                      profileImageId === image.id
+                        ? "bg-primary text-primary-foreground opacity-100"
+                        : "bg-black/50 text-white opacity-0 group-hover:opacity-100"
+                    }`}
+                  >
+                    <Star className={`h-3.5 w-3.5 ${profileImageId === image.id ? "fill-current" : ""}`} />
+                  </button>
+                )}
+                {profileImageId === image.id && (
+                  <div className="absolute bottom-1.5 left-1.5 bg-primary text-primary-foreground text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                    <Star className="h-2.5 w-2.5 fill-current" />
+                    {t("patients.profilePhoto")}
+                  </div>
+                )}
               </div>
 
               <div className={`p-2.5 sm:p-3 border-t bg-card text-xs transition-colors ${columns === 8 ? "hidden" : "block"}`}>

@@ -31,7 +31,8 @@ export const ListPatientsResponseItem = zod.object({
   "dateOfBirth": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "createdAt": zod.string(),
-  "imageCount": zod.number().optional()
+  "imageCount": zod.number().optional(),
+  "profileImageId": zod.number().nullish()
 })
 export const ListPatientsResponse = zod.array(ListPatientsResponseItem)
 
@@ -65,7 +66,8 @@ export const GetPatientResponse = zod.object({
   "dateOfBirth": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "createdAt": zod.string(),
-  "imageCount": zod.number().optional()
+  "imageCount": zod.number().optional(),
+  "profileImageId": zod.number().nullish()
 })
 
 
@@ -84,7 +86,8 @@ export const UpdatePatientBody = zod.object({
   "name": zod.string().min(1).optional(),
   "patientCode": zod.string().min(1).optional(),
   "dateOfBirth": zod.string().optional(),
-  "notes": zod.string().optional()
+  "notes": zod.string().optional(),
+  "profileImageId": zod.number().nullish()
 })
 
 export const UpdatePatientResponse = zod.object({
@@ -94,7 +97,8 @@ export const UpdatePatientResponse = zod.object({
   "dateOfBirth": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "createdAt": zod.string(),
-  "imageCount": zod.number().optional()
+  "imageCount": zod.number().optional(),
+  "profileImageId": zod.number().nullish()
 })
 
 

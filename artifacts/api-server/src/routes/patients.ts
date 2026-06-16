@@ -25,6 +25,7 @@ router.get("/patients", async (req, res): Promise<void> => {
         patientCode: patientsTable.patientCode,
         dateOfBirth: patientsTable.dateOfBirth,
         notes: patientsTable.notes,
+        profileImageId: patientsTable.profileImageId,
         createdAt: patientsTable.createdAt,
         imageCount: sql<number>`cast(count(${imagesTable.id}) as integer)`,
       })
@@ -84,6 +85,7 @@ router.get("/patients/:id", async (req, res): Promise<void> => {
         patientCode: patientsTable.patientCode,
         dateOfBirth: patientsTable.dateOfBirth,
         notes: patientsTable.notes,
+        profileImageId: patientsTable.profileImageId,
         createdAt: patientsTable.createdAt,
         imageCount: sql<number>`cast(count(${imagesTable.id}) as integer)`,
       })
@@ -137,6 +139,7 @@ router.patch("/patients/:id", async (req, res): Promise<void> => {
         patientCode: patientsTable.patientCode,
         dateOfBirth: patientsTable.dateOfBirth,
         notes: patientsTable.notes,
+        profileImageId: patientsTable.profileImageId,
         createdAt: patientsTable.createdAt,
         imageCount: sql<number>`cast(count(${imagesTable.id}) as integer)`,
       })

@@ -11,6 +11,7 @@ import {
   getListPatientImagesQueryKey,
   useDeletePatient,
   getListPatientsQueryKey,
+  useUpdatePatient,
   useListTags,
   getListTagsQueryKey,
   useListPatientTags,
@@ -213,6 +214,23 @@ export default function PatientDetail() {
       }
     }
   });
+
+  const setProfileMutation = useUpdatePatient({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetPatientQueryKey(id) });
+        queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
+        toast({ title: t("patients.profileSet") });
+      },
+      onError: () => {
+        toast({ variant: "destructive", title: t("common.error") });
+      }
+    }
+  });
+
+  const handleSetProfile = (imageId: number) => {
+    setProfileMutation.mutate({ id, data: { profileImageId: imageId } });
+  };
 
   const handleAddTag = () => {
     if (!selectedTagId) return;
@@ -446,7 +464,12 @@ export default function PatientDetail() {
             {[1, 2, 3, 4].map(i => <Skeleton key={i} className="aspect-square rounded-xl" />)}
           </div>
         ) : images && images.length > 0 ? (
-          <ImageGrid images={images} columns={gridColumns} />
+          <ImageGrid
+            images={images}
+            columns={gridColumns}
+            profileImageId={patient.profileImageId}
+            onSetProfile={handleSetProfile}
+          />
         ) : (
           <div className="flex flex-col items-center justify-center p-16 text-center border rounded-xl bg-card border-dashed">
             <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">

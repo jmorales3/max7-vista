@@ -19,6 +19,8 @@ export interface Patient {
   notes?: string | null;
   createdAt: string;
   imageCount?: number;
+  /** @nullable */
+  profileImageId?: number | null;
 }
 
 export interface ImageUploadInput {
@@ -50,6 +52,8 @@ export interface PatientUpdate {
   patientCode?: string;
   dateOfBirth?: string;
   notes?: string;
+  /** @nullable */
+  profileImageId?: number | null;
 }
 
 export interface Image {
