@@ -16,6 +16,7 @@ function buildMobileSessionCookie(sessionId: string, secret: string): string {
 const router: IRouter = Router();
 
 router.get("/auth/needs-setup", async (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
   try {
     const users = await db.select({ id: usersTable.id }).from(usersTable).limit(1);
     return res.json({ needsSetup: users.length === 0 });

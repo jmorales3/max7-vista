@@ -292,16 +292,48 @@ async function seedPostgres(pool: import("pg").Pool) {
     END $$
   `);
 
-  // Step 6: create the demo user (password: admin123)
+  // Step 6: create/refresh the demo user (password: admin123) — DO UPDATE ensures hash is always correct
   const demoHash = await bcrypt.hash("admin123", 10);
   await pool.query(
     `INSERT INTO users (username, password_hash, tenant_id, role, is_active)
      VALUES ('demo', $1, $2, 'superadmin', true)
-     ON CONFLICT (username) DO NOTHING`,
+     ON CONFLICT (username) DO UPDATE
+       SET password_hash = EXCLUDED.password_hash,
+           tenant_id     = EXCLUDED.tenant_id,
+           is_active     = true`,
     [demoHash, demoId]
   );
 
-  logger.info("PostgreSQL seed complete (tenants + demo user ensured)");
+  // Step 7: seed sample patients for the demo tenant (idempotent)
+  const { rows: existingPatients } = await pool.query<{ count: string }>(
+    `SELECT count(*)::text AS count FROM patients WHERE tenant_id = $1`,
+    [demoId]
+  );
+  if (parseInt(existingPatients[0]?.count ?? "0") === 0) {
+    const demoPatients = [
+      ["Ana Martínez",      "PT-D001", "1985-03-12"],
+      ["Carlos Rodríguez",  "PT-D002", "1972-07-25"],
+      ["Sofia Hernández",   "PT-D003", "1990-11-03"],
+      ["Miguel Torres",     "PT-D004", "1968-01-18"],
+      ["Valentina García",  "PT-D005", "1995-06-30"],
+      ["Luis Pérez",        "PT-D006", "1955-09-14"],
+      ["Isabella López",    "PT-D007", "1988-04-22"],
+      ["Andrés Gómez",      "PT-D008", "2001-12-08"],
+      ["Camila Díaz",       "PT-D009", "1978-02-17"],
+      ["Sebastián Morales", "PT-D010", "1963-08-05"],
+    ];
+    for (const [name, code, dob] of demoPatients) {
+      await pool.query(
+        `INSERT INTO patients (tenant_id, name, patient_code, date_of_birth, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, NOW(), NOW())
+         ON CONFLICT DO NOTHING`,
+        [demoId, name, code, dob]
+      );
+    }
+    logger.info({ count: demoPatients.length }, "Demo patients seeded");
+  }
+
+  logger.info("PostgreSQL seed complete (tenants + demo user + demo patients ensured)");
 }
 
 async function start() {

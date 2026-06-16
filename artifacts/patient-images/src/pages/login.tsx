@@ -59,6 +59,14 @@ export default function LoginPage() {
           body: JSON.stringify({ username: username.trim(), password }),
         });
         const body = await res.json();
+        if (res.status === 403) {
+          // Setup already done — browser had a stale cached response; switch to login
+          setMode("login");
+          setPassword("");
+          setConfirmPassword("");
+          setError("");
+          return;
+        }
         if (!res.ok) throw new Error(body.error ?? "Setup failed");
         setSuccess(t("auth.setupSuccess"));
         setMode("login");
