@@ -65,74 +65,94 @@ function buildImageRow(row: {
   };
 }
 
-router.get("/images/stats", async (_req, res): Promise<void> => {
-  const [totalImagesRow] = await db
-    .select({ count: sql<number>`cast(count(*) as integer)` })
-    .from(imagesTable);
+function tid(req: any): number {
+  const t = req.session?.tenantId as number | undefined;
+  if (!t) throw Object.assign(new Error("No tenant associated with this session"), { status: 403 });
+  return t;
+}
 
-  const [totalPatientsRow] = await db
-    .select({ count: sql<number>`cast(count(*) as integer)` })
-    .from(patientsTable);
+router.get("/images/stats", async (req, res): Promise<void> => {
+  try {
+    const tenantId = tid(req);
 
-  const [unassignedRow] = await db
-    .select({ count: sql<number>`cast(count(*) as integer)` })
-    .from(imagesTable)
-    .where(eq(imagesTable.isUnassigned, true));
+    const [totalImagesRow] = await db
+      .select({ count: sql<number>`cast(count(*) as integer)` })
+      .from(imagesTable)
+      .innerJoin(patientsTable, and(
+        eq(patientsTable.id, imagesTable.patientId),
+        eq(patientsTable.tenantId, tenantId),
+      ));
 
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  const [recentRow] = await db
-    .select({ count: sql<number>`cast(count(*) as integer)` })
-    .from(imagesTable)
-    .where(gte(imagesTable.createdAt, thirtyDaysAgo));
+    const [totalPatientsRow] = await db
+      .select({ count: sql<number>`cast(count(*) as integer)` })
+      .from(patientsTable)
+      .where(eq(patientsTable.tenantId, tenantId));
 
-  res.json({
-    totalImages: totalImagesRow?.count ?? 0,
-    totalPatients: totalPatientsRow?.count ?? 0,
-    unassignedImages: unassignedRow?.count ?? 0,
-    recentUploads: recentRow?.count ?? 0,
-  });
+    const [unassignedRow] = await db
+      .select({ count: sql<number>`cast(count(*) as integer)` })
+      .from(imagesTable)
+      .innerJoin(patientsTable, and(
+        eq(patientsTable.id, imagesTable.patientId),
+        eq(patientsTable.tenantId, tenantId),
+      ))
+      .where(eq(imagesTable.isUnassigned, true));
+
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const [recentRow] = await db
+      .select({ count: sql<number>`cast(count(*) as integer)` })
+      .from(imagesTable)
+      .innerJoin(patientsTable, and(
+        eq(patientsTable.id, imagesTable.patientId),
+        eq(patientsTable.tenantId, tenantId),
+      ))
+      .where(gte(imagesTable.createdAt, thirtyDaysAgo));
+
+    res.json({
+      totalImages: totalImagesRow?.count ?? 0,
+      totalPatients: totalPatientsRow?.count ?? 0,
+      unassignedImages: unassignedRow?.count ?? 0,
+      recentUploads: recentRow?.count ?? 0,
+    });
+  } catch (err: any) {
+    if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
+    res.status(500).json({ error: String(err) });
+  }
 });
 
 router.get("/images", async (req, res): Promise<void> => {
-  const parsed = ListImagesQueryParams.safeParse(req.query);
-  const params = parsed.success ? parsed.data : {};
-
-  const query = db
-    .select({
-      id: imagesTable.id,
-      patientId: imagesTable.patientId,
-      filePath: imagesTable.filePath,
-      fileName: imagesTable.fileName,
-      notes: imagesTable.notes,
-      annotation: imagesTable.annotation,
-      capturedAt: imagesTable.capturedAt,
-      isUnassigned: imagesTable.isUnassigned,
-      createdAt: imagesTable.createdAt,
-      patientName: patientsTable.name,
-      patientCode: patientsTable.patientCode,
-    })
-    .from(imagesTable)
-    .leftJoin(patientsTable, eq(patientsTable.id, imagesTable.patientId));
-
-  const conditions = [];
-  if (params.patientId) {
-    conditions.push(eq(imagesTable.patientId, params.patientId));
-  }
-  if (params.dateFrom) {
-    conditions.push(gte(imagesTable.capturedAt, new Date(params.dateFrom)));
-  }
-  if (params.dateTo) {
-    conditions.push(lte(imagesTable.capturedAt, new Date(params.dateTo)));
-  }
-
   try {
-    const rows =
-      conditions.length > 0
-        ? await query.where(and(...conditions)).orderBy(imagesTable.capturedAt)
-        : await query.orderBy(imagesTable.capturedAt);
+    const tenantId = tid(req);
+    const parsed = ListImagesQueryParams.safeParse(req.query);
+    const params = parsed.success ? parsed.data : {};
+
+    // Always inner-join patients so we get tenant isolation for free
+    const conditions: ReturnType<typeof eq>[] = [eq(patientsTable.tenantId, tenantId)];
+    if (params.patientId) conditions.push(eq(imagesTable.patientId, params.patientId));
+    if (params.dateFrom) conditions.push(gte(imagesTable.capturedAt, new Date(params.dateFrom)));
+    if (params.dateTo) conditions.push(lte(imagesTable.capturedAt, new Date(params.dateTo)));
+
+    const rows = await db
+      .select({
+        id: imagesTable.id,
+        patientId: imagesTable.patientId,
+        filePath: imagesTable.filePath,
+        fileName: imagesTable.fileName,
+        notes: imagesTable.notes,
+        annotation: imagesTable.annotation,
+        capturedAt: imagesTable.capturedAt,
+        isUnassigned: imagesTable.isUnassigned,
+        createdAt: imagesTable.createdAt,
+        patientName: patientsTable.name,
+        patientCode: patientsTable.patientCode,
+      })
+      .from(imagesTable)
+      .innerJoin(patientsTable, eq(patientsTable.id, imagesTable.patientId))
+      .where(and(...conditions))
+      .orderBy(imagesTable.capturedAt);
 
     res.json(rows.map(buildImageRow));
-  } catch (err) {
+  } catch (err: any) {
+    if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
     console.error("GET /images error:", err);
     res.status(500).json({ error: "Failed to load images", detail: String(err) });
   }
@@ -143,6 +163,8 @@ router.get("/images", async (req, res): Promise<void> => {
 // URL so the browser can PUT the file directly to GCS — bypassing the Replit
 // proxy entirely and avoiding the body-size stall that plagued the old approach.
 router.post("/images/upload-url", async (req, res): Promise<void> => {
+  try {
+  const tenantId = tid(req);
   const { fileName, mimeType, patientId: rawPatientId } = req.body ?? {};
 
   if (!fileName || typeof fileName !== "string") {
@@ -160,7 +182,7 @@ router.post("/images/upload-url", async (req, res): Promise<void> => {
     const [patient] = await db
       .select({ id: patientsTable.id })
       .from(patientsTable)
-      .where(eq(patientsTable.id, patientId));
+      .where(and(eq(patientsTable.id, patientId), eq(patientsTable.tenantId, tenantId)));
     if (!patient) {
       res.status(404).json({ error: `Patient ${patientId} not found` });
       return;
@@ -181,12 +203,18 @@ router.post("/images/upload-url", async (req, res): Promise<void> => {
     console.error("Failed to get signed upload URL:", err);
     res.status(503).json({ error: "Could not prepare upload — please try again", detail: String(err) });
   }
+  } catch (err: any) {
+    if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
+    res.status(500).json({ error: String(err) });
+  }
 });
 
 // Step 3 of the direct-to-GCS upload flow.
 // Called by the browser AFTER it has successfully PUT the file to GCS via the
 // signed URL. Creates the database record and returns the image row.
 router.post("/images/register", async (req, res): Promise<void> => {
+  try {
+  const tenantId = tid(req);
   const { objectName, fileName, mimeType, patientId: rawPatientId, notes, capturedAt: rawCapturedAt } = req.body ?? {};
 
   if (!objectName || typeof objectName !== "string") {
@@ -202,6 +230,22 @@ router.post("/images/register", async (req, res): Promise<void> => {
   const capturedAt = rawCapturedAt ? new Date(rawCapturedAt) : new Date();
   const filePath = toGcsPath(objectName);
 
+  // Verify patient belongs to this tenant
+  let patientName: string | null = null;
+  let patientCode: string | null = null;
+  if (patientId) {
+    const [patient] = await db
+      .select()
+      .from(patientsTable)
+      .where(and(eq(patientsTable.id, patientId), eq(patientsTable.tenantId, tenantId)));
+    if (!patient) {
+      res.status(404).json({ error: `Patient ${patientId} not found` });
+      return;
+    }
+    patientName = patient.name;
+    patientCode = patient.patientCode;
+  }
+
   const [image] = await db
     .insert(imagesTable)
     .values({
@@ -214,22 +258,20 @@ router.post("/images/register", async (req, res): Promise<void> => {
     })
     .returning();
 
-  let patientName: string | null = null;
-  let patientCode: string | null = null;
-  if (patientId) {
-    const [patient] = await db.select().from(patientsTable).where(eq(patientsTable.id, patientId));
-    patientName = patient?.name ?? null;
-    patientCode = patient?.patientCode ?? null;
-  }
-
   await logAudit(req, "upload", "image", image.id, JSON.stringify({ fileName, patientId }));
   res.status(201).json(buildImageRow({ ...image, patientName, patientCode }));
+  } catch (err: any) {
+    if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
+    res.status(500).json({ error: String(err) });
+  }
 });
 
 // JSON + base64 upload — kept as fallback for non-browser callers (e.g. mobile,
 // migration import). The deployment proxy stalls large bodies so this path is
 // no longer used by the web app; web uploads go through /images/upload-url instead.
 router.post("/images/upload", async (req, res): Promise<void> => {
+  try {
+  const tenantId = tid(req);
   const { fileBase64, fileName, mimeType, patientId: rawPatientId, notes, capturedAt: rawCapturedAt } = req.body ?? {};
 
   if (!fileBase64 || typeof fileBase64 !== "string") {
@@ -261,7 +303,7 @@ router.post("/images/upload", async (req, res): Promise<void> => {
     const [patient] = await db
       .select({ id: patientsTable.id })
       .from(patientsTable)
-      .where(eq(patientsTable.id, patientId));
+      .where(and(eq(patientsTable.id, patientId), eq(patientsTable.tenantId, tenantId)));
     if (!patient) {
       res.status(404).json({ error: `Patient ${patientId} not found` });
       return;
@@ -296,19 +338,25 @@ router.post("/images/upload", async (req, res): Promise<void> => {
     })
     .returning();
 
-  let patientName: string | null = null;
-  let patientCode: string | null = null;
+  let patientName2: string | null = null;
+  let patientCode2: string | null = null;
   if (patientId) {
-    const [patient] = await db.select().from(patientsTable).where(eq(patientsTable.id, patientId));
-    patientName = patient?.name ?? null;
-    patientCode = patient?.patientCode ?? null;
+    const [patient] = await db.select().from(patientsTable).where(and(eq(patientsTable.id, patientId), eq(patientsTable.tenantId, tenantId)));
+    patientName2 = patient?.name ?? null;
+    patientCode2 = patient?.patientCode ?? null;
   }
 
   await logAudit(req, "upload", "image", image.id, JSON.stringify({ fileName, patientId }));
-  res.status(201).json(buildImageRow({ ...image, patientName, patientCode }));
+  res.status(201).json(buildImageRow({ ...image, patientName: patientName2, patientCode: patientCode2 }));
+  } catch (err: any) {
+    if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
+    res.status(500).json({ error: String(err) });
+  }
 });
 
 router.post("/images", upload.single("file"), async (req, res): Promise<void> => {
+  try {
+  const tenantId = tid(req);
   if (!req.file) {
     res.status(400).json({ error: "No file uploaded" });
     return;
@@ -323,7 +371,7 @@ router.post("/images", upload.single("file"), async (req, res): Promise<void> =>
     const [patient] = await db
       .select({ id: patientsTable.id })
       .from(patientsTable)
-      .where(eq(patientsTable.id, patientId));
+      .where(and(eq(patientsTable.id, patientId), eq(patientsTable.tenantId, tenantId)));
     if (!patient) {
       res.status(404).json({ error: `Patient ${patientId} not found` });
       return;
@@ -364,244 +412,223 @@ router.post("/images", upload.single("file"), async (req, res): Promise<void> =>
     const [patient] = await db
       .select()
       .from(patientsTable)
-      .where(eq(patientsTable.id, patientId));
+      .where(and(eq(patientsTable.id, patientId), eq(patientsTable.tenantId, tenantId)));
     patientName = patient?.name ?? null;
     patientCode = patient?.patientCode ?? null;
   }
 
   await logAudit(req, "upload", "image", image.id, JSON.stringify({ fileName: req.file.originalname, patientId }));
   res.status(201).json(buildImageRow({ ...image, patientName, patientCode }));
+  } catch (err: any) {
+    if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
+    res.status(500).json({ error: String(err) });
+  }
 });
 
 router.put("/images/:id/file", upload.single("file"), async (req, res): Promise<void> => {
-  const params = ReplaceImageFileParams.safeParse(req.params);
-  if (!params.success) {
-    res.status(400).json({ error: params.error.message });
-    return;
-  }
-
-  if (!req.file) {
-    res.status(400).json({ error: "No file provided" });
-    return;
-  }
-
-  const [existingImage] = await db
-    .select()
-    .from(imagesTable)
-    .where(eq(imagesTable.id, params.data.id));
-
-  if (!existingImage) {
-    res.status(404).json({ error: "Image not found" });
-    return;
-  }
-
-  // Overwrite the existing file in GCS (preserving the same path)
-  const ext = path.extname(req.file.originalname) || ".jpg";
-  const filename = `${Date.now()}${ext}`;
-  const objectName = isGcsPath(existingImage.filePath)
-    ? existingImage.filePath.slice(4)  // reuse the same GCS key
-    : `images/replaced/${filename}`;
-  await uploadToGcs(req.file.buffer, objectName, req.file.mimetype);
-
-  const rows = await db
-    .select({
-      id: imagesTable.id,
-      patientId: imagesTable.patientId,
-      filePath: imagesTable.filePath,
-      fileName: imagesTable.fileName,
-      notes: imagesTable.notes,
-      annotation: imagesTable.annotation,
-      capturedAt: imagesTable.capturedAt,
-      isUnassigned: imagesTable.isUnassigned,
-      createdAt: imagesTable.createdAt,
-      patientName: patientsTable.name,
-      patientCode: patientsTable.patientCode,
-    })
-    .from(imagesTable)
-    .leftJoin(patientsTable, eq(patientsTable.id, imagesTable.patientId))
-    .where(eq(imagesTable.id, params.data.id));
-
-  await logAudit(req, "replace_file", "image", params.data.id, JSON.stringify({ fileName: req.file.originalname }));
-  res.json(buildImageRow(rows[0] ?? { ...existingImage, patientName: null, patientCode: null }));
-});
-
-router.get("/images/:id/file", async (req, res): Promise<void> => {
-  const params = GetImageFileParams.safeParse(req.params);
-  if (!params.success) {
-    res.status(400).json({ error: params.error.message });
-    return;
-  }
-
-  const [image] = await db
-    .select()
-    .from(imagesTable)
-    .where(eq(imagesTable.id, params.data.id));
-
-  if (!image) {
-    res.status(404).json({ error: "Image not found" });
-    return;
-  }
-
-  await logAudit(req, "view", "image", params.data.id);
-  await streamFile(image.filePath, image.fileName, res);
-});
-
-router.get("/patients/:id/images", async (req, res): Promise<void> => {
-  const params = ListPatientImagesParams.safeParse(req.params);
-  if (!params.success) {
-    res.status(400).json({ error: params.error.message });
-    return;
-  }
-
   try {
+    const tenantId = tid(req);
+    const params = ReplaceImageFileParams.safeParse(req.params);
+    if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+    if (!req.file) { res.status(400).json({ error: "No file provided" }); return; }
+
+    const [existingImage] = await db
+      .select({ img: imagesTable })
+      .from(imagesTable)
+      .innerJoin(patientsTable, and(eq(patientsTable.id, imagesTable.patientId), eq(patientsTable.tenantId, tenantId)))
+      .where(eq(imagesTable.id, params.data.id))
+      .then(r => r.map(x => x.img));
+
+    if (!existingImage) { res.status(404).json({ error: "Image not found" }); return; }
+
+    const ext = path.extname(req.file.originalname) || ".jpg";
+    const filename = `${Date.now()}${ext}`;
+    const objectName = isGcsPath(existingImage.filePath)
+      ? existingImage.filePath.slice(4)
+      : `images/replaced/${filename}`;
+    await uploadToGcs(req.file.buffer, objectName, req.file.mimetype);
+
     const rows = await db
       .select({
-        id: imagesTable.id,
-        patientId: imagesTable.patientId,
-        filePath: imagesTable.filePath,
-        fileName: imagesTable.fileName,
-        notes: imagesTable.notes,
-        annotation: imagesTable.annotation,
-        capturedAt: imagesTable.capturedAt,
-        isUnassigned: imagesTable.isUnassigned,
-        createdAt: imagesTable.createdAt,
-        patientName: patientsTable.name,
-        patientCode: patientsTable.patientCode,
+        id: imagesTable.id, patientId: imagesTable.patientId, filePath: imagesTable.filePath,
+        fileName: imagesTable.fileName, notes: imagesTable.notes, annotation: imagesTable.annotation,
+        capturedAt: imagesTable.capturedAt, isUnassigned: imagesTable.isUnassigned, createdAt: imagesTable.createdAt,
+        patientName: patientsTable.name, patientCode: patientsTable.patientCode,
       })
       .from(imagesTable)
       .leftJoin(patientsTable, eq(patientsTable.id, imagesTable.patientId))
+      .where(eq(imagesTable.id, params.data.id));
+
+    await logAudit(req, "replace_file", "image", params.data.id, JSON.stringify({ fileName: req.file.originalname }));
+    res.json(buildImageRow(rows[0] ?? { ...existingImage, patientName: null, patientCode: null }));
+  } catch (err: any) {
+    if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+router.get("/images/:id/file", async (req, res): Promise<void> => {
+  try {
+    const tenantId = tid(req);
+    const params = GetImageFileParams.safeParse(req.params);
+    if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+
+    const [image] = await db
+      .select({ img: imagesTable })
+      .from(imagesTable)
+      .innerJoin(patientsTable, and(eq(patientsTable.id, imagesTable.patientId), eq(patientsTable.tenantId, tenantId)))
+      .where(eq(imagesTable.id, params.data.id))
+      .then(r => r.map(x => x.img));
+
+    if (!image) { res.status(404).json({ error: "Image not found" }); return; }
+
+    await logAudit(req, "view", "image", params.data.id);
+    await streamFile(image.filePath, image.fileName, res);
+  } catch (err: any) {
+    if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+router.get("/patients/:id/images", async (req, res): Promise<void> => {
+  try {
+    const tenantId = tid(req);
+    const params = ListPatientImagesParams.safeParse(req.params);
+    if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+
+    const rows = await db
+      .select({
+        id: imagesTable.id, patientId: imagesTable.patientId, filePath: imagesTable.filePath,
+        fileName: imagesTable.fileName, notes: imagesTable.notes, annotation: imagesTable.annotation,
+        capturedAt: imagesTable.capturedAt, isUnassigned: imagesTable.isUnassigned, createdAt: imagesTable.createdAt,
+        patientName: patientsTable.name, patientCode: patientsTable.patientCode,
+      })
+      .from(imagesTable)
+      .innerJoin(patientsTable, and(eq(patientsTable.id, imagesTable.patientId), eq(patientsTable.tenantId, tenantId)))
       .where(eq(imagesTable.patientId, params.data.id))
       .orderBy(imagesTable.capturedAt);
 
     res.json(rows.map(buildImageRow));
-  } catch (err) {
+  } catch (err: any) {
+    if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
     console.error("GET /patients/:id/images error:", err);
     res.status(500).json({ error: "Failed to load images", detail: String(err) });
   }
 });
 
 router.get("/images/:id", async (req, res): Promise<void> => {
-  const params = GetImageParams.safeParse(req.params);
-  if (!params.success) {
-    res.status(400).json({ error: params.error.message });
-    return;
+  try {
+    const tenantId = tid(req);
+    const params = GetImageParams.safeParse(req.params);
+    if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+
+    const rows = await db
+      .select({
+        id: imagesTable.id, patientId: imagesTable.patientId, filePath: imagesTable.filePath,
+        fileName: imagesTable.fileName, notes: imagesTable.notes, annotation: imagesTable.annotation,
+        capturedAt: imagesTable.capturedAt, isUnassigned: imagesTable.isUnassigned, createdAt: imagesTable.createdAt,
+        patientName: patientsTable.name, patientCode: patientsTable.patientCode,
+      })
+      .from(imagesTable)
+      .innerJoin(patientsTable, and(eq(patientsTable.id, imagesTable.patientId), eq(patientsTable.tenantId, tenantId)))
+      .where(eq(imagesTable.id, params.data.id));
+
+    if (!rows[0]) { res.status(404).json({ error: "Image not found" }); return; }
+    res.json(buildImageRow(rows[0]));
+  } catch (err: any) {
+    if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
+    res.status(500).json({ error: String(err) });
   }
-
-  const rows = await db
-    .select({
-      id: imagesTable.id,
-      patientId: imagesTable.patientId,
-      filePath: imagesTable.filePath,
-      fileName: imagesTable.fileName,
-      notes: imagesTable.notes,
-      annotation: imagesTable.annotation,
-      capturedAt: imagesTable.capturedAt,
-      isUnassigned: imagesTable.isUnassigned,
-      createdAt: imagesTable.createdAt,
-      patientName: patientsTable.name,
-      patientCode: patientsTable.patientCode,
-    })
-    .from(imagesTable)
-    .leftJoin(patientsTable, eq(patientsTable.id, imagesTable.patientId))
-    .where(eq(imagesTable.id, params.data.id));
-
-  if (!rows[0]) {
-    res.status(404).json({ error: "Image not found" });
-    return;
-  }
-
-  res.json(buildImageRow(rows[0]));
 });
 
 router.patch("/images/:id", async (req, res): Promise<void> => {
-  const params = UpdateImageParams.safeParse(req.params);
-  if (!params.success) {
-    res.status(400).json({ error: params.error.message });
-    return;
-  }
+  try {
+    const tenantId = tid(req);
+    const params = UpdateImageParams.safeParse(req.params);
+    if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
 
-  const parsed = UpdateImageBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
+    const parsed = UpdateImageBody.safeParse(req.body);
+    if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  const updateData: Record<string, unknown> = {};
-  if (parsed.data.notes !== undefined) updateData.notes = parsed.data.notes;
-  if (parsed.data.annotation !== undefined) updateData.annotation = parsed.data.annotation;
-  if (parsed.data.patientId !== undefined) {
-    // Validate patientId existence when reassigning to give a clean 404
-    if (parsed.data.patientId !== null) {
-      const [patient] = await db
-        .select({ id: patientsTable.id })
-        .from(patientsTable)
-        .where(eq(patientsTable.id, parsed.data.patientId));
-      if (!patient) {
-        res.status(404).json({ error: `Patient ${parsed.data.patientId} not found` });
-        return;
+    const updateData: Record<string, unknown> = {};
+    if (parsed.data.notes !== undefined) updateData.notes = parsed.data.notes;
+    if (parsed.data.annotation !== undefined) updateData.annotation = parsed.data.annotation;
+    if (parsed.data.patientId !== undefined) {
+      if (parsed.data.patientId !== null) {
+        const [patient] = await db
+          .select({ id: patientsTable.id })
+          .from(patientsTable)
+          .where(and(eq(patientsTable.id, parsed.data.patientId), eq(patientsTable.tenantId, tenantId)));
+        if (!patient) { res.status(404).json({ error: `Patient ${parsed.data.patientId} not found` }); return; }
       }
+      updateData.patientId = parsed.data.patientId;
+      updateData.isUnassigned = parsed.data.patientId === null;
     }
-    updateData.patientId = parsed.data.patientId;
-    updateData.isUnassigned = parsed.data.patientId === null;
+    if (parsed.data.capturedAt !== undefined) updateData.capturedAt = new Date(parsed.data.capturedAt);
+
+    // Only update images that belong to this tenant (via patient join)
+    const [existingCheck] = await db
+      .select({ id: imagesTable.id })
+      .from(imagesTable)
+      .innerJoin(patientsTable, and(eq(patientsTable.id, imagesTable.patientId), eq(patientsTable.tenantId, tenantId)))
+      .where(eq(imagesTable.id, params.data.id));
+    if (!existingCheck) { res.status(404).json({ error: "Image not found" }); return; }
+
+    const [image] = await db
+      .update(imagesTable)
+      .set(updateData)
+      .where(eq(imagesTable.id, params.data.id))
+      .returning();
+
+    if (!image) { res.status(404).json({ error: "Image not found" }); return; }
+
+    const rows = await db
+      .select({
+        id: imagesTable.id, patientId: imagesTable.patientId, filePath: imagesTable.filePath,
+        fileName: imagesTable.fileName, notes: imagesTable.notes, annotation: imagesTable.annotation,
+        capturedAt: imagesTable.capturedAt, isUnassigned: imagesTable.isUnassigned, createdAt: imagesTable.createdAt,
+        patientName: patientsTable.name, patientCode: patientsTable.patientCode,
+      })
+      .from(imagesTable)
+      .leftJoin(patientsTable, eq(patientsTable.id, imagesTable.patientId))
+      .where(eq(imagesTable.id, params.data.id));
+
+    await logAudit(req, "edit", "image", params.data.id, JSON.stringify(parsed.data));
+    res.json(buildImageRow(rows[0] ?? { ...image, patientName: null, patientCode: null }));
+  } catch (err: any) {
+    if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
+    res.status(500).json({ error: String(err) });
   }
-  if (parsed.data.capturedAt !== undefined) {
-    updateData.capturedAt = new Date(parsed.data.capturedAt);
-  }
-
-  const [image] = await db
-    .update(imagesTable)
-    .set(updateData)
-    .where(eq(imagesTable.id, params.data.id))
-    .returning();
-
-  if (!image) {
-    res.status(404).json({ error: "Image not found" });
-    return;
-  }
-
-  const rows = await db
-    .select({
-      id: imagesTable.id,
-      patientId: imagesTable.patientId,
-      filePath: imagesTable.filePath,
-      fileName: imagesTable.fileName,
-      notes: imagesTable.notes,
-      annotation: imagesTable.annotation,
-      capturedAt: imagesTable.capturedAt,
-      isUnassigned: imagesTable.isUnassigned,
-      createdAt: imagesTable.createdAt,
-      patientName: patientsTable.name,
-      patientCode: patientsTable.patientCode,
-    })
-    .from(imagesTable)
-    .leftJoin(patientsTable, eq(patientsTable.id, imagesTable.patientId))
-    .where(eq(imagesTable.id, params.data.id));
-
-  await logAudit(req, "edit", "image", params.data.id, JSON.stringify(parsed.data));
-  res.json(buildImageRow(rows[0] ?? { ...image, patientName: null, patientCode: null }));
 });
 
 router.delete("/images/:id", async (req, res): Promise<void> => {
-  const params = DeleteImageParams.safeParse(req.params);
-  if (!params.success) {
-    res.status(400).json({ error: params.error.message });
-    return;
+  try {
+    const tenantId = tid(req);
+    const params = DeleteImageParams.safeParse(req.params);
+    if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+
+    // Verify tenant owns this image before deleting
+    const [check] = await db
+      .select({ id: imagesTable.id })
+      .from(imagesTable)
+      .innerJoin(patientsTable, and(eq(patientsTable.id, imagesTable.patientId), eq(patientsTable.tenantId, tenantId)))
+      .where(eq(imagesTable.id, params.data.id));
+    if (!check) { res.status(404).json({ error: "Image not found" }); return; }
+
+    const [image] = await db
+      .delete(imagesTable)
+      .where(eq(imagesTable.id, params.data.id))
+      .returning();
+
+    if (!image) { res.status(404).json({ error: "Image not found" }); return; }
+
+    await deleteFile(image.filePath);
+    await logAudit(req, "delete", "image", params.data.id, JSON.stringify({ fileName: image.fileName, patientId: image.patientId }));
+    res.sendStatus(204);
+  } catch (err: any) {
+    if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
+    res.status(500).json({ error: String(err) });
   }
-
-  const [image] = await db
-    .delete(imagesTable)
-    .where(eq(imagesTable.id, params.data.id))
-    .returning();
-
-  if (!image) {
-    res.status(404).json({ error: "Image not found" });
-    return;
-  }
-
-  await deleteFile(image.filePath);
-
-  await logAudit(req, "delete", "image", params.data.id, JSON.stringify({ fileName: image.fileName, patientId: image.patientId }));
-  res.sendStatus(204);
 });
 
 // POST /api/patients/:id/export-images — admin/superadmin only
@@ -617,10 +644,11 @@ router.post(
       return;
     }
 
+    const tenantId = tid(req);
     const [patient] = await db
       .select({ id: patientsTable.id, name: patientsTable.name, patientCode: patientsTable.patientCode })
       .from(patientsTable)
-      .where(eq(patientsTable.id, patientId))
+      .where(and(eq(patientsTable.id, patientId), eq(patientsTable.tenantId, tenantId)))
       .limit(1);
 
     if (!patient) {

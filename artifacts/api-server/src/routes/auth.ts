@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
-import { db, usersTable } from "@workspace/db";
+import { db, usersTable, tenantsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
 function buildMobileSessionCookie(sessionId: string, secret: string): string {
@@ -42,12 +42,20 @@ router.post("/auth/setup", async (req, res) => {
       return res.status(400).json({ error: "Password must be at least 6 characters" });
     }
 
+    // Auto-create the default tenant for this installation
+    const slug = username.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const [tenant] = await db
+      .insert(tenantsTable)
+      .values({ name: username.trim(), slug })
+      .returning();
+
     const passwordHash = await bcrypt.hash(password, 10);
     await db.insert(usersTable).values({
       username: username.trim().toLowerCase(),
       passwordHash,
       role: "superadmin",
       isActive: true,
+      tenantId: tenant.id,
     });
 
     return res.status(201).json({ message: "Administrator account created" });

@@ -90,10 +90,11 @@ router.patch("/admin/users/:id", requireRole("admin", "superadmin"), async (req,
 });
 
 router.post("/admin/users", requireRole("admin", "superadmin"), async (req, res) => {
-  const { username, password, role } = req.body as {
+  const { username, password, role, tenantId } = req.body as {
     username?: string;
     password?: string;
     role?: "user" | "admin" | "superadmin";
+    tenantId?: number;
   };
 
   if (!username || !password) {
@@ -104,6 +105,10 @@ router.post("/admin/users", requireRole("admin", "superadmin"), async (req, res)
   const validRoles = ["user", "admin", "superadmin"] as const;
   const assignedRole = role && validRoles.includes(role) ? role : "user";
 
+  // Default the new user to the same tenant as the creator, unless superadmin specifies otherwise
+  const creatorTenantId = req.session.tenantId;
+  const resolvedTenantId = tenantId ?? creatorTenantId ?? null;
+
   try {
     const passwordHash = await bcrypt.hash(password, 10);
     const [created] = await db
@@ -113,6 +118,7 @@ router.post("/admin/users", requireRole("admin", "superadmin"), async (req, res)
         passwordHash,
         role: assignedRole,
         isActive: true,
+        tenantId: resolvedTenantId,
       })
       .returning({
         id: usersTable.id,

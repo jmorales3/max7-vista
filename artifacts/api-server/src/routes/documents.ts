@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import path from "path";
 import fs from "fs";
 import multer from "multer";
@@ -7,6 +7,12 @@ import { db, documentsTable, patientsTable } from "@workspace/db";
 import { uploadToGcs, streamFile, deleteFile, getSignedDownloadUrl } from "../lib/gcsStorage";
 
 const router: IRouter = Router();
+
+function tid(req: any): number {
+  const t = req.session?.tenantId as number | undefined;
+  if (!t) throw Object.assign(new Error("No tenant associated with this session"), { status: 403 });
+  return t;
+}
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -44,6 +50,18 @@ router.get("/documents", async (req, res) => {
     return;
   }
 
+  const tenantId = tid(req);
+  // Verify patient belongs to this tenant
+  const [patient] = await db
+    .select({ id: patientsTable.id })
+    .from(patientsTable)
+    .where(and(eq(patientsTable.id, patientIdQ), eq(patientsTable.tenantId, tenantId)))
+    .limit(1);
+  if (!patient) {
+    res.status(404).json({ error: "Patient not found" });
+    return;
+  }
+
   const rows = await db
     .select()
     .from(documentsTable)
@@ -66,10 +84,11 @@ router.post("/documents", upload.single("file"), async (req, res) => {
     return;
   }
 
+  const tenantId = tid(req);
   const [patient] = await db
     .select({ id: patientsTable.id })
     .from(patientsTable)
-    .where(eq(patientsTable.id, patientId));
+    .where(and(eq(patientsTable.id, patientId), eq(patientsTable.tenantId, tenantId)));
   if (!patient) {
     res.status(404).json({ error: `Patient ${patientId} not found` });
     return;
@@ -105,10 +124,14 @@ router.get("/documents/:id/signed-url", async (req, res) => {
     return;
   }
 
-  const [doc] = await db
-    .select()
+  const tenantId = tid(req);
+  const rows = await db
+    .select({ doc: documentsTable })
     .from(documentsTable)
-    .where(eq(documentsTable.id, id));
+    .innerJoin(patientsTable, and(eq(patientsTable.id, documentsTable.patientId), eq(patientsTable.tenantId, tenantId)))
+    .where(eq(documentsTable.id, id))
+    .limit(1);
+  const doc = rows[0]?.doc;
 
   if (!doc) {
     res.status(404).json({ error: "Document not found" });
@@ -147,10 +170,14 @@ router.get("/documents/:id/file", async (req, res) => {
     return;
   }
 
-  const [doc] = await db
-    .select()
+  const tenantId = tid(req);
+  const rows = await db
+    .select({ doc: documentsTable })
     .from(documentsTable)
-    .where(eq(documentsTable.id, id));
+    .innerJoin(patientsTable, and(eq(patientsTable.id, documentsTable.patientId), eq(patientsTable.tenantId, tenantId)))
+    .where(eq(documentsTable.id, id))
+    .limit(1);
+  const doc = rows[0]?.doc;
 
   if (!doc) {
     res.status(404).json({ error: "Document not found" });
@@ -165,6 +192,19 @@ router.patch("/documents/:id", async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!id || isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+
+  const tenantId = tid(req);
+  // Verify document belongs to this tenant
+  const check = await db
+    .select({ docId: documentsTable.id })
+    .from(documentsTable)
+    .innerJoin(patientsTable, and(eq(patientsTable.id, documentsTable.patientId), eq(patientsTable.tenantId, tenantId)))
+    .where(eq(documentsTable.id, id))
+    .limit(1);
+  if (!check[0]) {
+    res.status(404).json({ error: "Document not found" });
     return;
   }
 
@@ -195,10 +235,14 @@ router.delete("/documents/:id", async (req, res) => {
     return;
   }
 
-  const [doc] = await db
-    .select()
+  const tenantId = tid(req);
+  const rows = await db
+    .select({ doc: documentsTable })
     .from(documentsTable)
-    .where(eq(documentsTable.id, id));
+    .innerJoin(patientsTable, and(eq(patientsTable.id, documentsTable.patientId), eq(patientsTable.tenantId, tenantId)))
+    .where(eq(documentsTable.id, id))
+    .limit(1);
+  const doc = rows[0]?.doc;
 
   if (!doc) {
     res.status(404).json({ error: "Document not found" });

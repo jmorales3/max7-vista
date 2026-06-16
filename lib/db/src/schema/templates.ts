@@ -1,4 +1,5 @@
-import { pgTable, serial, text, real, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, real, jsonb, timestamp, integer } from "drizzle-orm/pg-core";
+import { tenantsTable } from "./tenants";
 
 export interface TemplateFrame {
   id: string;
@@ -11,6 +12,7 @@ export interface TemplateFrame {
 
 export const templatesTable = pgTable("templates", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").notNull().references(() => tenantsTable.id, { onDelete: "cascade" }),
   title: text("title").notNull().default("Untitled Template"),
   description: text("description"),
   officeName: text("office_name"),
