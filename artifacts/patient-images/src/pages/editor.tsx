@@ -2792,7 +2792,7 @@ export default function Editor() {
                   <div
                     ref={overlayScrollRef}
                     className="flex gap-1 overflow-x-auto scroll-smooth"
-                    style={{ scrollbarWidth: "none", maxWidth: 320 }}
+                    style={{ scrollbarWidth: "none", maxWidth: 460 }}
                   >
                     {patientImages
                       .filter((pi) => String(pi.id) !== String(id))
@@ -2800,7 +2800,7 @@ export default function Editor() {
                         <button
                           key={pi.id}
                           title={pi.notes ?? String(pi.id)}
-                          className={`shrink-0 w-20 h-20 rounded border-2 overflow-hidden transition-colors ${
+                          className={`shrink-0 w-28 h-28 rounded border-2 overflow-hidden transition-colors ${
                             overlayImageId === String(pi.id) ? "border-primary" : "border-transparent hover:border-muted-foreground/40"
                           }`}
                           onClick={() => setOverlayImageId(overlayImageId === String(pi.id) ? null : String(pi.id))}
