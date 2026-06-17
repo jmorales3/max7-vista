@@ -358,7 +358,7 @@ export default function ImageLibrary() {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*,video/mp4,video/webm,video/quicktime,video/ogg"
+            accept="image/*,video/mp4,video/webm,video/quicktime,video/ogg,.mov,.mp4,.webm,.ogv"
             multiple
             className="hidden"
             onChange={onFileInputChange}
@@ -458,14 +458,14 @@ export default function ImageLibrary() {
                           preload="metadata"
                           muted
                         />
-                        <div
-                          className="absolute inset-0 flex items-center justify-center bg-black/20"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setVideoPlayer(asset);
-                          }}
-                        >
-                          <div className="h-10 w-10 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+                          <div
+                            className="h-10 w-10 rounded-full bg-white/90 flex items-center justify-center shadow-lg pointer-events-auto"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setVideoPlayer(asset);
+                            }}
+                          >
                             <Play className="h-5 w-5 text-gray-800 ml-0.5" />
                           </div>
                         </div>
