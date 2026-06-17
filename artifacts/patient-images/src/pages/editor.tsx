@@ -2697,9 +2697,6 @@ export default function Editor() {
                   <div className="px-2 py-1.5 border-b flex flex-col gap-2">
                     {!floater ? (
                       <>
-                        <p className="text-[11px] text-muted-foreground leading-snug">
-                          Select a shape type and operation below, then draw the area on the image.
-                        </p>
                         <div>
                           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1 block">
                             {t("editor.selectionMode")}
@@ -2737,6 +2734,7 @@ export default function Editor() {
                               <Copy className="h-3 w-3" />{t("editor.selectTransferCopy")}
                             </Button>
                           </div>
+                          <p className="text-[11px] text-muted-foreground leading-snug mt-1">Release to move or copy.</p>
                         </div>
                       </>
                     ) : (
