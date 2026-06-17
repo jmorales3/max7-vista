@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { db, tagsTable, patientTagsTable, patientsTable } from "@workspace/db";
+import { getAccessiblePatientIds, canAccessPatient } from "../lib/patientAccess";
 import {
   ListPatientTagsParams,
   AddPatientTagParams,
@@ -125,6 +126,12 @@ router.get("/patients/:id/tags", async (req, res): Promise<void> => {
       return;
     }
 
+    const tagsAccessibleIds = await getAccessiblePatientIds(req);
+    if (!canAccessPatient(tagsAccessibleIds, params.data.id)) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+
     const tags = await db
       .select({
         id: tagsTable.id,
@@ -165,6 +172,12 @@ router.post("/patients/:id/tags", async (req, res): Promise<void> => {
       .limit(1);
     if (!patient) {
       res.status(404).json({ error: "Patient not found" });
+      return;
+    }
+
+    const postTagsAccessibleIds = await getAccessiblePatientIds(req);
+    if (!canAccessPatient(postTagsAccessibleIds, params.data.id)) {
+      res.status(403).json({ error: "Access denied" });
       return;
     }
 
@@ -216,6 +229,12 @@ router.delete("/patients/:id/tags/:tagId", async (req, res): Promise<void> => {
       .limit(1);
     if (!patient) {
       res.status(404).json({ error: "Patient not found" });
+      return;
+    }
+
+    const delTagsAccessibleIds = await getAccessiblePatientIds(req);
+    if (!canAccessPatient(delTagsAccessibleIds, params.data.id)) {
+      res.status(403).json({ error: "Access denied" });
       return;
     }
 

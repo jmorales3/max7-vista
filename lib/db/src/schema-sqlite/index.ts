@@ -13,3 +13,4 @@ export * from "./presentations";
 export * from "./documents";
 export * from "./templates";
 export * from "./template-documents";
+export * from "./patient-access";

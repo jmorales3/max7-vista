@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, patientAccessTable, patientsTable } from "@workspace/db";
+import { db, patientAccessTable, patientsTable, usersTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { requireRole } from "../middlewares/requireAuth";
 
@@ -36,7 +36,7 @@ router.get(
 );
 
 // PUT /api/users/:id/patient-access
-// Replaces the full set. Send { patientIds: [] } to remove all restrictions.
+// Atomically replaces the full set. Send { patientIds: [] } to remove all restrictions.
 router.put(
   "/users/:id/patient-access",
   requireRole("admin", "superadmin"),
@@ -53,6 +53,21 @@ router.put(
 
     const ids = patientIds.map(Number).filter((n) => !isNaN(n) && n > 0);
 
+    // Validate target user belongs to this tenant and is a regular user (not admin/superadmin)
+    const [targetUser] = await db
+      .select({ id: usersTable.id, role: usersTable.role, tenantId: usersTable.tenantId })
+      .from(usersTable)
+      .where(and(eq(usersTable.id, userId), eq(usersTable.tenantId, tenantId)))
+      .limit(1);
+    if (!targetUser) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    if (targetUser.role === "admin" || targetUser.role === "superadmin") {
+      res.status(400).json({ error: "Cannot restrict admin or superadmin users" });
+      return;
+    }
+
     if (ids.length > 0) {
       const tenantPatients = await db
         .select({ id: patientsTable.id })
@@ -65,20 +80,23 @@ router.put(
       }
     }
 
-    await db
-      .delete(patientAccessTable)
-      .where(
-        and(
-          eq(patientAccessTable.tenantId, tenantId),
-          eq(patientAccessTable.userId, userId),
-        ),
-      );
+    // Atomic replace: delete existing rows then insert new ones in a transaction
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(patientAccessTable)
+        .where(
+          and(
+            eq(patientAccessTable.tenantId, tenantId),
+            eq(patientAccessTable.userId, userId),
+          ),
+        );
 
-    if (ids.length > 0) {
-      await db
-        .insert(patientAccessTable)
-        .values(ids.map((patientId) => ({ tenantId, userId, patientId })));
-    }
+      if (ids.length > 0) {
+        await tx
+          .insert(patientAccessTable)
+          .values(ids.map((patientId) => ({ tenantId, userId, patientId })));
+      }
+    });
 
     res.json({ patientIds: ids });
   },

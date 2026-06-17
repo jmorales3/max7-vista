@@ -478,6 +478,11 @@ router.put("/images/:id/file", upload.single("file"), async (req, res): Promise<
 
     if (!existingImage) { res.status(404).json({ error: "Image not found" }); return; }
 
+    const putAccessibleIds = await getAccessiblePatientIds(req);
+    if (!canAccessPatient(putAccessibleIds, existingImage.patientId)) {
+      res.status(403).json({ error: "Access denied" }); return;
+    }
+
     const ext = path.extname(req.file.originalname) || ".jpg";
     const filename = `${Date.now()}${ext}`;
     const objectName = isGcsPath(existingImage.filePath)

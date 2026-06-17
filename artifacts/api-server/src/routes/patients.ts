@@ -208,6 +208,12 @@ router.delete("/patients/:id", async (req, res): Promise<void> => {
       return;
     }
 
+    const accessibleIds = await getAccessiblePatientIds(req);
+    if (!canAccessPatient(accessibleIds, params.data.id)) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+
     const [deleted] = await db
       .delete(patientsTable)
       .where(and(eq(patientsTable.id, params.data.id), eq(patientsTable.tenantId, tenantId)))

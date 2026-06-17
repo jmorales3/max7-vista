@@ -3,6 +3,7 @@ import { eq, and } from "drizzle-orm";
 import { db, templatesTable, templateDocumentsTable, patientsTable } from "@workspace/db";
 import type { TemplateFrame, DocumentFrame } from "@workspace/db";
 import { logAudit } from "../lib/audit";
+import { getAccessiblePatientIds, canAccessPatient } from "../lib/patientAccess";
 import {
   ListTemplatesQueryParams,
   CreateTemplateBody,
@@ -170,8 +171,14 @@ router.get("/template-documents", async (req, res): Promise<void> => {
     }
     // template-documents are scoped via patient (patientId on the row)
     const conditions: ReturnType<typeof eq>[] = [eq(templatesTable.tenantId, tenantId)];
-    if (query.data.patientId !== undefined)
+    if (query.data.patientId !== undefined) {
+      const tdAccessibleIds = await getAccessiblePatientIds(req);
+      if (!canAccessPatient(tdAccessibleIds, query.data.patientId)) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
       conditions.push(eq(templateDocumentsTable.patientId, query.data.patientId));
+    }
     if (query.data.templateId !== undefined)
       conditions.push(eq(templateDocumentsTable.templateId, query.data.templateId));
     const rows = await db
@@ -215,6 +222,11 @@ router.post("/template-documents", async (req, res): Promise<void> => {
         res.status(404).json({ error: "Patient not found" });
         return;
       }
+      const tdPostAccessibleIds = await getAccessiblePatientIds(req);
+      if (!canAccessPatient(tdPostAccessibleIds, body.data.patientId)) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
     }
     const [created] = await db
       .insert(templateDocumentsTable)
@@ -254,6 +266,13 @@ router.get("/template-documents/:id", async (req, res): Promise<void> => {
       res.status(404).json({ error: "Template document not found" });
       return;
     }
+    if (row.patientId != null) {
+      const tdGetAccessibleIds = await getAccessiblePatientIds(req);
+      if (!canAccessPatient(tdGetAccessibleIds, row.patientId)) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+    }
     res.json(row);
   } catch (err: any) {
     if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
@@ -287,6 +306,14 @@ router.put("/template-documents/:id", async (req, res): Promise<void> => {
     if (!existing) {
       res.status(404).json({ error: "Template document not found" });
       return;
+    }
+    const existingPatientId = existing.d.patientId;
+    if (existingPatientId != null) {
+      const tdPutAccessibleIds = await getAccessiblePatientIds(req);
+      if (!canAccessPatient(tdPutAccessibleIds, existingPatientId)) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
     }
     const updates: Partial<typeof templateDocumentsTable.$inferInsert> = { updatedAt: new Date() };
     if (body.data.title !== undefined) updates.title = body.data.title;
@@ -342,6 +369,14 @@ router.delete("/template-documents/:id", async (req, res): Promise<void> => {
     if (!existing) {
       res.status(404).json({ error: "Template document not found" });
       return;
+    }
+    const delPatientId = existing.d.patientId;
+    if (delPatientId != null) {
+      const tdDelAccessibleIds = await getAccessiblePatientIds(req);
+      if (!canAccessPatient(tdDelAccessibleIds, delPatientId)) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
     }
     await db.delete(templateDocumentsTable).where(eq(templateDocumentsTable.id, params.data.id));
     res.sendStatus(204);

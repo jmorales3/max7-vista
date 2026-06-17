@@ -151,6 +151,12 @@ router.get("/documents/:id/signed-url", async (req, res) => {
     return;
   }
 
+  const accessibleIds = await getAccessiblePatientIds(req);
+  if (!canAccessPatient(accessibleIds, doc.patientId)) {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+
   try {
     // Auto-migrate legacy disk-stored files to GCS on first view
     if (!doc.filePath.startsWith("gcs:")) {
@@ -197,6 +203,12 @@ router.get("/documents/:id/file", async (req, res) => {
     return;
   }
 
+  const accessibleIds = await getAccessiblePatientIds(req);
+  if (!canAccessPatient(accessibleIds, doc.patientId)) {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+
   await streamFile(doc.filePath, doc.fileName, res, true);
 });
 
@@ -211,13 +223,19 @@ router.patch("/documents/:id", async (req, res) => {
   const tenantId = tid(req);
   // Verify document belongs to this tenant
   const check = await db
-    .select({ docId: documentsTable.id })
+    .select({ docId: documentsTable.id, patientId: documentsTable.patientId })
     .from(documentsTable)
     .innerJoin(patientsTable, and(eq(patientsTable.id, documentsTable.patientId), eq(patientsTable.tenantId, tenantId)))
     .where(eq(documentsTable.id, id))
     .limit(1);
   if (!check[0]) {
     res.status(404).json({ error: "Document not found" });
+    return;
+  }
+
+  const accessibleIds = await getAccessiblePatientIds(req);
+  if (!canAccessPatient(accessibleIds, check[0].patientId)) {
+    res.status(403).json({ error: "Access denied" });
     return;
   }
 
@@ -259,6 +277,12 @@ router.delete("/documents/:id", async (req, res) => {
 
   if (!doc) {
     res.status(404).json({ error: "Document not found" });
+    return;
+  }
+
+  const accessibleIds = await getAccessiblePatientIds(req);
+  if (!canAccessPatient(accessibleIds, doc.patientId)) {
+    res.status(403).json({ error: "Access denied" });
     return;
   }
 
