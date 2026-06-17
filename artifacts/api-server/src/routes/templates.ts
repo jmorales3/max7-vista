@@ -179,7 +179,9 @@ router.get("/template-documents", async (req, res): Promise<void> => {
       }
       conditions.push(eq(templateDocumentsTable.patientId, query.data.patientId));
     } else if (tdListAccessibleIds !== null) {
-      // Restricted user: show only docs linked to their accessible patients (or unlinked docs)
+      // Restricted user: show docs for their accessible patients plus null-patient docs.
+      // Null-patient docs are blank/unlinked template documents (no patient data attached)
+      // and are intentionally kept accessible as shared document templates.
       conditions.push(
         or(
           isNull(templateDocumentsTable.patientId),

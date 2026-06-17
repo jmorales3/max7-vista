@@ -75,37 +75,42 @@ function tid(req: any): number {
 router.get("/images/stats", async (req, res): Promise<void> => {
   try {
     const tenantId = tid(req);
+    const statsAccessibleIds = await getAccessiblePatientIds(req);
+
+    // Base patient condition: tenant-scoped + per-patient access restriction
+    const patientJoinCond = and(
+      eq(patientsTable.id, imagesTable.patientId),
+      eq(patientsTable.tenantId, tenantId),
+      statsAccessibleIds !== null
+        ? inArray(imagesTable.patientId, statsAccessibleIds)
+        : undefined,
+    );
+    const patientWhereCond =
+      statsAccessibleIds !== null
+        ? and(eq(patientsTable.tenantId, tenantId), inArray(patientsTable.id, statsAccessibleIds))
+        : eq(patientsTable.tenantId, tenantId);
 
     const [totalImagesRow] = await db
       .select({ count: sql<number>`cast(count(*) as integer)` })
       .from(imagesTable)
-      .innerJoin(patientsTable, and(
-        eq(patientsTable.id, imagesTable.patientId),
-        eq(patientsTable.tenantId, tenantId),
-      ));
+      .innerJoin(patientsTable, patientJoinCond);
 
     const [totalPatientsRow] = await db
       .select({ count: sql<number>`cast(count(*) as integer)` })
       .from(patientsTable)
-      .where(eq(patientsTable.tenantId, tenantId));
+      .where(patientWhereCond);
 
     const [unassignedRow] = await db
       .select({ count: sql<number>`cast(count(*) as integer)` })
       .from(imagesTable)
-      .innerJoin(patientsTable, and(
-        eq(patientsTable.id, imagesTable.patientId),
-        eq(patientsTable.tenantId, tenantId),
-      ))
+      .innerJoin(patientsTable, patientJoinCond)
       .where(eq(imagesTable.isUnassigned, true));
 
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const [recentRow] = await db
       .select({ count: sql<number>`cast(count(*) as integer)` })
       .from(imagesTable)
-      .innerJoin(patientsTable, and(
-        eq(patientsTable.id, imagesTable.patientId),
-        eq(patientsTable.tenantId, tenantId),
-      ))
+      .innerJoin(patientsTable, patientJoinCond)
       .where(gte(imagesTable.createdAt, thirtyDaysAgo));
 
     res.json({
