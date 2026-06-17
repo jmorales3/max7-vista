@@ -331,7 +331,7 @@ export function PresentationBuilder({
           {slide.type === "single" ? (
             <img src={imageUrl(slide.imageId)} className="absolute inset-0 w-full h-full object-contain" />
           ) : slide.type === "video" ? (
-            <video src={`/api/library/assets/${slide.imageId}/file`} className="absolute inset-0 w-full h-full object-contain" controls />
+            <video src={`/api/library-assets/${slide.imageId}/file`} className="absolute inset-0 w-full h-full object-contain" controls autoPlay />
           ) : slide.type === "compare" ? (
             <BeforeAfterSlider beforeUrl={imageUrl(slide.beforeId)} afterUrl={imageUrl(slide.afterId)} />
           ) : (
@@ -494,8 +494,12 @@ export function PresentationBuilder({
                       <CardContent className="p-2 flex items-center gap-2">
                         <span className="text-xs font-bold text-muted-foreground w-5 text-center shrink-0">{idx + 1}</span>
                         <div className="flex items-center gap-1 shrink-0">
-                          <div className="w-14 h-10 rounded-md overflow-hidden bg-muted">
-                            <img src={imageUrl(mainId)} className="w-full h-full object-cover" />
+                          <div className="w-14 h-10 rounded-md overflow-hidden bg-muted flex items-center justify-center">
+                            {slide.type === "video" ? (
+                              <video src={`/api/library-assets/${mainId}/file`} className="w-full h-full object-cover" muted preload="metadata" />
+                            ) : (
+                              <img src={imageUrl(mainId)} className="w-full h-full object-cover" />
+                            )}
                           </div>
                           {secondId && (
                             <>
