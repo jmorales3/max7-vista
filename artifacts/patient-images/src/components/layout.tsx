@@ -14,6 +14,7 @@ import {
   LayoutTemplate,
   Library,
   Tags,
+  ClipboardList,
 } from "lucide-react";
 import {
   Sidebar,
@@ -126,6 +127,17 @@ export function AppSidebar() {
                     <Link href="/admin/tags">
                       <Tags />
                       <span>{t("nav.tagManagement")}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === "/admin/audit-log"}
+                  >
+                    <Link href="/admin/audit-log">
+                      <ClipboardList />
+                      <span>{t("nav.auditLog")}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

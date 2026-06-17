@@ -16,7 +16,8 @@
     "library": "Biblioteca de Imágenes",
     "administration": "Administración",
     "userManagement": "Gestión de Usuarios",
-    "tagManagement": "Gestión de Etiquetas"
+    "tagManagement": "Gestión de Etiquetas",
+    "auditLog": "Registro de Auditoría"
   },
   "admin": {
     "title": "Gestión de Usuarios",
@@ -415,7 +416,6 @@
     "flipHorizontal": "Voltear Horizontal",
     "rotateLeft": "Rotar a la Izquierda",
     "rotateRight": "Rotar a la Derecha",
-    "angle": "Ángulo",
     "ellipse": "Elipse",
     "rectangle": "Rectángulo",
     "filled": "Relleno",
@@ -482,7 +482,8 @@
       "tenants": "Configuración Multiempresa",
       "templates": "Plantillas",
       "imageLibrary": "Biblioteca de Imágenes",
-      "exportImages": "Exportación de imágenes"
+      "exportImages": "Exportación de imágenes",
+      "auditLog": "Registro de Auditoría"
     },
     "overview": {
       "heading": "¿Qué es Max7 Vista?",
@@ -547,6 +548,10 @@
     "exportImages": {
       "heading": "Exportar imágenes del paciente",
       "body": "Los administradores y superadministradores pueden exportar una o varias imágenes de cualquier paciente como archivo ZIP. Abra la ficha del paciente, haga clic en el menú ⋮ (Más) en la esquina superior derecha y elija \"Exportar imágenes\". Un cuadro de diálogo muestra todas las imágenes del paciente — todas preseleccionadas por defecto. Marque o desmarque imágenes individualmente, o use \"Seleccionar todas\" / \"Deseleccionar todas\". Haga clic en \"Descargar ZIP\" para generar y descargar el archivo. El nombre incluye el código del paciente y la fecha actual; cada archivo dentro lleva su ID, fecha de captura y nombre original. La exportación queda registrada en el Registro de auditoría. Esta opción no es visible para usuarios regulares."
+    },
+    "auditLog": {
+      "heading": "Registro de Auditoría",
+      "body": "El Registro de Auditoría (Administración → Registro de Auditoría) es una sección exclusiva para administradores que registra todas las acciones significativas del sistema: inicios de sesión, fallos de inicio de sesión, cierres de sesión, creación/edición/eliminación de registros de pacientes, carga y visualización de imágenes, gestión de activos de biblioteca, importaciones masivas y migraciones. Cada entrada muestra la marca de tiempo, el nombre de usuario del actor, el tipo de acción, el tipo y ID del recurso afectado, los detalles relevantes y la dirección IP de origen. Use los filtros en la parte superior para limitar los resultados por acción, nombre de usuario o rango de fechas. El registro de auditoría apoya el cumplimiento de HIPAA al mantener un registro a prueba de manipulaciones."
     }
   },
   "bulkImport": {
@@ -775,5 +780,27 @@
       "headerOff": "Encabezado: Desactivado",
       "documentDefault": "Documento"
     }
+  },
+  "auditLog": {
+    "title": "Registro de Auditoría",
+    "subtitle": "Revise toda la actividad del sistema registrada para cumplimiento y seguridad.",
+    "colTimestamp": "Fecha/Hora",
+    "colUser": "Usuario",
+    "colAction": "Acción",
+    "colResource": "Recurso",
+    "colDetails": "Detalles",
+    "colIP": "Dirección IP",
+    "noLogs": "No se encontraron entradas en el registro de auditoría.",
+    "loading": "Cargando registro de auditoría…",
+    "filterAction": "Filtrar por acción",
+    "filterUser": "Filtrar por usuario",
+    "filterDateFrom": "Desde la fecha",
+    "filterDateTo": "Hasta la fecha",
+    "clearFilters": "Limpiar Filtros",
+    "allActions": "Todas las acciones",
+    "prevPage": "Anterior",
+    "nextPage": "Siguiente",
+    "pageOf": "Página {{page}} de {{total}}",
+    "totalEntries": "entradas"
   }
 }

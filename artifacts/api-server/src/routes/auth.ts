@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import { db, usersTable, tenantsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { logAudit } from "../lib/audit";
 
 function buildMobileSessionCookie(sessionId: string, secret: string): string {
   const signature = crypto
@@ -114,6 +115,7 @@ router.post("/auth/login", async (req, res) => {
       .limit(1);
 
     if (!user) {
+      await logAudit(req, "login_failed", "session", null, JSON.stringify({ username: username.trim().toLowerCase(), reason: "user_not_found" }));
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
@@ -123,6 +125,7 @@ router.post("/auth/login", async (req, res) => {
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
+      await logAudit(req, "login_failed", "session", null, JSON.stringify({ username: user.username, reason: "wrong_password" }));
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
@@ -134,6 +137,8 @@ router.post("/auth/login", async (req, res) => {
     await new Promise<void>((resolve, reject) => {
       req.session.save((err) => (err ? reject(err) : resolve()));
     });
+
+    await logAudit(req, "login", "session", user.id);
 
     return res.json({
       id: user.id,
@@ -147,7 +152,8 @@ router.post("/auth/login", async (req, res) => {
   }
 });
 
-router.post("/auth/logout", (req, res) => {
+router.post("/auth/logout", async (req, res) => {
+  await logAudit(req, "logout", "session", req.session.userId ?? null);
   req.session.destroy(() => {
     res.clearCookie("max7.sid");
     res.json({ ok: true });

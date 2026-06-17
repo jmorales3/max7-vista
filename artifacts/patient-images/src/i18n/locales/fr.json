@@ -64,7 +64,8 @@
     "library": "Bibliothèque d'Images",
     "administration": "Administration",
     "userManagement": "Gestion des Utilisateurs",
-    "tagManagement": "Gestion des Étiquettes"
+    "tagManagement": "Gestion des Étiquettes",
+    "auditLog": "Journal d'Audit"
   },
   "common": {
     "save": "Enregistrer",
@@ -415,7 +416,6 @@
     "flipHorizontal": "Retourner Horizontalement",
     "rotateLeft": "Tourner à Gauche",
     "rotateRight": "Tourner à Droite",
-    "angle": "Angle",
     "ellipse": "Ellipse",
     "rectangle": "Rectangle",
     "filled": "Rempli",
@@ -482,7 +482,8 @@
       "tenants": "Configuration Multi-Organisation",
       "templates": "Modèles",
       "imageLibrary": "Bibliothèque d'Images",
-      "exportImages": "Export d’images"
+      "exportImages": "Export d’images",
+      "auditLog": "Journal d'Audit"
     },
     "overview": {
       "heading": "Qu'est-ce que Max7 Vista ?",
@@ -547,6 +548,10 @@
     "exportImages": {
       "heading": "Exporter les images d’un patient",
       "body": "Les administrateurs et super-administrateurs peuvent exporter une ou plusieurs images d’un patient sous forme d’archive ZIP. Ouvrez la fiche d’un patient, cliquez sur le menu ⋮ (Plus) en haut à droite et choisissez « Exporter les images ». Une boîte de dialogue liste toutes les images du patient — toutes présélectionnées par défaut. Cochez ou décochez les images individuellement, ou utilisez « Tout sélectionner » / « Tout désélectionner ». Cliquez sur « Télécharger le ZIP » pour générer et télécharger l’archive. Le nom du fichier inclut le code patient et la date du jour ; chaque entrée porte son ID, sa date de capture et son nom d’origine. L’exportation est enregistrée dans le Journal d’audit. Cette option est masquée pour les utilisateurs ordinaires."
+    },
+    "auditLog": {
+      "heading": "Journal d'Audit",
+      "body": "Le Journal d'Audit (Administration → Journal d'Audit) est une section réservée aux administrateurs qui enregistre toutes les actions importantes du système : connexions, échecs de connexion, déconnexions, créations/modifications/suppressions de dossiers patients, téléversements et consultations d'images, gestion des ressources de bibliothèque, importations en masse et migrations. Chaque entrée affiche l'horodatage, le nom d'utilisateur de l'acteur, le type d'action, le type et l'ID de la ressource concernée, les détails pertinents et l'adresse IP d'origine. Utilisez les filtres en haut pour restreindre les résultats par action, nom d'utilisateur ou plage de dates. Le journal d'audit favorise la conformité HIPAA en maintenant un enregistrement inviolable."
     }
   },
   "bulkImport": {
@@ -775,5 +780,27 @@
       "headerOff": "En-tête : Désactivé",
       "documentDefault": "Document"
     }
+  },
+  "auditLog": {
+    "title": "Journal d'Audit",
+    "subtitle": "Consultez toute l'activité enregistrée du système pour la conformité et la sécurité.",
+    "colTimestamp": "Horodatage",
+    "colUser": "Utilisateur",
+    "colAction": "Action",
+    "colResource": "Ressource",
+    "colDetails": "Détails",
+    "colIP": "Adresse IP",
+    "noLogs": "Aucune entrée dans le journal d'audit.",
+    "loading": "Chargement du journal d'audit…",
+    "filterAction": "Filtrer par action",
+    "filterUser": "Filtrer par utilisateur",
+    "filterDateFrom": "Date de début",
+    "filterDateTo": "Date de fin",
+    "clearFilters": "Effacer les filtres",
+    "allActions": "Toutes les actions",
+    "prevPage": "Précédent",
+    "nextPage": "Suivant",
+    "pageOf": "Page {{page}} sur {{total}}",
+    "totalEntries": "entrées"
   }
 }

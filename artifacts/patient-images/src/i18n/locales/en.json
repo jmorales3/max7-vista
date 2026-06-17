@@ -16,7 +16,8 @@
     "library": "Image Library",
     "administration": "Administration",
     "userManagement": "User Management",
-    "tagManagement": "Tag Management"
+    "tagManagement": "Tag Management",
+    "auditLog": "Audit Log"
   },
   "admin": {
     "title": "User Management",
@@ -415,7 +416,6 @@
     "flipHorizontal": "Flip Horizontal",
     "rotateLeft": "Rotate Left",
     "rotateRight": "Rotate Right",
-    "angle": "Angle",
     "ellipse": "Ellipse",
     "rectangle": "Rectangle",
     "filled": "Filled",
@@ -482,7 +482,8 @@
       "tenants": "Multi-Tenant Setup",
       "templates": "Templates",
       "imageLibrary": "Image Library",
-      "exportImages": "Image Export"
+      "exportImages": "Image Export",
+      "auditLog": "Audit Log"
     },
     "overview": {
       "heading": "What is Max7 Vista?",
@@ -547,6 +548,10 @@
     "exportImages": {
       "heading": "Exporting Patient Images",
       "body": "Admins and Super Admins can export one or more images for any patient as a ZIP archive. Open a patient detail page, click the ⋮ (More) menu in the top-right corner, and choose \"Export Images\". A dialog lists all images for that patient — all are pre-selected by default. Tick or untick individual images, or use \"Select All\" / \"Deselect All\". Click \"Download ZIP\" to generate and download the archive. The file is named with the patient code and today’s date; each entry inside is named with its ID, capture date, and original filename. The export is recorded in the Audit Log. This option is hidden from regular users."
+    },
+    "auditLog": {
+      "heading": "Audit Log",
+      "body": "The Audit Log (Administration → Audit Log) is an admin-only section that records all significant system actions: logins, login failures, logouts, patient record creates/edits/deletes, image uploads and views, library asset management, bulk imports, and migrations. Each entry shows the timestamp, the acting user's username, the action type, the affected resource type and ID, any relevant details, and the originating IP address. Use the filters at the top to narrow results by action keyword, username, or date range, then click Apply. The total entry count and pagination controls are shown at the bottom when there are more than 50 entries. The audit log supports HIPAA compliance by maintaining a tamper-evident record of data access and modifications."
     }
   },
   "bulkImport": {
@@ -775,5 +780,27 @@
       "headerOff": "Header: Off",
       "documentDefault": "Document"
     }
+  },
+  "auditLog": {
+    "title": "Audit Log",
+    "subtitle": "Review all recorded system activity for compliance and security.",
+    "colTimestamp": "Timestamp",
+    "colUser": "User",
+    "colAction": "Action",
+    "colResource": "Resource",
+    "colDetails": "Details",
+    "colIP": "IP Address",
+    "noLogs": "No audit log entries found.",
+    "loading": "Loading audit log…",
+    "filterAction": "Filter by action",
+    "filterUser": "Filter by user",
+    "filterDateFrom": "From date",
+    "filterDateTo": "To date",
+    "clearFilters": "Clear Filters",
+    "allActions": "All actions",
+    "prevPage": "Previous",
+    "nextPage": "Next",
+    "pageOf": "Page {{page}} of {{total}}",
+    "totalEntries": "entries"
   }
 }

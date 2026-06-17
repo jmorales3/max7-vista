@@ -3,6 +3,7 @@ import { eq, and, inArray } from "drizzle-orm";
 import path from "path";
 import { db, imagesTable, tagsTable, libraryAssetTagsTable } from "@workspace/db";
 import { streamFile, streamFileWithRange, deleteFile, isGcsPath, toGcsPath, getSignedUploadUrl } from "../lib/gcsStorage";
+import { logAudit } from "../lib/audit";
 
 const router: IRouter = Router();
 
@@ -121,6 +122,7 @@ router.post("/library-assets/register", async (req, res): Promise<void> => {
       mediaType: mt,
     })
     .returning();
+  await logAudit(req, "upload", "library_asset", row.id, JSON.stringify({ fileName, mediaType: mt }));
   res.status(201).json(buildLibraryRow(row, []));
 });
 
@@ -151,6 +153,7 @@ router.delete("/library-assets/:id", async (req, res): Promise<void> => {
     try { await deleteFile(row.filePath); } catch (e) { console.warn("Could not delete GCS object:", e); }
   }
   await db.delete(imagesTable).where(eq(imagesTable.id, id));
+  await logAudit(req, "delete", "library_asset", id, JSON.stringify({ fileName: row.fileName }));
   res.status(204).send();
 });
 
@@ -164,6 +167,7 @@ router.get("/library-assets/:id/file", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Library asset not found" });
     return;
   }
+  await logAudit(req, "view", "library_asset", id);
   if (row.mediaType === "video") {
     await streamFileWithRange(row.filePath, row.fileName, req, res);
   } else {

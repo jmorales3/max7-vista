@@ -21,7 +21,8 @@ type SectionKey =
   | "migration"
   | "roles"
   | "tenants"
-  | "templates";
+  | "templates"
+  | "auditLog";
 
 const SECTIONS: SectionKey[] = [
   "overview",
@@ -40,6 +41,7 @@ const SECTIONS: SectionKey[] = [
   "roles",
   "tenants",
   "templates",
+  "auditLog",
 ];
 
 export default function Manual() {
