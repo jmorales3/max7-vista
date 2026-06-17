@@ -114,12 +114,17 @@ async function initSqlite() {
 
     CREATE TABLE IF NOT EXISTS audit_log (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id INTEGER,
       user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       username TEXT,
+      patient_id INTEGER REFERENCES patients(id) ON DELETE SET NULL,
       action TEXT NOT NULL,
       entity_type TEXT NOT NULL,
       entity_id INTEGER,
+      resource_id TEXT,
       details TEXT,
+      ip_address TEXT,
+      user_agent TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -182,6 +187,19 @@ async function initSqlite() {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
+
+  // Migrate existing SQLite audit_log tables — ADD COLUMN doesn't support IF NOT EXISTS
+  // in SQLite, so each statement is wrapped in a try/catch and ignored if it fails (column exists)
+  const auditMigrations = [
+    `ALTER TABLE audit_log ADD COLUMN tenant_id INTEGER`,
+    `ALTER TABLE audit_log ADD COLUMN patient_id INTEGER REFERENCES patients(id)`,
+    `ALTER TABLE audit_log ADD COLUMN resource_id TEXT`,
+    `ALTER TABLE audit_log ADD COLUMN ip_address TEXT`,
+    `ALTER TABLE audit_log ADD COLUMN user_agent TEXT`,
+  ];
+  for (const sql of auditMigrations) {
+    try { exec(sql); } catch { /* column already exists — safe to ignore */ }
+  }
 
   logger.info("SQLite tables initialized");
 }

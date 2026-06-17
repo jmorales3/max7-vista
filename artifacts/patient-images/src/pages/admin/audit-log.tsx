@@ -53,7 +53,6 @@ const ACTION_COLORS: Record<string, string> = {
   image_replace: "bg-orange-100 text-orange-800",
   image_export: "bg-indigo-100 text-indigo-800",
   image_print: "bg-pink-100 text-pink-800",
-  library_view: "bg-slate-100 text-slate-600",
   library_upload: "bg-purple-100 text-purple-800",
   library_delete: "bg-red-100 text-red-800",
   bulk_import: "bg-teal-100 text-teal-800",
@@ -161,7 +160,6 @@ export default function AuditLogPage() {
                 <option value="image_print">image_print</option>
               </optgroup>
               <optgroup label="Library">
-                <option value="library_view">library_view</option>
                 <option value="library_upload">library_upload</option>
                 <option value="library_delete">library_delete</option>
               </optgroup>

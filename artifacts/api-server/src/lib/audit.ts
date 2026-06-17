@@ -2,6 +2,7 @@ import { db, auditLogTable } from "@workspace/db";
 import type { Request } from "express";
 
 export interface AuditOpts {
+  tenantId?: number | null;
   patientId?: number | null;
   resourceId?: string | null;
 }
@@ -20,7 +21,7 @@ export function logAudit(
     null;
   const userAgent = (req.headers["user-agent"] as string | undefined) ?? null;
   db.insert(auditLogTable).values({
-    tenantId: (req.session as any)?.tenantId ?? null,
+    tenantId: opts?.tenantId ?? (req.session as any)?.tenantId ?? null,
     userId: (req.session as any)?.userId ?? null,
     username: (req.session as any)?.username ?? null,
     patientId: opts?.patientId ?? null,

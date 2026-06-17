@@ -125,7 +125,7 @@ router.post("/auth/login", async (req, res) => {
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
-      logAudit(req, "login_failed", "session", null, { username: user.username, reason: "wrong_password" });
+      logAudit(req, "login_failed", "session", null, { username: user.username, reason: "wrong_password" }, { tenantId: user.tenantId ?? null });
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
