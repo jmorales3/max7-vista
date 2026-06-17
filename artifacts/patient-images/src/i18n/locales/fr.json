@@ -801,6 +801,7 @@
     "prevPage": "Précédent",
     "nextPage": "Suivant",
     "pageOf": "Page {{page}} sur {{total}}",
-    "totalEntries": "entrées"
+    "totalEntries": "entrées",
+    "filterPatient": "Patient"
   }
 }

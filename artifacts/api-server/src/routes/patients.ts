@@ -71,7 +71,7 @@ router.post("/patients", async (req, res): Promise<void> => {
       .returning();
 
     const result = { ...patient, imageCount: 0 };
-    await logAudit(req, "create", "patient", patient.id, JSON.stringify({ name: patient.name, patientCode: patient.patientCode }));
+    logAudit(req, "create", "patient", patient.id, JSON.stringify({ name: patient.name, patientCode: patient.patientCode }));
     res.status(201).json(result);
   } catch (err: any) {
     if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
@@ -111,6 +111,7 @@ router.get("/patients/:id", async (req, res): Promise<void> => {
       return;
     }
 
+    logAudit(req, "patient_view", "patient", rows[0].id, undefined, { patientId: rows[0].id });
     res.json(rows[0]);
   } catch (err: any) {
     if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
@@ -162,7 +163,7 @@ router.patch("/patients/:id", async (req, res): Promise<void> => {
       .where(and(eq(patientsTable.id, params.data.id), eq(patientsTable.tenantId, tenantId)))
       .groupBy(patientsTable.id);
 
-    await logAudit(req, "edit", "patient", params.data.id, JSON.stringify(parsed.data));
+    logAudit(req, "edit", "patient", params.data.id, JSON.stringify(parsed.data));
     res.json(rows[0] ?? { ...patient, imageCount: 0 });
   } catch (err: any) {
     if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
@@ -191,7 +192,7 @@ router.delete("/patients/:id", async (req, res): Promise<void> => {
       return;
     }
 
-    await logAudit(req, "delete", "patient", params.data.id, JSON.stringify({ name: deleted.name, patientCode: deleted.patientCode }));
+    logAudit(req, "delete", "patient", params.data.id, JSON.stringify({ name: deleted.name, patientCode: deleted.patientCode }));
     res.sendStatus(204);
   } catch (err: any) {
     if (err.status === 403) { res.status(403).json({ error: err.message }); return; }

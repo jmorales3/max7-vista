@@ -258,7 +258,7 @@ router.post("/images/register", async (req, res): Promise<void> => {
     })
     .returning();
 
-  await logAudit(req, "upload", "image", image.id, JSON.stringify({ fileName, patientId }));
+  logAudit(req, "upload", "image", image.id, JSON.stringify({ fileName, patientId }), { patientId: patientId ?? null });
   res.status(201).json(buildImageRow({ ...image, patientName, patientCode }));
   } catch (err: any) {
     if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
@@ -346,7 +346,7 @@ router.post("/images/upload", async (req, res): Promise<void> => {
     patientCode2 = patient?.patientCode ?? null;
   }
 
-  await logAudit(req, "upload", "image", image.id, JSON.stringify({ fileName, patientId }));
+  logAudit(req, "upload", "image", image.id, JSON.stringify({ fileName, patientId }), { patientId: patientId ?? null });
   res.status(201).json(buildImageRow({ ...image, patientName: patientName2, patientCode: patientCode2 }));
   } catch (err: any) {
     if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
@@ -417,7 +417,7 @@ router.post("/images", upload.single("file"), async (req, res): Promise<void> =>
     patientCode = patient?.patientCode ?? null;
   }
 
-  await logAudit(req, "upload", "image", image.id, JSON.stringify({ fileName: req.file.originalname, patientId }));
+  logAudit(req, "upload", "image", image.id, JSON.stringify({ fileName: req.file.originalname, patientId }), { patientId: patientId ?? null });
   res.status(201).json(buildImageRow({ ...image, patientName, patientCode }));
   } catch (err: any) {
     if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
@@ -459,7 +459,7 @@ router.put("/images/:id/file", upload.single("file"), async (req, res): Promise<
       .leftJoin(patientsTable, eq(patientsTable.id, imagesTable.patientId))
       .where(eq(imagesTable.id, params.data.id));
 
-    await logAudit(req, "replace_file", "image", params.data.id, JSON.stringify({ fileName: req.file.originalname }));
+    logAudit(req, "replace_file", "image", params.data.id, JSON.stringify({ fileName: req.file.originalname }));
     res.json(buildImageRow(rows[0] ?? { ...existingImage, patientName: null, patientCode: null }));
   } catch (err: any) {
     if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
@@ -482,7 +482,7 @@ router.get("/images/:id/file", async (req, res): Promise<void> => {
 
     if (!image) { res.status(404).json({ error: "Image not found" }); return; }
 
-    await logAudit(req, "view", "image", params.data.id);
+    logAudit(req, "image_view", "image", params.data.id, undefined, { patientId: image.patientId ?? undefined });
     await streamFile(image.filePath, image.fileName, res);
   } catch (err: any) {
     if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
@@ -593,7 +593,7 @@ router.patch("/images/:id", async (req, res): Promise<void> => {
       .leftJoin(patientsTable, eq(patientsTable.id, imagesTable.patientId))
       .where(eq(imagesTable.id, params.data.id));
 
-    await logAudit(req, "edit", "image", params.data.id, JSON.stringify(parsed.data));
+    logAudit(req, "edit", "image", params.data.id, JSON.stringify(parsed.data));
     res.json(buildImageRow(rows[0] ?? { ...image, patientName: null, patientCode: null }));
   } catch (err: any) {
     if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
@@ -623,7 +623,7 @@ router.delete("/images/:id", async (req, res): Promise<void> => {
     if (!image) { res.status(404).json({ error: "Image not found" }); return; }
 
     await deleteFile(image.filePath);
-    await logAudit(req, "delete", "image", params.data.id, JSON.stringify({ fileName: image.fileName, patientId: image.patientId }));
+    logAudit(req, "delete", "image", params.data.id, JSON.stringify({ fileName: image.fileName, patientId: image.patientId }), { patientId: image.patientId ?? null });
     res.sendStatus(204);
   } catch (err: any) {
     if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
@@ -703,12 +703,13 @@ router.post(
     res.setHeader("Content-Length", String(zipBuffer.length));
     res.end(zipBuffer);
 
-    await logAudit(
+    logAudit(
       req,
       "export",
       "patient",
       patientId,
-      JSON.stringify({ imageCount: added, imageIds: rows.map((r) => r.id) })
+      JSON.stringify({ imageCount: added, imageIds: rows.map((r) => r.id) }),
+      { patientId: patientId ?? null }
     );
   }
 );

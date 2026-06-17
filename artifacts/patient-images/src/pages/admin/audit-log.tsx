@@ -13,7 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { getApiUrl } from "@/lib/apiUrl";
 
 interface AuditLogEntry {
@@ -21,11 +20,14 @@ interface AuditLogEntry {
   tenantId: number | null;
   userId: number | null;
   username: string | null;
+  patientId: number | null;
   action: string;
   entityType: string;
   entityId: number | null;
+  resourceId: string | null;
   details: string | null;
   ipAddress: string | null;
+  userAgent: string | null;
   createdAt: string;
 }
 
@@ -45,24 +47,39 @@ const ACTION_COLORS: Record<string, string> = {
   delete: "bg-red-100 text-red-800",
   upload: "bg-purple-100 text-purple-800",
   view: "bg-slate-100 text-slate-600",
+  image_view: "bg-slate-100 text-slate-600",
+  patient_view: "bg-sky-100 text-sky-700",
   replace_file: "bg-orange-100 text-orange-800",
   export: "bg-indigo-100 text-indigo-800",
+  bulk_import: "bg-teal-100 text-teal-800",
+};
+
+interface Filters {
+  action: string;
+  username: string;
+  patient: string;
+  dateFrom: string;
+  dateTo: string;
+}
+
+const EMPTY_FILTERS: Filters = {
+  action: "",
+  username: "",
+  patient: "",
+  dateFrom: "",
+  dateTo: "",
 };
 
 async function fetchAuditLog(params: {
   page: number;
-  action: string;
-  username: string;
-  dateFrom: string;
-  dateTo: string;
-}): Promise<AuditLogResponse> {
+} & Filters): Promise<AuditLogResponse> {
   const q = new URLSearchParams({ page: String(params.page), limit: "50" });
   if (params.action) q.set("action", params.action);
   if (params.username) q.set("username", params.username);
-  if (params.dateFrom) q.set("dateFrom", params.dateFrom);
-  if (params.dateTo) q.set("dateTo", params.dateTo);
+  if (params.dateFrom) q.set("from", params.dateFrom);
+  if (params.dateTo) q.set("to", params.dateTo);
 
-  const res = await fetch(getApiUrl(`/api/audit-log?${q}`), { credentials: "include" });
+  const res = await fetch(getApiUrl(`/api/audit-logs?${q}`), { credentials: "include" });
   if (!res.ok) throw new Error("Failed to fetch audit log");
   return res.json();
 }
@@ -70,38 +87,26 @@ async function fetchAuditLog(params: {
 export default function AuditLogPage() {
   const { t } = useTranslation();
   const [page, setPage] = useState(1);
-  const [actionFilter, setActionFilter] = useState("");
-  const [usernameFilter, setUsernameFilter] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-
-  const [appliedFilters, setAppliedFilters] = useState({
-    action: "",
-    username: "",
-    dateFrom: "",
-    dateTo: "",
-  });
+  const [draft, setDraft] = useState<Filters>(EMPTY_FILTERS);
+  const [applied, setApplied] = useState<Filters>(EMPTY_FILTERS);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["audit-log", page, appliedFilters],
-    queryFn: () => fetchAuditLog({ page, ...appliedFilters }),
+    queryKey: ["audit-logs", page, applied],
+    queryFn: () => fetchAuditLog({ page, ...applied }),
   });
 
   function applyFilters() {
     setPage(1);
-    setAppliedFilters({ action: actionFilter, username: usernameFilter, dateFrom, dateTo });
+    setApplied({ ...draft });
   }
 
   function clearFilters() {
-    setActionFilter("");
-    setUsernameFilter("");
-    setDateFrom("");
-    setDateTo("");
+    setDraft(EMPTY_FILTERS);
     setPage(1);
-    setAppliedFilters({ action: "", username: "", dateFrom: "", dateTo: "" });
+    setApplied(EMPTY_FILTERS);
   }
 
-  const hasFilters = actionFilter || usernameFilter || dateFrom || dateTo;
+  const hasFilters = Object.values(draft).some(Boolean);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -118,23 +123,45 @@ export default function AuditLogPage() {
       </div>
 
       <div className="rounded-lg border bg-card p-4 space-y-3">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <div className="space-y-1">
             <Label className="text-xs">{t("auditLog.filterAction")}</Label>
-            <Input
-              placeholder={t("auditLog.allActions")}
-              value={actionFilter}
-              onChange={(e) => setActionFilter(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-              className="h-8 text-sm"
-            />
+            <select
+              className="w-full h-8 text-sm rounded-md border border-input bg-background px-2 focus:outline-none focus:ring-1 focus:ring-ring"
+              value={draft.action}
+              onChange={(e) => setDraft((d) => ({ ...d, action: e.target.value }))}
+            >
+              <option value="">{t("auditLog.allActions")}</option>
+              <option value="login">login</option>
+              <option value="logout">logout</option>
+              <option value="login_failed">login_failed</option>
+              <option value="patient_view">patient_view</option>
+              <option value="image_view">image_view</option>
+              <option value="upload">upload</option>
+              <option value="delete">delete</option>
+              <option value="edit">edit</option>
+              <option value="create">create</option>
+              <option value="export">export</option>
+              <option value="replace_file">replace_file</option>
+              <option value="bulk_import">bulk_import</option>
+            </select>
           </div>
           <div className="space-y-1">
             <Label className="text-xs">{t("auditLog.filterUser")}</Label>
             <Input
               placeholder={t("auditLog.filterUser")}
-              value={usernameFilter}
-              onChange={(e) => setUsernameFilter(e.target.value)}
+              value={draft.username}
+              onChange={(e) => setDraft((d) => ({ ...d, username: e.target.value }))}
+              onKeyDown={(e) => e.key === "Enter" && applyFilters()}
+              className="h-8 text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">{t("auditLog.filterPatient")}</Label>
+            <Input
+              placeholder={t("auditLog.filterPatient")}
+              value={draft.patient}
+              onChange={(e) => setDraft((d) => ({ ...d, patient: e.target.value }))}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
               className="h-8 text-sm"
             />
@@ -143,8 +170,8 @@ export default function AuditLogPage() {
             <Label className="text-xs">{t("auditLog.filterDateFrom")}</Label>
             <Input
               type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
+              value={draft.dateFrom}
+              onChange={(e) => setDraft((d) => ({ ...d, dateFrom: e.target.value }))}
               className="h-8 text-sm"
             />
           </div>
@@ -152,22 +179,23 @@ export default function AuditLogPage() {
             <Label className="text-xs">{t("auditLog.filterDateTo")}</Label>
             <Input
               type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
+              value={draft.dateTo}
+              onChange={(e) => setDraft((d) => ({ ...d, dateTo: e.target.value }))}
               className="h-8 text-sm"
             />
           </div>
-        </div>
-        <div className="flex gap-2">
-          <Button size="sm" onClick={applyFilters}>
-            {t("common.apply")}
-          </Button>
-          {hasFilters && (
-            <Button size="sm" variant="ghost" onClick={clearFilters}>
-              <X className="h-3.5 w-3.5 mr-1" />
-              {t("auditLog.clearFilters")}
-            </Button>
-          )}
+          <div className="space-y-1 flex flex-col justify-end">
+            <div className="flex gap-2">
+              <Button size="sm" onClick={applyFilters} className="flex-1">
+                {t("common.apply")}
+              </Button>
+              {hasFilters && (
+                <Button size="sm" variant="ghost" onClick={clearFilters}>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -184,11 +212,11 @@ export default function AuditLogPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-44">{t("auditLog.colTimestamp")}</TableHead>
-                  <TableHead className="w-32">{t("auditLog.colUser")}</TableHead>
-                  <TableHead className="w-32">{t("auditLog.colAction")}</TableHead>
-                  <TableHead className="w-36">{t("auditLog.colResource")}</TableHead>
+                  <TableHead className="w-28">{t("auditLog.colUser")}</TableHead>
+                  <TableHead className="w-36">{t("auditLog.colAction")}</TableHead>
+                  <TableHead className="w-32">{t("auditLog.colResource")}</TableHead>
                   <TableHead>{t("auditLog.colDetails")}</TableHead>
-                  <TableHead className="w-36">{t("auditLog.colIP")}</TableHead>
+                  <TableHead className="w-32">{t("auditLog.colIP")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -213,6 +241,9 @@ export default function AuditLogPage() {
                       {entry.entityType}
                       {entry.entityId != null && (
                         <span className="ml-1 text-foreground/50">#{entry.entityId}</span>
+                      )}
+                      {entry.patientId != null && entry.entityType !== "patient" && (
+                        <div className="text-foreground/40">pt#{entry.patientId}</div>
                       )}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground max-w-xs truncate">
