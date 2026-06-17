@@ -22,6 +22,7 @@ import {
   useListPresentations, getListPresentationsQueryKey,
   useCreatePresentation, useUpdatePresentation,
   Presentation as ApiPresentation,
+  useListPatients, getListPatientsQueryKey,
 } from "@workspace/api-client-react";
 import { queryClient as globalQueryClient } from "@/lib/queryClient";
 import { type Slide } from "@/components/PresentationBuilder";
@@ -136,6 +137,7 @@ export default function ImageLibrary() {
   const [addToPresentationOpen, setAddToPresentationOpen] = useState(false);
   const [selectedPresentation, setSelectedPresentation] = useState<string>("new");
   const [newPresentationTitle, setNewPresentationTitle] = useState("");
+  const [dialogPatientId, setDialogPatientId] = useState<string>("all");
   const [isSaving, setIsSaving] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [filterTagId, setFilterTagId] = useState<number | null>(null);
@@ -155,6 +157,11 @@ export default function ImageLibrary() {
   const { data: presentations = [] } = useListPresentations(
     {},
     { query: { queryKey: getListPresentationsQueryKey({}) } },
+  );
+
+  const { data: patients = [] } = useListPatients(
+    {},
+    { query: { queryKey: getListPatientsQueryKey({}) } },
   );
 
   const updatePresentation = useUpdatePresentation({
@@ -308,13 +315,15 @@ export default function ImageLibrary() {
     });
     if (selectedPresentation === "new") {
       const title = newPresentationTitle.trim() || t("library.defaultPresentationTitle");
-      createPresentation.mutate({ data: { title, slides: slides as unknown[] } });
+      const patId = dialogPatientId !== "all" ? parseInt(dialogPatientId, 10) : undefined;
+      createPresentation.mutate({ data: { title, slides: slides as unknown[], ...(patId ? { patientId: patId } : {}) } });
     } else {
       const pres = (presentations as ApiPresentation[]).find(
         (p) => String(p.id) === selectedPresentation,
       );
       if (!pres) return;
-      const existing: Slide[] = (() => { try { return JSON.parse((pres as any).slides || "[]"); } catch { return []; } })();
+      const rawSlides = (pres as any).slides;
+      const existing: Slide[] = Array.isArray(rawSlides) ? rawSlides : (() => { try { return JSON.parse(rawSlides || "[]"); } catch { return []; } })();
       updatePresentation.mutate({
         id: pres.id,
         data: { slides: [...existing, ...slides] as unknown[] },
@@ -649,24 +658,48 @@ export default function ImageLibrary() {
             <DialogTitle>{t("library.selectPresentation")}</DialogTitle>
             <DialogDescription>{t("library.selectPresentationDesc")}</DialogDescription>
           </DialogHeader>
-          <Select value={selectedPresentation} onValueChange={setSelectedPresentation}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="new">
-                <span className="flex items-center gap-1.5">
-                  <PlusCircle className="h-4 w-4" />
-                  {t("library.newPresentation")}
-                </span>
-              </SelectItem>
-              {(presentations as ApiPresentation[]).map((p) => (
-                <SelectItem key={p.id} value={String(p.id)}>
-                  {p.title}
+          {/* Patient filter */}
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-muted-foreground">Patient</p>
+            <Select value={dialogPatientId} onValueChange={(v) => { setDialogPatientId(v); setSelectedPresentation("new"); }}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All patients</SelectItem>
+                {(patients as any[]).map((p: any) => (
+                  <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {/* Presentation picker */}
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-muted-foreground">Presentation</p>
+            <Select value={selectedPresentation} onValueChange={setSelectedPresentation}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="new">
+                  <span className="flex items-center gap-1.5">
+                    <PlusCircle className="h-4 w-4" />
+                    {t("library.newPresentation")}
+                  </span>
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                {(presentations as ApiPresentation[])
+                  .filter((p) =>
+                    dialogPatientId === "all" ||
+                    String((p as any).patientId) === dialogPatientId,
+                  )
+                  .map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.title}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
           {selectedPresentation === "new" && (
             <Input
               placeholder={t("library.newPresentationPlaceholder")}
