@@ -2808,6 +2808,7 @@ export default function Editor() {
                     variant="ghost" size="sm"
                     className="h-7 text-xs justify-start px-2"
                     onClick={() => {
+                      if (floater) { cancelSelection(); return; }
                       pushHistory();
                       annotationsRef.current = [];
                       setAnnotations([]);
@@ -2820,8 +2821,8 @@ export default function Editor() {
                   <Button
                     variant="ghost" size="sm"
                     className="h-7 gap-1.5 text-xs justify-start px-2"
-                    onClick={undoAnnotation}
-                    disabled={!canUndo}
+                    onClick={() => { if (floater) { cancelSelection(); return; } undoAnnotation(); }}
+                    disabled={!floater && !canUndo}
                     title={`${t("editor.undoAnnotation")} (Ctrl+Z)`}
                   ><Undo2 className="h-3.5 w-3.5" />{t("editor.undoAnnotation")}</Button>
                   <Button
