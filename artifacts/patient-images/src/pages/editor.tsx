@@ -2273,56 +2273,6 @@ export default function Editor() {
             </div>
           )}
 
-          {(tool === "circle" || (tool === "pointer" && selectedCircleId)) && (
-            <>
-              <Button
-                size="sm"
-                variant={circleShape === "ellipse" ? "default" : "outline"}
-                className="h-8 gap-1 text-xs px-2"
-                title={t("editor.circleShapeEllipse")}
-                onClick={() => {
-                  setCircleShape("ellipse");
-                  if (tool === "pointer" && selectedCircleId) {
-                    setAnnotations(prev => prev.map(a => a.id === selectedCircleId && a.type === "circle" ? { ...a, shape: "ellipse" } : a));
-                  }
-                }}
-              >
-                <CircleIcon className="h-3.5 w-3.5" />
-                {t("editor.ellipse")}
-              </Button>
-              <Button
-                size="sm"
-                variant={circleShape === "rect" ? "default" : "outline"}
-                className="h-8 gap-1 text-xs px-2"
-                title={t("editor.circleShapeRect")}
-                onClick={() => {
-                  setCircleShape("rect");
-                  if (tool === "pointer" && selectedCircleId) {
-                    setAnnotations(prev => prev.map(a => a.id === selectedCircleId && a.type === "circle" ? { ...a, shape: "rect" } : a));
-                  }
-                }}
-              >
-                <Square className="h-3.5 w-3.5" />
-                {t("editor.rectangle")}
-              </Button>
-              <Button
-                size="sm"
-                variant={circleFilled ? "default" : "outline"}
-                className="h-8 gap-1 text-xs px-2"
-                title={t("editor.circleFill")}
-                onClick={() => {
-                  const next = !circleFilled;
-                  setCircleFilled(next);
-                  if (tool === "pointer" && selectedCircleId) {
-                    setAnnotations(prev => prev.map(a => a.id === selectedCircleId && a.type === "circle" ? { ...a, filled: next } : a));
-                  }
-                }}
-              >
-                <PaintBucket className="h-3.5 w-3.5" />
-                {circleFilled ? t("editor.filled") : t("editor.outline")}
-              </Button>
-            </>
-          )}
 
           {(tool === "pen" || tool === "arrow" || tool === "circle" || tool === "eraser" || tool === "straightline") && (
             <div className="flex items-center gap-1" title={t("editor.strokeWidth")}>
@@ -2681,23 +2631,89 @@ export default function Editor() {
                     )}
                   </div>
                 )}
+                {/* Circle tool controls */}
+                {(tool === "circle" || (tool === "pointer" && selectedCircleId)) && (
+                  <div className="px-2 py-1.5 border-b flex flex-col gap-2">
+                    <div>
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1 block">
+                        {t("editor.ellipse")} / {t("editor.rectangle")}
+                      </span>
+                      <div className="flex flex-col gap-1 border rounded-md p-0.5 bg-muted/20">
+                        <Button size="sm"
+                          variant="ghost"
+                          className={`h-7 w-full text-xs gap-1 justify-start ${circleShape === "ellipse" ? "bg-primary/20 text-primary font-semibold border border-primary/30" : ""}`}
+                          onClick={() => {
+                            setCircleShape("ellipse");
+                            if (tool === "pointer" && selectedCircleId)
+                              setAnnotations(prev => prev.map(a => a.id === selectedCircleId && a.type === "circle" ? { ...a, shape: "ellipse" } : a));
+                          }}>
+                          <CircleIcon className="h-3 w-3" />{t("editor.ellipse")}
+                        </Button>
+                        <Button size="sm"
+                          variant="ghost"
+                          className={`h-7 w-full text-xs gap-1 justify-start ${circleShape === "rect" ? "bg-primary/20 text-primary font-semibold border border-primary/30" : ""}`}
+                          onClick={() => {
+                            setCircleShape("rect");
+                            if (tool === "pointer" && selectedCircleId)
+                              setAnnotations(prev => prev.map(a => a.id === selectedCircleId && a.type === "circle" ? { ...a, shape: "rect" } : a));
+                          }}>
+                          <Square className="h-3 w-3" />{t("editor.rectangle")}
+                        </Button>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1 block">
+                        {t("editor.filled")} / {t("editor.outline")}
+                      </span>
+                      <div className="flex flex-col gap-1 border rounded-md p-0.5 bg-muted/20">
+                        <Button size="sm"
+                          variant="ghost"
+                          className={`h-7 w-full text-xs gap-1 justify-start ${circleFilled ? "bg-primary/20 text-primary font-semibold border border-primary/30" : ""}`}
+                          onClick={() => {
+                            const next = true;
+                            setCircleFilled(next);
+                            if (tool === "pointer" && selectedCircleId)
+                              setAnnotations(prev => prev.map(a => a.id === selectedCircleId && a.type === "circle" ? { ...a, filled: next } : a));
+                          }}>
+                          <PaintBucket className="h-3 w-3" />{t("editor.filled")}
+                        </Button>
+                        <Button size="sm"
+                          variant="ghost"
+                          className={`h-7 w-full text-xs gap-1 justify-start ${!circleFilled ? "bg-primary/20 text-primary font-semibold border border-primary/30" : ""}`}
+                          onClick={() => {
+                            const next = false;
+                            setCircleFilled(next);
+                            if (tool === "pointer" && selectedCircleId)
+                              setAnnotations(prev => prev.map(a => a.id === selectedCircleId && a.type === "circle" ? { ...a, filled: next } : a));
+                          }}>
+                          <CircleIcon className="h-3 w-3" />{t("editor.outline")}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {/* Select/Move tool controls */}
                 {tool === "select" && (
                   <div className="px-2 py-1.5 border-b flex flex-col gap-2">
                     {!floater ? (
                       <>
+                        <p className="text-[11px] text-muted-foreground leading-snug">
+                          Select a shape type and operation below, then draw the area on the image.
+                        </p>
                         <div>
                           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1 block">
                             {t("editor.selectionMode")}
                           </span>
-                          <div className="flex gap-0.5 border rounded-md p-0.5 bg-muted/30">
-                            <Button size="sm" variant={selectMode === "freehand" ? "secondary" : "ghost"}
-                              className="h-7 flex-1 text-xs gap-1"
+                          <div className="flex flex-col gap-1 border rounded-md p-0.5 bg-muted/20">
+                            <Button size="sm"
+                              variant="ghost"
+                              className={`h-7 w-full text-xs gap-1 justify-start ${selectMode === "freehand" ? "bg-primary/20 text-primary font-semibold border border-primary/30" : ""}`}
                               onClick={() => { setSelectMode("freehand"); selectionStartRef.current = null; setSelectionRect(null); }}>
                               <Lasso className="h-3 w-3" />{t("editor.selectModeFreehand")}
                             </Button>
-                            <Button size="sm" variant={selectMode === "rect" ? "secondary" : "ghost"}
-                              className="h-7 flex-1 text-xs gap-1"
+                            <Button size="sm"
+                              variant="ghost"
+                              className={`h-7 w-full text-xs gap-1 justify-start ${selectMode === "rect" ? "bg-primary/20 text-primary font-semibold border border-primary/30" : ""}`}
                               onClick={() => { setSelectMode("rect"); selectDrawingRef.current = false; selectPathRef.current = []; clearBrushCursor(); }}>
                               <RectangleHorizontal className="h-3 w-3" />{t("editor.selectModeRect")}
                             </Button>
@@ -2707,14 +2723,16 @@ export default function Editor() {
                           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1 block">
                             {t("editor.transferMode")}
                           </span>
-                          <div className="flex gap-0.5 border rounded-md p-0.5 bg-muted/30">
-                            <Button size="sm" variant={selectTransferMode === "cut" ? "secondary" : "ghost"}
-                              className="h-7 flex-1 text-xs gap-1"
+                          <div className="flex flex-col gap-1 border rounded-md p-0.5 bg-muted/20">
+                            <Button size="sm"
+                              variant="ghost"
+                              className={`h-7 w-full text-xs gap-1 justify-start ${selectTransferMode === "cut" ? "bg-primary/20 text-primary font-semibold border border-primary/30" : ""}`}
                               onClick={() => setSelectTransferMode("cut")}>
                               <Scissors className="h-3 w-3" />{t("editor.selectTransferCut")}
                             </Button>
-                            <Button size="sm" variant={selectTransferMode === "copy" ? "secondary" : "ghost"}
-                              className="h-7 flex-1 text-xs gap-1"
+                            <Button size="sm"
+                              variant="ghost"
+                              className={`h-7 w-full text-xs gap-1 justify-start ${selectTransferMode === "copy" ? "bg-primary/20 text-primary font-semibold border border-primary/30" : ""}`}
                               onClick={() => setSelectTransferMode("copy")}>
                               <Copy className="h-3 w-3" />{t("editor.selectTransferCopy")}
                             </Button>
