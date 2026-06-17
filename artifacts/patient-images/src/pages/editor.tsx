@@ -2230,30 +2230,16 @@ export default function Editor() {
 
 
 
-          {tool === "smooth" && (
+          {tool === "smooth" && pendingSmoothPath && (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">{t("editor.smoothStrength")}</span>
-              <input
-                type="range"
-                min={1}
-                max={20}
-                value={smoothBlur}
-                onChange={(e) => setSmoothBlur(+e.target.value)}
-                className="w-20 h-1.5 accent-primary"
-              />
-              <span className="text-xs font-mono w-4 text-center">{smoothBlur}</span>
-              {pendingSmoothPath && (
-                <>
-                  <Button size="sm" className="h-8 gap-1" onClick={applySmooth}>
-                    <Check className="h-3.5 w-3.5" />
-                    {t("editor.applySmooth")}
-                  </Button>
-                  <Button size="sm" variant="ghost" className="h-8 gap-1" onClick={cancelSmooth}>
-                    <X className="h-3.5 w-3.5" />
-                    {t("common.cancel")}
-                  </Button>
-                </>
-              )}
+              <Button size="sm" className="h-8 gap-1" onClick={applySmooth}>
+                <Check className="h-3.5 w-3.5" />
+                {t("editor.applySmooth")}
+              </Button>
+              <Button size="sm" variant="ghost" className="h-8 gap-1" onClick={cancelSmooth}>
+                <X className="h-3.5 w-3.5" />
+                {t("common.cancel")}
+              </Button>
             </div>
           )}
 
@@ -2301,86 +2287,6 @@ export default function Editor() {
       </div>
 
       {/* Overlay secondary toolbar */}
-      {tool === "overlay" && overlayImageId && (
-        <div className="border-b bg-card flex items-center gap-2 px-4 py-1.5 shrink-0 flex-wrap">
-          <span className="text-xs text-muted-foreground">{t("editor.overlayOpacity")}</span>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.05}
-            value={overlayOpacity}
-            onChange={(e) => setOverlayOpacity(parseFloat(e.target.value))}
-            className="w-28 h-1.5 accent-primary"
-          />
-          <span className="text-xs font-mono w-8 text-center">{Math.round(overlayOpacity * 100)}%</span>
-          <div className="h-4 w-px bg-border mx-0.5" />
-          <span className="text-xs text-muted-foreground">{t("editor.overlayScale")}</span>
-          <input
-            type="range"
-            min={0.1}
-            max={3.0}
-            step={0.01}
-            value={overlayScaleCorrection}
-            onChange={(e) => {
-              const v = parseFloat(e.target.value);
-              overlayScaleCorrectionRef.current = v;
-              setOverlayScaleCorrection(v);
-              redrawOverlay();
-            }}
-            className="w-28 h-1.5 accent-primary"
-          />
-          <span className="text-xs font-mono w-10 text-center">{Math.round(overlayScaleCorrection * 100)}%</span>
-          {overlayScaleCorrection !== 1.0 && (
-            <button
-              className="text-xs text-primary hover:underline shrink-0"
-              onClick={() => {
-                overlayScaleCorrectionRef.current = 1.0;
-                setOverlayScaleCorrection(1.0);
-                redrawOverlay();
-              }}
-            >
-              {t("editor.overlayOffsetReset")}
-            </button>
-          )}
-          <div className="h-4 w-px bg-border mx-0.5" />
-          <Move className="h-3 w-3 text-muted-foreground shrink-0" />
-          <span className="text-xs text-muted-foreground">{t("editor.overlayPosition")}</span>
-          <span className="text-xs font-mono text-muted-foreground">
-            {overlayOffsetX},{overlayOffsetY}
-          </span>
-          {(overlayOffsetX !== 0 || overlayOffsetY !== 0) && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 text-xs px-2"
-              onClick={() => {
-                overlayOffsetXRef.current = 0;
-                overlayOffsetYRef.current = 0;
-                setOverlayOffsetX(0);
-                setOverlayOffsetY(0);
-                redrawOverlay();
-              }}
-            >
-              {t("editor.overlayOffsetReset")}
-            </Button>
-          )}
-          <div className="h-4 w-px bg-border mx-0.5" />
-          <Button
-            size="sm"
-            variant="secondary"
-            className="h-6 text-xs px-2 gap-1"
-            onClick={() => {
-              setSaveOverlayPickId("new");
-              setSaveOverlayNewTitle("");
-              setShowSaveOverlayDialog(true);
-            }}
-          >
-            <Layers className="h-3 w-3" />
-            {t("editor.saveOverlayToPresentation")}
-          </Button>
-        </div>
-      )}
 
       {/* Main area */}
       <div className="flex flex-1 overflow-hidden">
@@ -2581,6 +2487,54 @@ export default function Editor() {
                         )}
                       </>
                     )}
+                  </div>
+                )}
+                {/* Smooth tool controls */}
+                {tool === "smooth" && (
+                  <div className="px-2 py-1.5 border-b flex flex-col gap-2">
+                    <div>
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1 block">{t("editor.smoothStrength")}</span>
+                      <div className="flex items-center gap-2">
+                        <input type="range" min={1} max={20} value={smoothBlur} onChange={(e) => setSmoothBlur(+e.target.value)} className="flex-1 h-1.5 accent-primary" />
+                        <span className="text-xs font-mono w-4 text-center">{smoothBlur}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {/* Overlay tool controls */}
+                {tool === "overlay" && overlayImageId && (
+                  <div className="px-2 py-1.5 border-b flex flex-col gap-2">
+                    <div>
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1 block">{t("editor.overlayOpacity")}</span>
+                      <div className="flex items-center gap-2">
+                        <input type="range" min={0} max={1} step={0.05} value={overlayOpacity} onChange={(e) => setOverlayOpacity(parseFloat(e.target.value))} className="flex-1 h-1.5 accent-primary" />
+                        <span className="text-xs font-mono w-8 text-center">{Math.round(overlayOpacity * 100)}%</span>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1 block">{t("editor.overlayScale")}</span>
+                      <div className="flex items-center gap-2">
+                        <input type="range" min={0.1} max={3.0} step={0.01} value={overlayScaleCorrection} onChange={(e) => { const v = parseFloat(e.target.value); overlayScaleCorrectionRef.current = v; setOverlayScaleCorrection(v); redrawOverlay(); }} className="flex-1 h-1.5 accent-primary" />
+                        <span className="text-xs font-mono w-10 text-center">{Math.round(overlayScaleCorrection * 100)}%</span>
+                      </div>
+                      {overlayScaleCorrection !== 1.0 && (
+                        <button className="text-xs text-primary hover:underline mt-0.5" onClick={() => { overlayScaleCorrectionRef.current = 1.0; setOverlayScaleCorrection(1.0); redrawOverlay(); }}>{t("editor.overlayOffsetReset")}</button>
+                      )}
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1 block">{t("editor.overlayPosition")}</span>
+                      <div className="flex items-center gap-2">
+                        <Move className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-xs font-mono text-muted-foreground">{overlayOffsetX},{overlayOffsetY}</span>
+                        {(overlayOffsetX !== 0 || overlayOffsetY !== 0) && (
+                          <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={() => { overlayOffsetXRef.current = 0; overlayOffsetYRef.current = 0; setOverlayOffsetX(0); setOverlayOffsetY(0); redrawOverlay(); }}>{t("editor.overlayOffsetReset")}</Button>
+                        )}
+                      </div>
+                    </div>
+                    <Button size="sm" variant="secondary" className="h-7 text-xs gap-1 w-full" onClick={() => { setSaveOverlayPickId("new"); setSaveOverlayNewTitle(""); setShowSaveOverlayDialog(true); }}>
+                      <Layers className="h-3 w-3" />
+                      {t("editor.saveOverlayToPresentation")}
+                    </Button>
                   </div>
                 )}
                 {/* Appearance controls (color + size) for annotation tools */}
