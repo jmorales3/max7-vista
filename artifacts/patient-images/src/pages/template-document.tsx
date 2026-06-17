@@ -510,10 +510,16 @@ export default function TemplateDocumentPage() {
           }
           .print-canvas {
             transform: none !important;
-            position: relative !important;
+            position: absolute !important;
+            top: 0 !important; left: 0 !important;
+            width: ${pageWidth}mm !important;
+            height: ${pageHeight}mm !important;
           }
           .print-header {
-            padding: 8.35mm 5mm !important;
+            left: ${headerX}mm !important;
+            top: ${headerY}mm !important;
+            width: ${headerW}mm !important;
+            padding: 3mm 5mm !important;
             background: rgba(255,255,255,0.92) !important;
             border: none !important;
             border-radius: 0 !important;
@@ -521,13 +527,13 @@ export default function TemplateDocumentPage() {
             flex-direction: column !important;
             align-items: center !important;
             text-align: center !important;
-            gap: 2mm !important;
+            gap: 1.5mm !important;
             cursor: default !important;
           }
-          .print-header img { height: 24mm !important; max-width: 56mm !important; object-fit: contain !important; }
-          .print-header-name { font-size: 13pt !important; }
-          .print-header-info { font-size: 10pt !important; }
-          .print-header-patient { font-size: 10pt !important; }
+          .print-header img { height: 18mm !important; max-width: ${headerW * 0.65}mm !important; object-fit: contain !important; }
+          .print-header-name { font-size: 11pt !important; line-height: 1.2 !important; }
+          .print-header-info { font-size: 8.5pt !important; line-height: 1.2 !important; }
+          .print-header-patient { font-size: 8.5pt !important; line-height: 1.2 !important; padding-top: 1.5mm !important; margin-top: 0.5mm !important; }
           @page { size: ${pageWidth}mm ${pageHeight}mm; margin: 0; }
         }
       `}</style>
