@@ -10,7 +10,7 @@
  */
 
 import { Storage } from "@google-cloud/storage";
-import type { Response } from "express";
+import type { Response, Request } from "express";
 import fs from "fs";
 
 const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
@@ -177,6 +177,59 @@ export async function streamFile(
     } else {
       res.sendFile(filePath);
     }
+  }
+}
+
+/**
+ * Stream a video file with HTTP Range request support (required for browser <video> playback).
+ * Returns 206 Partial Content when the client sends a Range header, 200 otherwise.
+ */
+export async function streamFileWithRange(
+  filePath: string,
+  fileName: string,
+  req: Request,
+  res: Response,
+): Promise<void> {
+  if (isGcsPath(filePath)) {
+    const objectName = fromGcsPath(filePath);
+    const bucket = storageClient.bucket(getBucketName());
+    const file = bucket.file(objectName);
+
+    const [exists] = await file.exists();
+    if (!exists) {
+      res.status(404).json({ error: "File not found" });
+      return;
+    }
+
+    const [metadata] = await file.getMetadata();
+    const contentType = (metadata.contentType as string) || "application/octet-stream";
+    const fileSize = parseInt(metadata.size as string, 10);
+
+    res.setHeader("Accept-Ranges", "bytes");
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Cache-Control", "private, max-age=86400");
+
+    const rangeHeader = req.headers.range;
+    if (rangeHeader) {
+      const parts = rangeHeader.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunkSize = end - start + 1;
+
+      res.status(206);
+      res.setHeader("Content-Range", `bytes ${start}-${end}/${fileSize}`);
+      res.setHeader("Content-Length", String(chunkSize));
+      file.createReadStream({ start, end }).pipe(res);
+    } else {
+      res.setHeader("Content-Length", String(fileSize));
+      file.createReadStream().pipe(res);
+    }
+  } else {
+    if (!fs.existsSync(filePath)) {
+      res.status(404).json({ error: "File not found on disk" });
+      return;
+    }
+    res.sendFile(filePath); // Express handles Range natively for local files
   }
 }
 

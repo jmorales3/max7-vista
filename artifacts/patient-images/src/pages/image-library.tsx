@@ -293,6 +293,11 @@ export default function ImageLibrary() {
     setAddToPresentationOpen(true);
   }
 
+  function quickAddToPresentation(asset: LibraryAsset) {
+    setSelected(new Set([asset.id]));
+    setAddToPresentationOpen(true);
+  }
+
   function confirmAddToPresentation() {
     if (!selected.size) return;
     setIsSaving(true);
@@ -497,6 +502,13 @@ export default function ImageLibrary() {
                   <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       className="h-6 w-6 rounded bg-background/80 backdrop-blur flex items-center justify-center hover:bg-background shadow"
+                      title={t("library.addToPresentation")}
+                      onClick={(e) => { e.stopPropagation(); quickAddToPresentation(asset); }}
+                    >
+                      <MonitorPlay className="h-3 w-3" />
+                    </button>
+                    <button
+                      className="h-6 w-6 rounded bg-background/80 backdrop-blur flex items-center justify-center hover:bg-background shadow"
                       onClick={(e) => {
                         e.stopPropagation();
                         openEdit(asset);
@@ -681,12 +693,33 @@ export default function ImageLibrary() {
             <DialogTitle>{videoPlayer?.title || videoPlayer?.fileName}</DialogTitle>
           </DialogHeader>
           {videoPlayer && (
-            <video
-              src={`/api/library-assets/${videoPlayer.id}/file`}
-              controls
-              autoPlay
-              className="w-full rounded-lg max-h-[60vh]"
-            />
+            <>
+              <video
+                key={videoPlayer.id}
+                src={`/api/library-assets/${videoPlayer.id}/file`}
+                controls
+                autoPlay
+                className="w-full rounded-lg max-h-[60vh]"
+              />
+              {/\.mov$/i.test(videoPlayer.fileName) && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded px-3 py-2">
+                  ⚠ .mov (QuickTime) files only play in Safari. Use the download link to convert, or re-upload as .mp4.
+                </p>
+              )}
+              <DialogFooter>
+                <a
+                  href={`/api/library-assets/${videoPlayer.id}/file`}
+                  download={videoPlayer.fileName}
+                  className="mr-auto"
+                >
+                  <Button variant="outline" size="sm">Download</Button>
+                </a>
+                <Button size="sm" onClick={() => { quickAddToPresentation(videoPlayer); setVideoPlayer(null); }}>
+                  <MonitorPlay className="h-4 w-4 mr-1" />
+                  {t("library.addToPresentation")}
+                </Button>
+              </DialogFooter>
+            </>
           )}
         </DialogContent>
       </Dialog>

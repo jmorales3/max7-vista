@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, and, inArray } from "drizzle-orm";
 import path from "path";
 import { db, imagesTable, tagsTable, libraryAssetTagsTable } from "@workspace/db";
-import { streamFile, deleteFile, isGcsPath, toGcsPath, getSignedUploadUrl } from "../lib/gcsStorage";
+import { streamFile, streamFileWithRange, deleteFile, isGcsPath, toGcsPath, getSignedUploadUrl } from "../lib/gcsStorage";
 
 const router: IRouter = Router();
 
@@ -164,7 +164,11 @@ router.get("/library-assets/:id/file", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Library asset not found" });
     return;
   }
-  await streamFile(row.filePath, row.fileName, res);
+  if (row.mediaType === "video") {
+    await streamFileWithRange(row.filePath, row.fileName, req, res);
+  } else {
+    await streamFile(row.filePath, row.fileName, res);
+  }
 });
 
 // --- Tag assignment for library assets ---
