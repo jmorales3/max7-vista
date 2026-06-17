@@ -18,6 +18,7 @@ import {
 import { logAudit } from "../lib/audit";
 import { requireRole } from "../middlewares/requireAuth";
 import { uploadToGcs, streamFile, deleteFile, isGcsPath, toGcsPath, getSignedUploadUrl, readFileAsBuffer } from "../lib/gcsStorage";
+import { getAccessiblePatientIds, canAccessPatient } from "../lib/patientAccess";
 
 const router: IRouter = Router();
 
@@ -125,11 +126,18 @@ router.get("/images", async (req, res): Promise<void> => {
     const parsed = ListImagesQueryParams.safeParse(req.query);
     const params = parsed.success ? parsed.data : {};
 
+    const accessibleIds = await getAccessiblePatientIds(req);
+    if (accessibleIds !== null && accessibleIds.length === 0) {
+      res.json([]);
+      return;
+    }
+
     // Always inner-join patients so we get tenant isolation for free
     const conditions: ReturnType<typeof eq>[] = [eq(patientsTable.tenantId, tenantId)];
     if (params.patientId) conditions.push(eq(imagesTable.patientId, params.patientId));
     if (params.dateFrom) conditions.push(gte(imagesTable.capturedAt, new Date(params.dateFrom)));
     if (params.dateTo) conditions.push(lte(imagesTable.capturedAt, new Date(params.dateTo)));
+    if (accessibleIds !== null) conditions.push(inArray(imagesTable.patientId, accessibleIds) as any);
 
     const rows = await db
       .select({
@@ -187,6 +195,11 @@ router.post("/images/upload-url", async (req, res): Promise<void> => {
       res.status(404).json({ error: `Patient ${patientId} not found` });
       return;
     }
+    const accessibleIds = await getAccessiblePatientIds(req);
+    if (!canAccessPatient(accessibleIds, patientId)) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
   }
 
   const dateStr = new Date().toISOString().split("T")[0];
@@ -241,6 +254,11 @@ router.post("/images/register", async (req, res): Promise<void> => {
       .where(and(eq(patientsTable.id, patientId), eq(patientsTable.tenantId, tenantId)));
     if (!patient) {
       res.status(404).json({ error: `Patient ${patientId} not found` });
+      return;
+    }
+    const accessibleIds = await getAccessiblePatientIds(req);
+    if (!canAccessPatient(accessibleIds, patientId)) {
+      res.status(403).json({ error: "Access denied" });
       return;
     }
     patientName = patient.name;
@@ -312,6 +330,11 @@ router.post("/images/upload", async (req, res): Promise<void> => {
       res.status(404).json({ error: `Patient ${patientId} not found` });
       return;
     }
+    const accessibleIds = await getAccessiblePatientIds(req);
+    if (!canAccessPatient(accessibleIds, patientId)) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
   }
 
   const dateStr = capturedAt.toISOString().split("T")[0];
@@ -379,6 +402,11 @@ router.post("/images", upload.single("file"), async (req, res): Promise<void> =>
       .where(and(eq(patientsTable.id, patientId), eq(patientsTable.tenantId, tenantId)));
     if (!patient) {
       res.status(404).json({ error: `Patient ${patientId} not found` });
+      return;
+    }
+    const accessibleIds = await getAccessiblePatientIds(req);
+    if (!canAccessPatient(accessibleIds, patientId)) {
+      res.status(403).json({ error: "Access denied" });
       return;
     }
   }
@@ -491,6 +519,12 @@ router.get("/images/:id/file", async (req, res): Promise<void> => {
 
     if (!image) { res.status(404).json({ error: "Image not found" }); return; }
 
+    const accessibleIds = await getAccessiblePatientIds(req);
+    if (!canAccessPatient(accessibleIds, image.patientId)) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+
     logAudit(req, "image_view", "image", params.data.id, undefined, { patientId: image.patientId ?? undefined });
     await streamFile(image.filePath, image.fileName, res);
   } catch (err: any) {
@@ -504,6 +538,12 @@ router.get("/patients/:id/images", async (req, res): Promise<void> => {
     const tenantId = tid(req);
     const params = ListPatientImagesParams.safeParse(req.params);
     if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+
+    const accessibleIds = await getAccessiblePatientIds(req);
+    if (!canAccessPatient(accessibleIds, params.data.id)) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
 
     const rows = await db
       .select({
@@ -543,6 +583,13 @@ router.get("/images/:id", async (req, res): Promise<void> => {
       .where(eq(imagesTable.id, params.data.id));
 
     if (!rows[0]) { res.status(404).json({ error: "Image not found" }); return; }
+
+    const accessibleIds = await getAccessiblePatientIds(req);
+    if (!canAccessPatient(accessibleIds, rows[0].patientId)) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+
     res.json(buildImageRow(rows[0]));
   } catch (err: any) {
     if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
@@ -577,11 +624,17 @@ router.patch("/images/:id", async (req, res): Promise<void> => {
 
     // Only update images that belong to this tenant (via patient join)
     const [existingCheck] = await db
-      .select({ id: imagesTable.id })
+      .select({ id: imagesTable.id, patientId: imagesTable.patientId })
       .from(imagesTable)
       .innerJoin(patientsTable, and(eq(patientsTable.id, imagesTable.patientId), eq(patientsTable.tenantId, tenantId)))
       .where(eq(imagesTable.id, params.data.id));
     if (!existingCheck) { res.status(404).json({ error: "Image not found" }); return; }
+
+    const accessibleIds = await getAccessiblePatientIds(req);
+    if (!canAccessPatient(accessibleIds, existingCheck.patientId)) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
 
     const [image] = await db
       .update(imagesTable)
@@ -618,11 +671,17 @@ router.delete("/images/:id", async (req, res): Promise<void> => {
 
     // Verify tenant owns this image before deleting
     const [check] = await db
-      .select({ id: imagesTable.id })
+      .select({ id: imagesTable.id, patientId: imagesTable.patientId })
       .from(imagesTable)
       .innerJoin(patientsTable, and(eq(patientsTable.id, imagesTable.patientId), eq(patientsTable.tenantId, tenantId)))
       .where(eq(imagesTable.id, params.data.id));
     if (!check) { res.status(404).json({ error: "Image not found" }); return; }
+
+    const accessibleIds = await getAccessiblePatientIds(req);
+    if (!canAccessPatient(accessibleIds, check.patientId)) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
 
     const [image] = await db
       .delete(imagesTable)

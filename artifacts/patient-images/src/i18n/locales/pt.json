@@ -49,7 +49,21 @@
     "deleteDialogDescPost": "será excluída permanentemente. Esta ação não pode ser desfeita.",
     "roleUser": "Usuário",
     "roleAdmin": "Admin",
-    "roleSuperAdmin": "Super Admin"
+    "roleSuperAdmin": "Super Admin",
+    "patientAccess": "Acesso a Pacientes",
+    "patientAccessTitle": "Acesso a Pacientes — {{username}}",
+    "patientAccessDesc": "Selecione os pacientes que este usuário pode acessar. Deixe tudo desmarcado para permitir acesso a todos os pacientes.",
+    "patientAccessSave": "Salvar",
+    "patientAccessSaved": "Acesso a pacientes salvo",
+    "patientAccessSaveError": "Falha ao salvar o acesso a pacientes",
+    "patientAccessLoading": "Carregando…",
+    "patientAccessUnrestricted": "Todos os pacientes (sem restrição)",
+    "patientAccessRestricted": "{{count}} paciente(s) atribuído(s)",
+    "patientAccessManage": "Acesso",
+    "patientAccessSelectAll": "Selecionar tudo",
+    "patientAccessClearAll": "Limpar tudo",
+    "patientAccessNoPatients": "Nenhum paciente encontrado",
+    "patientAccessBadge": "Restrito"
   },
   "nav": {
     "patients": "Pacientes",
@@ -484,7 +498,8 @@
       "imageLibrary": "Biblioteca de Imagens",
       "exportImages": "Exportação de imagens",
       "auditLog": "Registro de Auditoria",
-      "sessionTimeout": "Tempo Limite de Inatividade"
+      "sessionTimeout": "Tempo Limite de Inatividade",
+      "patientAccess": "Acesso por Paciente"
     },
     "overview": {
       "heading": "O que é o Max7 Vista?",
@@ -557,6 +572,10 @@
     "sessionTimeout": {
       "heading": "Tempo Limite de Inatividade",
       "body": "Para conformidade com HIPAA (§164.312(a)(2)(iii)), o Max7 Vista encerra automaticamente a sessão após 15 minutos de inatividade. Um diálogo de aviso aparece com uma contagem regressiva de 2 minutos. Clique em 'Manter sessão' para redefinir o temporizador, ou 'Sair' para terminar a sessão imediatamente. O servidor também impõe uma sessão deslizante de 30 minutos — cada requisição reinicia o contador. No celular, retornar ao aplicativo após 15 minutos em segundo plano também aciona o logout automático."
+    },
+    "patientAccess": {
+      "heading": "Controle de Acesso por Paciente",
+      "body": "Administradores podem restringir usuários regulares a um conjunto específico de pacientes. Em Administração → Gestão de Usuários, clique no botão 'Acesso' ao lado de qualquer usuário com função 'Usuário'. Um diálogo lista todos os pacientes — marque os que esse usuário deve ver. Deixar todas as caixas desmarcadas concede acesso a todos os pacientes (sem restrição). Administradores e Super Administradores sempre têm acesso irrestrito. A restrição se aplica à lista de pacientes, detalhes, galeria, captura, documentos e todas as visualizações específicas do paciente. As alterações têm efeito imediato."
     }
   },
   "bulkImport": {

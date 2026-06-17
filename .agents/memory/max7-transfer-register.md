@@ -1421,4 +1421,87 @@ Added `scaleRef` and `rotationRef` (always-current refs synced via useEffect). U
 
 ---
 
+## FEAT-016 — Per-Patient Access Control
+
+**Status:** ✅ Confirmed working in Vista  
+**Date:** 2026-06-17  
+**Vista files:**
+- `lib/db/src/schema/patient-access.ts` — DB schema
+- `artifacts/api-server/src/lib/patientAccess.ts` — access helpers
+- `artifacts/api-server/src/routes/user-patient-access.ts` — GET/PUT `/users/:id/patient-access`
+- `artifacts/api-server/src/routes/patients.ts`, `images.ts`, `documents.ts` — access checks
+- `artifacts/patient-images/src/pages/admin/users.tsx` — PatientAccessDialog UI
+- `artifacts/patient-images/src/lib/auth.ts` — `getPatientAccess`, `setPatientAccess`
+
+### What it does
+Admins can restrict any `role=user` account to a specific set of patients. Admins/superadmins are always unrestricted. Restrictions apply to every patient-facing endpoint (list, detail, gallery, upload, documents).
+
+### DB schema (`patient_access` table)
+```sql
+CREATE TABLE patient_access (
+  id          SERIAL PRIMARY KEY,
+  tenant_id   INT NOT NULL,
+  user_id     INT NOT NULL,
+  patient_id  INT NOT NULL,
+  UNIQUE (tenant_id, user_id, patient_id)
+);
+```
+
+### Access semantics
+`getAccessiblePatientIds(req)` → `null` = unrestricted (admins, superadmins, users with 0 rows). Non-null array = restricted to those IDs.
+
+```typescript
+export async function getAccessiblePatientIds(req: Request): Promise<number[] | null> {
+  const user = (req as any).user;
+  if (!user || user.role === "admin" || user.role === "superadmin") return null;
+  const rows = await db.select({ patientId: patientAccess.patientId })
+    .from(patientAccess)
+    .where(and(eq(patientAccess.tenantId, user.tenantId), eq(patientAccess.userId, user.id)));
+  if (rows.length === 0) return null; // no rows = unrestricted
+  return rows.map(r => r.patientId);
+}
+
+export async function canAccessPatient(req: Request, patientId: number): Promise<boolean> {
+  const ids = await getAccessiblePatientIds(req);
+  if (ids === null) return true;
+  return ids.includes(patientId);
+}
+```
+
+### API endpoints
+- `GET /api/users/:id/patient-access` → `{ patientIds: number[] }`
+- `PUT /api/users/:id/patient-access` `{ patientIds: number[] }` → replaces all rows for that user (delete-then-insert); empty array = unrestricted
+
+### Frontend UI (PatientAccessDialog in users.tsx)
+- "Access" button appears only on rows where `role === "user"`
+- Badge shows "Restricted (N)" or "Unrestricted" below the role badge
+- Dialog lists all patients with checkboxes (ScrollArea for long lists)
+- Select All / Clear All quick-actions
+- Uses `initialized` ref to avoid re-setting selection on re-open
+
+### Route enforcement pattern
+```typescript
+// List endpoint
+const accessibleIds = await getAccessiblePatientIds(req);
+if (accessibleIds !== null) {
+  query = query.where(inArray(patients.id, accessibleIds as any));
+}
+
+// Single-item endpoint
+if (!(await canAccessPatient(req, id))) {
+  return res.status(403).json({ error: "Access denied" });
+}
+```
+
+### i18n keys (all 4 locales: en / es / fr / pt)
+All keys under `admin.patientAccess*`:
+- `patientAccess`, `patientAccessTitle`, `patientAccessDesc`, `patientAccessSave`
+- `patientAccessSaved`, `patientAccessSaveError`, `patientAccessLoading`
+- `patientAccessUnrestricted`, `patientAccessRestricted`, `patientAccessManage`
+- `patientAccessSelectAll`, `patientAccessClearAll`, `patientAccessNoPatients`, `patientAccessBadge`
+
+Manual section key: `manual.sections.patientAccess` + `manual.patientAccess.{heading,body}`
+
+---
+
 <!-- Add new entries below as features are confirmed in Vista -->

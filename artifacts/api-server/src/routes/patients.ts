@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, ilike, sql, and } from "drizzle-orm";
+import { eq, ilike, sql, and, inArray } from "drizzle-orm";
 import { db, patientsTable, imagesTable } from "@workspace/db";
 import {
   ListPatientsQueryParams,
@@ -10,6 +10,7 @@ import {
   DeletePatientParams,
 } from "@workspace/api-zod";
 import { logAudit } from "../lib/audit";
+import { getAccessiblePatientIds, canAccessPatient } from "../lib/patientAccess";
 
 const router: IRouter = Router();
 
@@ -25,10 +26,23 @@ router.get("/patients", async (req, res): Promise<void> => {
     const parsed = ListPatientsQueryParams.safeParse(req.query);
     const search = parsed.success ? parsed.data.search : undefined;
 
-    const baseWhere = eq(patientsTable.tenantId, tenantId);
-    const searchWhere = search
-      ? sql`(${ilike(patientsTable.name, `%${search}%`)} OR ${ilike(patientsTable.patientCode, `%${search}%`)})`
-      : undefined;
+    const accessibleIds = await getAccessiblePatientIds(req);
+
+    // If restricted to a specific set, short-circuit to empty when set is empty
+    if (accessibleIds !== null && accessibleIds.length === 0) {
+      res.json([]);
+      return;
+    }
+
+    const conditions: ReturnType<typeof eq>[] = [eq(patientsTable.tenantId, tenantId)];
+    if (search) {
+      conditions.push(
+        sql`(${ilike(patientsTable.name, `%${search}%`)} OR ${ilike(patientsTable.patientCode, `%${search}%`)})` as any,
+      );
+    }
+    if (accessibleIds !== null) {
+      conditions.push(inArray(patientsTable.id, accessibleIds) as any);
+    }
 
     const patients = await db
       .select({
@@ -43,7 +57,7 @@ router.get("/patients", async (req, res): Promise<void> => {
       })
       .from(patientsTable)
       .leftJoin(imagesTable, eq(imagesTable.patientId, patientsTable.id))
-      .where(searchWhere ? and(baseWhere, searchWhere) : baseWhere)
+      .where(and(...conditions))
       .groupBy(patientsTable.id)
       .orderBy(patientsTable.name);
 
@@ -90,6 +104,12 @@ router.get("/patients/:id", async (req, res): Promise<void> => {
       return;
     }
 
+    const accessibleIds = await getAccessiblePatientIds(req);
+    if (!canAccessPatient(accessibleIds, params.data.id)) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+
     const rows = await db
       .select({
         id: patientsTable.id,
@@ -133,6 +153,12 @@ router.patch("/patients/:id", async (req, res): Promise<void> => {
     const parsed = UpdatePatientBody.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+
+    const accessibleIds = await getAccessiblePatientIds(req);
+    if (!canAccessPatient(accessibleIds, params.data.id)) {
+      res.status(403).json({ error: "Access denied" });
       return;
     }
 

@@ -14,3 +14,4 @@ export * from "./documents";
 export * from "./templates";
 export * from "./template-documents";
 export * from "./library-asset-tags";
+export * from "./patient-access";

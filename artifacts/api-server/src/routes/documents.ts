@@ -5,6 +5,7 @@ import fs from "fs";
 import multer from "multer";
 import { db, documentsTable, patientsTable } from "@workspace/db";
 import { uploadToGcs, streamFile, deleteFile, getSignedDownloadUrl } from "../lib/gcsStorage";
+import { getAccessiblePatientIds, canAccessPatient } from "../lib/patientAccess";
 
 const router: IRouter = Router();
 
@@ -62,6 +63,12 @@ router.get("/documents", async (req, res) => {
     return;
   }
 
+  const accessibleIds = await getAccessiblePatientIds(req);
+  if (!canAccessPatient(accessibleIds, patientIdQ)) {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+
   const rows = await db
     .select()
     .from(documentsTable)
@@ -91,6 +98,12 @@ router.post("/documents", upload.single("file"), async (req, res) => {
     .where(and(eq(patientsTable.id, patientId), eq(patientsTable.tenantId, tenantId)));
   if (!patient) {
     res.status(404).json({ error: `Patient ${patientId} not found` });
+    return;
+  }
+
+  const accessibleIds = await getAccessiblePatientIds(req);
+  if (!canAccessPatient(accessibleIds, patientId)) {
+    res.status(403).json({ error: "Access denied" });
     return;
   }
 

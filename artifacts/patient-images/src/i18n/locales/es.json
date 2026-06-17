@@ -65,7 +65,21 @@
     "deleteDialogDescPost": "Esta acción no se puede deshacer.",
     "roleUser": "Usuario",
     "roleAdmin": "Admin",
-    "roleSuperAdmin": "Super Admin"
+    "roleSuperAdmin": "Super Admin",
+    "patientAccess": "Acceso a Pacientes",
+    "patientAccessTitle": "Acceso a Pacientes — {{username}}",
+    "patientAccessDesc": "Seleccione los pacientes a los que este usuario puede acceder. Deje todo sin marcar para permitir el acceso a todos los pacientes.",
+    "patientAccessSave": "Guardar",
+    "patientAccessSaved": "Acceso a pacientes guardado",
+    "patientAccessSaveError": "Error al guardar el acceso a pacientes",
+    "patientAccessLoading": "Cargando…",
+    "patientAccessUnrestricted": "Todos los pacientes (sin restricción)",
+    "patientAccessRestricted": "{{count}} paciente(s) asignado(s)",
+    "patientAccessManage": "Acceso",
+    "patientAccessSelectAll": "Seleccionar todo",
+    "patientAccessClearAll": "Limpiar todo",
+    "patientAccessNoPatients": "No se encontraron pacientes",
+    "patientAccessBadge": "Restringido"
   },
   "common": {
     "save": "Guardar",
@@ -484,7 +498,8 @@
       "imageLibrary": "Biblioteca de Imágenes",
       "exportImages": "Exportación de imágenes",
       "auditLog": "Registro de Auditoría",
-      "sessionTimeout": "Tiempo de Espera de Sesión"
+      "sessionTimeout": "Tiempo de Espera de Sesión",
+      "patientAccess": "Acceso por Paciente"
     },
     "overview": {
       "heading": "¿Qué es Max7 Vista?",
@@ -557,6 +572,10 @@
     "sessionTimeout": {
       "heading": "Tiempo de Espera de Sesión",
       "body": "Para cumplir con HIPAA (§164.312(a)(2)(iii)), Max7 Vista cierra la sesión automáticamente tras 15 minutos de inactividad. Aparece un cuadro de diálogo de advertencia con cuenta regresiva de 2 minutos. Haga clic en 'Mantener sesión' para restablecer el temporizador, o 'Cerrar sesión' para terminar la sesión inmediatamente. El servidor también impone una sesión continua de 30 minutos — cada solicitud reinicia el contador. En móvil, volver a la aplicación tras 15 minutos en segundo plano también cierra la sesión automáticamente."
+    },
+    "patientAccess": {
+      "heading": "Control de Acceso por Paciente",
+      "body": "Los administradores pueden restringir a los usuarios regulares a un conjunto específico de pacientes. En Administración → Gestión de Usuarios, haga clic en el botón 'Acceso' junto a cualquier usuario con rol 'Usuario'. Un diálogo muestra todos los pacientes — marque los que ese usuario debe ver. Dejar todas las casillas sin marcar otorga acceso a todos los pacientes (sin restricción). Los administradores y superadministradores siempre tienen acceso completo. La restricción aplica a la lista de pacientes, vista de detalle, galería, captura, documentos y todas las vistas específicas del paciente. Los cambios surten efecto de inmediato."
     }
   },
   "bulkImport": {

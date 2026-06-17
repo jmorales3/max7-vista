@@ -6,14 +6,19 @@ import {
   updateAdminUser,
   createAdminUser,
   deleteAdminUser,
+  getPatientAccess,
+  setPatientAccess,
   type AdminUser,
   type Role,
 } from "@/lib/auth";
+import { getApiUrl } from "@/lib/apiUrl";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
   TableBody,
@@ -49,7 +54,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, CheckCircle, XCircle, Trash2, ShieldCheck, Shield, User } from "lucide-react";
+import { UserPlus, CheckCircle, XCircle, Trash2, ShieldCheck, Shield, User, KeyRound } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 const ROLE_ICONS: Record<Role, React.ComponentType<{ className?: string }>> = {
@@ -291,6 +296,7 @@ function UserRow({
   const { t } = useTranslation();
   const isCurrentUser = user.id === currentUserId;
   const RoleIcon = ROLE_ICONS[user.role];
+  const [patientAccessOpen, setPatientAccessOpen] = useState(false);
 
   const roleLabels: Record<Role, string> = {
     user: t("admin.roleUser"),
@@ -299,150 +305,327 @@ function UserRow({
   };
 
   return (
-    <TableRow>
-      <TableCell className="font-medium">
-        {user.username}
-        {isCurrentUser && (
-          <Badge variant="outline" className="ml-2 text-[10px]">
-            {t("admin.you")}
-          </Badge>
-        )}
-      </TableCell>
-      <TableCell className="text-muted-foreground text-sm">
-        {formatDistanceToNow(new Date(user.createdAt), { addSuffix: true })}
-      </TableCell>
-      <TableCell>
-        <Select
-          value={user.role}
-          onValueChange={(v) => onRoleChange(v as Role)}
-          disabled={isCurrentUser}
-        >
-          <SelectTrigger className="h-7 w-32 text-xs">
-            <SelectValue>
-              <span className="flex items-center gap-1.5">
-                <RoleIcon className="h-3 w-3" />
-                {roleLabels[user.role]}
-              </span>
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="user">{t("admin.roleUser")}</SelectItem>
-            <SelectItem value="admin">{t("admin.roleAdmin")}</SelectItem>
-            <SelectItem value="superadmin">{t("admin.roleSuperAdmin")}</SelectItem>
-          </SelectContent>
-        </Select>
-      </TableCell>
-      {!isPending && (
-        <TableCell>
-          <Badge
-            variant={user.isActive ? "default" : "secondary"}
-            className={user.isActive ? "bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30" : ""}
-          >
-            {user.isActive ? t("admin.statusActive") : t("admin.statusSuspended")}
-          </Badge>
+    <>
+      <TableRow>
+        <TableCell className="font-medium">
+          {user.username}
+          {isCurrentUser && (
+            <Badge variant="outline" className="ml-2 text-[10px]">
+              {t("admin.you")}
+            </Badge>
+          )}
         </TableCell>
-      )}
-      <TableCell className="text-right">
-        <div className="flex items-center justify-end gap-1">
-          {isPending ? (
-            <>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 text-green-600 hover:text-green-700 hover:bg-green-50"
-                onClick={onApprove}
-                title={t("admin.approveTitle")}
-              >
-                <CheckCircle className="h-4 w-4 mr-1" />
-                {t("admin.approve")}
-              </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 text-red-500 hover:text-red-600 hover:bg-red-50"
-                    title={t("admin.denyTitle")}
-                  >
-                    <XCircle className="h-4 w-4 mr-1" />
-                    {t("admin.deny")}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>{t("admin.denyDialogTitle")}</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      {t("admin.denyDialogDescPre")} <strong>{user.username}</strong>. {t("admin.denyDialogDescPost")}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-                    <AlertDialogAction
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      onClick={onDeny}
-                    >
-                      {t("admin.denyDelete")}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </>
-          ) : (
-            <>
-              {!isCurrentUser && (
+        <TableCell className="text-muted-foreground text-sm">
+          {formatDistanceToNow(new Date(user.createdAt), { addSuffix: true })}
+        </TableCell>
+        <TableCell>
+          <Select
+            value={user.role}
+            onValueChange={(v) => onRoleChange(v as Role)}
+            disabled={isCurrentUser}
+          >
+            <SelectTrigger className="h-7 w-32 text-xs">
+              <SelectValue>
+                <span className="flex items-center gap-1.5">
+                  <RoleIcon className="h-3 w-3" />
+                  {roleLabels[user.role]}
+                </span>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="user">{t("admin.roleUser")}</SelectItem>
+              <SelectItem value="admin">{t("admin.roleAdmin")}</SelectItem>
+              <SelectItem value="superadmin">{t("admin.roleSuperAdmin")}</SelectItem>
+            </SelectContent>
+          </Select>
+        </TableCell>
+        {!isPending && (
+          <TableCell>
+            <Badge
+              variant={user.isActive ? "default" : "secondary"}
+              className={user.isActive ? "bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30" : ""}
+            >
+              {user.isActive ? t("admin.statusActive") : t("admin.statusSuspended")}
+            </Badge>
+          </TableCell>
+        )}
+        <TableCell className="text-right">
+          <div className="flex items-center justify-end gap-1">
+            {isPending ? (
+              <>
                 <Button
                   size="sm"
                   variant="ghost"
-                  className={`h-7 text-xs ${
-                    user.isActive
-                      ? "text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                      : "text-green-600 hover:text-green-700 hover:bg-green-50"
-                  }`}
-                  onClick={user.isActive ? onDeny : onApprove}
-                  title={user.isActive ? t("admin.suspendTitle") : t("admin.restoreTitle")}
+                  className="h-7 text-green-600 hover:text-green-700 hover:bg-green-50"
+                  onClick={onApprove}
+                  title={t("admin.approveTitle")}
                 >
-                  {user.isActive ? (
-                    <><XCircle className="h-3.5 w-3.5 mr-1" />{t("admin.suspend")}</>
-                  ) : (
-                    <><CheckCircle className="h-3.5 w-3.5 mr-1" />{t("admin.restore")}</>
-                  )}
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  {t("admin.approve")}
                 </Button>
-              )}
-              {!isCurrentUser && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-7 text-destructive hover:bg-destructive/10"
-                      title={t("admin.deleteTitle")}
+                      className="h-7 text-red-500 hover:text-red-600 hover:bg-red-50"
+                      title={t("admin.denyTitle")}
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <XCircle className="h-4 w-4 mr-1" />
+                      {t("admin.deny")}
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>{t("admin.deleteDialogTitle")}</AlertDialogTitle>
+                      <AlertDialogTitle>{t("admin.denyDialogTitle")}</AlertDialogTitle>
                       <AlertDialogDescription>
-                        {t("admin.deleteDialogDescPre")} <strong>{user.username}</strong>. {t("admin.deleteDialogDescPost")}
+                        {t("admin.denyDialogDescPre")} <strong>{user.username}</strong>. {t("admin.denyDialogDescPost")}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
                       <AlertDialogAction
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        onClick={onDelete}
+                        onClick={onDeny}
                       >
-                        {t("common.delete")}
+                        {t("admin.denyDelete")}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
+              </>
+            ) : (
+              <>
+                {user.role === "user" && !isCurrentUser && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    onClick={() => setPatientAccessOpen(true)}
+                    title={t("admin.patientAccess")}
+                  >
+                    <KeyRound className="h-3.5 w-3.5 mr-1" />
+                    {t("admin.patientAccessManage")}
+                  </Button>
+                )}
+                {!isCurrentUser && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className={`h-7 text-xs ${
+                      user.isActive
+                        ? "text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                        : "text-green-600 hover:text-green-700 hover:bg-green-50"
+                    }`}
+                    onClick={user.isActive ? onDeny : onApprove}
+                    title={user.isActive ? t("admin.suspendTitle") : t("admin.restoreTitle")}
+                  >
+                    {user.isActive ? (
+                      <><XCircle className="h-3.5 w-3.5 mr-1" />{t("admin.suspend")}</>
+                    ) : (
+                      <><CheckCircle className="h-3.5 w-3.5 mr-1" />{t("admin.restore")}</>
+                    )}
+                  </Button>
+                )}
+                {!isCurrentUser && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-destructive hover:bg-destructive/10"
+                        title={t("admin.deleteTitle")}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>{t("admin.deleteDialogTitle")}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {t("admin.deleteDialogDescPre")} <strong>{user.username}</strong>. {t("admin.deleteDialogDescPost")}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          onClick={onDelete}
+                        >
+                          {t("common.delete")}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </>
+            )}
+          </div>
+        </TableCell>
+      </TableRow>
+      {user.role === "user" && (
+        <PatientAccessDialog
+          userId={user.id}
+          username={user.username}
+          open={patientAccessOpen}
+          onClose={() => setPatientAccessOpen(false)}
+        />
+      )}
+    </>
+  );
+}
+
+interface PatientItem {
+  id: number;
+  name: string;
+  patientCode: string;
+}
+
+function PatientAccessDialog({
+  userId,
+  username,
+  open,
+  onClose,
+}: {
+  userId: number;
+  username: string;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [saving, setSaving] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+
+  const { data: patients = [], isLoading: patientsLoading } = useQuery<PatientItem[]>({
+    queryKey: ["admin-patients-list"],
+    queryFn: async () => {
+      const res = await fetch(getApiUrl("/api/patients"), { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load patients");
+      return res.json();
+    },
+    enabled: open,
+  });
+
+  const { data: currentAccess, isLoading: accessLoading } = useQuery<number[]>({
+    queryKey: ["patient-access", userId],
+    queryFn: () => getPatientAccess(userId),
+    enabled: open,
+  });
+
+  if (open && !initialized && currentAccess !== undefined) {
+    setSelected(new Set(currentAccess));
+    setInitialized(true);
+  }
+
+  if (!open && initialized) {
+    setInitialized(false);
+  }
+
+  function togglePatient(id: number) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function selectAll() {
+    setSelected(new Set(patients.map((p) => p.id)));
+  }
+
+  function clearAll() {
+    setSelected(new Set());
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await setPatientAccess(userId, Array.from(selected));
+      toast({ title: t("admin.patientAccessSaved") });
+      onClose();
+    } catch (err: unknown) {
+      toast({
+        title: t("common.error"),
+        description: err instanceof Error ? err.message : t("admin.patientAccessSaveError"),
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const isLoading = patientsLoading || accessLoading;
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t("admin.patientAccessTitle", { username })}</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">{t("admin.patientAccessDesc")}</p>
+
+        {isLoading ? (
+          <div className="h-32 flex items-center justify-center text-muted-foreground text-sm">
+            {t("admin.patientAccessLoading")}
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>
+                {selected.size === 0
+                  ? t("admin.patientAccessUnrestricted")
+                  : t("admin.patientAccessRestricted", { count: selected.size })}
+              </span>
+              <div className="flex gap-2">
+                <button onClick={selectAll} className="underline hover:no-underline">
+                  {t("admin.patientAccessSelectAll")}
+                </button>
+                <button onClick={clearAll} className="underline hover:no-underline">
+                  {t("admin.patientAccessClearAll")}
+                </button>
+              </div>
+            </div>
+            <ScrollArea className="h-56 border rounded-md p-2">
+              {patients.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  {t("admin.patientAccessNoPatients")}
+                </p>
+              ) : (
+                <div className="space-y-1">
+                  {patients.map((p) => (
+                    <label
+                      key={p.id}
+                      className="flex items-center gap-2.5 rounded px-2 py-1.5 hover:bg-muted cursor-pointer text-sm"
+                    >
+                      <Checkbox
+                        checked={selected.has(p.id)}
+                        onCheckedChange={() => togglePatient(p.id)}
+                      />
+                      <span className="font-medium">{p.name}</span>
+                      <span className="text-muted-foreground text-xs ml-auto">{p.patientCode}</span>
+                    </label>
+                  ))}
+                </div>
               )}
-            </>
-          )}
-        </div>
-      </TableCell>
-    </TableRow>
+            </ScrollArea>
+          </>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            {t("common.cancel")}
+          </Button>
+          <Button onClick={handleSave} disabled={saving || isLoading}>
+            {saving ? t("common.loading") : t("admin.patientAccessSave")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

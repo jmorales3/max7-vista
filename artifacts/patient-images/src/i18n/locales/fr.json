@@ -49,7 +49,21 @@
     "deleteDialogDescPost": "sera supprimé définitivement. Cette action est irréversible.",
     "roleUser": "Utilisateur",
     "roleAdmin": "Admin",
-    "roleSuperAdmin": "Super Admin"
+    "roleSuperAdmin": "Super Admin",
+    "patientAccess": "Accès Patients",
+    "patientAccessTitle": "Accès Patients — {{username}}",
+    "patientAccessDesc": "Sélectionnez les patients auxquels cet utilisateur peut accéder. Laissez tout décoché pour permettre l'accès à tous les patients.",
+    "patientAccessSave": "Enregistrer",
+    "patientAccessSaved": "Accès patients enregistré",
+    "patientAccessSaveError": "Échec de l'enregistrement de l'accès patients",
+    "patientAccessLoading": "Chargement…",
+    "patientAccessUnrestricted": "Tous les patients (sans restriction)",
+    "patientAccessRestricted": "{{count}} patient(s) assigné(s)",
+    "patientAccessManage": "Accès",
+    "patientAccessSelectAll": "Tout sélectionner",
+    "patientAccessClearAll": "Tout effacer",
+    "patientAccessNoPatients": "Aucun patient trouvé",
+    "patientAccessBadge": "Restreint"
   },
   "nav": {
     "patients": "Patients",
@@ -484,7 +498,8 @@
       "imageLibrary": "Bibliothèque d'Images",
       "exportImages": "Export d’images",
       "auditLog": "Journal d'Audit",
-      "sessionTimeout": "Délai d'Inactivité"
+      "sessionTimeout": "Délai d'Inactivité",
+      "patientAccess": "Accès par Patient"
     },
     "overview": {
       "heading": "Qu'est-ce que Max7 Vista ?",
@@ -557,6 +572,10 @@
     "sessionTimeout": {
       "heading": "Délai d'Inactivité",
       "body": "Pour la conformité HIPAA (§164.312(a)(2)(iii)), Max7 Vista vous déconnecte automatiquement après 15 minutes d'inactivité. Une boîte de dialogue d'avertissement apparaît avec un compte à rebours de 2 minutes. Cliquez sur 'Rester connecté' pour réinitialiser le minuteur, ou 'Se déconnecter' pour terminer la session immédiatement. Le serveur impose également une session glissante de 30 minutes — chaque requête remet le compteur à zéro. Sur mobile, revenir à l'application après 15 minutes en arrière-plan déclenche aussi une déconnexion automatique."
+    },
+    "patientAccess": {
+      "heading": "Contrôle d'Accès par Patient",
+      "body": "Les administrateurs peuvent restreindre les utilisateurs ordinaires à un ensemble spécifique de patients. Dans Administration → Gestion des Utilisateurs, cliquez sur le bouton 'Accès' à côté de tout utilisateur avec le rôle 'Utilisateur'. Un dialogue liste tous les patients — cochez ceux que cet utilisateur doit voir. Laisser toutes les cases décochées accorde l'accès à tous les patients (sans restriction). Les administrateurs et super administrateurs sont toujours sans restriction. La restriction s'applique à la liste des patients, à la vue détaillée, à la galerie, à la capture, aux documents et à toutes les vues spécifiques aux patients. Les modifications prennent effet immédiatement."
     }
   },
   "bulkImport": {

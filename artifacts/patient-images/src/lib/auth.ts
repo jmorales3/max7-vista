@@ -128,3 +128,27 @@ export async function deleteAdminUser(id: number): Promise<void> {
     throw new Error(body.error || "Failed to delete user");
   }
 }
+
+export async function getPatientAccess(userId: number): Promise<number[]> {
+  const res = await fetch(getApiUrl(`/api/users/${userId}/patient-access`), {
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to fetch patient access");
+  const data = await res.json() as { patientIds: number[] };
+  return data.patientIds;
+}
+
+export async function setPatientAccess(userId: number, patientIds: number[]): Promise<number[]> {
+  const res = await fetch(getApiUrl(`/api/users/${userId}/patient-access`), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ patientIds }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error || "Failed to update patient access");
+  }
+  const data = await res.json() as { patientIds: number[] };
+  return data.patientIds;
+}

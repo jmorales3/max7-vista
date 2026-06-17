@@ -17,6 +17,7 @@ import documentsRouter from "./documents";
 import localFileRouter from "./localFile";
 import templatesRouter from "./templates";
 import libraryRouter from "./library";
+import userPatientAccessRouter from "./user-patient-access";
 
 const router: IRouter = Router();
 
@@ -38,5 +39,6 @@ router.use(documentsRouter);
 router.use(localFileRouter);
 router.use(templatesRouter);
 router.use(libraryRouter);
+router.use(userPatientAccessRouter);
 
 export default router;

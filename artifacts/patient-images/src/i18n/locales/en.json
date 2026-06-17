@@ -65,7 +65,21 @@
     "deleteDialogDescPost": "This action cannot be undone.",
     "roleUser": "User",
     "roleAdmin": "Admin",
-    "roleSuperAdmin": "Super Admin"
+    "roleSuperAdmin": "Super Admin",
+    "patientAccess": "Patient Access",
+    "patientAccessTitle": "Patient Access — {{username}}",
+    "patientAccessDesc": "Select the patients this user can access. Leave all unchecked to allow access to all patients.",
+    "patientAccessSave": "Save",
+    "patientAccessSaved": "Patient access saved",
+    "patientAccessSaveError": "Failed to save patient access",
+    "patientAccessLoading": "Loading…",
+    "patientAccessUnrestricted": "All patients (unrestricted)",
+    "patientAccessRestricted": "{{count}} patient(s) assigned",
+    "patientAccessManage": "Access",
+    "patientAccessSelectAll": "Select all",
+    "patientAccessClearAll": "Clear all",
+    "patientAccessNoPatients": "No patients found",
+    "patientAccessBadge": "Restricted"
   },
   "common": {
     "save": "Save",
@@ -484,7 +498,8 @@
       "imageLibrary": "Image Library",
       "exportImages": "Image Export",
       "auditLog": "Audit Log",
-      "sessionTimeout": "Session Idle Timeout"
+      "sessionTimeout": "Session Idle Timeout",
+      "patientAccess": "Per-Patient Access"
     },
     "overview": {
       "heading": "What is Max7 Vista?",
@@ -557,6 +572,10 @@
     "sessionTimeout": {
       "heading": "Session Idle Timeout",
       "body": "For HIPAA compliance (§164.312(a)(2)(iii)), Max7 Vista automatically logs you out after 15 minutes of inactivity. A warning dialog appears with a 2-minute countdown. Click 'Stay signed in' to reset the timer, or 'Sign out' to end your session immediately. The server also enforces a 30-minute rolling session — each request resets the clock, so active use keeps you signed in. On mobile, returning to the app after 15 minutes in the background will also trigger an automatic logout."
+    },
+    "patientAccess": {
+      "heading": "Per-Patient Access Control",
+      "body": "Admins can restrict regular users to a specific set of patients. In Administration → User Management, click the 'Access' button next to any user with the 'User' role. A dialog lists all patients — tick the ones this user should see. Leaving all boxes unchecked grants that user access to all patients (unrestricted). Admins and Super Admins are always unrestricted and cannot be restricted. The access restriction applies to the patient list, patient detail page, image gallery, capture, documents, and every other patient-specific view. Restrictions take effect immediately without requiring a logout."
     }
   },
   "bulkImport": {
