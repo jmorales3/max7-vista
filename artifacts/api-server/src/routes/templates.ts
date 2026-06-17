@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { db, templatesTable, templateDocumentsTable, patientsTable } from "@workspace/db";
 import type { TemplateFrame, DocumentFrame } from "@workspace/db";
+import { logAudit } from "../lib/audit";
 import {
   ListTemplatesQueryParams,
   CreateTemplateBody,
@@ -291,6 +292,7 @@ router.put("/template-documents/:id", async (req, res): Promise<void> => {
     if (body.data.title !== undefined) updates.title = body.data.title;
     if (body.data.patientId !== undefined) updates.patientId = body.data.patientId;
     if (body.data.frames !== undefined) updates.frames = body.data.frames as DocumentFrame[];
+    const isPrint = body.data.printedAt !== undefined && body.data.printedAt !== null;
     if (body.data.printedAt !== undefined)
       updates.printedAt = body.data.printedAt ? new Date(body.data.printedAt) : null;
     const [updated] = await db
@@ -301,6 +303,16 @@ router.put("/template-documents/:id", async (req, res): Promise<void> => {
     if (!updated) {
       res.status(404).json({ error: "Template document not found" });
       return;
+    }
+    if (isPrint) {
+      logAudit(
+        req,
+        "image_print",
+        "template_document",
+        params.data.id,
+        { templateDocumentId: params.data.id, patientId: updated.patientId ?? null },
+        { patientId: updated.patientId ?? null },
+      );
     }
     res.json(updated);
   } catch (err: any) {

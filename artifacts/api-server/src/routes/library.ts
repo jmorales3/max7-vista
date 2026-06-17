@@ -122,7 +122,7 @@ router.post("/library-assets/register", async (req, res): Promise<void> => {
       mediaType: mt,
     })
     .returning();
-  logAudit(req, "upload", "library_asset", row.id, JSON.stringify({ fileName, mediaType: mt }));
+  logAudit(req, "library_upload", "library_asset", row.id, { fileName, mediaType: mt });
   res.status(201).json(buildLibraryRow(row, []));
 });
 
@@ -153,7 +153,7 @@ router.delete("/library-assets/:id", async (req, res): Promise<void> => {
     try { await deleteFile(row.filePath); } catch (e) { console.warn("Could not delete GCS object:", e); }
   }
   await db.delete(imagesTable).where(eq(imagesTable.id, id));
-  logAudit(req, "delete", "library_asset", id, JSON.stringify({ fileName: row.fileName }));
+  logAudit(req, "library_delete", "library_asset", id, { fileName: row.fileName });
   res.status(204).send();
 });
 
@@ -167,7 +167,7 @@ router.get("/library-assets/:id/file", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Library asset not found" });
     return;
   }
-  logAudit(req, "view", "library_asset", id);
+  logAudit(req, "library_view", "library_asset", id);
   if (row.mediaType === "video") {
     await streamFileWithRange(row.filePath, row.fileName, req, res);
   } else {

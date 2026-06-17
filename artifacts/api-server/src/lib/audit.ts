@@ -11,7 +11,7 @@ export function logAudit(
   action: string,
   entityType: string = "system",
   entityId?: number | null,
-  details?: string,
+  details?: Record<string, unknown> | null,
   opts?: AuditOpts,
 ): void {
   const ip =

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, varchar, jsonb } from "drizzle-orm/pg-core";
 import { usersTable } from "./users";
 import { patientsTable } from "./patients";
 
@@ -12,7 +12,7 @@ export const auditLogTable = pgTable("audit_log", {
   entityType: text("entity_type").notNull(),
   entityId: integer("entity_id"),
   resourceId: text("resource_id"),
-  details: text("details"),
+  details: jsonb("details"),
   ipAddress: varchar("ip_address", { length: 45 }),
   userAgent: text("user_agent"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

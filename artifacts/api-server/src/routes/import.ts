@@ -171,7 +171,7 @@ async function upsertPatient(
     })
     .returning({ id: patientsTable.id });
   summary.patientsCreated++;
-  await logAudit(req, "create", "patient", created.id, JSON.stringify({ patientCode, source: "bulk-import" }));
+  logAudit(req, "patient_create", "patient", created.id, { patientCode, source: "bulk-import" });
   return created;
 }
 
@@ -295,13 +295,13 @@ router.post(
       }
     }
 
-    await logAudit(req, "bulk_import", "image", 0, JSON.stringify({
+    logAudit(req, "bulk_import", "image", 0, {
       patientsCreated: summary.patientsCreated,
       patientsMatched: summary.patientsMatched,
       imagesImported: summary.imagesImported,
       errors: summary.errors.length,
       source: "zip",
-    }));
+    });
 
     res.json(summary);
   },
@@ -435,13 +435,13 @@ router.post("/import/bulk-from-gcs", async (req, res): Promise<void> => {
     await deleteFile(toGcsPath(objectName));
   } catch { /* ignore */ }
 
-  await logAudit(req, "bulk_import", "image", 0, JSON.stringify({
+  logAudit(req, "bulk_import", "image", 0, {
     patientsCreated: summary.patientsCreated,
     patientsMatched: summary.patientsMatched,
     imagesImported: summary.imagesImported,
     errors: summary.errors.length,
     source: "zip-gcs",
-  }));
+  });
 
   res.json(summary);
 });
@@ -571,14 +571,14 @@ router.post(
         }
       }
 
-      await logAudit(req, "bulk_import", "image", 0, JSON.stringify({
+      logAudit(req, "bulk_import", "image", 0, {
         folderPath,
         patientsCreated: summary.patientsCreated,
         patientsMatched: summary.patientsMatched,
         imagesImported: summary.imagesImported,
         errors: summary.errors.length,
         source: "folder",
-      }));
+      });
 
       res.json(summary);
     } catch (err) {

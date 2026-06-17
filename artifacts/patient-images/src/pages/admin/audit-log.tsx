@@ -42,16 +42,23 @@ const ACTION_COLORS: Record<string, string> = {
   login: "bg-green-100 text-green-800",
   logout: "bg-slate-100 text-slate-700",
   login_failed: "bg-red-100 text-red-800",
-  create: "bg-blue-100 text-blue-800",
-  edit: "bg-yellow-100 text-yellow-800",
-  delete: "bg-red-100 text-red-800",
-  upload: "bg-purple-100 text-purple-800",
-  view: "bg-slate-100 text-slate-600",
-  image_view: "bg-slate-100 text-slate-600",
   patient_view: "bg-sky-100 text-sky-700",
-  replace_file: "bg-orange-100 text-orange-800",
-  export: "bg-indigo-100 text-indigo-800",
+  patient_create: "bg-blue-100 text-blue-800",
+  patient_edit: "bg-yellow-100 text-yellow-800",
+  patient_delete: "bg-red-100 text-red-800",
+  image_view: "bg-slate-100 text-slate-600",
+  image_upload: "bg-purple-100 text-purple-800",
+  image_edit: "bg-yellow-100 text-yellow-800",
+  image_delete: "bg-red-100 text-red-800",
+  image_replace: "bg-orange-100 text-orange-800",
+  image_export: "bg-indigo-100 text-indigo-800",
+  image_print: "bg-pink-100 text-pink-800",
+  library_view: "bg-slate-100 text-slate-600",
+  library_upload: "bg-purple-100 text-purple-800",
+  library_delete: "bg-red-100 text-red-800",
   bulk_import: "bg-teal-100 text-teal-800",
+  migration_export: "bg-indigo-100 text-indigo-800",
+  migration_import: "bg-teal-100 text-teal-800",
 };
 
 interface Filters {
@@ -76,6 +83,7 @@ async function fetchAuditLog(params: {
   const q = new URLSearchParams({ page: String(params.page), limit: "50" });
   if (params.action) q.set("action", params.action);
   if (params.username) q.set("username", params.username);
+  if (params.patient) q.set("patient", params.patient);
   if (params.dateFrom) q.set("from", params.dateFrom);
   if (params.dateTo) q.set("to", params.dateTo);
 
@@ -132,18 +140,36 @@ export default function AuditLogPage() {
               onChange={(e) => setDraft((d) => ({ ...d, action: e.target.value }))}
             >
               <option value="">{t("auditLog.allActions")}</option>
-              <option value="login">login</option>
-              <option value="logout">logout</option>
-              <option value="login_failed">login_failed</option>
-              <option value="patient_view">patient_view</option>
-              <option value="image_view">image_view</option>
-              <option value="upload">upload</option>
-              <option value="delete">delete</option>
-              <option value="edit">edit</option>
-              <option value="create">create</option>
-              <option value="export">export</option>
-              <option value="replace_file">replace_file</option>
-              <option value="bulk_import">bulk_import</option>
+              <optgroup label="Auth">
+                <option value="login">login</option>
+                <option value="logout">logout</option>
+                <option value="login_failed">login_failed</option>
+              </optgroup>
+              <optgroup label="Patient">
+                <option value="patient_view">patient_view</option>
+                <option value="patient_create">patient_create</option>
+                <option value="patient_edit">patient_edit</option>
+                <option value="patient_delete">patient_delete</option>
+              </optgroup>
+              <optgroup label="Image">
+                <option value="image_view">image_view</option>
+                <option value="image_upload">image_upload</option>
+                <option value="image_edit">image_edit</option>
+                <option value="image_delete">image_delete</option>
+                <option value="image_replace">image_replace</option>
+                <option value="image_export">image_export</option>
+                <option value="image_print">image_print</option>
+              </optgroup>
+              <optgroup label="Library">
+                <option value="library_view">library_view</option>
+                <option value="library_upload">library_upload</option>
+                <option value="library_delete">library_delete</option>
+              </optgroup>
+              <optgroup label="System">
+                <option value="bulk_import">bulk_import</option>
+                <option value="migration_export">migration_export</option>
+                <option value="migration_import">migration_import</option>
+              </optgroup>
             </select>
           </div>
           <div className="space-y-1">

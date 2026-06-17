@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { desc, eq, and, gte, lte, ilike, SQL } from "drizzle-orm";
-import { db, auditLogTable } from "@workspace/db";
+import { desc, eq, and, gte, lte, ilike, inArray, SQL } from "drizzle-orm";
+import { db, auditLogTable, patientsTable } from "@workspace/db";
 import { requireRole } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -22,20 +22,55 @@ async function handleAuditLog(req: any, res: any): Promise<void> {
       offset = (page - 1) * limitRaw;
     }
 
-    // Accept both new-style (from, to, userId, patientId) and old-style (dateFrom, dateTo, username, action)
+    // Params: new-style (from, to, userId, patientId, patient) + old-style (dateFrom, dateTo, username)
     const action = req.query.action as string | undefined;
-    const username = (req.query.username) as string | undefined;
+    const username = req.query.username as string | undefined;
     const userId = req.query.userId ? parseInt(String(req.query.userId), 10) : undefined;
-    const patientId = req.query.patientId ? parseInt(String(req.query.patientId), 10) : undefined;
+    const patientIdParam = req.query.patientId ? parseInt(String(req.query.patientId), 10) : undefined;
+    const patientSearch = req.query.patient as string | undefined; // text search by patient name/code
     const dateFrom = (req.query.from ?? req.query.dateFrom) as string | undefined;
     const dateTo = (req.query.to ?? req.query.dateTo) as string | undefined;
+
+    // If patient text search is provided, resolve to patientIds via subquery
+    let resolvedPatientIds: number[] | undefined;
+    if (patientSearch && tenantId) {
+      const matches = await db
+        .select({ id: patientsTable.id })
+        .from(patientsTable)
+        .where(
+          and(
+            eq(patientsTable.tenantId, tenantId),
+            ilike(patientsTable.name, `%${patientSearch}%`),
+          )
+        );
+      // Also search by patient_code
+      const matchesCode = await db
+        .select({ id: patientsTable.id })
+        .from(patientsTable)
+        .where(
+          and(
+            eq(patientsTable.tenantId, tenantId),
+            ilike(patientsTable.patientCode, `%${patientSearch}%`),
+          )
+        );
+      const idSet = new Set([...matches.map(r => r.id), ...matchesCode.map(r => r.id)]);
+      resolvedPatientIds = [...idSet];
+    }
 
     const conditions: SQL[] = [];
     if (tenantId) conditions.push(eq(auditLogTable.tenantId, tenantId));
     if (action) conditions.push(eq(auditLogTable.action, action));
     if (username) conditions.push(ilike(auditLogTable.username as any, `%${username}%`));
-    if (userId) conditions.push(eq(auditLogTable.userId as any, userId));
-    if (patientId) conditions.push(eq(auditLogTable.patientId as any, patientId));
+    if (userId && !isNaN(userId)) conditions.push(eq(auditLogTable.userId as any, userId));
+    if (patientIdParam && !isNaN(patientIdParam)) {
+      conditions.push(eq(auditLogTable.patientId as any, patientIdParam));
+    } else if (resolvedPatientIds !== undefined) {
+      if (resolvedPatientIds.length === 0) {
+        // No patients matched — return empty result
+        return res.json({ items: [], total: 0, page, totalPages: 1 });
+      }
+      conditions.push(inArray(auditLogTable.patientId as any, resolvedPatientIds));
+    }
     if (dateFrom) conditions.push(gte(auditLogTable.createdAt, new Date(dateFrom)));
     if (dateTo) {
       const end = new Date(dateTo);

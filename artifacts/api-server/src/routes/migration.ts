@@ -101,8 +101,8 @@ router.get(
       const dateSuffix = new Date().toISOString().slice(0, 10);
       const filename = `max7-vista-migration-${dateSuffix}.zip`;
 
-      await logAudit(req, "migration_export", "system", null,
-        JSON.stringify({ patients: patients.length, images: images.length, filesAdded }));
+      logAudit(req, "migration_export", "system", null,
+        { patients: patients.length, images: images.length, filesAdded });
 
       res.setHeader("Content-Type", "application/zip");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
@@ -318,12 +318,12 @@ router.post(
         }
       }
 
-      await logAudit(req, "migration_import", "system", null, JSON.stringify({
+      logAudit(req, "migration_import", "system", null, {
         patientsImported: summary.patientsImported,
         imagesImported: summary.imagesImported,
         usersImported: summary.usersImported,
         errors: summary.errors.length,
-      }));
+      });
 
       res.json(summary);
     } catch (err) {
