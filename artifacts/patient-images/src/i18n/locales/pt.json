@@ -63,7 +63,8 @@
     "patientAccessSelectAll": "Selecionar tudo",
     "patientAccessClearAll": "Limpar tudo",
     "patientAccessNoPatients": "Nenhum paciente encontrado",
-    "patientAccessBadge": "Restrito"
+    "patientAccessBadge": "Restrito",
+    "patientAccessSearch": "Pesquisar pacientes…"
   },
   "nav": {
     "patients": "Pacientes",

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray, isNull, or } from "drizzle-orm";
 import { db, templatesTable, templateDocumentsTable, patientsTable } from "@workspace/db";
 import type { TemplateFrame, DocumentFrame } from "@workspace/db";
 import { logAudit } from "../lib/audit";
@@ -170,14 +170,22 @@ router.get("/template-documents", async (req, res): Promise<void> => {
       return;
     }
     // template-documents are scoped via patient (patientId on the row)
-    const conditions: ReturnType<typeof eq>[] = [eq(templatesTable.tenantId, tenantId)];
+    const tdListAccessibleIds = await getAccessiblePatientIds(req);
+    const conditions: ReturnType<typeof eq | typeof or | typeof isNull>[] = [eq(templatesTable.tenantId, tenantId)];
     if (query.data.patientId !== undefined) {
-      const tdAccessibleIds = await getAccessiblePatientIds(req);
-      if (!canAccessPatient(tdAccessibleIds, query.data.patientId)) {
+      if (!canAccessPatient(tdListAccessibleIds, query.data.patientId)) {
         res.status(403).json({ error: "Access denied" });
         return;
       }
       conditions.push(eq(templateDocumentsTable.patientId, query.data.patientId));
+    } else if (tdListAccessibleIds !== null) {
+      // Restricted user: show only docs linked to their accessible patients (or unlinked docs)
+      conditions.push(
+        or(
+          isNull(templateDocumentsTable.patientId),
+          inArray(templateDocumentsTable.patientId, tdListAccessibleIds),
+        ) as ReturnType<typeof eq>,
+      );
     }
     if (query.data.templateId !== undefined)
       conditions.push(eq(templateDocumentsTable.templateId, query.data.templateId));

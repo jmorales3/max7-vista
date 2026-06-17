@@ -79,7 +79,8 @@
     "patientAccessSelectAll": "Select all",
     "patientAccessClearAll": "Clear all",
     "patientAccessNoPatients": "No patients found",
-    "patientAccessBadge": "Restricted"
+    "patientAccessBadge": "Restricted",
+    "patientAccessSearch": "Search patients…"
   },
   "common": {
     "save": "Save",

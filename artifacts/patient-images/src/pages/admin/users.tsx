@@ -497,6 +497,7 @@ function PatientAccessDialog({
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [saving, setSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [search, setSearch] = useState("");
 
   const { data: patients = [], isLoading: patientsLoading } = useQuery<PatientItem[]>({
     queryKey: ["admin-patients-list"],
@@ -521,6 +522,7 @@ function PatientAccessDialog({
 
   if (!open && initialized) {
     setInitialized(false);
+    setSearch("");
   }
 
   function togglePatient(id: number) {
@@ -534,6 +536,12 @@ function PatientAccessDialog({
       return next;
     });
   }
+
+  const filteredPatients = patients.filter(
+    (p) =>
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      p.patientCode.toLowerCase().includes(search.toLowerCase()),
+  );
 
   function selectAll() {
     setSelected(new Set(patients.map((p) => p.id)));
@@ -591,14 +599,20 @@ function PatientAccessDialog({
                 </button>
               </div>
             </div>
-            <ScrollArea className="h-56 border rounded-md p-2">
-              {patients.length === 0 ? (
+            <Input
+              placeholder={t("admin.patientAccessSearch")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 text-sm"
+            />
+            <ScrollArea className="h-48 border rounded-md p-2">
+              {filteredPatients.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   {t("admin.patientAccessNoPatients")}
                 </p>
               ) : (
                 <div className="space-y-1">
-                  {patients.map((p) => (
+                  {filteredPatients.map((p) => (
                     <label
                       key={p.id}
                       className="flex items-center gap-2.5 rounded px-2 py-1.5 hover:bg-muted cursor-pointer text-sm"
