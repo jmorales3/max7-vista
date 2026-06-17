@@ -1,0 +1,480 @@
+As the software architect, it's useful to think of HIPAA not as a certification target but as a set of regulatory requirements that your product must enable healthcare organizations and business associates to satisfy.
+
+For a clinical image management system, I would map the HIPAA Security Rule into specific architectural capabilities.
+
+# 1. Access Control (§164.312(a))
+
+HIPAA requires technical mechanisms to limit access to PHI.
+
+### Architecture Recommendations
+
+#### Identity Management
+
+* Unique user IDs
+* No shared accounts
+* Support federation:
+
+  * SAML 2.0
+  * OIDC/OpenID Connect
+  * Active Directory / LDAP
+  * Azure AD / Entra ID
+
+#### Role-Based Access Control
+
+Typical roles:
+
+* Radiologist
+* Physician
+* Nurse
+* Technician
+* Billing
+* Compliance Officer
+* System Administrator
+
+Avoid simple "Admin/User" models.
+
+#### Fine-Grained Authorization
+
+Access should be controllable by:
+
+* Patient
+* Encounter
+* Facility
+* Department
+* Image study
+* Image type
+
+Example:
+
+A dermatologist should not automatically see behavioral health images.
+
+#### Session Controls
+
+* Configurable idle timeout
+* Reauthentication for sensitive actions
+* Forced logout after inactivity
+
+---
+
+# 2. Audit Controls (§164.312(b))
+
+This is one of the most scrutinized areas during investigations.
+
+You should assume every PHI interaction must be reconstructable.
+
+### Log Events
+
+Record:
+
+* Login success/failure
+* Logout
+* Patient search
+* Study opened
+* Image viewed
+* Metadata viewed
+* Export
+* Download
+* Print
+* Annotation
+* Deletion
+* User creation
+* Permission changes
+
+### Log Content
+
+Capture:
+
+* Timestamp
+* User ID
+* Patient ID
+* Study ID
+* IP address
+* Device identifier
+* Action performed
+
+### Immutability
+
+Do not allow administrators to alter logs.
+
+Recommended approaches:
+
+* WORM storage
+* Append-only event streams
+* Cryptographic log signing
+* Centralized SIEM integration
+
+Examples:
+
+* Splunk
+* Elastic
+* Microsoft Sentinel
+
+(Use whichever platform the customer prefers.)
+
+---
+
+# 3. Integrity Controls (§164.312(c))
+
+HIPAA requires protection against improper alteration.
+
+For imaging systems this becomes critical.
+
+### Image Integrity
+
+Store:
+
+* SHA-256 hash
+* SHA-512 hash
+
+for:
+
+* Original image
+* DICOM object
+* Exported derivative
+
+### Versioning
+
+Never overwrite originals.
+
+Instead:
+
+Original → Version 1
+
+Annotation → Version 2
+
+Processed image → Version 3
+
+The original should remain recoverable.
+
+### Chain of Custody
+
+Maintain:
+
+* Who uploaded
+* Who modified
+* When modified
+* What changed
+
+---
+
+# 4. Transmission Security (§164.312(e))
+
+All PHI movement should be encrypted.
+
+### Internal Communications
+
+Use TLS 1.2+ minimum.
+
+Today I would recommend:
+
+* TLS 1.3 where possible
+* Mutual TLS between services
+
+### APIs
+
+Require:
+
+* OAuth2/OIDC
+* JWT validation
+* Rate limiting
+* API auditing
+
+### Integrations
+
+Healthcare environments frequently use:
+
+* DICOM
+* DICOMweb
+* HL7
+* FHIR
+
+Every interface should support secure transport.
+
+---
+
+# 5. Person or Entity Authentication (§164.312(d))
+
+You must verify users are who they claim to be.
+
+### MFA
+
+Support:
+
+* TOTP
+* FIDO2/WebAuthn
+* Hardware security keys
+
+Many hospitals increasingly require MFA.
+
+### Service Authentication
+
+For machine-to-machine communications:
+
+* Client certificates
+* Managed identities
+* Service principals
+
+Avoid shared service accounts whenever possible.
+
+---
+
+# 6. Privacy Rule Support
+
+HIPAA's Privacy Rule creates additional product requirements.
+
+## Minimum Necessary Access
+
+Support limiting visibility.
+
+Examples:
+
+A billing clerk may need:
+
+* Patient name
+* Study identifier
+
+but not:
+
+* Actual image contents
+
+---
+
+# 7. Accounting of Disclosures
+
+Patients may request disclosure information.
+
+Your architecture should support reporting:
+
+* Who accessed records
+* When
+* Why
+* Whether data left the system
+
+This often becomes an audit-reporting feature.
+
+---
+
+# 8. De-Identification and Research Workflows
+
+Clinical image systems commonly support research.
+
+### DICOM Metadata
+
+DICOM files often contain:
+
+* Name
+* MRN
+* DOB
+* Facility
+* Physician
+
+Build automated de-identification.
+
+### Recommended Features
+
+* DICOM anonymization profiles
+* Batch de-identification
+* Export validation
+* Re-identification controls
+
+Keep original datasets isolated.
+
+---
+
+# 9. Data Lifecycle Management
+
+HIPAA does not specify exact retention periods.
+
+Your software should support:
+
+### Retention Policies
+
+Configurable by customer:
+
+* 7 years
+* 10 years
+* Indefinite
+
+depending on state and specialty requirements.
+
+### Legal Hold
+
+Prevent deletion when:
+
+* Litigation
+* Investigation
+* Audit
+
+exists.
+
+### Secure Deletion
+
+When deletion is permitted:
+
+* Remove active data
+* Remove replicas
+* Remove backup references according to policy
+
+---
+
+# 10. Backup and Disaster Recovery
+
+HIPAA explicitly requires contingency planning.
+
+### Architecture Components
+
+Primary storage
+
+↓
+
+Secondary storage
+
+↓
+
+Offsite backup
+
+↓
+
+Disaster recovery region
+
+### Recommended Features
+
+* Automated backups
+* Backup verification
+* Restore testing
+* Recovery reporting
+
+---
+
+# 11. Multi-Tenant SaaS Considerations
+
+If your platform is cloud-hosted.
+
+### Tenant Isolation
+
+Every tenant should have:
+
+* Logical isolation minimum
+* Preferably cryptographic isolation
+
+Common approaches:
+
+* Tenant-specific encryption keys
+* Separate storage containers
+* Row-level security
+
+### Encryption Keys
+
+Ideal:
+
+Per-tenant key hierarchy.
+
+Even better:
+
+Customer-managed keys (CMK).
+
+Examples:
+
+* AWS KMS
+* Azure Key Vault
+* Google Cloud KMS
+
+---
+
+# 12. Breach Investigation Support
+
+When incidents occur, customers need answers quickly.
+
+Build:
+
+### Searchable Audit Trails
+
+Questions that should be answerable in minutes:
+
+* Who viewed Patient X?
+* Which studies were exported?
+* Which users accessed data from outside the network?
+* What PHI was affected?
+
+### Forensic Preservation
+
+Logs should survive:
+
+* User deletion
+* Account disabling
+* Data archival
+
+---
+
+# 13. DICOM-Specific Risks Most Vendors Miss
+
+These are common failure points.
+
+### Burned-In Annotations
+
+Patient names embedded in pixels rather than metadata.
+
+Need:
+
+* Detection
+* Masking workflows
+
+### Export Leakage
+
+JPEG exports often leave the secure ecosystem.
+
+Implement:
+
+* Export permissions
+* Export auditing
+* Optional watermarking
+
+### Caching
+
+Viewer caches frequently become hidden PHI repositories.
+
+Protect:
+
+* Browser cache
+* Mobile cache
+* Desktop cache
+
+with encryption and expiration controls.
+
+---
+
+# 14. Architecture Controls I'd Consider "Table Stakes" in 2026
+
+If I were designing a new clinical imaging platform today, I'd consider these mandatory:
+
+### Security
+
+* MFA
+* SSO
+* RBAC
+* Encryption at rest
+* Encryption in transit
+* Tenant-specific keys
+
+### Compliance
+
+* Immutable audit logs
+* Full disclosure reporting
+* De-identification workflows
+* Retention management
+
+### Imaging
+
+* DICOM support
+* DICOM de-identification
+* Burned-in PHI detection
+* Image integrity verification
+
+### Operations
+
+* SIEM integration
+* Disaster recovery
+* Backup verification
+* Security event monitoring
+
+A useful next step would be to create a **HIPAA requirements traceability matrix** that maps each HIPAA Security Rule implementation specification to specific microservices, database controls, API requirements, UI features, and operational controls in your system architecture. That's often the document compliance teams, auditors, and engineering teams can all work from together.
