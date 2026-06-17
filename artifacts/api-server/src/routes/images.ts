@@ -215,7 +215,7 @@ router.post("/images/upload-url", async (req, res): Promise<void> => {
 router.post("/images/register", async (req, res): Promise<void> => {
   try {
   const tenantId = tid(req);
-  const { objectName, fileName, mimeType, patientId: rawPatientId, notes, capturedAt: rawCapturedAt } = req.body ?? {};
+  const { objectName, fileName, mimeType, patientId: rawPatientId, notes, capturedAt: rawCapturedAt, sha256: rawSha256 } = req.body ?? {};
 
   if (!objectName || typeof objectName !== "string") {
     res.status(400).json({ error: "objectName is required" });
@@ -229,6 +229,7 @@ router.post("/images/register", async (req, res): Promise<void> => {
   const patientId = rawPatientId != null ? parseInt(String(rawPatientId), 10) : null;
   const capturedAt = rawCapturedAt ? new Date(rawCapturedAt) : new Date();
   const filePath = toGcsPath(objectName);
+  const sha256 = typeof rawSha256 === "string" && rawSha256.length === 64 ? rawSha256 : null;
 
   // Verify patient belongs to this tenant
   let patientName: string | null = null;
@@ -255,6 +256,7 @@ router.post("/images/register", async (req, res): Promise<void> => {
       notes: notes ?? null,
       capturedAt,
       isUnassigned: patientId === null,
+      sha256,
     })
     .returning();
 
@@ -290,6 +292,8 @@ router.post("/images/upload", async (req, res): Promise<void> => {
   // Accept both raw base64 and data-URL ("data:image/jpeg;base64,...") format
   const base64Data = fileBase64.includes(",") ? fileBase64.split(",")[1] : fileBase64;
   const buffer = Buffer.from(base64Data, "base64");
+  const { createHash } = await import("crypto");
+  const sha256 = createHash("sha256").update(buffer).digest("hex");
 
   if (buffer.length > 50 * 1024 * 1024) {
     res.status(413).json({ error: "File too large (max 50 MB)" });
@@ -335,6 +339,7 @@ router.post("/images/upload", async (req, res): Promise<void> => {
       notes: notes ?? null,
       capturedAt,
       isUnassigned: patientId === null,
+      sha256,
     })
     .returning();
 

@@ -69,12 +69,24 @@ async function getUploadUrl(fileName: string, mimeType: string) {
   return res.json() as Promise<{ signedUrl: string; objectName: string }>;
 }
 
-async function registerAsset(objectName: string, fileName: string, mimeType: string, title: string) {
+async function computeSha256(blob: Blob): Promise<string | null> {
+  try {
+    const arrayBuffer = await blob.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest("SHA-256", arrayBuffer);
+    return Array.from(new Uint8Array(hashBuffer))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  } catch {
+    return null;
+  }
+}
+
+async function registerAsset(objectName: string, fileName: string, mimeType: string, title: string, sha256: string | null) {
   const res = await fetch("/api/library-assets/register", {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ objectName, fileName, mimeType, title }),
+    body: JSON.stringify({ objectName, fileName, mimeType, title, sha256 }),
   });
   if (!res.ok) throw new Error("Failed to register asset");
   return res.json() as Promise<LibraryAsset>;
@@ -222,13 +234,14 @@ export default function ImageLibrary() {
     for (const file of arr) {
       try {
         const { signedUrl, objectName } = await getUploadUrl(file.name, file.type);
+        const sha256 = await computeSha256(file);
         await fetch(signedUrl, {
           method: "PUT",
           headers: { "Content-Type": file.type },
           body: file,
         });
         const title = file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
-        await registerAsset(objectName, file.name, file.type, title);
+        await registerAsset(objectName, file.name, file.type, title, sha256);
         done++;
         setUploadProgress(Math.round((done / arr.length) * 100));
       } catch (err) {

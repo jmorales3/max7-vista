@@ -98,7 +98,7 @@ router.post("/library-assets/upload-url", async (req, res): Promise<void> => {
 });
 
 router.post("/library-assets/register", async (req, res): Promise<void> => {
-  const { objectName, fileName, mimeType, title } = req.body ?? {};
+  const { objectName, fileName, mimeType, title, sha256: rawSha256 } = req.body ?? {};
   if (!objectName || typeof objectName !== "string") {
     res.status(400).json({ error: "objectName is required" });
     return;
@@ -109,6 +109,7 @@ router.post("/library-assets/register", async (req, res): Promise<void> => {
   }
   const mt = detectMediaType(mimeType ?? "image/jpeg");
   const filePath = toGcsPath(objectName);
+  const sha256 = typeof rawSha256 === "string" && rawSha256.length === 64 ? rawSha256 : null;
   const [row] = await db
     .insert(imagesTable)
     .values({
@@ -120,6 +121,7 @@ router.post("/library-assets/register", async (req, res): Promise<void> => {
       isUnassigned: false,
       isLibraryAsset: true,
       mediaType: mt,
+      sha256,
     })
     .returning();
   logAudit(req, "library_upload", "library_asset", row.id, { fileName, mediaType: mt });

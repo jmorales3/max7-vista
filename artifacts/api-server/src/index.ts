@@ -56,6 +56,7 @@ async function initSqlite() {
       captured_at TEXT NOT NULL DEFAULT (datetime('now')),
       is_unassigned INTEGER NOT NULL DEFAULT 0,
       is_library_asset INTEGER NOT NULL DEFAULT 0,
+      sha256 TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -188,6 +189,9 @@ async function initSqlite() {
     );
   `);
 
+  // Migrate existing SQLite images table
+  try { exec(`ALTER TABLE images ADD COLUMN sha256 TEXT`); } catch { /* already exists */ }
+
   // Migrate existing SQLite audit_log tables — ADD COLUMN doesn't support IF NOT EXISTS
   // in SQLite, so each statement is wrapped in a try/catch and ignored if it fails (column exists)
   const auditMigrations = [
@@ -279,7 +283,10 @@ async function seedPostgres(pool: import("pg").Pool) {
   await pool.query(`ALTER TABLE tags      ADD COLUMN IF NOT EXISTS tenant_id INTEGER`);
   await pool.query(`ALTER TABLE templates ADD COLUMN IF NOT EXISTS tenant_id INTEGER`);
 
-  // Step 1b: ensure audit_log has all HIPAA columns (idempotent — adds only if missing)
+  // Step 1b: ensure images table has sha256 column
+  await pool.query(`ALTER TABLE images ADD COLUMN IF NOT EXISTS sha256 TEXT`);
+
+  // Step 1c: ensure audit_log has all HIPAA columns (idempotent — adds only if missing)
   await pool.query(`ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS tenant_id   INTEGER`);
   await pool.query(`ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS patient_id  INTEGER REFERENCES patients(id) ON DELETE SET NULL`);
   await pool.query(`ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS resource_id TEXT`);

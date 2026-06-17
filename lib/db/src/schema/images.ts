@@ -14,6 +14,7 @@ export const imagesTable = pgTable("images", {
   isUnassigned: boolean("is_unassigned").notNull().default(false),
   isLibraryAsset: boolean("is_library_asset").notNull().default(false),
   mediaType: varchar("media_type", { length: 10 }).notNull().default("image"),
+  sha256: text("sha256"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

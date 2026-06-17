@@ -78,6 +78,18 @@ export async function uploadPatientImage(
 
   const { signedUrl, objectName } = await urlRes.json() as { signedUrl: string; objectName: string };
 
+  // ── Step 1b: compute SHA-256 of the bytes we are about to upload ──
+  let sha256: string | null = null;
+  try {
+    const arrayBuffer = await uploadBlob.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest("SHA-256", arrayBuffer);
+    sha256 = Array.from(new Uint8Array(hashBuffer))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  } catch {
+    // Non-critical — proceed without hash if SubtleCrypto unavailable
+  }
+
   // ── Step 2: PUT file bytes DIRECTLY to GCS — bypasses the Replit proxy ──
   const putRes = await fetch(signedUrl, {
     method: "PUT",
@@ -102,6 +114,7 @@ export async function uploadPatientImage(
       patientId,
       notes,
       capturedAt: capturedAt ?? new Date().toISOString(),
+      sha256,
     }),
     signal: AbortSignal.timeout(30_000),
   });
