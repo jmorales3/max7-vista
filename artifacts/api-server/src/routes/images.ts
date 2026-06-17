@@ -390,6 +390,9 @@ router.post("/images", upload.single("file"), async (req, res): Promise<void> =>
     ? `images/${patientId}/${dateStr}/${filename}`
     : `images/unassigned/${dateStr}/${filename}`;
 
+  const { createHash: createHashMultipart } = await import("crypto");
+  const sha256Multipart = createHashMultipart("sha256").update(req.file.buffer).digest("hex");
+
   let filePath: string;
   try {
     filePath = await uploadToGcs(req.file.buffer, objectName, req.file.mimetype);
@@ -408,6 +411,7 @@ router.post("/images", upload.single("file"), async (req, res): Promise<void> =>
       notes,
       capturedAt: capturedAt,
       isUnassigned: patientId === null,
+      sha256: sha256Multipart,
     })
     .returning();
 
