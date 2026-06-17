@@ -316,9 +316,20 @@ router.put("/template-documents/:id", async (req, res): Promise<void> => {
       return;
     }
     const existingPatientId = existing.d.patientId;
+    const tdPutAccessibleIds = await getAccessiblePatientIds(req);
     if (existingPatientId != null) {
-      const tdPutAccessibleIds = await getAccessiblePatientIds(req);
       if (!canAccessPatient(tdPutAccessibleIds, existingPatientId)) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+    }
+    if (body.data.patientId !== undefined && body.data.patientId !== null) {
+      const [targetPatient] = await db
+        .select({ id: patientsTable.id })
+        .from(patientsTable)
+        .where(and(eq(patientsTable.id, body.data.patientId), eq(patientsTable.tenantId, tenantId)));
+      if (!targetPatient) { res.status(404).json({ error: `Patient ${body.data.patientId} not found` }); return; }
+      if (!canAccessPatient(tdPutAccessibleIds, body.data.patientId)) {
         res.status(403).json({ error: "Access denied" });
         return;
       }

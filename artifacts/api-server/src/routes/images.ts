@@ -614,19 +614,6 @@ router.patch("/images/:id", async (req, res): Promise<void> => {
     const updateData: Record<string, unknown> = {};
     if (parsed.data.notes !== undefined) updateData.notes = parsed.data.notes;
     if (parsed.data.annotation !== undefined) updateData.annotation = parsed.data.annotation;
-    if (parsed.data.patientId !== undefined) {
-      if (parsed.data.patientId !== null) {
-        const [patient] = await db
-          .select({ id: patientsTable.id })
-          .from(patientsTable)
-          .where(and(eq(patientsTable.id, parsed.data.patientId), eq(patientsTable.tenantId, tenantId)));
-        if (!patient) { res.status(404).json({ error: `Patient ${parsed.data.patientId} not found` }); return; }
-      }
-      updateData.patientId = parsed.data.patientId;
-      updateData.isUnassigned = parsed.data.patientId === null;
-    }
-    if (parsed.data.capturedAt !== undefined) updateData.capturedAt = new Date(parsed.data.capturedAt);
-
     // Only update images that belong to this tenant (via patient join)
     const [existingCheck] = await db
       .select({ id: imagesTable.id, patientId: imagesTable.patientId })
@@ -640,6 +627,23 @@ router.patch("/images/:id", async (req, res): Promise<void> => {
       res.status(403).json({ error: "Access denied" });
       return;
     }
+
+    if (parsed.data.patientId !== undefined) {
+      if (parsed.data.patientId !== null) {
+        const [patient] = await db
+          .select({ id: patientsTable.id })
+          .from(patientsTable)
+          .where(and(eq(patientsTable.id, parsed.data.patientId), eq(patientsTable.tenantId, tenantId)));
+        if (!patient) { res.status(404).json({ error: `Patient ${parsed.data.patientId} not found` }); return; }
+        if (!canAccessPatient(accessibleIds, parsed.data.patientId)) {
+          res.status(403).json({ error: "Access denied" });
+          return;
+        }
+      }
+      updateData.patientId = parsed.data.patientId;
+      updateData.isUnassigned = parsed.data.patientId === null;
+    }
+    if (parsed.data.capturedAt !== undefined) updateData.capturedAt = new Date(parsed.data.capturedAt);
 
     const [image] = await db
       .update(imagesTable)
