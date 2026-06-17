@@ -167,7 +167,7 @@ router.get("/library-assets/:id/file", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Library asset not found" });
     return;
   }
-  logAudit(req, "library_view", "library_asset", id);
+  logAudit(req, "image_view", "library_asset", id);
   if (row.mediaType === "video") {
     await streamFileWithRange(row.filePath, row.fileName, req, res);
   } else {

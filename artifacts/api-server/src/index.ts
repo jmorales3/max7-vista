@@ -231,6 +231,22 @@ async function initPostgres() {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id SERIAL PRIMARY KEY,
+      tenant_id INTEGER,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      username TEXT,
+      patient_id INTEGER REFERENCES patients(id) ON DELETE SET NULL,
+      action TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_id INTEGER,
+      resource_id TEXT,
+      details JSONB,
+      ip_address VARCHAR(45),
+      user_agent TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
   `);
   logger.info("PostgreSQL tables ensured");
 
@@ -244,6 +260,25 @@ async function seedPostgres(pool: import("pg").Pool) {
   await pool.query(`ALTER TABLE patients  ADD COLUMN IF NOT EXISTS tenant_id INTEGER`);
   await pool.query(`ALTER TABLE tags      ADD COLUMN IF NOT EXISTS tenant_id INTEGER`);
   await pool.query(`ALTER TABLE templates ADD COLUMN IF NOT EXISTS tenant_id INTEGER`);
+
+  // Step 1b: ensure audit_log has all HIPAA columns (idempotent — adds only if missing)
+  await pool.query(`ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS tenant_id   INTEGER`);
+  await pool.query(`ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS patient_id  INTEGER REFERENCES patients(id) ON DELETE SET NULL`);
+  await pool.query(`ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS resource_id TEXT`);
+  await pool.query(`ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS ip_address  VARCHAR(45)`);
+  await pool.query(`ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS user_agent  TEXT`);
+  // Migrate details column from TEXT to JSONB if it still has the old type
+  await pool.query(`
+    DO $$ BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'audit_log' AND column_name = 'details'
+          AND data_type = 'text'
+      ) THEN
+        ALTER TABLE audit_log ALTER COLUMN details TYPE JSONB USING details::jsonb;
+      END IF;
+    END $$
+  `);
 
   // Step 2: fix unique constraints
   await pool.query(`ALTER TABLE patients DROP CONSTRAINT IF EXISTS patients_patient_code_unique`);

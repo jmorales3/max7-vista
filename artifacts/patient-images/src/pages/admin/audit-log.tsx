@@ -25,7 +25,7 @@ interface AuditLogEntry {
   entityType: string;
   entityId: number | null;
   resourceId: string | null;
-  details: string | null;
+  details: Record<string, unknown> | null;
   ipAddress: string | null;
   userAgent: string | null;
   createdAt: string;
@@ -273,7 +273,7 @@ export default function AuditLogPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground max-w-xs truncate">
-                      {entry.details ?? "—"}
+                      {entry.details != null ? JSON.stringify(entry.details) : "—"}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground font-mono">
                       {entry.ipAddress ?? "—"}
