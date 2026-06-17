@@ -2257,52 +2257,6 @@ export default function Editor() {
             </div>
           )}
 
-          {tool !== "crop" && tool !== "pointer" && tool !== "select" && tool !== "eyedropper" && tool !== "hand" && tool !== "smooth" && (
-            <div className="relative flex items-center gap-1.5" title={t("editor.annotationColor")}>
-              <div
-                className="w-5 h-5 rounded-full border-2 border-muted-foreground/40 shadow cursor-pointer"
-                style={{ background: penColor }}
-              />
-              <input
-                type="color"
-                value={penColor}
-                onChange={(e) => setPenColor(e.target.value)}
-                className="absolute inset-0 opacity-0 w-full cursor-pointer"
-                title={t("editor.pickColor")}
-              />
-            </div>
-          )}
-
-
-          {(tool === "pen" || tool === "arrow" || tool === "circle" || tool === "eraser" || tool === "straightline") && (
-            <div className="flex items-center gap-1" title={t("editor.strokeWidth")}>
-              <span className="text-xs text-muted-foreground">{t("editor.strokeWidth")}</span>
-              <Button
-                variant="ghost" size="icon" className="h-6 w-6 text-base"
-                onClick={() => setStrokeWidth((w) => Math.max(1, w - 1))}
-              >−</Button>
-              <span className="text-xs font-mono w-5 text-center">{strokeWidth}</span>
-              <Button
-                variant="ghost" size="icon" className="h-6 w-6 text-base"
-                onClick={() => setStrokeWidth((w) => Math.min(30, w + 1))}
-              >+</Button>
-            </div>
-          )}
-
-          {tool === "text" && (
-            <div className="flex items-center gap-1" title={t("editor.textSize")}>
-              <span className="text-xs text-muted-foreground">{t("editor.textSize")}</span>
-              <Button
-                variant="ghost" size="icon" className="h-6 w-6 text-base"
-                onClick={() => setTextSize((s) => Math.max(10, s - 4))}
-              >−</Button>
-              <span className="text-xs font-mono w-7 text-center">{textSize}px</span>
-              <Button
-                variant="ghost" size="icon" className="h-6 w-6 text-base"
-                onClick={() => setTextSize((s) => Math.min(120, s + 4))}
-              >+</Button>
-            </div>
-          )}
 
         </div>
 
@@ -2629,9 +2583,58 @@ export default function Editor() {
                     )}
                   </div>
                 )}
+                {/* Appearance controls (color + size) for annotation tools */}
+                {(tool === "pen" || tool === "arrow" || tool === "straightline" || tool === "eraser" || tool === "text" || tool === "ruler" || tool === "angle") && (
+                  <div className="px-2 py-1.5 border-b flex flex-col gap-2">
+                    <div>
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1 block">{t("editor.annotationColor")}</span>
+                      <div className="relative flex items-center gap-2 h-7">
+                        <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/40 shadow cursor-pointer flex-shrink-0" style={{ background: penColor }} />
+                        <span className="text-xs font-mono text-muted-foreground">{penColor}</span>
+                        <input type="color" value={penColor} onChange={(e) => setPenColor(e.target.value)} className="absolute inset-0 opacity-0 w-full cursor-pointer" title={t("editor.pickColor")} />
+                      </div>
+                    </div>
+                    {(tool === "pen" || tool === "arrow" || tool === "eraser" || tool === "straightline") && (
+                      <div>
+                        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1 block">{t("editor.strokeWidth")}</span>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-base" onClick={() => setStrokeWidth((w) => Math.max(1, w - 1))}>−</Button>
+                          <span className="text-xs font-mono w-5 text-center">{strokeWidth}</span>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-base" onClick={() => setStrokeWidth((w) => Math.min(30, w + 1))}>+</Button>
+                        </div>
+                      </div>
+                    )}
+                    {tool === "text" && (
+                      <div>
+                        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1 block">{t("editor.textSize")}</span>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-base" onClick={() => setTextSize((s) => Math.max(10, s - 4))}>−</Button>
+                          <span className="text-xs font-mono w-7 text-center">{textSize}px</span>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-base" onClick={() => setTextSize((s) => Math.min(120, s + 4))}>+</Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {/* Circle tool controls */}
                 {(tool === "circle" || (tool === "pointer" && selectedCircleId)) && (
                   <div className="px-2 py-1.5 border-b flex flex-col gap-2">
+                    <div>
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1 block">{t("editor.annotationColor")}</span>
+                      <div className="relative flex items-center gap-2 h-7">
+                        <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/40 shadow cursor-pointer flex-shrink-0" style={{ background: penColor }} />
+                        <span className="text-xs font-mono text-muted-foreground">{penColor}</span>
+                        <input type="color" value={penColor} onChange={(e) => setPenColor(e.target.value)} className="absolute inset-0 opacity-0 w-full cursor-pointer" title={t("editor.pickColor")} />
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1 block">{t("editor.strokeWidth")}</span>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-base" onClick={() => setStrokeWidth((w) => Math.max(1, w - 1))}>−</Button>
+                        <span className="text-xs font-mono w-5 text-center">{strokeWidth}</span>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-base" onClick={() => setStrokeWidth((w) => Math.min(30, w + 1))}>+</Button>
+                      </div>
+                    </div>
                     <div>
                       <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1 block">
                         {t("editor.ellipse")} / {t("editor.rectangle")}
