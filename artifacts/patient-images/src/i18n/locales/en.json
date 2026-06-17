@@ -483,7 +483,8 @@
       "templates": "Templates",
       "imageLibrary": "Image Library",
       "exportImages": "Image Export",
-      "auditLog": "Audit Log"
+      "auditLog": "Audit Log",
+      "sessionTimeout": "Session Idle Timeout"
     },
     "overview": {
       "heading": "What is Max7 Vista?",
@@ -552,6 +553,10 @@
     "auditLog": {
       "heading": "Audit Log",
       "body": "The Audit Log (Administration → Audit Log) is an admin-only section that records all significant system actions: logins, login failures, logouts, patient record creates/edits/deletes, image uploads and views, library asset management, bulk imports, and migrations. Each entry shows the timestamp, the acting user's username, the action type, the affected resource type and ID, any relevant details, and the originating IP address. Use the filters at the top to narrow results by action keyword, username, or date range, then click Apply. The total entry count and pagination controls are shown at the bottom when there are more than 50 entries. The audit log supports HIPAA compliance by maintaining a tamper-evident record of data access and modifications."
+    },
+    "sessionTimeout": {
+      "heading": "Session Idle Timeout",
+      "body": "For HIPAA compliance (§164.312(a)(2)(iii)), Max7 Vista automatically logs you out after 15 minutes of inactivity. A warning dialog appears with a 2-minute countdown. Click 'Stay signed in' to reset the timer, or 'Sign out' to end your session immediately. The server also enforces a 30-minute rolling session — each request resets the clock, so active use keeps you signed in. On mobile, returning to the app after 15 minutes in the background will also trigger an automatic logout."
     }
   },
   "bulkImport": {
@@ -803,5 +808,11 @@
     "pageOf": "Page {{page}} of {{total}}",
     "totalEntries": "entries",
     "filterPatient": "Patient"
+  },
+  "idleTimeout": {
+    "title": "Session About to Expire",
+    "message": "Your session will expire due to inactivity. Stay signed in?",
+    "staySignedIn": "Stay signed in",
+    "signOut": "Sign out"
   }
 }

@@ -483,7 +483,8 @@
       "templates": "Plantillas",
       "imageLibrary": "Biblioteca de Imágenes",
       "exportImages": "Exportación de imágenes",
-      "auditLog": "Registro de Auditoría"
+      "auditLog": "Registro de Auditoría",
+      "sessionTimeout": "Tiempo de Espera de Sesión"
     },
     "overview": {
       "heading": "¿Qué es Max7 Vista?",
@@ -552,6 +553,10 @@
     "auditLog": {
       "heading": "Registro de Auditoría",
       "body": "El Registro de Auditoría (Administración → Registro de Auditoría) es una sección exclusiva para administradores que registra todas las acciones significativas del sistema: inicios de sesión, fallos de inicio de sesión, cierres de sesión, creación/edición/eliminación de registros de pacientes, carga y visualización de imágenes, gestión de activos de biblioteca, importaciones masivas y migraciones. Cada entrada muestra la marca de tiempo, el nombre de usuario del actor, el tipo de acción, el tipo y ID del recurso afectado, los detalles relevantes y la dirección IP de origen. Use los filtros en la parte superior para limitar los resultados por acción, nombre de usuario o rango de fechas. El registro de auditoría apoya el cumplimiento de HIPAA al mantener un registro a prueba de manipulaciones."
+    },
+    "sessionTimeout": {
+      "heading": "Tiempo de Espera de Sesión",
+      "body": "Para cumplir con HIPAA (§164.312(a)(2)(iii)), Max7 Vista cierra la sesión automáticamente tras 15 minutos de inactividad. Aparece un cuadro de diálogo de advertencia con cuenta regresiva de 2 minutos. Haga clic en 'Mantener sesión' para restablecer el temporizador, o 'Cerrar sesión' para terminar la sesión inmediatamente. El servidor también impone una sesión continua de 30 minutos — cada solicitud reinicia el contador. En móvil, volver a la aplicación tras 15 minutos en segundo plano también cierra la sesión automáticamente."
     }
   },
   "bulkImport": {
@@ -803,5 +808,11 @@
     "pageOf": "Página {{page}} de {{total}}",
     "totalEntries": "entradas",
     "filterPatient": "Paciente"
+  },
+  "idleTimeout": {
+    "title": "La Sesión Está a Punto de Expirar",
+    "message": "Su sesión expirará por inactividad. ¿Desea mantenerse conectado?",
+    "staySignedIn": "Mantener sesión",
+    "signOut": "Cerrar sesión"
   }
 }

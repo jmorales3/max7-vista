@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Router from "./router";
 import LoginPage from "@/pages/login";
 import PendingApprovalPage from "@/pages/pending-approval";
+import { IdleWarningDialog } from "@/components/IdleWarningDialog";
 import { queryClient } from "@/lib/queryClient";
 import { Loader2 } from "lucide-react";
 
@@ -30,7 +31,12 @@ function AppInner() {
     return <LoginPage />;
   }
 
-  return <Router />;
+  return (
+    <>
+      <Router />
+      <IdleWarningDialog />
+    </>
+  );
 }
 
 function App() {

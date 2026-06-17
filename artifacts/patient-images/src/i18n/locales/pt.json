@@ -483,7 +483,8 @@
       "templates": "Modelos",
       "imageLibrary": "Biblioteca de Imagens",
       "exportImages": "Exportação de imagens",
-      "auditLog": "Registro de Auditoria"
+      "auditLog": "Registro de Auditoria",
+      "sessionTimeout": "Tempo Limite de Inatividade"
     },
     "overview": {
       "heading": "O que é o Max7 Vista?",
@@ -552,6 +553,10 @@
     "auditLog": {
       "heading": "Registro de Auditoria",
       "body": "O Registro de Auditoria (Administração → Registro de Auditoria) é uma seção exclusiva para administradores que registra todas as ações significativas do sistema: logins, falhas de login, logouts, criações/edições/exclusões de registros de pacientes, uploads e visualizações de imagens, gerenciamento de ativos de biblioteca, importações em massa e migrações. Cada entrada mostra o timestamp, o nome de usuário do ator, o tipo de ação, o tipo e ID do recurso afetado, os detalhes relevantes e o endereço IP de origem. Use os filtros no topo para restringir resultados por ação, nome de usuário ou intervalo de datas. O registro de auditoria apoia a conformidade com HIPAA mantendo um registro inviolável."
+    },
+    "sessionTimeout": {
+      "heading": "Tempo Limite de Inatividade",
+      "body": "Para conformidade com HIPAA (§164.312(a)(2)(iii)), o Max7 Vista encerra automaticamente a sessão após 15 minutos de inatividade. Um diálogo de aviso aparece com uma contagem regressiva de 2 minutos. Clique em 'Manter sessão' para redefinir o temporizador, ou 'Sair' para terminar a sessão imediatamente. O servidor também impõe uma sessão deslizante de 30 minutos — cada requisição reinicia o contador. No celular, retornar ao aplicativo após 15 minutos em segundo plano também aciona o logout automático."
     }
   },
   "bulkImport": {
@@ -803,5 +808,11 @@
     "pageOf": "Página {{page}} de {{total}}",
     "totalEntries": "entradas",
     "filterPatient": "Paciente"
+  },
+  "idleTimeout": {
+    "title": "Sessão Prestes a Expirar",
+    "message": "Sua sessão expirará por inatividade. Deseja manter a sessão ativa?",
+    "staySignedIn": "Manter sessão",
+    "signOut": "Sair"
   }
 }

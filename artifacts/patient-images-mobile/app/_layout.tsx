@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useRef } from "react";
+import { AppState, type AppStateStatus } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -27,14 +28,34 @@ const queryClient = new QueryClient({
   },
 });
 
+const MOBILE_IDLE_MS = 15 * 60 * 1000;
+
 function RootLayoutNav() {
   const { serverUrl, isLoading: serverLoading } = useServer();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, logout } = useAuth();
   // Tracks whether we have already routed the user to their initial destination.
   // Once true, in-app navigation (patient detail, settings, etc.) is never
   // interrupted by this guard. It resets when the user logs out or the server
   // URL is cleared so those transitions still force the correct screen.
   const initialRouteDone = useRef(false);
+  const bgTimestampRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (nextState: AppStateStatus) => {
+      if (nextState === "background" || nextState === "inactive") {
+        bgTimestampRef.current = Date.now();
+      } else if (nextState === "active" && bgTimestampRef.current !== null) {
+        const elapsed = Date.now() - bgTimestampRef.current;
+        bgTimestampRef.current = null;
+        if (elapsed >= MOBILE_IDLE_MS && user) {
+          void logout().finally(() => {
+            router.replace("/login");
+          });
+        }
+      }
+    });
+    return () => sub.remove();
+  }, [user, logout]);
 
   useEffect(() => {
     if (serverLoading) return;

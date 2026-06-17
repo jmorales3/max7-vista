@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import { getSession, login as apiLogin, logout as apiLogout, type AuthUser, PendingApprovalError } from "@/lib/auth";
+import { registerForceLogout } from "@/lib/authBridge";
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -7,6 +8,7 @@ interface AuthContextValue {
   pendingApproval: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  forceLogout: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -20,6 +22,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     getSession()
       .then(setUser)
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    registerForceLogout(() => {
+      setUser(null);
+      setPendingApproval(false);
+    });
   }, []);
 
   async function login(username: string, password: string) {
@@ -42,8 +51,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPendingApproval(false);
   }
 
+  function forceLogout() {
+    setUser(null);
+    setPendingApproval(false);
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, pendingApproval, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, pendingApproval, login, logout, forceLogout }}>
       {children}
     </AuthContext.Provider>
   );

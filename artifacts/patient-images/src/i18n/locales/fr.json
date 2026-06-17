@@ -483,7 +483,8 @@
       "templates": "Modèles",
       "imageLibrary": "Bibliothèque d'Images",
       "exportImages": "Export d’images",
-      "auditLog": "Journal d'Audit"
+      "auditLog": "Journal d'Audit",
+      "sessionTimeout": "Délai d'Inactivité"
     },
     "overview": {
       "heading": "Qu'est-ce que Max7 Vista ?",
@@ -552,6 +553,10 @@
     "auditLog": {
       "heading": "Journal d'Audit",
       "body": "Le Journal d'Audit (Administration → Journal d'Audit) est une section réservée aux administrateurs qui enregistre toutes les actions importantes du système : connexions, échecs de connexion, déconnexions, créations/modifications/suppressions de dossiers patients, téléversements et consultations d'images, gestion des ressources de bibliothèque, importations en masse et migrations. Chaque entrée affiche l'horodatage, le nom d'utilisateur de l'acteur, le type d'action, le type et l'ID de la ressource concernée, les détails pertinents et l'adresse IP d'origine. Utilisez les filtres en haut pour restreindre les résultats par action, nom d'utilisateur ou plage de dates. Le journal d'audit favorise la conformité HIPAA en maintenant un enregistrement inviolable."
+    },
+    "sessionTimeout": {
+      "heading": "Délai d'Inactivité",
+      "body": "Pour la conformité HIPAA (§164.312(a)(2)(iii)), Max7 Vista vous déconnecte automatiquement après 15 minutes d'inactivité. Une boîte de dialogue d'avertissement apparaît avec un compte à rebours de 2 minutes. Cliquez sur 'Rester connecté' pour réinitialiser le minuteur, ou 'Se déconnecter' pour terminer la session immédiatement. Le serveur impose également une session glissante de 30 minutes — chaque requête remet le compteur à zéro. Sur mobile, revenir à l'application après 15 minutes en arrière-plan déclenche aussi une déconnexion automatique."
     }
   },
   "bulkImport": {
@@ -803,5 +808,11 @@
     "pageOf": "Page {{page}} sur {{total}}",
     "totalEntries": "entrées",
     "filterPatient": "Patient"
+  },
+  "idleTimeout": {
+    "title": "Session Sur le Point d'Expirer",
+    "message": "Votre session va expirer en raison d'inactivité. Rester connecté ?",
+    "staySignedIn": "Rester connecté",
+    "signOut": "Se déconnecter"
   }
 }

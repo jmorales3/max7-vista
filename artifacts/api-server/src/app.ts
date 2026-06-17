@@ -88,10 +88,11 @@ if (IS_SQLITE) {
       secret: process.env["SESSION_SECRET"] || "max7-vista-dev-secret-change-in-prod",
       resave: false,
       saveUninitialized: false,
+      rolling: true,
       cookie: {
         httpOnly: true,
         sameSite: "lax",
-        maxAge: 8 * 60 * 60 * 1000,
+        maxAge: 30 * 60 * 1000,
       },
     }),
   );
@@ -107,10 +108,11 @@ if (IS_SQLITE) {
       secret: process.env["SESSION_SECRET"] || "max7-vista-dev-secret-change-in-prod",
       resave: false,
       saveUninitialized: false,
+      rolling: true,
       cookie: {
         httpOnly: true,
         sameSite: "lax",
-        maxAge: 8 * 60 * 60 * 1000,
+        maxAge: 30 * 60 * 1000,
       },
     }),
   );
