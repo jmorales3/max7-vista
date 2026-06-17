@@ -17,6 +17,9 @@ export function useIdleTimeout(idleMs: number, warningMs: number) {
 
   useEffect(() => {
     const handleActivity = () => {
+      // Once warning is active, ignore ambient events — only the explicit
+      // "Stay signed in" button (reset()) is allowed to cancel the countdown.
+      if (warningStartRef.current !== null) return;
       lastActivityRef.current = Date.now();
     };
 
