@@ -15,7 +15,8 @@
     "templates": "Templates",
     "library": "Image Library",
     "administration": "Administration",
-    "userManagement": "User Management"
+    "userManagement": "User Management",
+    "tagManagement": "Tag Management"
   },
   "admin": {
     "title": "User Management",
@@ -286,7 +287,22 @@
     "deleteDesc": "This will permanently remove the image from your library. This cannot be undone.",
     "deleted": "Image deleted",
     "editTitle": "Edit Title",
-    "titlePlaceholder": "Enter a title for this image…"
+    "titlePlaceholder": "Enter a title for this image…",
+    "video": "Video",
+    "allAssets": "All",
+    "assignTags": "Tags",
+    "unsupportedFile": "File type not supported. Please upload images or videos."
+  },
+  "adminTags": {
+    "title": "Tag Management",
+    "subtitle": "Create and manage tags that can be assigned to library assets.",
+    "namePlaceholder": "New tag name…",
+    "addTag": "Add Tag",
+    "created": "Tag created",
+    "deleted": "Tag deleted",
+    "noTags": "No tags yet. Create your first tag above.",
+    "deleteTitle": "Delete Tag",
+    "deleteDesc": "Delete tag \"{{name}}\"? It will be removed from all assets. This cannot be undone."
   },
   "editor": {
     "pointer": "Pointer",
@@ -393,6 +409,13 @@
     "selectFreehandHint": "Draw a freehand outline around the area, then release to move or copy",
     "selectTransferCut": "Move",
     "selectTransferCopy": "Copy",
+    "selectionMode": "Selection Mode",
+    "transferMode": "Operation",
+    "transformLabel": "Transform",
+    "flipHorizontal": "Flip Horizontal",
+    "rotateLeft": "Rotate Left",
+    "rotateRight": "Rotate Right",
+    "angle": "Angle",
     "ellipse": "Ellipse",
     "rectangle": "Rectangle",
     "filled": "Filled",

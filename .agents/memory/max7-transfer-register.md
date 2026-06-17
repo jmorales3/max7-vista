@@ -1301,4 +1301,124 @@ editor.overlaySavedOk               — success toast
 
 ---
 
+## FEAT-016 — Library Tags (Admin CRUD + Per-Asset Assignment + Filter Bar)
+
+**Status:** ✅ Confirmed working in Vista
+**Date:** 2026-06-17
+**Vista files:**
+- `lib/db/src/schema/library-asset-tags.ts` — junction table
+- `lib/db/src/schema/images.ts` — `mediaType` column added
+- `artifacts/api-server/src/routes/library.ts` — tag CRUD endpoints
+- `artifacts/patient-images/src/pages/admin/tags.tsx` — admin UI
+- `artifacts/patient-images/src/pages/image-library.tsx` — tag display, filter, assign
+
+### What it does
+- Admins manage a tenant-scoped tag list at `/admin/tags` (create / delete)
+- Tags appear as coloured badges on each library asset card
+- Users can assign/remove tags on any asset via the edit dialog
+- A filter bar above the grid filters assets by tag; "All" shows everything
+
+### DB schema
+```sql
+-- junction table
+CREATE TABLE library_asset_tags (
+  library_asset_id INTEGER NOT NULL REFERENCES images(id) ON DELETE CASCADE,
+  tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+  PRIMARY KEY (library_asset_id, tag_id)
+);
+-- mediaType column on images
+ALTER TABLE images ADD COLUMN media_type VARCHAR(10) DEFAULT 'image';
+```
+
+### API endpoints added to `library.ts`
+- `GET  /library-assets/:id/tags` — list tags for asset
+- `POST /library-assets/:id/tags` — assign tag `{ tagId }`
+- `DELETE /library-assets/:id/tags/:tagId` — remove tag
+- `GET /library-assets` response now includes `tags` array
+
+### i18n keys added (all 4 locales)
+- `nav.tagManagement`
+- `adminTags.*` (title, subtitle, namePlaceholder, addTag, created, deleted, noTags, deleteTitle, deleteDesc)
+- `library.video`, `library.allAssets`, `library.assignTags`, `library.unsupportedFile`
+
+---
+
+## FEAT-017 — Videos in Library
+
+**Status:** ✅ Confirmed working in Vista
+**Date:** 2026-06-17
+**Vista files:** `artifacts/api-server/src/routes/library.ts`, `artifacts/patient-images/src/pages/image-library.tsx`
+
+### What it does
+- Library accepts video uploads (mp4, webm, mov, ogg)
+- Video cards show a play-button overlay; clicking opens an in-page video player modal
+- Videos can be added to presentations as a `{ type: "video", imageId }` slide
+- `VideoSlide` type added to the `Slide` union in `PresentationBuilder.tsx`
+- PresentationBuilder renders a `<video>` element for video slides
+- `src` for video slides: `/api/library/assets/{imageId}/file`
+
+### Notes for Max7 agent
+- `mediaType` is stored as `"image"` or `"video"` in the `images` table
+- API route must allow `video/mp4`, `video/webm`, `video/quicktime`, `video/ogg` MIME types
+- File input should accept `.mp4,.webm,.mov,.ogg,image/*`
+- Presentations thumbnail strip: for `s.type === "video"`, use `s.imageId` as the image ID (show poster frame or a video icon)
+
+---
+
+## FEAT-018 — Select/Move HUD Redesign + Flip + Free Rotation
+
+**Status:** ✅ Confirmed working in Vista
+**Date:** 2026-06-17
+**Vista file:** `artifacts/patient-images/src/pages/editor.tsx`
+
+### What it does
+All Select/Move controls moved from the top toolbar into the HUD floating window:
+- **Before floater**: Selection Mode (Freehand / Rectangle) + Operation (Move / Copy)
+- **After floater**: Transform section (Flip Horizontal, Rotate Left 90°, Rotate Right 90°, angle slider ±180°) + Apply / Copy to Clipboard / Cancel buttons
+- Clear All and Undo in the HUD now immediately re-render the canvas
+
+### Floater state extensions
+```typescript
+type Floater = { dataUrl: string; x: number; y: number; w: number; h: number;
+  path?: [number, number][];
+  flipH?: boolean;   // ← new
+  angle?: number;    // ← new, degrees
+};
+```
+
+### applyFloater — flip + rotation burn-in
+```typescript
+const { x, y, w, h, flipH: fh, angle: ang } = floater;
+const angRad = ((ang ?? 0) * Math.PI) / 180;
+if (fh || angRad !== 0) {
+  ctx.save();
+  ctx.translate(x + w / 2, y + h / 2);
+  ctx.rotate(angRad);
+  if (fh) ctx.scale(-1, 1);
+  ctx.drawImage(img, -w / 2, -h / 2, w, h);
+  ctx.restore();
+} else {
+  ctx.drawImage(img, x, y, w, h);
+}
+```
+
+### Floater live preview CSS transform
+```jsx
+style={{
+  transform: [
+    floater.flipH ? "scaleX(-1)" : "",
+    (floater.angle ?? 0) !== 0 ? `rotate(${floater.angle}deg)` : "",
+  ].filter(Boolean).join(" ") || undefined,
+}}
+```
+
+### Clear All / Undo immediate re-render fix
+Added `scaleRef` and `rotationRef` (always-current refs synced via useEffect). Used in `undoAnnotation` and the Clear All onClick to call `renderCanvas` immediately after syncing `annotationsRef.current`.
+
+### i18n keys added (all 4 locales)
+- `editor.selectionMode`, `editor.transferMode`, `editor.transformLabel`
+- `editor.flipHorizontal`, `editor.rotateLeft`, `editor.rotateRight`, `editor.angle`
+
+---
+
 <!-- Add new entries below as features are confirmed in Vista -->

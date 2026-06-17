@@ -45,6 +45,7 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCw,
+  RotateCcw,
   Loader2,
   Eraser,
   Crop,
@@ -71,6 +72,7 @@ import {
   GripVertical,
   Square,
   PaintBucket,
+  FlipHorizontal2,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -504,6 +506,8 @@ export default function Editor() {
   const [floater, setFloater] = useState<{
     dataUrl: string; x: number; y: number; w: number; h: number;
     path?: [number, number][];
+    flipH?: boolean;
+    angle?: number;
   } | null>(null);
   const [pendingText, setPendingText] = useState<{ x: number; y: number } | null>(null);
   const [textInput, setTextInput] = useState("");
@@ -604,6 +608,10 @@ export default function Editor() {
   const hoveredAngleIdxRef = useRef<number | null>(null);
 
   const annotationHistoryRef = useRef<Annotation[][]>([]);
+  const scaleRef = useRef(1);
+  const rotationRef = useRef(0);
+  useEffect(() => { scaleRef.current = scale; }, [scale]);
+  useEffect(() => { rotationRef.current = rotation; }, [rotation]);
 
   const pushHistory = useCallback(() => {
     annotationHistoryRef.current = [
@@ -618,8 +626,13 @@ export default function Editor() {
     if (hist.length === 0) return;
     const prev = hist[hist.length - 1];
     annotationHistoryRef.current = hist.slice(0, -1);
+    annotationsRef.current = prev;
     setAnnotations(prev);
     setCanUndo(annotationHistoryRef.current.length > 0);
+    const canvas = canvasRef.current;
+    if (canvas && imgRef.current) {
+      renderCanvas(canvas, imgRef.current, prev, scaleRef.current, rotationRef.current, null, null, null, undefined, panOffsetRef.current);
+    }
   }, []);
 
   useEffect(() => {
@@ -1814,7 +1827,18 @@ export default function Editor() {
       // Render current state (image + annotations + white hole), then burn in floater
       renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, null, null, cutRect, undefined, undefined, cutPath);
       const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(img, floater.x, floater.y, floater.w, floater.h);
+      const { x, y, w, h, flipH: fh, angle: ang } = floater;
+      const angRad = ((ang ?? 0) * Math.PI) / 180;
+      if (fh || angRad !== 0) {
+        ctx.save();
+        ctx.translate(x + w / 2, y + h / 2);
+        ctx.rotate(angRad);
+        if (fh) ctx.scale(-1, 1);
+        ctx.drawImage(img, -w / 2, -h / 2, w, h);
+        ctx.restore();
+      } else {
+        ctx.drawImage(img, x, y, w, h);
+      }
       // Flatten to a new image
       const flatUrl = canvas.toDataURL("image/png");
       const newImg = new Image();
@@ -2202,76 +2226,6 @@ export default function Editor() {
             </Button>
           )}
 
-          {tool === "select" && !floater && (
-            <>
-              <div className="flex items-center gap-0.5 border rounded-md p-0.5 bg-muted/30">
-                <Button
-                  size="icon"
-                  variant={selectMode === "rect" ? "secondary" : "ghost"}
-                  className="h-7 w-7"
-                  title={t("editor.selectModeRect")}
-                  onClick={() => {
-                    setSelectMode("rect");
-                    selectDrawingRef.current = false;
-                    selectPathRef.current = [];
-                    clearBrushCursor();
-                  }}
-                >
-                  <RectangleHorizontal className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant={selectMode === "freehand" ? "secondary" : "ghost"}
-                  className="h-7 w-7"
-                  title={t("editor.selectModeFreehand")}
-                  onClick={() => {
-                    setSelectMode("freehand");
-                    selectionStartRef.current = null;
-                    setSelectionRect(null);
-                  }}
-                >
-                  <Lasso className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-              <div className="flex items-center gap-0.5 border rounded-md p-0.5 bg-muted/30">
-                <Button
-                  size="sm"
-                  variant={selectTransferMode === "cut" ? "secondary" : "ghost"}
-                  className="h-7 px-2 text-xs"
-                  title={t("editor.selectTransferCut")}
-                  onClick={() => setSelectTransferMode("cut")}
-                >
-                  {t("editor.selectTransferCut")}
-                </Button>
-                <Button
-                  size="sm"
-                  variant={selectTransferMode === "copy" ? "secondary" : "ghost"}
-                  className="h-7 px-2 text-xs"
-                  title={t("editor.selectTransferCopy")}
-                  onClick={() => setSelectTransferMode("copy")}
-                >
-                  {t("editor.selectTransferCopy")}
-                </Button>
-              </div>
-            </>
-          )}
-
-          {tool === "select" && floater && (
-            <div className="flex items-center gap-1">
-              <Button size="sm" className="h-8 gap-1" onClick={applyFloater}>
-                <Check className="h-3.5 w-3.5" />
-                {t("editor.applySelection")}
-              </Button>
-              <Button size="sm" variant="outline" className="h-8 gap-1" onClick={copyFloaterToClipboard}>
-                <Clipboard className="h-3.5 w-3.5" />
-                {t("editor.copyToClipboard")}
-              </Button>
-              <Button size="sm" variant="ghost" className="h-8 gap-1" onClick={cancelSelection}>
-                <X className="h-3.5 w-3.5" />
-                {t("editor.cancelSelection")}
-              </Button>
-            </div>
-          )}
 
 
 
@@ -2727,6 +2681,96 @@ export default function Editor() {
                     )}
                   </div>
                 )}
+                {/* Select/Move tool controls */}
+                {tool === "select" && (
+                  <div className="px-2 py-1.5 border-b flex flex-col gap-2">
+                    {!floater ? (
+                      <>
+                        <div>
+                          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1 block">
+                            {t("editor.selectionMode")}
+                          </span>
+                          <div className="flex gap-0.5 border rounded-md p-0.5 bg-muted/30">
+                            <Button size="sm" variant={selectMode === "freehand" ? "secondary" : "ghost"}
+                              className="h-7 flex-1 text-xs gap-1"
+                              onClick={() => { setSelectMode("freehand"); selectionStartRef.current = null; setSelectionRect(null); }}>
+                              <Lasso className="h-3 w-3" />{t("editor.selectModeFreehand")}
+                            </Button>
+                            <Button size="sm" variant={selectMode === "rect" ? "secondary" : "ghost"}
+                              className="h-7 flex-1 text-xs gap-1"
+                              onClick={() => { setSelectMode("rect"); selectDrawingRef.current = false; selectPathRef.current = []; clearBrushCursor(); }}>
+                              <RectangleHorizontal className="h-3 w-3" />{t("editor.selectModeRect")}
+                            </Button>
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1 block">
+                            {t("editor.transferMode")}
+                          </span>
+                          <div className="flex gap-0.5 border rounded-md p-0.5 bg-muted/30">
+                            <Button size="sm" variant={selectTransferMode === "cut" ? "secondary" : "ghost"}
+                              className="h-7 flex-1 text-xs gap-1"
+                              onClick={() => setSelectTransferMode("cut")}>
+                              <Scissors className="h-3 w-3" />{t("editor.selectTransferCut")}
+                            </Button>
+                            <Button size="sm" variant={selectTransferMode === "copy" ? "secondary" : "ghost"}
+                              className="h-7 flex-1 text-xs gap-1"
+                              onClick={() => setSelectTransferMode("copy")}>
+                              <Copy className="h-3 w-3" />{t("editor.selectTransferCopy")}
+                            </Button>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div>
+                          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1 block">
+                            {t("editor.transformLabel")}
+                          </span>
+                          <div className="flex gap-0.5 mb-1.5">
+                            <Button size="icon" variant={floater.flipH ? "secondary" : "outline"}
+                              className="h-7 flex-1"
+                              title={t("editor.flipHorizontal")}
+                              onClick={() => setFloater((f) => f ? { ...f, flipH: !f.flipH } : f)}>
+                              <FlipHorizontal2 className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button size="icon" variant="outline" className="h-7 flex-1"
+                              title={t("editor.rotateLeft")}
+                              onClick={() => setFloater((f) => f ? { ...f, angle: ((f.angle ?? 0) - 90 + 360) % 360 } : f)}>
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button size="icon" variant="outline" className="h-7 flex-1"
+                              title={t("editor.rotateRight")}
+                              onClick={() => setFloater((f) => f ? { ...f, angle: ((f.angle ?? 0) + 90) % 360 } : f)}>
+                              <RotateCw className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-muted-foreground shrink-0">{t("editor.angle")}</span>
+                            <input
+                              type="range" min={-180} max={180}
+                              value={floater.angle ?? 0}
+                              onChange={(e) => setFloater((f) => f ? { ...f, angle: +e.target.value } : f)}
+                              className="flex-1 h-1.5 accent-primary"
+                            />
+                            <span className="text-xs font-mono w-8 text-right">{floater.angle ?? 0}°</span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1 pt-1 border-t">
+                          <Button size="sm" className="h-7 gap-1 text-xs" onClick={applyFloater}>
+                            <Check className="h-3 w-3" />{t("editor.applySelection")}
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={copyFloaterToClipboard}>
+                            <Clipboard className="h-3 w-3" />{t("editor.copyToClipboard")}
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={cancelSelection}>
+                            <X className="h-3 w-3" />{t("editor.cancelSelection")}
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
                 {/* Zoom */}
                 <div className="flex items-center gap-0.5 px-1.5 py-1 border-b">
                   <Button
@@ -2746,7 +2790,15 @@ export default function Editor() {
                   <Button
                     variant="ghost" size="sm"
                     className="h-7 text-xs justify-start px-2"
-                    onClick={() => { pushHistory(); setAnnotations([]); }}
+                    onClick={() => {
+                      pushHistory();
+                      annotationsRef.current = [];
+                      setAnnotations([]);
+                      const canvas = canvasRef.current;
+                      if (canvas && imgRef.current) {
+                        renderCanvas(canvas, imgRef.current, [], scaleRef.current, rotationRef.current, null, null, null, undefined, panOffsetRef.current);
+                      }
+                    }}
                   >{t("editor.clearAnnotations")}</Button>
                   <Button
                     variant="ghost" size="sm"
@@ -2844,7 +2896,15 @@ export default function Editor() {
               <img
                 src={floater.dataUrl}
                 draggable={false}
-                style={{ width: floater.w, height: floater.h, display: "block" }}
+                style={{
+                  width: floater.w,
+                  height: floater.h,
+                  display: "block",
+                  transform: [
+                    floater.flipH ? "scaleX(-1)" : "",
+                    (floater.angle ?? 0) !== 0 ? `rotate(${floater.angle}deg)` : "",
+                  ].filter(Boolean).join(" ") || undefined,
+                }}
                 alt=""
               />
               {floater.path && (

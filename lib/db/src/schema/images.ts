@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, boolean, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { patientsTable } from "./patients";
@@ -13,6 +13,7 @@ export const imagesTable = pgTable("images", {
   capturedAt: timestamp("captured_at", { withTimezone: true }).notNull().defaultNow(),
   isUnassigned: boolean("is_unassigned").notNull().default(false),
   isLibraryAsset: boolean("is_library_asset").notNull().default(false),
+  mediaType: varchar("media_type", { length: 10 }).notNull().default("image"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

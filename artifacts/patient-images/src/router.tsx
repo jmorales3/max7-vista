@@ -15,6 +15,7 @@ import Settings from "@/pages/settings";
 import Manual from "@/pages/manual";
 import NotFound from "@/pages/not-found";
 import AdminUsers from "@/pages/admin/users";
+import AdminTags from "@/pages/admin/tags";
 import BulkImport from "@/pages/bulk-import";
 import ImageLibrary from "@/pages/image-library";
 import Templates from "@/pages/templates";
@@ -51,6 +52,7 @@ function Router() {
         <Route path="/settings" component={Settings} />
         <Route path="/manual" component={Manual} />
         <Route path="/admin/users" component={isAdmin ? AdminUsers : NotAuthorized} />
+        <Route path="/admin/tags" component={isAdmin ? AdminTags : NotAuthorized} />
         <Route path="/import" component={BulkImport} />
         <Route path="/templates" component={Templates} />
         <Route path="/templates/:id" component={TemplateDesigner} />

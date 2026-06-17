@@ -63,7 +63,8 @@
     "templates": "Modèles",
     "library": "Bibliothèque d'Images",
     "administration": "Administration",
-    "userManagement": "Gestion des Utilisateurs"
+    "userManagement": "Gestion des Utilisateurs",
+    "tagManagement": "Gestion des Étiquettes"
   },
   "common": {
     "save": "Enregistrer",
@@ -286,7 +287,22 @@
     "deleteDesc": "Cette action supprimera définitivement l'image de la bibliothèque. Cette action est irréversible.",
     "deleted": "Image supprimée",
     "editTitle": "Modifier le Titre",
-    "titlePlaceholder": "Saisissez un titre pour cette image…"
+    "titlePlaceholder": "Saisissez un titre pour cette image…",
+    "video": "Vidéo",
+    "allAssets": "Tous",
+    "assignTags": "Étiquettes",
+    "unsupportedFile": "Type de fichier non pris en charge. Veuillez télécharger des images ou des vidéos."
+  },
+  "adminTags": {
+    "title": "Gestion des Étiquettes",
+    "subtitle": "Créez et gérez des étiquettes à assigner aux ressources de la bibliothèque.",
+    "namePlaceholder": "Nom de la nouvelle étiquette…",
+    "addTag": "Ajouter une Étiquette",
+    "created": "Étiquette créée",
+    "deleted": "Étiquette supprimée",
+    "noTags": "Aucune étiquette pour l'instant. Créez la première ci-dessus.",
+    "deleteTitle": "Supprimer l'Étiquette",
+    "deleteDesc": "Supprimer l'étiquette \"{{name}}\" ? Elle sera retirée de toutes les ressources. Cette action est irréversible."
   },
   "editor": {
     "pointer": "Pointeur",
@@ -393,6 +409,13 @@
     "selectFreehandHint": "Tracez un contour autour de la zone, puis relâchez pour déplacer ou copier",
     "selectTransferCut": "Déplacer",
     "selectTransferCopy": "Copier",
+    "selectionMode": "Mode de Sélection",
+    "transferMode": "Opération",
+    "transformLabel": "Transformer",
+    "flipHorizontal": "Retourner Horizontalement",
+    "rotateLeft": "Tourner à Gauche",
+    "rotateRight": "Tourner à Droite",
+    "angle": "Angle",
     "ellipse": "Ellipse",
     "rectangle": "Rectangle",
     "filled": "Rempli",

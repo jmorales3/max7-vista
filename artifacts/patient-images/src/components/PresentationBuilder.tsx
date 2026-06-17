@@ -22,7 +22,8 @@ export type SuperimposeSlide = {
   /** The editor's base image scale (px/image-px) at save time — used to normalize offsetX/Y */
   overlayBaseScale?: number;
 };
-export type Slide = SingleSlide | CompareSlide | SuperimposeSlide;
+export type VideoSlide = { type: "video"; imageId: number };
+export type Slide = SingleSlide | CompareSlide | SuperimposeSlide | VideoSlide;
 
 export interface PickerImage {
   id: number;
@@ -231,7 +232,7 @@ export function PresentationBuilder({
   const imageUrl = (id: number) => `/api/images/${id}/file`;
 
   const usedIds = new Set(slides.flatMap((s) => {
-    if (s.type === "single") return [s.imageId];
+    if (s.type === "single" || s.type === "video") return [s.imageId];
     if (s.type === "compare") return [s.beforeId, s.afterId];
     return [s.baseId, s.overlayId];
   }));
@@ -261,7 +262,7 @@ export function PresentationBuilder({
   function selectPairImage(idx: number, afterId: number) {
     setSlides((prev) => prev.map((s, i) => {
       if (i !== idx) return s;
-      const beforeId = s.type === "single" ? s.imageId : s.type === "compare" ? s.beforeId : s.baseId;
+      const beforeId = (s.type === "single" || s.type === "video") ? s.imageId : s.type === "compare" ? s.beforeId : s.baseId;
       return { type: "compare", beforeId, afterId } as CompareSlide;
     }));
     setPairingSlideIdx(null);
@@ -329,6 +330,8 @@ export function PresentationBuilder({
         <div className="flex-1 relative overflow-hidden">
           {slide.type === "single" ? (
             <img src={imageUrl(slide.imageId)} className="absolute inset-0 w-full h-full object-contain" />
+          ) : slide.type === "video" ? (
+            <video src={`/api/library/assets/${slide.imageId}/file`} className="absolute inset-0 w-full h-full object-contain" controls />
           ) : slide.type === "compare" ? (
             <BeforeAfterSlider beforeUrl={imageUrl(slide.beforeId)} afterUrl={imageUrl(slide.afterId)} />
           ) : (
@@ -482,7 +485,7 @@ export function PresentationBuilder({
           ) : (
             <div className="space-y-2">
               {slides.map((slide, idx) => {
-                const mainId = slide.type === "single" ? slide.imageId : slide.type === "compare" ? slide.beforeId : slide.baseId;
+                const mainId = (slide.type === "single" || slide.type === "video") ? slide.imageId : slide.type === "compare" ? slide.beforeId : slide.baseId;
                 const secondId = slide.type === "compare" ? slide.afterId : slide.type === "superimpose" ? slide.overlayId : null;
                 const isPairing = pairingSlideIdx === idx;
                 return (

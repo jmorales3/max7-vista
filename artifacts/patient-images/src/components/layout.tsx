@@ -13,6 +13,7 @@ import {
   FolderUp,
   LayoutTemplate,
   Library,
+  Tags,
 } from "lucide-react";
 import {
   Sidebar,
@@ -109,11 +110,22 @@ export function AppSidebar() {
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    isActive={location.startsWith("/admin")}
+                    isActive={location === "/admin/users"}
                   >
                     <Link href="/admin/users">
                       <ShieldCheck />
                       <span>{t("nav.userManagement")}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === "/admin/tags"}
+                  >
+                    <Link href="/admin/tags">
+                      <Tags />
+                      <span>{t("nav.tagManagement")}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

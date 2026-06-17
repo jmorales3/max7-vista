@@ -63,7 +63,8 @@
     "templates": "Modelos",
     "library": "Biblioteca de Imagens",
     "administration": "Administração",
-    "userManagement": "Gestão de Usuários"
+    "userManagement": "Gestão de Usuários",
+    "tagManagement": "Gerenciamento de Etiquetas"
   },
   "common": {
     "save": "Salvar",
@@ -286,7 +287,22 @@
     "deleteDesc": "Esta ação removerá permanentemente a imagem da biblioteca. Não é possível desfazer.",
     "deleted": "Imagem excluída",
     "editTitle": "Editar Título",
-    "titlePlaceholder": "Digite um título para esta imagem…"
+    "titlePlaceholder": "Digite um título para esta imagem…",
+    "video": "Vídeo",
+    "allAssets": "Todos",
+    "assignTags": "Etiquetas",
+    "unsupportedFile": "Tipo de arquivo não suportado. Faça upload de imagens ou vídeos."
+  },
+  "adminTags": {
+    "title": "Gerenciamento de Etiquetas",
+    "subtitle": "Crie e gerencie etiquetas para atribuir aos recursos da biblioteca.",
+    "namePlaceholder": "Nome da nova etiqueta…",
+    "addTag": "Adicionar Etiqueta",
+    "created": "Etiqueta criada",
+    "deleted": "Etiqueta excluída",
+    "noTags": "Nenhuma etiqueta ainda. Crie a primeira acima.",
+    "deleteTitle": "Excluir Etiqueta",
+    "deleteDesc": "Excluir a etiqueta \"{{name}}\"? Ela será removida de todos os recursos. Não é possível desfazer."
   },
   "editor": {
     "pointer": "Ponteiro",
@@ -393,6 +409,13 @@
     "selectFreehandHint": "Desenhe um contorno ao redor da área e solte para mover ou copiar",
     "selectTransferCut": "Mover",
     "selectTransferCopy": "Copiar",
+    "selectionMode": "Modo de Seleção",
+    "transferMode": "Operação",
+    "transformLabel": "Transformar",
+    "flipHorizontal": "Virar na Horizontal",
+    "rotateLeft": "Girar à Esquerda",
+    "rotateRight": "Girar à Direita",
+    "angle": "Ângulo",
     "ellipse": "Elipse",
     "rectangle": "Retângulo",
     "filled": "Preenchido",
