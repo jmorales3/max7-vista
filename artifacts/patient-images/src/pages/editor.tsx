@@ -1121,19 +1121,42 @@ export default function Editor() {
         { id, data: { file } },
         {
           onSuccess: () => {
-            // Scale ruler coordinates by the same factor so they stay accurate on the resized image
+            // Scale ruler coordinates by the same factor AND stamp the reference calibration
+            // so subsequent measurements on this image are immediately correct.
+            const newRulerPxPerMm = refPxPerMm ?? rulers[0]?.pxPerMm ?? null;
             const scaledRulers = rulers.map(r => ({
               ...r,
               x1: r.x1 * factor,
               y1: r.y1 * factor,
               x2: r.x2 * factor,
               y2: r.y2 * factor,
+              pxPerMm: newRulerPxPerMm,
             }));
+            // Update calibration state so new rulers drawn immediately after resize are correct
+            if (newRulerPxPerMm != null) setPxPerMm(newRulerPxPerMm);
             setAnnotations(scaledRulers);
-            // Persist the scaled rulers to DB
+            // Persist scaled rulers with updated calibration
             updateImage.mutate({ id, data: { notes, annotation: JSON.stringify(scaledRulers) } });
             setShowResizePanel(false);
             setResizeRefInput("");
+            // Reload the image from the server (cache-busted) so imgRef reflects the new dimensions.
+            // Without this the browser serves the old cached blob and measurements stay wrong.
+            const reloadImg = new Image();
+            reloadImg.crossOrigin = "anonymous";
+            reloadImg.src = `/api/images/${id}/file?t=${Date.now()}`;
+            reloadImg.onload = () => {
+              imgRef.current = reloadImg;
+              const canvas = canvasRef.current;
+              const container = containerRef.current;
+              if (canvas && container && reloadImg.naturalWidth > 0 && reloadImg.naturalHeight > 0) {
+                const fitScale = Math.min(
+                  container.offsetWidth / reloadImg.naturalWidth,
+                  container.offsetHeight / reloadImg.naturalHeight,
+                );
+                setScale(fitScale);
+                renderCanvas(canvas, reloadImg, scaledRulers, fitScale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, panOffsetRef.current, cutPath);
+              }
+            };
             toast({
               title: t("editor.resizeApplied"),
               description: `${newW}×${newH} px  (×${factor.toFixed(3)})`,
