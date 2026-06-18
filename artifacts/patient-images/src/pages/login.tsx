@@ -136,13 +136,13 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="username" className="text-blue-100">{t("auth.username")}</Label>
               <Input
                 id="username"
                 type="text"
-                autoComplete="username"
+                autoComplete="off"
                 autoFocus
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -158,7 +158,7 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
-                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={mode === "login" ? t("auth.passwordPlaceholder") : t("auth.passwordMinLength")}
