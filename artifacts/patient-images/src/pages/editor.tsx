@@ -549,6 +549,12 @@ export default function Editor() {
     const s = localStorage.getItem("max7_refLinePx");
     return s ? parseFloat(s) : null;
   });
+  // Cross-image reference calibration: px/mm from the designated reference image.
+  // Intentionally global (localStorage) so it survives navigation between images.
+  const [refPxPerMm, setRefPxPerMm] = useState<number | null>(() => {
+    const s = localStorage.getItem("max7_refPxPerMm");
+    return s ? parseFloat(s) : null;
+  });
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cursorCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -1043,6 +1049,9 @@ export default function Editor() {
     if (!calibratingPx || isNaN(mm) || mm <= 0) return;
     const newPxPerMm = calibratingPx / mm;
     setPxPerMm(newPxPerMm);
+    // Auto-set as global reference scale so Resize mode on other images can use mm input
+    setRefPxPerMm(newPxPerMm);
+    localStorage.setItem("max7_refPxPerMm", String(newPxPerMm));
     setAnnotations((prev) =>
       prev.map((ann) => (ann.type === "ruler" ? { ...ann, pxPerMm: newPxPerMm } : ann)),
     );
@@ -1056,22 +1065,40 @@ export default function Editor() {
     const rounded = Math.round(px);
     setReferenceLinePx(rounded);
     localStorage.setItem("max7_refLinePx", String(rounded));
-    // Persist the ruler annotation to DB so it survives navigation away from Image A
+    // Also save this image's calibration (pxPerMm) as the global reference scale
+    // so Resize mode on other images can accept mm input directly
+    if (pxPerMm != null) {
+      setRefPxPerMm(pxPerMm);
+      localStorage.setItem("max7_refPxPerMm", String(pxPerMm));
+    }
     if (id) {
       updateImage.mutate({ id, data: { notes, annotation: JSON.stringify(annotations) } });
     }
     toast({ title: t("editor.resizeSaveRef"), description: `${rounded} px ${t("editor.resizeSavedDesc")}` });
   }
 
-  function handleResizeToReference(targetPx?: number) {
-    const refPx = targetPx ?? parseFloat(resizeRefInput);
-    if (isNaN(refPx) || refPx <= 0) return;
+  function handleResizeToReference(targetPxOverride?: number) {
+    // Compute target pixel count from mm input (preferred) or raw px override (legacy)
+    let targetPx: number;
+    if (targetPxOverride !== undefined) {
+      targetPx = targetPxOverride;
+    } else if (refPxPerMm != null) {
+      // mm-based mode: user entered real-world length; scale so line matches reference image's ratio
+      const enteredMm = parseFloat(resizeRefInput);
+      if (isNaN(enteredMm) || enteredMm <= 0) return;
+      targetPx = enteredMm * refPxPerMm;
+    } else {
+      // Fallback px mode (no calibration available)
+      const px = parseFloat(resizeRefInput);
+      if (isNaN(px) || px <= 0) return;
+      targetPx = px;
+    }
     const rulers = annotations.filter((a): a is DrawRuler => a.type === "ruler");
     if (rulers.length === 0) return;
     const ref = rulers[rulers.length - 1];
     const currentPx = Math.hypot(ref.x2 - ref.x1, ref.y2 - ref.y1);
     if (currentPx < 1) return;
-    const factor = refPx / currentPx;
+    const factor = targetPx / currentPx;
     const img = imgRef.current;
     if (!img || !id) return;
     // Render the flat canvas WITHOUT rulers so they stay as live annotations
@@ -2435,32 +2462,32 @@ export default function Editor() {
                           <span className="text-xs text-muted-foreground">{t("editor.resizeLandmark")}:</span>
                           <span className="text-xs font-mono font-semibold">{resizePanelLinePx} px</span>
                         </div>
-                        <Button size="sm" variant="outline" className="h-7 text-xs gap-1"
-                          onClick={() => saveAsReference(resizePanelLinePx)}>
-                          <Bookmark className="h-3 w-3" />{t("editor.resizeSaveRef")}
-                        </Button>
-                        {referenceLinePx && referenceLinePx !== resizePanelLinePx && (
-                          <Button size="sm" className="h-7 text-xs gap-1"
-                            onClick={() => handleResizeToReference(referenceLinePx)}
-                            disabled={replaceFile.isPending}>
-                            <Check className="h-3 w-3" />{t("editor.resizeMatchRef")} ({referenceLinePx} px)
-                          </Button>
+                        {refPxPerMm != null ? (
+                          <>
+                            <div className="text-[10px] text-muted-foreground bg-muted/40 px-2 py-0.5 rounded">
+                              {t("editor.resizeRefScale")}: {refPxPerMm.toFixed(3)} px/mm
+                            </div>
+                            <div className="flex items-center gap-1 pt-0.5">
+                              <input type="number" min="0.01" step="0.1" placeholder={t("editor.resizeEnterMm")}
+                                value={resizeRefInput}
+                                onChange={(e) => setResizeRefInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleResizeToReference();
+                                  if (e.key === "Escape") { setShowResizePanel(false); setResizeRefInput(""); }
+                                }}
+                                className="w-20 h-7 text-xs border rounded px-2 bg-background" />
+                              <span className="text-xs text-muted-foreground">mm</span>
+                            </div>
+                          </>
+                        ) : (
+                          <p className="text-[10px] text-muted-foreground leading-tight">
+                            {t("editor.resizeNoRefCalib")}
+                          </p>
                         )}
-                        <div className="flex items-center gap-1 pt-0.5">
-                          <input type="number" min="1" step="1" placeholder="px"
-                            value={resizeRefInput}
-                            onChange={(e) => setResizeRefInput(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") handleResizeToReference();
-                              if (e.key === "Escape") { setShowResizePanel(false); setResizeRefInput(""); }
-                            }}
-                            className="w-20 h-7 text-xs border rounded px-2 bg-background" />
-                          <span className="text-xs text-muted-foreground">px</span>
-                        </div>
                         <div className="flex gap-1">
                           <Button size="sm" variant="outline" className="h-7 gap-1 flex-1 text-xs"
                             onClick={() => handleResizeToReference()}
-                            disabled={!resizeRefInput || isNaN(parseFloat(resizeRefInput)) || replaceFile.isPending}>
+                            disabled={!resizeRefInput || isNaN(parseFloat(resizeRefInput)) || refPxPerMm == null || replaceFile.isPending}>
                             <Check className="h-3 w-3" />{t("editor.resizeApply")}
                           </Button>
                           <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
