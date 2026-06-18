@@ -675,7 +675,10 @@ export default function Editor() {
     { query: { enabled: !!image?.patientId, queryKey: getListPatientImagesQueryKey(image?.patientId ?? 0) } },
   );
 
-  const { data: presentations = [] } = useListPresentations();
+  const { data: presentations = [] } = useListPresentations(
+    { patientId: image?.patientId },
+    { query: { enabled: !!image?.patientId, queryKey: getListPresentationsQueryKey({ patientId: image?.patientId }) } },
+  );
   const createPresentation = useCreatePresentation();
   const updatePresentation = useUpdatePresentation();
 
