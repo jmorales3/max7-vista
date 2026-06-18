@@ -217,6 +217,57 @@ async function initSqlite() {
   logger.info("SQLite tables initialized");
 }
 
+// ─── Schema migrations ──────────────────────────────────────────────────────
+// Every statement here must be idempotent (IF NOT EXISTS / DO $$ BEGIN … END $$).
+// HOW TO ADD A FUTURE MIGRATION:
+//   • New table  → add a CREATE TABLE IF NOT EXISTS block to initPostgres() below.
+//   • New column → add an ALTER TABLE … ADD COLUMN IF NOT EXISTS line in the
+//                  "Column migrations" section of runMigrations() below.
+//   • New index  → add CREATE UNIQUE/INDEX … IF NOT EXISTS in "Index migrations".
+//   • New FK     → add a DO $$ BEGIN IF NOT EXISTS … END $$ block in seedPostgres().
+// Never DROP or RENAME columns/tables here — doing so would destroy production data.
+// ────────────────────────────────────────────────────────────────────────────
+async function runMigrations(pool: import("pg").Pool) {
+  // ── Column migrations (ADD COLUMN IF NOT EXISTS — safe to run every startup) ──
+  await pool.query(`ALTER TABLE patients  ADD COLUMN IF NOT EXISTS tenant_id INTEGER`);
+  await pool.query(`ALTER TABLE tags      ADD COLUMN IF NOT EXISTS tenant_id INTEGER`);
+  await pool.query(`ALTER TABLE templates ADD COLUMN IF NOT EXISTS tenant_id INTEGER`);
+  await pool.query(`ALTER TABLE images    ADD COLUMN IF NOT EXISTS sha256 TEXT`);
+  await pool.query(`ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS tenant_id  INTEGER`);
+  await pool.query(`ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS patient_id INTEGER REFERENCES patients(id) ON DELETE SET NULL`);
+  await pool.query(`ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS resource_id TEXT`);
+  await pool.query(`ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS ip_address  VARCHAR(45)`);
+  await pool.query(`ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS user_agent  TEXT`);
+
+  // ── Column type migrations ───────────────────────────────────────────────────
+  // Migrate audit_log.details from TEXT → JSONB (one-time, safe to re-run)
+  await pool.query(`
+    DO $$ BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'audit_log' AND column_name = 'details' AND data_type = 'text'
+      ) THEN
+        ALTER TABLE audit_log ALTER COLUMN details TYPE JSONB USING details::jsonb;
+      END IF;
+    END $$
+  `);
+
+  // ── Index migrations (CREATE … IF NOT EXISTS) ────────────────────────────────
+  await pool.query(`ALTER TABLE patients DROP CONSTRAINT IF EXISTS patients_patient_code_unique`);
+  await pool.query(`ALTER TABLE tags     DROP CONSTRAINT IF EXISTS tags_name_unique`);
+  await pool.query(`ALTER TABLE tags     DROP CONSTRAINT IF EXISTS tags_name_key`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS patients_code_tenant_unique ON patients(patient_code, tenant_id)`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS tags_name_tenant_unique ON tags(name, tenant_id)`);
+  await pool.query(`
+    DELETE FROM images
+    WHERE id NOT IN (SELECT MIN(id) FROM images GROUP BY patient_id, file_path)
+  `);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS images_patient_file_unique ON images(patient_id, file_path)`);
+
+  // ── ADD FUTURE MIGRATIONS ABOVE THIS LINE ────────────────────────────────────
+  logger.info("PostgreSQL schema migrations applied");
+}
+
 async function initPostgres() {
   const { pool } = await import("@workspace/db");
   await pool.query(`
@@ -290,55 +341,14 @@ async function initPostgres() {
   `);
   logger.info("PostgreSQL tables ensured");
 
+  await runMigrations(pool);
   await seedPostgres(pool);
 }
 
 async function seedPostgres(pool: import("pg").Pool) {
   const bcrypt = (await import("bcryptjs")).default;
 
-  // Step 1: ensure tenant_id columns exist (one call each — pool.query rejects multi-statement)
-  await pool.query(`ALTER TABLE patients  ADD COLUMN IF NOT EXISTS tenant_id INTEGER`);
-  await pool.query(`ALTER TABLE tags      ADD COLUMN IF NOT EXISTS tenant_id INTEGER`);
-  await pool.query(`ALTER TABLE templates ADD COLUMN IF NOT EXISTS tenant_id INTEGER`);
-
-  // Step 1b: ensure images table has sha256 column
-  await pool.query(`ALTER TABLE images ADD COLUMN IF NOT EXISTS sha256 TEXT`);
-
-  // Step 1c: ensure audit_log has all HIPAA columns (idempotent — adds only if missing)
-  await pool.query(`ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS tenant_id   INTEGER`);
-  await pool.query(`ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS patient_id  INTEGER REFERENCES patients(id) ON DELETE SET NULL`);
-  await pool.query(`ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS resource_id TEXT`);
-  await pool.query(`ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS ip_address  VARCHAR(45)`);
-  await pool.query(`ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS user_agent  TEXT`);
-  // Migrate details column from TEXT to JSONB if it still has the old type
-  await pool.query(`
-    DO $$ BEGIN
-      IF EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'audit_log' AND column_name = 'details'
-          AND data_type = 'text'
-      ) THEN
-        ALTER TABLE audit_log ALTER COLUMN details TYPE JSONB USING details::jsonb;
-      END IF;
-    END $$
-  `);
-
-  // Step 2: fix unique constraints
-  await pool.query(`ALTER TABLE patients DROP CONSTRAINT IF EXISTS patients_patient_code_unique`);
-  await pool.query(`ALTER TABLE tags     DROP CONSTRAINT IF EXISTS tags_name_unique`);
-  await pool.query(`ALTER TABLE tags     DROP CONSTRAINT IF EXISTS tags_name_key`);
-  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS patients_code_tenant_unique ON patients(patient_code, tenant_id)`);
-  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS tags_name_tenant_unique ON tags(name, tenant_id)`);
-  // Remove duplicate image rows before enforcing uniqueness (keeps the oldest record per patient+path)
-  await pool.query(`
-    DELETE FROM images
-    WHERE id NOT IN (
-      SELECT MIN(id) FROM images GROUP BY patient_id, file_path
-    )
-  `);
-  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS images_patient_file_unique ON images(patient_id, file_path)`);
-
-  // Step 3: create the two canonical tenants
+  // Step 1: create the two canonical tenants
   await pool.query(
     `INSERT INTO tenants (name, slug, is_active)
      VALUES ('Main Clinic', 'main-clinic', true), ('Demo Clinic', 'demo', true)
