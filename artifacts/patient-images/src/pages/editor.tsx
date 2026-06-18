@@ -520,10 +520,7 @@ export default function Editor() {
   const selectPathRef = useRef<[number, number][]>([]);
   const selectDrawingRef = useRef(false);
   const [cutPath, setCutPath] = useState<[number, number][] | null>(null);
-  const [pxPerMm, setPxPerMm] = useState<number | null>(() => {
-    const v = localStorage.getItem("max7_pxPerMm");
-    return v ? parseFloat(v) : null;
-  });
+  const [pxPerMm, setPxPerMm] = useState<number | null>(null);
   const [selectedCircleId, setSelectedCircleId] = useState<string | null>(null);
   const [circleFilled, setCircleFilled] = useState(false);
   const [circleShape, setCircleShape] = useState<"ellipse" | "rect">("ellipse");
@@ -709,10 +706,20 @@ export default function Editor() {
     if (image?.annotation) {
       try {
         const parsed = JSON.parse(image.annotation);
-        if (Array.isArray(parsed)) setAnnotations(parsed);
+        if (Array.isArray(parsed)) {
+          setAnnotations(parsed);
+          // Restore per-image calibration from the most recent calibrated ruler.
+          // Each image carries its own mm/px ratio — do NOT inherit from other images.
+          const rulers = parsed.filter((a: Annotation) => a.type === "ruler") as DrawRuler[];
+          const calibrated = rulers.filter((r) => r.pxPerMm != null);
+          setPxPerMm(calibrated.length > 0 ? calibrated[calibrated.length - 1].pxPerMm! : null);
+        }
       } catch {
         /* ignore */
       }
+    } else {
+      // Image has no annotations — reset calibration so we don't inherit from a previous image
+      setPxPerMm(null);
     }
   }, [image]);
 
@@ -1036,7 +1043,6 @@ export default function Editor() {
     if (!calibratingPx || isNaN(mm) || mm <= 0) return;
     const newPxPerMm = calibratingPx / mm;
     setPxPerMm(newPxPerMm);
-    localStorage.setItem("max7_pxPerMm", String(newPxPerMm));
     setAnnotations((prev) =>
       prev.map((ann) => (ann.type === "ruler" ? { ...ann, pxPerMm: newPxPerMm } : ann)),
     );
