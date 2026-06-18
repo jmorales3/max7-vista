@@ -182,7 +182,8 @@ export default function Settings() {
     queryFn: async () => {
       const res = await fetch("/api/audit-log", { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch audit log");
-      return res.json();
+      const data = await res.json();
+      return data.items ?? data;
     },
     enabled: isAdmin,
   });
