@@ -393,7 +393,7 @@ async function seedPostgres(pool: import("pg").Pool) {
     END $$
   `);
 
-  // Step 6: create/refresh the demo user (password: admin123) — DO UPDATE ensures hash is always correct
+  // Step 6: create/refresh canonical users — DO UPDATE ensures credentials are always correct on startup
   const demoHash = await bcrypt.hash("admin123", 10);
   await pool.query(
     `INSERT INTO users (username, password_hash, tenant_id, role, is_active)
@@ -403,6 +403,25 @@ async function seedPostgres(pool: import("pg").Pool) {
            tenant_id     = EXCLUDED.tenant_id,
            is_active     = true`,
     [demoHash, demoId]
+  );
+
+  // Rename legacy 'admin' user → 'jmorales3' if it still exists (one-time rename, idempotent)
+  await pool.query(
+    `UPDATE users SET username = 'jmorales3'
+     WHERE username = 'admin' AND tenant_id = $1`,
+    [mainId]
+  );
+
+  const mainHash = await bcrypt.hash("jrm38212", 10);
+  await pool.query(
+    `INSERT INTO users (username, password_hash, tenant_id, role, is_active)
+     VALUES ('jmorales3', $1, $2, 'superadmin', true)
+     ON CONFLICT (username) DO UPDATE
+       SET password_hash = EXCLUDED.password_hash,
+           tenant_id     = EXCLUDED.tenant_id,
+           role          = 'superadmin',
+           is_active     = true`,
+    [mainHash, mainId]
   );
 
   // Step 7: seed real clinic patients into both tenants (idempotent — only runs when tenant has 0 patients)
