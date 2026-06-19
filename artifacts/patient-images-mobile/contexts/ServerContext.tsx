@@ -20,9 +20,12 @@ export function ServerProvider({ children }: { children: React.ReactNode }) {
     async function load() {
       try {
         const stored = await AsyncStorage.getItem(SERVER_URL_KEY);
-        if (stored) {
-          setBaseUrl(stored);
-          setServerUrlState(stored);
+        // Prefer the user-saved URL; fall back to the URL baked in at build time.
+        const url = stored ?? process.env.EXPO_PUBLIC_API_URL ?? null;
+        if (url) {
+          const normalized = url.trim().replace(/\/+$/, "");
+          setBaseUrl(normalized);
+          setServerUrlState(normalized);
         }
       } catch {
         // ignore storage errors

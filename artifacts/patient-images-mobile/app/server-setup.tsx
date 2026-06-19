@@ -241,11 +241,19 @@ export default function ServerSetupScreen() {
 
           <View style={styles.infoBox}>
             <View style={styles.infoRow}>
-              <Ionicons name="information-circle-outline" size={16} color={colors.mutedForeground} />
+              <Ionicons name="globe-outline" size={16} color={colors.mutedForeground} />
               <Text style={styles.infoText}>
-                Ask your IT administrator or check the server console for the LAN address.
-                It typically looks like{" "}
-                <Text style={{ fontFamily: "Inter_600SemiBold" }}>http://192.168.x.x:8080</Text>.
+                Use your clinic's published address (e.g.{" "}
+                <Text style={{ fontFamily: "Inter_600SemiBold" }}>https://your-clinic.replit.app</Text>
+                ) to connect from anywhere without Wi-Fi restrictions.
+              </Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Ionicons name="wifi-outline" size={16} color={colors.mutedForeground} />
+              <Text style={styles.infoText}>
+                Or use the local network address (e.g.{" "}
+                <Text style={{ fontFamily: "Inter_600SemiBold" }}>http://192.168.x.x:8080</Text>
+                ) when on the same Wi-Fi as the server.
               </Text>
             </View>
           </View>

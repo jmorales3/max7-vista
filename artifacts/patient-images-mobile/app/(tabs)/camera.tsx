@@ -42,23 +42,33 @@ export default function CameraScreen() {
 
   const { mutate: uploadImage } = useMutation({
     mutationFn: async ({ uri, patientId, notes }: { uri: string; patientId?: number; notes?: string }) => {
-      const formData = new FormData();
+      // Use JSON + base64 instead of FormData — the Replit deployment proxy silently
+      // drops multipart/form-data bodies, so base64 is required for production uploads.
       const filename = uri.split("/").pop() ?? "image.jpg";
       const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : "image/jpeg";
-      // React Native FormData accepts { uri, name, type } for local files.
-      // TypeScript's FormData.append expects Blob | string; cast via unknown.
-      const rnFile: { uri: string; name: string; type: string } = { uri, name: filename, type };
-      formData.append("file", rnFile as unknown as Blob);
-      if (patientId) {
-        formData.append("patientId", String(patientId));
-      }
-      if (notes?.trim()) {
-        formData.append("notes", notes.trim());
-      }
-      formData.append("capturedAt", new Date().toISOString());
+      const mimeType = match ? `image/${match[1].toLowerCase().replace("jpg", "jpeg")}` : "image/jpeg";
 
-      return customFetch("/api/images", { method: "POST", body: formData });
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const fileBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+
+      return customFetch("/api/images/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileBase64,
+          fileName: filename,
+          mimeType,
+          patientId: patientId ?? null,
+          notes: notes?.trim() || undefined,
+          capturedAt: new Date().toISOString(),
+        }),
+      });
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["listPatients"] });
