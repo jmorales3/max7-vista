@@ -19,8 +19,10 @@ artifacts/mockup-sandbox/**
 **/android/**
 **/ios/**
 
-# Logs and temp files
+# Logs, temp files and archives
 **/*.log
 **/*.map
 **/.DS_Store
 **/Thumbs.db
+**/*.zip
+**/*.tar.gz
