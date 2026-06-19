@@ -14,7 +14,7 @@
     },
     "production": {
       "android": {
-        "buildType": "apk"
+        "buildType": "aab"
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://patient-image-manager.replit.app"
