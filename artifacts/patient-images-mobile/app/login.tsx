@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function LoginScreen() {
   const colors = useColors();
-  const { login } = useAuth();
+  const { login, sessionExpired } = useAuth();
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -151,6 +151,22 @@ export default function LoginScreen() {
       fontFamily: "Inter_600SemiBold",
       color: colors.primaryForeground,
     },
+    sessionBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: "#fff7ed",
+      borderRadius: colors.radius,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      gap: 8,
+      marginBottom: 20,
+    },
+    sessionBannerText: {
+      fontSize: 13,
+      fontFamily: "Inter_400Regular",
+      color: "#b45309",
+      flex: 1,
+    },
     footer: {
       alignItems: "center",
       marginTop: 24,
@@ -175,6 +191,15 @@ export default function LoginScreen() {
           <Text style={styles.title}>Patient Images</Text>
           <Text style={styles.subtitle}>Clinical Image Management</Text>
         </View>
+
+        {sessionExpired && (
+          <View style={styles.sessionBanner}>
+            <Ionicons name="time-outline" size={18} color="#b45309" />
+            <Text style={styles.sessionBannerText}>
+              Your session expired. Please sign in again.
+            </Text>
+          </View>
+        )}
 
         <View style={styles.form}>
           <View style={styles.field}>
