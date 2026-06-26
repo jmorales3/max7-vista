@@ -10,6 +10,7 @@ import {
   TextInput,
   Platform,
   Alert,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -82,21 +83,39 @@ export default function CameraScreen() {
       Alert.alert("Camera", "Camera is only available on mobile devices.");
       return;
     }
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "Camera Permission",
-        "Camera access is required to capture patient images. Please enable it in Settings.",
-      );
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      if (!permission.canAskAgain) {
+        Alert.alert(
+          "Camera Permission Required",
+          "Camera access has been denied. Please enable it in your device Settings to capture patient images.",
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Open Settings",
+              onPress: () => {
+                if (Platform.OS !== "web") {
+                  void Linking.openSettings();
+                }
+              },
+            },
+          ],
+        );
+      } else {
+        Alert.alert(
+          "Camera Permission",
+          "Camera access is required to capture patient images. Please allow access when prompted.",
+        );
+      }
       return;
     }
-    const result = await ImagePicker.launchCameraAsync({
+    const picked = await ImagePicker.launchCameraAsync({
       mediaTypes: "images",
       quality: 0.9,
       allowsEditing: false,
     });
-    if (!result.canceled && result.assets[0]) {
-      setCapturedUri(result.assets[0].uri);
+    if (!picked.canceled && picked.assets[0]) {
+      setCapturedUri(picked.assets[0].uri);
       setUploadState("idle");
       setErrorMsg(null);
     }
@@ -144,7 +163,7 @@ export default function CameraScreen() {
         },
       },
     );
-  }, [capturedUri, selectedPatient, uploadImage]);
+  }, [capturedUri, selectedPatient, uploadImage, imageNotes]);
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
