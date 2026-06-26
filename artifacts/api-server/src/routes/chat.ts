@@ -51,7 +51,7 @@ router.post("/chat", async (req, res) => {
     res.setHeader("Connection", "keep-alive");
 
     const stream = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5-mini",
       max_completion_tokens: 1024,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
