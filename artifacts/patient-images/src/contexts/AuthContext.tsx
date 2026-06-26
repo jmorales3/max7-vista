@@ -1,11 +1,12 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import { getSession, login as apiLogin, logout as apiLogout, type AuthUser, PendingApprovalError } from "@/lib/auth";
-import { registerForceLogout } from "@/lib/authBridge";
+import { registerForceLogout, registerSuspended } from "@/lib/authBridge";
 
 interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
   pendingApproval: boolean;
+  suspended: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   forceLogout: () => void;
@@ -17,6 +18,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [pendingApproval, setPendingApproval] = useState(false);
+  const [suspended, setSuspended] = useState(false);
 
   useEffect(() => {
     getSession()
@@ -28,6 +30,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     registerForceLogout(() => {
       setUser(null);
       setPendingApproval(false);
+      setSuspended(false);
+    });
+    registerSuspended(() => {
+      setUser(null);
+      setPendingApproval(false);
+      setSuspended(true);
     });
   }, []);
 
@@ -49,15 +57,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await apiLogout();
     setUser(null);
     setPendingApproval(false);
+    setSuspended(false);
   }
 
   function forceLogout() {
     setUser(null);
     setPendingApproval(false);
+    setSuspended(false);
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, pendingApproval, login, logout, forceLogout }}>
+    <AuthContext.Provider value={{ user, loading, pendingApproval, suspended, login, logout, forceLogout }}>
       {children}
     </AuthContext.Provider>
   );
