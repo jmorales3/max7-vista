@@ -48,7 +48,7 @@ interface TracingDetail {
 interface MeasurementDef {
   id: number;
   name: string;
-  type: "Line" | "Angle" | "Perpendicular" | "LineLineAngle";
+  type: "line" | "angle" | "perpendicular" | "line_angle";
   p1Label: string | null;
   p2Label: string | null;
   p3Label: string | null;
@@ -103,13 +103,13 @@ function drawMeasurementOverlays(
     ctx.lineWidth = lw;
     ctx.globalAlpha = 0.55;
 
-    if (m.type === "Line" && p1 && p2) {
+    if (m.type === "line" && p1 && p2) {
       ctx.setLineDash([5 / scale, 5 / scale]);
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(p2.x, p2.y);
       ctx.stroke();
-    } else if (m.type === "Angle" && p1 && p2 && p3) {
+    } else if (m.type === "angle" && p1 && p2 && p3) {
       ctx.setLineDash([5 / scale, 5 / scale]);
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
@@ -124,7 +124,7 @@ function drawMeasurementOverlays(
       ctx.beginPath();
       ctx.arc(p2.x, p2.y, r, Math.min(a1, a2), Math.max(a1, a2));
       ctx.stroke();
-    } else if (m.type === "LineLineAngle" && p1 && p2 && p3 && p4) {
+    } else if (m.type === "line_angle" && p1 && p2 && p3 && p4) {
       ctx.setLineDash([5 / scale, 5 / scale]);
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
@@ -134,7 +134,7 @@ function drawMeasurementOverlays(
       ctx.moveTo(p3.x, p3.y);
       ctx.lineTo(p4.x, p4.y);
       ctx.stroke();
-    } else if (m.type === "Perpendicular" && p1 && p2 && p3) {
+    } else if (m.type === "perpendicular" && p1 && p2 && p3) {
       const dx = p3.x - p2.x;
       const dy = p3.y - p2.y;
       const len2 = dx * dx + dy * dy;
