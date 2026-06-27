@@ -436,14 +436,25 @@ export default function CephalometricsTrace() {
       scheduleRender();
     }
     handleResize();
-    const ro = new ResizeObserver(handleResize);
-    if (containerRef.current) ro.observe(containerRef.current);
     window.addEventListener("resize", handleResize);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", handleResize);
-    };
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // Re-fit the image whenever the step changes (side panel appears/disappears)
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+    const img = imgRef.current;
+    if (img && img.complete && img.naturalWidth > 0) {
+      fitImage(img, canvas.width, canvas.height);
+    } else {
+      scheduleRender();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   function hitTestLandmark(ix: number, iy: number): number {
     const cw = canvasRef.current?.width ?? 0;
