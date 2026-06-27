@@ -881,14 +881,18 @@ async function seedPostgres(pool: import("pg").Pool) {
 
   // Seed cephalometric system templates (Steiner, Ricketts, Tweed)
   const { rows: cephSeedRows } = await pool.query<{ value: string }>(
-    `SELECT value FROM seed_state WHERE key = 'ceph_templates_v1'`
+    `SELECT value FROM seed_state WHERE key = 'ceph_templates_v2'`
   );
   if (!cephSeedRows[0]) {
+    // Remove any previously-seeded system templates so we can insert the corrected set cleanly.
+    // Landmarks and measurements cascade-delete via FK.
+    await pool.query(`DELETE FROM ceph_templates WHERE tenant_id IS NULL`);
+
     // ── Steiner Analysis ─────────────────────────────────────────────────────
     const { rows: [steiner] } = await pool.query<{ id: number }>(
       `INSERT INTO ceph_templates (tenant_id, name, description, locked)
        VALUES (NULL, 'Steiner Analysis', 'Classic Steiner cephalometric analysis (1953)', true)
-       ON CONFLICT DO NOTHING RETURNING id`
+       RETURNING id`
     );
     if (steiner) {
       const steinerId = steiner.id;
@@ -901,17 +905,18 @@ async function seedPostgres(pool: import("pg").Pool) {
         ["PNS",  "Posterior Nasal Spine",  "Tip of posterior nasal spine",                        5],
         ["A",    "Point A",                "Deepest point on anterior maxilla (Subspinale)",       6],
         ["B",    "Point B",                "Deepest point on anterior mandible (Supramentale)",    7],
-        ["Pog",  "Pogonion",              "Most anterior point of chin",                           8],
-        ["Gn",   "Gnathion",              "Most antero-inferior point of chin",                    9],
-        ["Me",   "Menton",                "Most inferior point of mandibular symphysis",           10],
-        ["Go",   "Gonion",                "Most postero-inferior angle of mandible",               11],
-        ["Ar",   "Articulare",            "Junction of posterior cranial base and condylar neck",  12],
-        ["U1t",  "U1 Tip",               "Tip of most prominent upper central incisor",           13],
-        ["U1a",  "U1 Apex",              "Root apex of most prominent upper central incisor",      14],
-        ["L1t",  "L1 Tip",               "Tip of most prominent lower central incisor",            15],
-        ["L1a",  "L1 Apex",              "Root apex of most prominent lower central incisor",      16],
-        ["OcP1", "Occlusal Plane Pt 1",  "Point on occlusal plane (premolar region)",             17],
-        ["OcP2", "Occlusal Plane Pt 2",  "Point on occlusal plane (molar region)",                18],
+        ["D",    "D Point",               "Center of the mandibular symphysis (Steiner's D point)",8],
+        ["Pog",  "Pogonion",              "Most anterior point of chin",                           9],
+        ["Gn",   "Gnathion",              "Most antero-inferior point of chin",                    10],
+        ["Me",   "Menton",                "Most inferior point of mandibular symphysis",           11],
+        ["Go",   "Gonion",                "Most postero-inferior angle of mandible",               12],
+        ["Ar",   "Articulare",            "Junction of posterior cranial base and condylar neck",  13],
+        ["U1t",  "U1 Tip",               "Tip of most prominent upper central incisor",           14],
+        ["U1a",  "U1 Apex",              "Root apex of most prominent upper central incisor",      15],
+        ["L1t",  "L1 Tip",               "Tip of most prominent lower central incisor",            16],
+        ["L1a",  "L1 Apex",              "Root apex of most prominent lower central incisor",      17],
+        ["OcP1", "Occlusal Plane Pt 1",  "Point on occlusal plane (premolar region)",             18],
+        ["OcP2", "Occlusal Plane Pt 2",  "Point on occlusal plane (molar region)",                19],
       ];
       for (const [label, name, description, order] of steinerLandmarks) {
         await pool.query(
@@ -921,18 +926,19 @@ async function seedPostgres(pool: import("pg").Pool) {
       }
       const steinerMeasurements = [
         // name, type, p1, p2, p3, p4, quadrant, unit, order
-        ["SNA",        "angle",      "N",   "S",    "A",    null,   null,  "degrees", 0],
-        ["SNB",        "angle",      "N",   "S",    "B",    null,   null,  "degrees", 1],
-        ["ANB",        "angle",      "N",   "A",    "B",    null,   null,  "degrees", 2],
-        ["GoGn-SN",    "line_angle", "Go",  "Gn",   "S",    "N",    null,  "degrees", 3],
-        ["Occ-SN",     "line_angle", "OcP1","OcP2", "S",    "N",    null,  "degrees", 4],
-        ["U1-NA (mm)", "perpendicular","U1t","N",   "A",    null,   null,  "mm",      5],
-        ["U1-NA (°)",  "line_angle", "U1a", "U1t",  "N",    "A",    null,  "degrees", 6],
-        ["L1-NB (mm)", "perpendicular","L1t","N",   "B",    null,   null,  "mm",      7],
-        ["L1-NB (°)",  "line_angle", "L1a", "L1t",  "N",    "B",    null,  "degrees", 8],
-        ["Pog-NB (mm)","perpendicular","Pog","N",   "B",    null,   null,  "mm",      9],
-        ["SN-GoMe",    "line_angle", "S",   "N",    "Go",   "Me",   null,  "degrees", 10],
-        ["SN-PNS-ANS", "line_angle", "S",   "N",    "PNS",  "ANS",  null,  "degrees", 11],
+        ["SNA",        "angle",        "N",    "S",    "A",    null,   null,  "degrees", 0],
+        ["SNB",        "angle",        "N",    "S",    "B",    null,   null,  "degrees", 1],
+        ["ANB",        "angle",        "N",    "A",    "B",    null,   null,  "degrees", 2],
+        ["SND",        "angle",        "N",    "S",    "D",    null,   null,  "degrees", 3],
+        ["GoGn-SN",    "line_angle",   "Go",   "Gn",   "S",    "N",    null,  "degrees", 4],
+        ["Occ-SN",     "line_angle",   "OcP1", "OcP2", "S",    "N",    null,  "degrees", 5],
+        ["U1-NA (mm)", "perpendicular","U1t",  "N",    "A",    null,   null,  "mm",      6],
+        ["U1-NA (°)",  "line_angle",   "U1a",  "U1t",  "N",    "A",    null,  "degrees", 7],
+        ["L1-NB (mm)", "perpendicular","L1t",  "N",    "B",    null,   null,  "mm",      8],
+        ["L1-NB (°)",  "line_angle",   "L1a",  "L1t",  "N",    "B",    null,  "degrees", 9],
+        ["Pog-NB (mm)","perpendicular","Pog",  "N",    "B",    null,   null,  "mm",      10],
+        ["SN-GoMe",    "line_angle",   "S",    "N",    "Go",   "Me",   null,  "degrees", 11],
+        ["SN-PNS-ANS", "line_angle",   "S",    "N",    "PNS",  "ANS",  null,  "degrees", 12],
       ];
       for (const [name, type, p1, p2, p3, p4, quadrant, unit, order] of steinerMeasurements) {
         await pool.query(
@@ -947,7 +953,7 @@ async function seedPostgres(pool: import("pg").Pool) {
     const { rows: [ricketts] } = await pool.query<{ id: number }>(
       `INSERT INTO ceph_templates (tenant_id, name, description, locked)
        VALUES (NULL, 'Ricketts Analysis', 'Ricketts cephalometric analysis', true)
-       ON CONFLICT DO NOTHING RETURNING id`
+       RETURNING id`
     );
     if (ricketts) {
       const rickettsId = ricketts.id;
@@ -1006,7 +1012,7 @@ async function seedPostgres(pool: import("pg").Pool) {
     const { rows: [tweed] } = await pool.query<{ id: number }>(
       `INSERT INTO ceph_templates (tenant_id, name, description, locked)
        VALUES (NULL, 'Tweed Analysis', 'Tweed triangle cephalometric analysis (FMA, FMIA, IMPA)', true)
-       ON CONFLICT DO NOTHING RETURNING id`
+       RETURNING id`
     );
     if (tweed) {
       const tweedId = tweed.id;
@@ -1049,10 +1055,10 @@ async function seedPostgres(pool: import("pg").Pool) {
     }
 
     await pool.query(
-      `INSERT INTO seed_state (key, value) VALUES ('ceph_templates_v1', 'seeded')
+      `INSERT INTO seed_state (key, value) VALUES ('ceph_templates_v2', 'seeded')
        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`
     );
-    logger.info("Cephalometric system templates seeded (Steiner, Ricketts, Tweed)");
+    logger.info("Cephalometric system templates seeded (Steiner+SND, Ricketts, Tweed)");
   }
 
   logger.info("PostgreSQL seed complete (tenants + users + patients + images ensured)");

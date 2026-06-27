@@ -8,6 +8,8 @@ import {
   cephTracingsTable,
   cephTracingPointsTable,
   cephTracingResultsTable,
+  patientsTable,
+  imagesTable,
 } from "@workspace/db";
 
 const router: IRouter = Router();
@@ -49,13 +51,27 @@ function angleDeg(vertex: Pt, arm1: Pt, arm2: Pt): number {
   return Math.acos(Math.max(-1, Math.min(1, dot / mag))) * (180 / Math.PI);
 }
 
-function lineAngleDeg(a: Pt, b: Pt, c: Pt, d: Pt): number {
+function lineAngleDeg(a: Pt, b: Pt, c: Pt, d: Pt, quadrant: string | null): number {
   const v1 = { x: b.x - a.x, y: b.y - a.y };
   const v2 = { x: d.x - c.x, y: d.y - c.y };
   const dot = v1.x * v2.x + v1.y * v2.y;
   const mag = Math.hypot(v1.x, v1.y) * Math.hypot(v2.x, v2.y);
   if (mag === 0) return 0;
-  return Math.acos(Math.max(-1, Math.min(1, Math.abs(dot) / mag))) * (180 / Math.PI);
+  const acuteAngle = Math.acos(Math.max(-1, Math.min(1, Math.abs(dot) / mag))) * (180 / Math.PI);
+  if (!quadrant) return acuteAngle;
+  // Compute which quadrant the acute-angle bisector falls in (screen coords: y increases downward).
+  // Flip u2 when dot < 0 so the bisector always points toward the interior of the acute angle.
+  const m1 = Math.hypot(v1.x, v1.y);
+  const m2 = Math.hypot(v2.x, v2.y);
+  const u1 = { x: v1.x / m1, y: v1.y / m1 };
+  const flip = dot < 0;
+  const u2 = { x: flip ? -v2.x / m2 : v2.x / m2, y: flip ? -v2.y / m2 : v2.y / m2 };
+  const bis = { x: u1.x + u2.x, y: u1.y + u2.y };
+  const bisIsUpper = bis.y <= 0;
+  const bisIsRight = bis.x >= 0;
+  const wantUpper = quadrant.startsWith("upper");
+  const wantRight = quadrant.endsWith("right");
+  return (bisIsUpper === wantUpper && bisIsRight === wantRight) ? acuteAngle : 180 - acuteAngle;
 }
 
 function perpendicularMm(p: Pt, a: Pt, b: Pt, pxPerMm: number): number {
@@ -66,7 +82,7 @@ function perpendicularMm(p: Pt, a: Pt, b: Pt, pxPerMm: number): number {
 }
 
 function computeMeasurement(
-  m: { type: string; p1Label: string; p2Label: string; p3Label: string | null; p4Label: string | null; unit: string },
+  m: { type: string; p1Label: string; p2Label: string; p3Label: string | null; p4Label: string | null; angleQuadrant: string | null; unit: string },
   pts: Map<string, Pt>,
   pxPerMm: number,
 ): number | null {
@@ -83,7 +99,7 @@ function computeMeasurement(
     case "perpendicular":
       return p3 ? perpendicularMm(p1, p2, p3, pxPerMm) : null;
     case "line_angle":
-      return p3 && p4 ? lineAngleDeg(p1, p2, p3, p4) : null;
+      return p3 && p4 ? lineAngleDeg(p1, p2, p3, p4, m.angleQuadrant) : null;
     default:
       return null;
   }
@@ -418,11 +434,41 @@ router.post("/ceph/tracings", async (req, res): Promise<void> => {
     const userId = req.session?.userId as number | undefined;
     const { patientId, imageId, templateId, templateName, pxPerMm, name } = req.body as Record<string, any>;
     if (!patientId) { res.status(400).json({ error: "patientId is required" }); return; }
+    const parsedPatientId = parseInt(patientId, 10);
+    const parsedImageId = imageId ? parseInt(imageId, 10) : null;
+    const parsedTemplateId = templateId ? parseInt(templateId, 10) : null;
+    if (isNaN(parsedPatientId)) { res.status(400).json({ error: "Invalid patientId" }); return; }
+
+    // Verify patient belongs to caller's tenant
+    const [patient] = await db.select({ id: patientsTable.id })
+      .from(patientsTable)
+      .where(and(eq(patientsTable.id, parsedPatientId), eq(patientsTable.tenantId, tenantId)));
+    if (!patient) { res.status(403).json({ error: "Patient not found in your organization" }); return; }
+
+    // Verify image belongs to this patient (if provided)
+    if (parsedImageId !== null) {
+      const [img] = await db.select({ id: imagesTable.id })
+        .from(imagesTable)
+        .where(and(eq(imagesTable.id, parsedImageId), eq(imagesTable.patientId, parsedPatientId)));
+      if (!img) { res.status(403).json({ error: "Image does not belong to this patient" }); return; }
+    }
+
+    // Verify template is accessible: system (tenantId IS NULL) or owned by caller's tenant
+    if (parsedTemplateId !== null) {
+      const [tmpl] = await db.select({ id: cephTemplatesTable.id })
+        .from(cephTemplatesTable)
+        .where(and(
+          eq(cephTemplatesTable.id, parsedTemplateId),
+          or(isNull(cephTemplatesTable.tenantId), eq(cephTemplatesTable.tenantId, tenantId))
+        ));
+      if (!tmpl) { res.status(403).json({ error: "Template not accessible" }); return; }
+    }
+
     const [tracing] = await db.insert(cephTracingsTable).values({
       tenantId,
-      patientId: parseInt(patientId, 10),
-      imageId: imageId ? parseInt(imageId, 10) : null,
-      templateId: templateId ? parseInt(templateId, 10) : null,
+      patientId: parsedPatientId,
+      imageId: parsedImageId,
+      templateId: parsedTemplateId,
       templateName: templateName ?? null,
       pxPerMm: pxPerMm ? String(pxPerMm) : null,
       name: name ?? null,
