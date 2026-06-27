@@ -837,10 +837,10 @@ export default function CephalometricsTrace() {
                         <Badge variant="outline" className="font-mono text-xs px-1.5">
                           {nextLandmark.label}
                         </Badge>
-                        <span className="font-medium text-sm">{nextLandmark.name}</span>
+                        <span className="font-medium text-sm">{t(`ceph.lm.${nextLandmark.name}.name` as any, nextLandmark.name)}</span>
                       </div>
                       {nextLandmark.description && (
-                        <p className="text-xs text-muted-foreground mt-1">{nextLandmark.description}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{t(`ceph.lm.${nextLandmark.name}.desc` as any, nextLandmark.description)}</p>
                       )}
                     </div>
                   ) : (
@@ -878,7 +878,7 @@ export default function CephalometricsTrace() {
                           )}
                         >
                           <span className="font-mono w-6 shrink-0">{lm.label}</span>
-                          <span className="truncate flex-1">{lm.name}</span>
+                          <span className="truncate flex-1">{t(`ceph.lm.${lm.name}.name` as any, lm.name)}</span>
                           {isPlaced && placedPt && (
                             <span className="font-mono text-[10px] text-muted-foreground/50 shrink-0">
                               {Math.round(placedPt.x)},{Math.round(placedPt.y)}
@@ -930,7 +930,7 @@ export default function CephalometricsTrace() {
                         <tbody>
                           {results.map((r) => (
                             <tr key={r.id} className="border-b last:border-0 hover:bg-muted/30">
-                              <td className="px-2 py-1.5">{r.measurementName}</td>
+                              <td className="px-2 py-1.5">{t(`ceph.meas.${r.measurementName}` as any, r.measurementName)}</td>
                               <td className="px-2 py-1.5 text-right font-mono">
                                 {r.value !== null
                                   ? `${parseFloat(r.value).toFixed(2)} ${r.unit}`
@@ -1030,7 +1030,7 @@ export default function CephalometricsTrace() {
                   <div className="min-w-0 flex-1">
                     <div className="font-medium truncate">{tmpl.name}</div>
                     {tmpl.description && (
-                      <div className="text-xs text-muted-foreground truncate mt-0.5">{tmpl.description}</div>
+                      <div className="text-xs text-muted-foreground truncate mt-0.5">{t(`ceph.tmpl.${tmpl.name.split(" ")[0].toLowerCase()}.desc` as any, tmpl.description)}</div>
                     )}
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-xs text-muted-foreground">

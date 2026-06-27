@@ -101,7 +101,7 @@ export default function Cephalometrics() {
           </div>
           {tmpl.description && (
             <CardDescription className="text-xs line-clamp-2 mt-1">
-              {tmpl.description}
+              {t(`ceph.tmpl.${tmpl.name.split(" ")[0].toLowerCase()}.desc` as any, tmpl.description)}
             </CardDescription>
           )}
           {(tmpl.landmarkCount !== undefined || tmpl.measurementCount !== undefined) && (

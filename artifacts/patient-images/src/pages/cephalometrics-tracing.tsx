@@ -464,7 +464,7 @@ export default function CephalometricsTracing() {
                       <Badge variant="outline" className="font-mono text-xs px-1 py-0">
                         {p.label}
                       </Badge>
-                      <span className="text-muted-foreground truncate flex-1">{p.name ?? p.label}</span>
+                      <span className="text-muted-foreground truncate flex-1">{t(`ceph.lm.${p.name ?? ""}.name` as any, p.name ?? p.label)}</span>
                       <span className="font-mono text-[10px] text-muted-foreground/50 shrink-0">
                         {Math.round(p.x)},{Math.round(p.y)}
                       </span>
@@ -495,7 +495,7 @@ export default function CephalometricsTracing() {
                     <tbody>
                       {tracing.results.map((r) => (
                         <tr key={r.id} className="border-b last:border-0 hover:bg-muted/30">
-                          <td className="px-2 py-1.5">{r.measurementName}</td>
+                          <td className="px-2 py-1.5">{t(`ceph.meas.${r.measurementName}` as any, r.measurementName)}</td>
                           <td className="px-2 py-1.5 text-right font-mono">
                             {r.value !== null
                               ? `${parseFloat(r.value).toFixed(2)} ${r.unit}`
