@@ -22,6 +22,8 @@ import ImageLibrary from "@/pages/image-library";
 import Templates from "@/pages/templates";
 import TemplateDesigner from "@/pages/template-designer";
 import TemplateDocumentPage from "@/pages/template-document";
+import Cephalometrics from "@/pages/cephalometrics";
+import CephalometricsEditor from "@/pages/cephalometrics-editor";
 
 function NotAuthorized() {
   return (
@@ -59,6 +61,8 @@ function Router() {
         <Route path="/templates" component={Templates} />
         <Route path="/templates/:id" component={TemplateDesigner} />
         <Route path="/template-documents/:id" component={TemplateDocumentPage} />
+        <Route path="/cephalometrics" component={Cephalometrics} />
+        <Route path="/cephalometrics/templates/:id/edit" component={CephalometricsEditor} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>

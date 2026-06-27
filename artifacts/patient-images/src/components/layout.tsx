@@ -15,6 +15,7 @@ import {
   Library,
   Tags,
   ClipboardList,
+  BrainCircuit,
 } from "lucide-react";
 import {
   Sidebar,
@@ -99,6 +100,25 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>{t("nav.clinicalTools")}</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location.startsWith("/cephalometrics")}
+                >
+                  <Link href="/cephalometrics">
+                    <BrainCircuit />
+                    <span>{t("nav.cephalometrics")}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
