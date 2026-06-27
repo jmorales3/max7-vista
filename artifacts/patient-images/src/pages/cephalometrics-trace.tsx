@@ -78,7 +78,7 @@ interface MeasurementResult {
 
 type Step = "setup" | "calibrate" | "landmarks" | "results";
 
-const LM_RADIUS = 7;
+const LM_RADIUS = 4;
 const HIT_RADIUS = 18;
 const CAL_COLOR = "#f59e0b";
 const LM_COLOR = "#3b82f6";
@@ -142,23 +142,16 @@ function drawLandmarks(
     const color = isDrag ? LM_ACTIVE_COLOR : isActive ? LM_PLACED_COLOR : LM_PLACED_COLOR;
 
     const r = LM_RADIUS / scale;
-    const fs = 11 / scale;
     const lw = 1.5 / scale;
 
     ctx.save();
     ctx.beginPath();
     ctx.arc(pt.x, pt.y, r, 0, 2 * Math.PI);
-    ctx.fillStyle = color + "cc";
+    ctx.fillStyle = color;
     ctx.fill();
     ctx.strokeStyle = isDrag ? LM_ACTIVE_COLOR : "#fff";
     ctx.lineWidth = lw;
     ctx.stroke();
-
-    ctx.font = `bold ${fs}px sans-serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = "#fff";
-    ctx.fillText(pt.label, pt.x, pt.y);
     ctx.restore();
   }
 }
