@@ -18,6 +18,7 @@ import localFileRouter from "./localFile";
 import templatesRouter from "./templates";
 import libraryRouter from "./library";
 import userPatientAccessRouter from "./user-patient-access";
+import cephRouter from "./ceph";
 
 const router: IRouter = Router();
 
@@ -40,5 +41,6 @@ router.use(localFileRouter);
 router.use(templatesRouter);
 router.use(libraryRouter);
 router.use(userPatientAccessRouter);
+router.use(cephRouter);
 
 export default router;

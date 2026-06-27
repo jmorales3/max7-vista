@@ -23,7 +23,8 @@ type SectionKey =
   | "tenants"
   | "templates"
   | "auditLog"
-  | "sessionTimeout";
+  | "sessionTimeout"
+  | "cephalometrics";
 
 const SECTIONS: SectionKey[] = [
   "overview",
@@ -44,6 +45,7 @@ const SECTIONS: SectionKey[] = [
   "templates",
   "auditLog",
   "sessionTimeout",
+  "cephalometrics",
 ];
 
 export default function Manual() {

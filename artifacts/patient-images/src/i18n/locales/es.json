@@ -503,7 +503,8 @@
       "exportImages": "Exportación de imágenes",
       "auditLog": "Registro de Auditoría",
       "sessionTimeout": "Tiempo de Espera de Sesión",
-      "patientAccess": "Acceso por Paciente"
+      "patientAccess": "Acceso por Paciente",
+      "cephalometrics": "Análisis Cefalométrico"
     },
     "overview": {
       "heading": "¿Qué es Max7 Vista?",
@@ -580,6 +581,10 @@
     "patientAccess": {
       "heading": "Control de Acceso por Paciente",
       "body": "Los administradores pueden restringir a los usuarios regulares a un conjunto específico de pacientes. En Administración → Gestión de Usuarios, haga clic en el botón 'Acceso' junto a cualquier usuario con rol 'Usuario'. Un diálogo muestra todos los pacientes — marque los que ese usuario debe ver. Dejar todas las casillas sin marcar otorga acceso a todos los pacientes (sin restricción). Los administradores y superadministradores siempre tienen acceso completo. La restricción aplica a la lista de pacientes, vista de detalle, galería, captura, documentos y todas las vistas específicas del paciente. Los cambios surten efecto de inmediato."
+    },
+    "cephalometrics": {
+      "heading": "Análisis Cefalométrico",
+      "body": "El módulo de Cefalometría permite el trazado de puntos cefalométricos y la medición automatizada sobre radiografías laterales de cráneo. Tres plantillas de sistema de solo lectura están disponibles: Análisis de Steiner (SNA, SNB, ANB, GoGn-SN, Occ-SN, U1-NA, L1-NB, Pog-NB), Análisis de Ricketts (eje facial, profundidad facial, plano mandibular, altura facial inferior, arco mandibular, convexidad, A-NPo, L1-APo, U1-APo) y Análisis de Tweed (FMA, FMIA, IMPA). Los administradores pueden crear plantillas personalizadas y copiar plantillas del sistema para modificarlas. Para realizar un trazado: abra un paciente, seleccione una radiografía lateral, elija una plantilla cefalométrica y coloque cada punto anatómico haciendo clic sobre la radiografía. Configure la escala px/mm midiendo una estructura conocida y haga clic en Calcular para obtener las medidas automáticamente. Los resultados se guardan con el trazado."
     }
   },
   "bulkImport": {

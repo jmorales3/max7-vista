@@ -503,7 +503,8 @@
       "exportImages": "Exportação de imagens",
       "auditLog": "Registro de Auditoria",
       "sessionTimeout": "Tempo Limite de Inatividade",
-      "patientAccess": "Acesso por Paciente"
+      "patientAccess": "Acesso por Paciente",
+      "cephalometrics": "Análise Cefalométrica"
     },
     "overview": {
       "heading": "O que é o Max7 Vista?",
@@ -580,6 +581,10 @@
     "patientAccess": {
       "heading": "Controle de Acesso por Paciente",
       "body": "Administradores podem restringir usuários regulares a um conjunto específico de pacientes. Em Administração → Gestão de Usuários, clique no botão 'Acesso' ao lado de qualquer usuário com função 'Usuário'. Um diálogo lista todos os pacientes — marque os que esse usuário deve ver. Deixar todas as caixas desmarcadas concede acesso a todos os pacientes (sem restrição). Administradores e Super Administradores sempre têm acesso irrestrito. A restrição se aplica à lista de pacientes, detalhes, galeria, captura, documentos e todas as visualizações específicas do paciente. As alterações têm efeito imediato."
+    },
+    "cephalometrics": {
+      "heading": "Análise Cefalométrica",
+      "body": "O módulo de Cefalometria permite o traçado de pontos cefalométricos e a medição automatizada em telerradiografias laterais. Três modelos de sistema somente leitura estão disponíveis: Análise de Steiner (SNA, SNB, ANB, GoGn-SN, Occ-SN, U1-NA, L1-NB, Pog-NB), Análise de Ricketts (eixo facial, profundidade facial, plano mandibular, altura facial inferior, arco mandibular, convexidade, A-NPo, L1-APo, U1-APo) e Análise de Tweed (FMA, FMIA, IMPA). Administradores podem criar modelos personalizados e copiar modelos do sistema para modificá-los. Para realizar um traçado: abra um paciente, selecione uma telerradiografia lateral, escolha um modelo cefalométrico e posicione cada ponto anatômico clicando sobre a radiografia. Configure a escala px/mm medindo uma estrutura conhecida e clique em Calcular para obter as medidas automaticamente. Os resultados são salvos com o traçado."
     }
   },
   "bulkImport": {

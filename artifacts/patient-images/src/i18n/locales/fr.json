@@ -503,7 +503,8 @@
       "exportImages": "Export d’images",
       "auditLog": "Journal d'Audit",
       "sessionTimeout": "Délai d'Inactivité",
-      "patientAccess": "Accès par Patient"
+      "patientAccess": "Accès par Patient",
+      "cephalometrics": "Analyse Céphalométrique"
     },
     "overview": {
       "heading": "Qu'est-ce que Max7 Vista ?",
@@ -580,6 +581,10 @@
     "patientAccess": {
       "heading": "Contrôle d'Accès par Patient",
       "body": "Les administrateurs peuvent restreindre les utilisateurs ordinaires à un ensemble spécifique de patients. Dans Administration → Gestion des Utilisateurs, cliquez sur le bouton 'Accès' à côté de tout utilisateur avec le rôle 'Utilisateur'. Un dialogue liste tous les patients — cochez ceux que cet utilisateur doit voir. Laisser toutes les cases décochées accorde l'accès à tous les patients (sans restriction). Les administrateurs et super administrateurs sont toujours sans restriction. La restriction s'applique à la liste des patients, à la vue détaillée, à la galerie, à la capture, aux documents et à toutes les vues spécifiques aux patients. Les modifications prennent effet immédiatement."
+    },
+    "cephalometrics": {
+      "heading": "Analyse Céphalométrique",
+      "body": "Le module de Céphалométrie permet le tracé de points céphalométriques et la mesure automatisée sur des téléradiographies de profil. Trois modèles système en lecture seule sont disponibles : Analyse de Steiner (SNA, SNB, ANB, GoGn-SN, Occ-SN, U1-NA, L1-NB, Pog-NB), Analyse de Ricketts (axe facial, profondeur faciale, plan mandibulaire, hauteur faciale inférieure, arc mandibulaire, convexité, A-NPo, L1-APo, U1-APo) et Analyse de Tweed (FMA, FMIA, IMPA). Les administrateurs peuvent créer des modèles personnalisés et copier les modèles système pour les modifier. Pour effectuer un tracé : ouvrez un patient, sélectionnez une téléradiographie, choisissez un modèle céphalométrique et placez chaque point anatomique en cliquant sur la radiographie. Configurez l'échelle px/mm en mesurant une structure connue, puis cliquez sur Calculer pour obtenir les mesures automatiquement. Les résultats sont enregistrés avec le tracé."
     }
   },
   "bulkImport": {

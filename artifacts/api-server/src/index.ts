@@ -338,6 +338,69 @@ async function initPostgres() {
       user_agent TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS ceph_templates (
+      id SERIAL PRIMARY KEY,
+      tenant_id INTEGER REFERENCES tenants(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      description TEXT,
+      locked BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS ceph_landmarks (
+      id SERIAL PRIMARY KEY,
+      template_id INTEGER NOT NULL REFERENCES ceph_templates(id) ON DELETE CASCADE,
+      label TEXT NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      display_order INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS ceph_measurements (
+      id SERIAL PRIMARY KEY,
+      template_id INTEGER NOT NULL REFERENCES ceph_templates(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      p1_label TEXT NOT NULL,
+      p2_label TEXT NOT NULL,
+      p3_label TEXT,
+      p4_label TEXT,
+      angle_quadrant TEXT,
+      unit TEXT NOT NULL,
+      display_order INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS ceph_tracings (
+      id SERIAL PRIMARY KEY,
+      tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      patient_id INTEGER NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+      image_id INTEGER,
+      template_id INTEGER,
+      template_name TEXT,
+      px_per_mm NUMERIC,
+      name TEXT,
+      created_by INTEGER,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS ceph_tracing_points (
+      id SERIAL PRIMARY KEY,
+      tracing_id INTEGER NOT NULL REFERENCES ceph_tracings(id) ON DELETE CASCADE,
+      landmark_label TEXT NOT NULL,
+      x NUMERIC NOT NULL,
+      y NUMERIC NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS ceph_tracing_results (
+      id SERIAL PRIMARY KEY,
+      tracing_id INTEGER NOT NULL REFERENCES ceph_tracings(id) ON DELETE CASCADE,
+      measurement_name TEXT NOT NULL,
+      value NUMERIC,
+      unit TEXT NOT NULL
+    );
   `);
   logger.info("PostgreSQL tables ensured");
 
@@ -815,6 +878,182 @@ async function seedPostgres(pool: import("pg").Pool) {
      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
     [IMAGE_SEED_VERSION]
   );
+
+  // Seed cephalometric system templates (Steiner, Ricketts, Tweed)
+  const { rows: cephSeedRows } = await pool.query<{ value: string }>(
+    `SELECT value FROM seed_state WHERE key = 'ceph_templates_v1'`
+  );
+  if (!cephSeedRows[0]) {
+    // ── Steiner Analysis ─────────────────────────────────────────────────────
+    const { rows: [steiner] } = await pool.query<{ id: number }>(
+      `INSERT INTO ceph_templates (tenant_id, name, description, locked)
+       VALUES (NULL, 'Steiner Analysis', 'Classic Steiner cephalometric analysis (1953)', true)
+       ON CONFLICT DO NOTHING RETURNING id`
+    );
+    if (steiner) {
+      const steinerId = steiner.id;
+      const steinerLandmarks = [
+        ["S",    "Sella",                   "Center of sella turcica",                              0],
+        ["N",    "Nasion",                  "Fronto-nasal suture, most anterior point",             1],
+        ["Or",   "Orbitale",               "Lowest point of orbital floor",                        2],
+        ["Po",   "Porion",                 "Most superior point of external auditory meatus",      3],
+        ["ANS",  "Anterior Nasal Spine",   "Tip of anterior nasal spine",                         4],
+        ["PNS",  "Posterior Nasal Spine",  "Tip of posterior nasal spine",                        5],
+        ["A",    "Point A",                "Deepest point on anterior maxilla (Subspinale)",       6],
+        ["B",    "Point B",                "Deepest point on anterior mandible (Supramentale)",    7],
+        ["Pog",  "Pogonion",              "Most anterior point of chin",                           8],
+        ["Gn",   "Gnathion",              "Most antero-inferior point of chin",                    9],
+        ["Me",   "Menton",                "Most inferior point of mandibular symphysis",           10],
+        ["Go",   "Gonion",                "Most postero-inferior angle of mandible",               11],
+        ["Ar",   "Articulare",            "Junction of posterior cranial base and condylar neck",  12],
+        ["U1t",  "U1 Tip",               "Tip of most prominent upper central incisor",           13],
+        ["U1a",  "U1 Apex",              "Root apex of most prominent upper central incisor",      14],
+        ["L1t",  "L1 Tip",               "Tip of most prominent lower central incisor",            15],
+        ["L1a",  "L1 Apex",              "Root apex of most prominent lower central incisor",      16],
+        ["OcP1", "Occlusal Plane Pt 1",  "Point on occlusal plane (premolar region)",             17],
+        ["OcP2", "Occlusal Plane Pt 2",  "Point on occlusal plane (molar region)",                18],
+      ];
+      for (const [label, name, description, order] of steinerLandmarks) {
+        await pool.query(
+          `INSERT INTO ceph_landmarks (template_id, label, name, description, display_order) VALUES ($1,$2,$3,$4,$5)`,
+          [steinerId, label, name, description, order]
+        );
+      }
+      const steinerMeasurements = [
+        // name, type, p1, p2, p3, p4, quadrant, unit, order
+        ["SNA",        "angle",      "N",   "S",    "A",    null,   null,  "degrees", 0],
+        ["SNB",        "angle",      "N",   "S",    "B",    null,   null,  "degrees", 1],
+        ["ANB",        "angle",      "N",   "A",    "B",    null,   null,  "degrees", 2],
+        ["GoGn-SN",    "line_angle", "Go",  "Gn",   "S",    "N",    null,  "degrees", 3],
+        ["Occ-SN",     "line_angle", "OcP1","OcP2", "S",    "N",    null,  "degrees", 4],
+        ["U1-NA (mm)", "perpendicular","U1t","N",   "A",    null,   null,  "mm",      5],
+        ["U1-NA (°)",  "line_angle", "U1a", "U1t",  "N",    "A",    null,  "degrees", 6],
+        ["L1-NB (mm)", "perpendicular","L1t","N",   "B",    null,   null,  "mm",      7],
+        ["L1-NB (°)",  "line_angle", "L1a", "L1t",  "N",    "B",    null,  "degrees", 8],
+        ["Pog-NB (mm)","perpendicular","Pog","N",   "B",    null,   null,  "mm",      9],
+        ["SN-GoMe",    "line_angle", "S",   "N",    "Go",   "Me",   null,  "degrees", 10],
+        ["SN-PNS-ANS", "line_angle", "S",   "N",    "PNS",  "ANS",  null,  "degrees", 11],
+      ];
+      for (const [name, type, p1, p2, p3, p4, quadrant, unit, order] of steinerMeasurements) {
+        await pool.query(
+          `INSERT INTO ceph_measurements (template_id, name, type, p1_label, p2_label, p3_label, p4_label, angle_quadrant, unit, display_order)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+          [steinerId, name, type, p1, p2, p3, p4, quadrant, unit, order]
+        );
+      }
+    }
+
+    // ── Ricketts Analysis ─────────────────────────────────────────────────────
+    const { rows: [ricketts] } = await pool.query<{ id: number }>(
+      `INSERT INTO ceph_templates (tenant_id, name, description, locked)
+       VALUES (NULL, 'Ricketts Analysis', 'Ricketts cephalometric analysis', true)
+       ON CONFLICT DO NOTHING RETURNING id`
+    );
+    if (ricketts) {
+      const rickettsId = ricketts.id;
+      const rickettsLandmarks = [
+        ["S",   "Sella",                  "Center of sella turcica",                             0],
+        ["N",   "Nasion",                 "Fronto-nasal suture, most anterior point",            1],
+        ["A",   "Point A",               "Deepest point on anterior maxilla",                    2],
+        ["B",   "Point B",               "Deepest point on anterior mandible",                   3],
+        ["Po",  "Pogonion",             "Most anterior point of chin",                            4],
+        ["Me",  "Menton",               "Most inferior point of mandibular symphysis",            5],
+        ["Go",  "Gonion",               "Most postero-inferior angle of mandible",                6],
+        ["Cf",  "Condylion (Cf)",       "Center of condylar head",                               7],
+        ["DC",  "Condyle Center (DC)",  "Center of condylar head on Ba-N line",                  8],
+        ["Xi",  "Xi Point",            "Geometric center of mandibular ramus",                    9],
+        ["ANS", "Anterior Nasal Spine", "Tip of anterior nasal spine",                          10],
+        ["Pr",  "Pronasal",            "Tip of the nose",                                        11],
+        ["Id",  "Infradentale",        "Most anterior-superior point of mandibular alveolus",   12],
+        ["Pm",  "Protuberance Menti",  "Junction of mandibular symphysis with chin",            13],
+        ["Or",  "Orbitale",           "Lowest point of orbital floor",                           14],
+        ["Ptm","Pterygomaxillary",    "Most posterior-superior point of PTM fissure",            15],
+        ["U1t","U1 Tip",             "Tip of upper central incisor",                             16],
+        ["U1a","U1 Apex",            "Apex of upper central incisor",                            17],
+        ["L1t","L1 Tip",             "Tip of lower central incisor",                             18],
+        ["L1a","L1 Apex",            "Apex of lower central incisor",                            19],
+        ["Ba", "Basion",             "Most inferior posterior point of occipital bone",          20],
+      ];
+      for (const [label, name, description, order] of rickettsLandmarks) {
+        await pool.query(
+          `INSERT INTO ceph_landmarks (template_id, label, name, description, display_order) VALUES ($1,$2,$3,$4,$5)`,
+          [rickettsId, label, name, description, order]
+        );
+      }
+      const rickettsMeasurements = [
+        ["Facial Axis",        "line_angle",    "Cf",  "Gn",  "Ba",  "N",   null,  "degrees", 0],
+        ["Facial Depth",       "angle",         "N",   "Po",  "Me",  null,  null,  "degrees", 1],
+        ["Mandibular Plane",   "line_angle",    "Go",  "Me",  "Or",  "Cf",  null,  "degrees", 2],
+        ["Lower Facial Height","line_angle",    "ANS", "Xi",  "Xi",  "Pm",  null,  "degrees", 3],
+        ["Mandibular Arc",     "line_angle",    "DC",  "Xi",  "Xi",  "Pm",  null,  "degrees", 4],
+        ["Convexity (A-NPo)",  "perpendicular", "A",   "N",   "Po",  null,  null,  "mm",      5],
+        ["A-NPo",              "perpendicular", "A",   "N",   "Po",  null,  null,  "mm",      6],
+        ["L1-APo (mm)",        "perpendicular", "L1t", "A",   "Po",  null,  null,  "mm",      7],
+        ["L1-APo (°)",         "line_angle",    "L1a", "L1t", "A",   "Po",  null,  "degrees", 8],
+        ["U1-APo (mm)",        "perpendicular", "U1t", "A",   "Po",  null,  null,  "mm",      9],
+        ["U1-APo (°)",         "line_angle",    "U1a", "U1t", "A",   "Po",  null,  "degrees", 10],
+      ];
+      for (const [name, type, p1, p2, p3, p4, quadrant, unit, order] of rickettsMeasurements) {
+        await pool.query(
+          `INSERT INTO ceph_measurements (template_id, name, type, p1_label, p2_label, p3_label, p4_label, angle_quadrant, unit, display_order)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+          [rickettsId, name, type, p1, p2, p3, p4, quadrant, unit, order]
+        );
+      }
+    }
+
+    // ── Tweed Analysis ────────────────────────────────────────────────────────
+    const { rows: [tweed] } = await pool.query<{ id: number }>(
+      `INSERT INTO ceph_templates (tenant_id, name, description, locked)
+       VALUES (NULL, 'Tweed Analysis', 'Tweed triangle cephalometric analysis (FMA, FMIA, IMPA)', true)
+       ON CONFLICT DO NOTHING RETURNING id`
+    );
+    if (tweed) {
+      const tweedId = tweed.id;
+      const tweedLandmarks = [
+        ["N",    "Nasion",             "Fronto-nasal suture, most anterior point",            0],
+        ["Or",   "Orbitale",          "Lowest point of orbital floor",                        1],
+        ["Po",   "Porion",            "Most superior point of external auditory meatus",      2],
+        ["ANS",  "Anterior Nasal Spine","Tip of anterior nasal spine",                       3],
+        ["A",    "Point A",           "Deepest point on anterior maxilla",                    4],
+        ["Me",   "Menton",            "Most inferior point of mandibular symphysis",          5],
+        ["B",    "Point B",           "Deepest point on anterior mandible",                   6],
+        ["Go",   "Gonion",            "Most postero-inferior angle of mandible",              7],
+        ["Gn",   "Gnathion",         "Most antero-inferior point of chin",                    8],
+        ["U1t",  "U1 Tip",           "Tip of upper central incisor",                         9],
+        ["U1a",  "U1 Apex",          "Apex of upper central incisor",                        10],
+        ["L1t",  "L1 Tip",           "Tip of lower central incisor",                         11],
+        ["L1a",  "L1 Apex",          "Apex of lower central incisor",                        12],
+      ];
+      for (const [label, name, description, order] of tweedLandmarks) {
+        await pool.query(
+          `INSERT INTO ceph_landmarks (template_id, label, name, description, display_order) VALUES ($1,$2,$3,$4,$5)`,
+          [tweedId, label, name, description, order]
+        );
+      }
+      const tweedMeasurements = [
+        // FMA: angle between Frankfort Horizontal (Or-Po) and Mandibular Plane (Go-Me)
+        ["FMA (Frankfort-Mandibular)",  "line_angle", "Or",  "Po",  "Go",  "Me",  null, "degrees", 0],
+        // FMIA: angle between Frankfort Horizontal (Or-Po) and lower incisor axis (L1a-L1t)
+        ["FMIA (Frankfort-L1 Axis)",   "line_angle", "Or",  "Po",  "L1a", "L1t", null, "degrees", 1],
+        // IMPA: angle between lower incisor axis (L1a-L1t) and Mandibular Plane (Go-Me)
+        ["IMPA (L1-Mandibular Plane)", "line_angle", "L1a", "L1t", "Go",  "Me",  null, "degrees", 2],
+      ];
+      for (const [name, type, p1, p2, p3, p4, quadrant, unit, order] of tweedMeasurements) {
+        await pool.query(
+          `INSERT INTO ceph_measurements (template_id, name, type, p1_label, p2_label, p3_label, p4_label, angle_quadrant, unit, display_order)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+          [tweedId, name, type, p1, p2, p3, p4, quadrant, unit, order]
+        );
+      }
+    }
+
+    await pool.query(
+      `INSERT INTO seed_state (key, value) VALUES ('ceph_templates_v1', 'seeded')
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`
+    );
+    logger.info("Cephalometric system templates seeded (Steiner, Ricketts, Tweed)");
+  }
 
   logger.info("PostgreSQL seed complete (tenants + users + patients + images ensured)");
 }
