@@ -57,6 +57,8 @@ import {
   LayoutTemplate,
   ExternalLink,
   Download,
+  Brain,
+  ChevronRight,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -87,6 +89,17 @@ interface TemplateItem {
   officeName?: string | null;
 }
 
+interface CephTracingItem {
+  id: number;
+  patientId: number;
+  imageId: number | null;
+  templateId: number | null;
+  templateName: string | null;
+  pxPerMm: string | null;
+  name: string | null;
+  createdAt: string;
+}
+
 export default function PatientDetail() {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -106,6 +119,8 @@ export default function PatientDetail() {
   const [exportOpen, setExportOpen] = useState(false);
   const [selectedExportIds, setSelectedExportIds] = useState<Set<number>>(new Set());
   const [exporting, setExporting] = useState(false);
+  const [cephNewOpen, setCephNewOpen] = useState(false);
+  const [deleteCephId, setDeleteCephId] = useState<number | null>(null);
 
   const openExportDialog = () => {
     setSelectedExportIds(new Set((images ?? []).map((img) => img.id)));
@@ -278,6 +293,26 @@ export default function PatientDetail() {
     onError: () => {
       toast({ variant: "destructive", title: t("patients.deleteDocError") });
       setDeleteDocId(null);
+    },
+  });
+
+  const { data: cephTracings = [] } = useQuery<CephTracingItem[]>({
+    queryKey: ["ceph-tracings-patient", id],
+    queryFn: () => customFetch<CephTracingItem[]>(`/api/ceph/tracings?patientId=${id}`),
+    enabled: !!id,
+  });
+
+  const deleteCephMutation = useMutation({
+    mutationFn: (tracingId: number) =>
+      customFetch<void>(`/api/ceph/tracings/${tracingId}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ceph-tracings-patient", id] });
+      setDeleteCephId(null);
+      toast({ title: t("ceph.tracingDeleted") });
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: t("ceph.tracingDeleteFailed") });
+      setDeleteCephId(null);
     },
   });
 
@@ -538,6 +573,78 @@ export default function PatientDetail() {
 
       <PatientDocuments patientId={patient.id} />
 
+      {/* Ceph Tracings section */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Brain className="h-5 w-5 text-primary" />
+            {t("ceph.tracings")}
+            {cephTracings.length > 0 && (
+              <span className="text-sm font-normal text-muted-foreground px-2 py-0.5 bg-muted rounded-full">
+                {cephTracings.length}
+              </span>
+            )}
+          </h2>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCephNewOpen(true)}
+            disabled={(images ?? []).length === 0}
+          >
+            <Plus className="mr-2 h-3.5 w-3.5" />
+            {t("ceph.newTracing")}
+          </Button>
+        </div>
+
+        {cephTracings.length === 0 ? (
+          <div className="rounded-lg border border-dashed p-6 text-center">
+            <Brain className="mx-auto h-8 w-8 text-muted-foreground/40 mb-2" />
+            <p className="text-sm font-medium text-muted-foreground">{t("ceph.noTracings")}</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">{t("ceph.noTracingsDesc")}</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {cephTracings.map((tr) => (
+              <div
+                key={tr.id}
+                className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 hover:bg-accent hover:border-primary/40 transition-colors group"
+              >
+                <Brain className="h-5 w-5 shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm truncate">
+                    {tr.templateName ?? t("ceph.title")}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {format(new Date(tr.createdAt), "MMM d, yyyy · HH:mm")}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    asChild
+                  >
+                    <Link href={`/cephalometrics/tracings/${tr.id}`}>
+                      {t("ceph.viewTracing")}
+                      <ChevronRight className="h-3 w-3" />
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => setDeleteCephId(tr.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <Dialog open={templateDocOpen} onOpenChange={(o) => { if (!o) { setTemplateDocOpen(false); setPendingTemplate(null); setDocName(""); } }}>
         <DialogContent className="max-w-md">
           {!pendingTemplate ? (
@@ -727,6 +834,68 @@ export default function PatientDetail() {
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => { if (deleteDocId !== null) deleteDocMutation.mutate(deleteDocId); }}
+            >
+              {t("common.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* New Tracing — image picker */}
+      <Dialog open={cephNewOpen} onOpenChange={(o) => { if (!o) setCephNewOpen(false); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5 text-primary" />
+              {t("ceph.selectImageForTracing")}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{t("ceph.selectImageForTracingDesc")}</p>
+          {(images ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">{t("ceph.noImagesForTracing")}</p>
+          ) : (
+            <div className="space-y-1 max-h-64 overflow-y-auto border rounded-md p-2 bg-muted/30">
+              {(images ?? []).map((img) => (
+                <button
+                  key={img.id}
+                  className="w-full flex items-center gap-3 px-2 py-1.5 rounded text-sm text-left hover:bg-accent transition-colors"
+                  onClick={() => { setCephNewOpen(false); setLocation(`/cephalometrics/trace/${img.id}`); }}
+                >
+                  <div className="h-8 w-8 rounded overflow-hidden shrink-0 bg-muted">
+                    <img
+                      src={`/api/images/${img.id}/file`}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <span className="flex-1 truncate">{img.fileName}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    {format(new Date(img.capturedAt), "MMM d, yyyy")}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCephNewOpen(false)}>
+              {t("common.cancel")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Ceph Tracing */}
+      <AlertDialog open={deleteCephId !== null} onOpenChange={(open) => { if (!open) setDeleteCephId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("ceph.trace.deleteTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("ceph.trace.deleteDesc")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => { if (deleteCephId !== null) deleteCephMutation.mutate(deleteCephId); }}
             >
               {t("common.delete")}
             </AlertDialogAction>
