@@ -299,23 +299,39 @@ export default function CephalometricsTracing() {
       doRender();
     }
     handleResize();
+    const ro = new ResizeObserver(handleResize);
+    if (containerRef.current) ro.observe(containerRef.current);
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
 
   function handleMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
     if (e.button === 1 || e.altKey) {
-      const rect = canvasRef.current!.getBoundingClientRect();
+      const canvas = canvasRef.current!;
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
       setIsPanning(true);
-      setPanStart({ mx: e.clientX - rect.left, my: e.clientY - rect.top, ox: panX, oy: panY });
+      setPanStart({
+        mx: (e.clientX - rect.left) * scaleX,
+        my: (e.clientY - rect.top) * scaleY,
+        ox: panX,
+        oy: panY,
+      });
     }
   }
 
   function handleMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
     if (isPanning && panStart) {
-      const rect = canvasRef.current!.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
+      const canvas = canvasRef.current!;
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const mx = (e.clientX - rect.left) * scaleX;
+      const my = (e.clientY - rect.top) * scaleY;
       setPanX(panStart.ox + (mx - panStart.mx));
       setPanY(panStart.oy + (my - panStart.my));
     }

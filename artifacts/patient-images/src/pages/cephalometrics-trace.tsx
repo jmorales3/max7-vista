@@ -436,8 +436,13 @@ export default function CephalometricsTrace() {
       scheduleRender();
     }
     handleResize();
+    const ro = new ResizeObserver(handleResize);
+    if (containerRef.current) ro.observe(containerRef.current);
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
 
   function hitTestLandmark(ix: number, iy: number): number {
@@ -455,11 +460,14 @@ export default function CephalometricsTrace() {
 
   function handleMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
     e.preventDefault();
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    const cw = canvasRef.current!.width;
-    const ch = canvasRef.current!.height;
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const mx = (e.clientX - rect.left) * scaleX;
+    const my = (e.clientY - rect.top) * scaleY;
+    const cw = canvas.width;
+    const ch = canvas.height;
 
     if (e.button === 1 || e.altKey) {
       setIsPanning(true);
@@ -492,9 +500,12 @@ export default function CephalometricsTrace() {
   }
 
   function handleMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const mx = (e.clientX - rect.left) * scaleX;
+    const my = (e.clientY - rect.top) * scaleY;
 
     if (isPanning && panStart) {
       setPanX(panStart.ox + (mx - panStart.mx));
