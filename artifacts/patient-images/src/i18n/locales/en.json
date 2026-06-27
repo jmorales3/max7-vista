@@ -586,7 +586,7 @@
     },
     "cephalometrics": {
       "heading": "Cephalometric Analysis",
-      "body": "The Cephalometrics module supports radiographic landmark tracing and automated measurement on lateral cephalograms. Three built-in read-only system templates are available: Steiner Analysis (SNA, SNB, ANB, GoGn-SN, Occ-SN, U1-NA, L1-NB, Pog-NB), Ricketts Analysis (facial axis, facial depth, mandibular plane, lower facial height, mandibular arc, convexity, A-NPo, L1-APo, U1-APo), and Tweed Analysis (FMA, FMIA, IMPA). Admins and Super Admins can create custom templates and copy system templates to modify them — system templates themselves are read-only and cannot be edited or deleted. To perform a tracing: open a patient, select a lateral cephalogram image, choose a cephalometric template, then place each landmark on the radiograph by clicking the anatomical point. Set the px/mm scale by measuring a known structure (e.g. a millimeter ruler superimposed on the radiograph). Click Compute to automatically calculate all measurements defined in the template. Results are saved with the tracing and can be reviewed at any time."
+      "body": "The Cephalometrics module (Clinical Tools → Cephalometrics in the sidebar) supports radiographic landmark tracing and automated angular/linear measurements on lateral cephalograms.\n\nTemplate Dashboard: The dashboard lists all System Templates (read-only, provided by Max7 Vista) and Clinic Templates (created or copied by admins). System templates include Steiner (SNA, SNB, ANB, GoGn-SN, Occ-SN, U1-NA, L1-NB, Pog-NB), Ricketts (facial axis, facial depth, mandibular plane, lower facial height, convexity, A-NPo, L1-APo, U1-APo), and Tweed (FMA, FMIA, IMPA). Template cards show the name, description, and landmark and measurement counts. Click 'View' to open any template in the editor. For system templates, click 'Copy to Edit' to open a copy dialog, enter a new name, and create an editable clinic copy — the new copy opens directly in the editor. Admins can create a brand-new template by clicking 'New Template.'\n\nTemplate Editor: The editor has two panels — Landmarks (left) and Measurements (right). Landmarks panel: Click 'Add Landmark' to add a point — enter a short label (e.g. 'S') and a full name (e.g. 'Sella'). Each row shows an order number, the label badge, the full name, and (for editable templates) pencil and trash action buttons on hover. Drag rows to reorder. Measurements panel: Click 'Add Measurement' to define a measurement — enter a name, select the type (Line, Angle, Perpendicular, or Line–Line Angle), choose the landmark dropdowns for each point, set the unit, and optionally choose the angle quadrant for line–angle measurements. Drag rows to reorder. System templates are shown with a read-only notice and all editing controls are disabled; use 'Copy to Edit' in the header to create an editable copy from within the editor.\n\nPerforming a Tracing (coming soon): Open a patient, select a lateral cephalogram image, choose a template, place each landmark by clicking the anatomical point on the radiograph, set the px/mm scale, and click Compute to calculate all measurements automatically."
     }
   },
   "bulkImport": {
@@ -875,6 +875,10 @@
     "deleteSuccess": "Template deleted",
     "deleteFailed": "Failed to delete template",
     "backToTemplates": "Cephalometrics",
+    "newTemplateHint": "Save the template to start adding landmarks and measurements in the editor.",
+    "saveFirstToAddLandmarks": "Save the template first to add landmarks.",
+    "saveFirstToAddMeasurements": "Save the template first to add measurements.",
+    "unitLabel": "Unit",
     "readOnlyNotice": "This is a system template — it is read-only. Copy it to create an editable version.",
     "templateSaved": "Template saved",
     "templateSaveFailed": "Failed to save template",

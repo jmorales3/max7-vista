@@ -586,7 +586,7 @@
     },
     "cephalometrics": {
       "heading": "Análisis Cefalométrico",
-      "body": "El módulo de Cefalometría permite el trazado de puntos cefalométricos y la medición automatizada sobre radiografías laterales de cráneo. Tres plantillas de sistema de solo lectura están disponibles: Análisis de Steiner (SNA, SNB, ANB, GoGn-SN, Occ-SN, U1-NA, L1-NB, Pog-NB), Análisis de Ricketts (eje facial, profundidad facial, plano mandibular, altura facial inferior, arco mandibular, convexidad, A-NPo, L1-APo, U1-APo) y Análisis de Tweed (FMA, FMIA, IMPA). Los administradores pueden crear plantillas personalizadas y copiar plantillas del sistema para modificarlas. Para realizar un trazado: abra un paciente, seleccione una radiografía lateral, elija una plantilla cefalométrica y coloque cada punto anatómico haciendo clic sobre la radiografía. Configure la escala px/mm midiendo una estructura conocida y haga clic en Calcular para obtener las medidas automáticamente. Los resultados se guardan con el trazado."
+      "body": "El módulo de Cefalometría (Herramientas Clínicas → Cefalometría en la barra lateral) permite el trazado de puntos cefalométricos y la medición automatizada sobre radiografías laterales de cráneo.\n\nPanel de Plantillas: Muestra las Plantillas del Sistema (solo lectura) y las Plantillas de la Clínica (creadas por administradores). Las plantillas del sistema incluyen Steiner, Ricketts y Tweed. Las tarjetas muestran el nombre, la descripción y el número de puntos y mediciones. Haga clic en 'Ver' para abrir una plantilla. Para las plantillas del sistema, haga clic en 'Copiar para Editar' para crear una copia editable que se abre directamente en el editor. Los administradores pueden crear nuevas plantillas con 'Nueva Plantilla'.\n\nEditor de Plantillas: El editor tiene dos paneles — Puntos de Referencia (izquierda) y Mediciones (derecha). Panel de puntos: agregue una etiqueta corta (ej. 'S') y un nombre completo (ej. 'Sella'). Cada fila muestra un número de orden. Panel de mediciones: defina el nombre, el tipo, los puntos (seleccionados desde los puntos de referencia), la unidad y el cuadrante de ángulo. Arrastre las filas para reordenar. Las plantillas del sistema muestran un aviso de solo lectura; use 'Copiar para Editar' en el encabezado para crear una copia editable."
     }
   },
   "bulkImport": {
@@ -875,6 +875,10 @@
     "deleteSuccess": "Plantilla eliminada",
     "deleteFailed": "Error al eliminar la plantilla",
     "backToTemplates": "Cefalometría",
+    "newTemplateHint": "Guarde la plantilla para comenzar a agregar puntos de referencia y mediciones en el editor.",
+    "saveFirstToAddLandmarks": "Guarde primero la plantilla para agregar puntos de referencia.",
+    "saveFirstToAddMeasurements": "Guarde primero la plantilla para agregar mediciones.",
+    "unitLabel": "Unidad",
     "readOnlyNotice": "Esta es una plantilla del sistema y es de solo lectura. Cópiela para crear una versión editable.",
     "templateSaved": "Plantilla guardada",
     "templateSaveFailed": "Error al guardar la plantilla",

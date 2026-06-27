@@ -586,7 +586,7 @@
     },
     "cephalometrics": {
       "heading": "Analyse Céphalométrique",
-      "body": "Le module de Céphалométrie permet le tracé de points céphalométriques et la mesure automatisée sur des téléradiographies de profil. Trois modèles système en lecture seule sont disponibles : Analyse de Steiner (SNA, SNB, ANB, GoGn-SN, Occ-SN, U1-NA, L1-NB, Pog-NB), Analyse de Ricketts (axe facial, profondeur faciale, plan mandibulaire, hauteur faciale inférieure, arc mandibulaire, convexité, A-NPo, L1-APo, U1-APo) et Analyse de Tweed (FMA, FMIA, IMPA). Les administrateurs peuvent créer des modèles personnalisés et copier les modèles système pour les modifier. Pour effectuer un tracé : ouvrez un patient, sélectionnez une téléradiographie, choisissez un modèle céphalométrique et placez chaque point anatomique en cliquant sur la radiographie. Configurez l'échelle px/mm en mesurant une structure connue, puis cliquez sur Calculer pour obtenir les mesures automatiquement. Les résultats sont enregistrés avec le tracé."
+      "body": "Le module de Céphalométrie (Outils Cliniques → Céphalométrie dans la barre latérale) permet le tracé de points céphalométriques et la mesure automatisée sur des téléradiographies de profil.\n\nTableau de bord des modèles : Liste les Modèles Système (lecture seule) et les Modèles de la Clinique (créés par les administrateurs). Les modèles système incluent Steiner, Ricketts et Tweed. Les cartes affichent le nom, la description et le nombre de points de repère et de mesures. Cliquez sur 'Voir' pour ouvrir un modèle. Pour les modèles système, cliquez sur 'Copier pour Modifier' pour créer une copie éditable qui s'ouvre directement dans l'éditeur.\n\nÉditeur de modèles : L'éditeur comporte deux panneaux — Points de Repère (gauche) et Mesures (droite). Panneau des points : ajoutez une étiquette courte et un nom complet. Chaque ligne affiche un numéro d'ordre. Panneau des mesures : définissez le nom, le type, les points (sélectionnés parmi les points de repère), l'unité et le quadrant. Faites glisser les lignes pour les réorganiser. Les modèles système affichent un avertissement en lecture seule ; utilisez 'Copier pour Modifier' dans l'en-tête pour créer une copie éditable."
     }
   },
   "bulkImport": {
@@ -875,6 +875,10 @@
     "deleteSuccess": "Modèle supprimé",
     "deleteFailed": "Échec de la suppression du modèle",
     "backToTemplates": "Céphalométrie",
+    "newTemplateHint": "Enregistrez le modèle pour commencer à ajouter des points de repère et des mesures dans l'éditeur.",
+    "saveFirstToAddLandmarks": "Enregistrez d'abord le modèle pour ajouter des points de repère.",
+    "saveFirstToAddMeasurements": "Enregistrez d'abord le modèle pour ajouter des mesures.",
+    "unitLabel": "Unité",
     "readOnlyNotice": "Ce modèle système est en lecture seule. Copiez-le pour créer une version modifiable.",
     "templateSaved": "Modèle enregistré",
     "templateSaveFailed": "Échec de l'enregistrement du modèle",

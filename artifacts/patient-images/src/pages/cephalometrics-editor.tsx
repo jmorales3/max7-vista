@@ -119,7 +119,6 @@ export default function CephalometricsEditor() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin" || user?.role === "superadmin";
 
-  const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState("");
   const [descVal, setDescVal] = useState("");
 
@@ -142,11 +141,14 @@ export default function CephalometricsEditor() {
   const [mEditPoints, setMEditPoints] = useState<string[]>(["", ""]);
   const [mEditQuadrant, setMEditQuadrant] = useState("none");
 
+  const [mEditUnit, setMEditUnit] = useState("mm");
+
   const [mAddOpen, setMAddOpen] = useState(false);
   const [mAddName, setMAddName] = useState("");
   const [mAddType, setMAddType] = useState<MeasurementType>("line");
   const [mAddPoints, setMAddPoints] = useState<string[]>(["", ""]);
   const [mAddQuadrant, setMAddQuadrant] = useState("none");
+  const [mAddUnit, setMAddUnit] = useState("mm");
 
   const [deleteTarget, setDeleteTarget] = useState<{ kind: "lm" | "m"; id: number } | null>(null);
 
@@ -197,7 +199,6 @@ export default function CephalometricsEditor() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEY });
-      setEditingName(false);
       toast({ title: t("ceph.templateSaved") });
     },
     onError: () => toast({ title: t("ceph.templateSaveFailed"), variant: "destructive" }),
@@ -327,7 +328,7 @@ export default function CephalometricsEditor() {
     });
   }
 
-  function pointsArrayToBody(type: MeasurementType, points: string[], quadrant: string) {
+  function pointsArrayToBody(type: MeasurementType, points: string[], quadrant: string, unit: string) {
     const n = pointsForType(type);
     return {
       p1Label: points[0] ?? "",
@@ -335,7 +336,7 @@ export default function CephalometricsEditor() {
       p3Label: n >= 3 ? (points[2] ?? "") : null,
       p4Label: n >= 4 ? (points[3] ?? "") : null,
       angleQuadrant: needsQuadrant(type) && quadrant !== "none" ? quadrant : null,
-      unit: unitForType(type),
+      unit,
     };
   }
 
@@ -350,6 +351,7 @@ export default function CephalometricsEditor() {
       m.p4Label ?? "",
     ]);
     setMEditQuadrant(m.angleQuadrant ?? "none");
+    setMEditUnit(m.unit || unitForType(m.type));
   }
 
   function saveMEdit() {
@@ -359,7 +361,7 @@ export default function CephalometricsEditor() {
       body: {
         name: mEditName.trim(),
         type: mEditType,
-        ...pointsArrayToBody(mEditType, mEditPoints, mEditQuadrant),
+        ...pointsArrayToBody(mEditType, mEditPoints, mEditQuadrant, mEditUnit),
       },
     });
   }
@@ -369,7 +371,7 @@ export default function CephalometricsEditor() {
     addMMutation.mutate({
       name: mAddName.trim(),
       type: mAddType,
-      ...pointsArrayToBody(mAddType, mAddPoints, mAddQuadrant),
+      ...pointsArrayToBody(mAddType, mAddPoints, mAddQuadrant, mAddUnit),
       displayOrder: measurements.length,
     });
   }
@@ -439,11 +441,13 @@ export default function CephalometricsEditor() {
     setMEditType(type);
     setMEditPoints(Array(pointsForType(type)).fill(""));
     setMEditQuadrant("none");
+    setMEditUnit(unitForType(type));
   }
   function onMAddTypeChange(type: MeasurementType) {
     setMAddType(type);
     setMAddPoints(Array(pointsForType(type)).fill(""));
     setMAddQuadrant("none");
+    setMAddUnit(unitForType(type));
   }
 
   function measurementSummary(m: CephMeasurement): string {
@@ -482,36 +486,21 @@ export default function CephalometricsEditor() {
           </Button>
 
           <div className="min-w-0 flex-1">
-            {editingName && canEdit ? (
+            {canEdit ? (
               <div className="space-y-2">
                 <Input
                   value={nameVal}
                   onChange={(e) => setNameVal(e.target.value)}
-                  className="text-lg font-bold h-9"
-                  autoFocus
+                  className="text-lg font-bold h-9 max-w-md"
+                  placeholder={t("ceph.templateNamePlaceholder")}
                 />
                 <Textarea
                   value={descVal}
                   onChange={(e) => setDescVal(e.target.value)}
                   placeholder={t("ceph.descriptionPlaceholder")}
                   rows={2}
-                  className="text-sm"
+                  className="text-sm max-w-md"
                 />
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() =>
-                      saveMeta.mutate({ name: nameVal.trim(), description: descVal.trim() || undefined })
-                    }
-                    disabled={!nameVal.trim() || saveMeta.isPending}
-                  >
-                    <Save className="h-3.5 w-3.5 mr-1.5" />
-                    {t("common.save")}
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => setEditingName(false)}>
-                    {t("common.cancel")}
-                  </Button>
-                </div>
               </div>
             ) : (
               <div>
@@ -523,16 +512,6 @@ export default function CephalometricsEditor() {
                       {t("ceph.systemBadge")}
                     </Badge>
                   )}
-                  {canEdit && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2 text-muted-foreground hover:text-foreground"
-                      onClick={() => setEditingName(true)}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
                 </div>
                 {template.description && (
                   <p className="text-sm text-muted-foreground mt-0.5">{template.description}</p>
@@ -542,20 +521,33 @@ export default function CephalometricsEditor() {
           </div>
         </div>
 
-        {isAdmin && locked && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              setCopyDialogName(`${template.name} (copy)`);
-              setCopyDialogOpen(true);
-            }}
-            className="shrink-0"
-          >
-            <Copy className="h-3.5 w-3.5 mr-1.5" />
-            {t("ceph.copyToEdit")}
-          </Button>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {canEdit && (
+            <Button
+              size="sm"
+              onClick={() =>
+                saveMeta.mutate({ name: nameVal.trim(), description: descVal.trim() || undefined })
+              }
+              disabled={!nameVal.trim() || saveMeta.isPending}
+            >
+              <Save className="h-3.5 w-3.5 mr-1.5" />
+              {saveMeta.isPending ? t("ceph.saving") : t("common.save")}
+            </Button>
+          )}
+          {isAdmin && locked && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setCopyDialogName(`${template.name} (copy)`);
+                setCopyDialogOpen(true);
+              }}
+            >
+              <Copy className="h-3.5 w-3.5 mr-1.5" />
+              {t("ceph.copyToEdit")}
+            </Button>
+          )}
+        </div>
       </div>
 
       {locked && (
@@ -709,10 +701,13 @@ export default function CephalometricsEditor() {
                         </div>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1 px-1 py-1.5 group rounded-md hover:bg-muted/40">
+                      <div className="flex items-center gap-1.5 px-1 py-1.5 group rounded-md hover:bg-muted/40">
                         {canEdit && (
                           <GripVertical className="h-4 w-4 text-muted-foreground/40 cursor-grab shrink-0" />
                         )}
+                        <span className="text-xs text-muted-foreground font-mono w-5 text-right shrink-0 select-none">
+                          {idx + 1}.
+                        </span>
                         <Badge variant="outline" className="font-mono text-xs shrink-0 w-10 justify-center">
                           {lm.label}
                         </Badge>
@@ -782,11 +777,13 @@ export default function CephalometricsEditor() {
                 type={mAddType}
                 points={mAddPoints}
                 quadrant={mAddQuadrant}
+                unit={mAddUnit}
                 landmarks={landmarks}
                 onName={setMAddName}
                 onType={onMAddTypeChange}
                 onPoint={updateMAddPoint}
                 onQuadrant={setMAddQuadrant}
+                onUnit={setMAddUnit}
                 onSave={handleAddM}
                 onCancel={() => setMAddOpen(false)}
                 saving={addMMutation.isPending}
@@ -818,11 +815,13 @@ export default function CephalometricsEditor() {
                           type={mEditType}
                           points={mEditPoints}
                           quadrant={mEditQuadrant}
+                          unit={mEditUnit}
                           landmarks={landmarks}
                           onName={setMEditName}
                           onType={onMEditTypeChange}
                           onPoint={updateMEditPoint}
                           onQuadrant={setMEditQuadrant}
+                          onUnit={setMEditUnit}
                           onSave={saveMEdit}
                           onCancel={() => setMEditId(null)}
                           saving={updateMMutation.isPending}
@@ -936,16 +935,20 @@ export default function CephalometricsEditor() {
   );
 }
 
+const UNIT_OPTIONS = ["mm", "°", "px", "%"];
+
 interface MeasurementFormProps {
   name: string;
   type: MeasurementType;
   points: string[];
   quadrant: string;
+  unit: string;
   landmarks: CephLandmark[];
   onName: (v: string) => void;
   onType: (v: MeasurementType) => void;
   onPoint: (idx: number, v: string) => void;
   onQuadrant: (v: string) => void;
+  onUnit: (v: string) => void;
   onSave: () => void;
   onCancel: () => void;
   saving: boolean;
@@ -954,8 +957,8 @@ interface MeasurementFormProps {
 }
 
 function MeasurementForm({
-  name, type, points, quadrant, landmarks,
-  onName, onType, onPoint, onQuadrant,
+  name, type, points, quadrant, unit, landmarks,
+  onName, onType, onPoint, onQuadrant, onUnit,
   onSave, onCancel, saving, isAdd, t,
 }: MeasurementFormProps) {
   const n = pointsForType(type);
@@ -978,7 +981,7 @@ function MeasurementForm({
             autoFocus={isAdd}
           />
         </div>
-        <div className="w-44 shrink-0 space-y-1">
+        <div className="w-40 shrink-0 space-y-1">
           <Label className="text-xs">{t("ceph.measurementType")}</Label>
           <Select value={type} onValueChange={(v) => onType(v as MeasurementType)}>
             <SelectTrigger className="h-8 text-xs">
@@ -988,6 +991,21 @@ function MeasurementForm({
               {MEASUREMENT_TYPES.map((mt) => (
                 <SelectItem key={mt} value={mt} className="text-xs">
                   {t(`ceph.typeLabel.${mt}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="w-20 shrink-0 space-y-1">
+          <Label className="text-xs">{t("ceph.unitLabel")}</Label>
+          <Select value={unit} onValueChange={onUnit}>
+            <SelectTrigger className="h-8 text-xs font-mono">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {UNIT_OPTIONS.map((u) => (
+                <SelectItem key={u} value={u} className="text-xs font-mono">
+                  {u}
                 </SelectItem>
               ))}
             </SelectContent>

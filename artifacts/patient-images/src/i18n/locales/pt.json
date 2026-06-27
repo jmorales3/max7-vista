@@ -586,7 +586,7 @@
     },
     "cephalometrics": {
       "heading": "Análise Cefalométrica",
-      "body": "O módulo de Cefalometria permite o traçado de pontos cefalométricos e a medição automatizada em telerradiografias laterais. Três modelos de sistema somente leitura estão disponíveis: Análise de Steiner (SNA, SNB, ANB, GoGn-SN, Occ-SN, U1-NA, L1-NB, Pog-NB), Análise de Ricketts (eixo facial, profundidade facial, plano mandibular, altura facial inferior, arco mandibular, convexidade, A-NPo, L1-APo, U1-APo) e Análise de Tweed (FMA, FMIA, IMPA). Administradores podem criar modelos personalizados e copiar modelos do sistema para modificá-los. Para realizar um traçado: abra um paciente, selecione uma telerradiografia lateral, escolha um modelo cefalométrico e posicione cada ponto anatômico clicando sobre a radiografia. Configure a escala px/mm medindo uma estrutura conhecida e clique em Calcular para obter as medidas automaticamente. Os resultados são salvos com o traçado."
+      "body": "O módulo de Cefalometria (Ferramentas Clínicas → Cefalometria na barra lateral) permite o traçado de pontos cefalométricos e a medição automatizada em telerradiografias laterais.\n\nPainel de Modelos: Lista os Modelos do Sistema (somente leitura) e os Modelos da Clínica (criados por administradores). Os modelos do sistema incluem Steiner, Ricketts e Tweed. Os cartões exibem o nome, a descrição e a contagem de marcos e medições. Clique em 'Ver' para abrir um modelo. Para modelos do sistema, clique em 'Copiar para Editar' para criar uma cópia editável que abre diretamente no editor.\n\nEditor de Modelos: O editor tem dois painéis — Marcos Anatômicos (esquerda) e Medições (direita). Painel de marcos: adicione um rótulo curto e um nome completo. Cada linha exibe um número de ordem. Painel de medições: defina o nome, o tipo, os pontos (selecionados a partir dos marcos), a unidade e o quadrante. Arraste as linhas para reordenar. Os modelos do sistema exibem um aviso somente leitura; use 'Copiar para Editar' no cabeçalho para criar uma cópia editável."
     }
   },
   "bulkImport": {
@@ -875,6 +875,10 @@
     "deleteSuccess": "Modelo excluído",
     "deleteFailed": "Falha ao excluir o modelo",
     "backToTemplates": "Cefalometria",
+    "newTemplateHint": "Salve o modelo para começar a adicionar marcos e medições no editor.",
+    "saveFirstToAddLandmarks": "Salve o modelo primeiro para adicionar marcos.",
+    "saveFirstToAddMeasurements": "Salve o modelo primeiro para adicionar medições.",
+    "unitLabel": "Unidade",
     "readOnlyNotice": "Este é um modelo do sistema e é somente leitura. Copie-o para criar uma versão editável.",
     "templateSaved": "Modelo salvo",
     "templateSaveFailed": "Falha ao salvar o modelo",
