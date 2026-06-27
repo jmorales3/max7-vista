@@ -149,6 +149,15 @@ interface DrawStraightLine {
   id: string;
 }
 
+interface DrawDot {
+  type: "dot";
+  x: number;
+  y: number;
+  color: string;
+  radius: number;
+  id: string;
+}
+
 interface DrawRuler {
   type: "ruler";
   x1: number;
@@ -172,7 +181,7 @@ interface DrawAngle {
   id: string;
 }
 
-type Annotation = DrawLine | DrawText | DrawArrow | DrawCircle | DrawStraightLine | DrawRuler | DrawAngle;
+type Annotation = DrawLine | DrawText | DrawArrow | DrawCircle | DrawStraightLine | DrawDot | DrawRuler | DrawAngle;
 
 interface CropRect {
   x: number;
@@ -280,6 +289,11 @@ function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation, scale: n
     ctx.moveTo(ann.x1, ann.y1);
     ctx.lineTo(ann.x2, ann.y2);
     ctx.stroke();
+  } else if (ann.type === "dot") {
+    ctx.beginPath();
+    ctx.arc(ann.x, ann.y, ann.radius, 0, 2 * Math.PI);
+    ctx.fillStyle = ann.color;
+    ctx.fill();
   } else if (ann.type === "ruler") {
     const { x1, y1, x2, y2, color, pxPerMm: annPxPerMm } = ann;
     const lineAngle = Math.atan2(y2 - y1, x2 - x1);
@@ -913,6 +927,8 @@ export default function Editor() {
           distToSegment(x, y, ann.vx, ann.vy, ann.p1x, ann.p1y) < THRESH ||
           distToSegment(x, y, ann.vx, ann.vy, ann.p2x, ann.p2y) < THRESH
         ) return ann;
+      } else if (ann.type === "dot") {
+        if (Math.hypot(x - ann.x, y - ann.y) < Math.max(ann.radius + THRESH, THRESH)) return ann;
       } else if (ann.type === "line") {
         const pts = ann.points;
         for (let j = 2; j < pts.length; j += 2) {
@@ -947,6 +963,7 @@ export default function Editor() {
     if (ann.type === "straightline" || ann.type === "arrow" || ann.type === "ruler")
       return { ...ann, x1: ann.x1 + dx, y1: ann.y1 + dy, x2: ann.x2 + dx, y2: ann.y2 + dy };
     if (ann.type === "circle") return { ...ann, cx: ann.cx + dx, cy: ann.cy + dy };
+    if (ann.type === "dot") return { ...ann, x: ann.x + dx, y: ann.y + dy };
     if (ann.type === "angle")
       return { ...ann, vx: ann.vx + dx, vy: ann.vy + dy, p1x: ann.p1x + dx, p1y: ann.p1y + dy, p2x: ann.p2x + dx, p2y: ann.p2y + dy };
     if (ann.type === "line") {
@@ -1605,6 +1622,17 @@ export default function Editor() {
         };
         pushHistory();
         setAnnotations((prev) => [...prev, newLine]);
+      } else {
+        const newDot: DrawDot = {
+          type: "dot",
+          x: x1,
+          y: y1,
+          color: penColor,
+          radius: Math.max(strokeWidth * 0.75, 3),
+          id: Date.now().toString(),
+        };
+        pushHistory();
+        setAnnotations((prev) => [...prev, newDot]);
       }
       return;
     }
