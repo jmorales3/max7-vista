@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -149,6 +150,9 @@ export default function CephalometricsEditor() {
 
   const [deleteTarget, setDeleteTarget] = useState<{ kind: "lm" | "m"; id: number } | null>(null);
 
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
+  const [copyDialogName, setCopyDialogName] = useState("");
+
   const dragLmRef = useRef<number | null>(null);
   const dragMRef = useRef<number | null>(null);
   const [lmDragOver, setLmDragOver] = useState<number | null>(null);
@@ -170,6 +174,20 @@ export default function CephalometricsEditor() {
       setDescVal(template.description ?? "");
     }
   }, [template?.id]);
+
+  const copyMutation = useMutation<{ id: number }, Error, { name: string }>({
+    mutationFn: ({ name }) =>
+      customFetch<{ id: number }>(`/api/ceph/templates/${templateId}/copy`, {
+        method: "POST",
+        body: JSON.stringify({ name }),
+      }),
+    onSuccess: (tmpl) => {
+      setCopyDialogOpen(false);
+      toast({ title: t("ceph.copySuccess") });
+      navigate(`/cephalometrics/templates/${tmpl.id}/edit`);
+    },
+    onError: () => toast({ title: t("ceph.copyFailed"), variant: "destructive" }),
+  });
 
   const saveMeta = useMutation({
     mutationFn: (body: { name?: string; description?: string }) =>
@@ -528,7 +546,10 @@ export default function CephalometricsEditor() {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => navigate("/cephalometrics")}
+            onClick={() => {
+              setCopyDialogName(`${template.name} (copy)`);
+              setCopyDialogOpen(true);
+            }}
             className="shrink-0"
           >
             <Copy className="h-3.5 w-3.5 mr-1.5" />
@@ -761,6 +782,7 @@ export default function CephalometricsEditor() {
                 type={mAddType}
                 points={mAddPoints}
                 quadrant={mAddQuadrant}
+                landmarks={landmarks}
                 onName={setMAddName}
                 onType={onMAddTypeChange}
                 onPoint={updateMAddPoint}
@@ -796,6 +818,7 @@ export default function CephalometricsEditor() {
                           type={mEditType}
                           points={mEditPoints}
                           quadrant={mEditQuadrant}
+                          landmarks={landmarks}
                           onName={setMEditName}
                           onType={onMEditTypeChange}
                           onPoint={updateMEditPoint}
@@ -853,6 +876,36 @@ export default function CephalometricsEditor() {
         </Card>
       </div>
 
+      {/* Copy dialog */}
+      <Dialog open={copyDialogOpen} onOpenChange={(o) => !o && setCopyDialogOpen(false)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t("ceph.copyTitle")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1.5 py-2">
+            <Label>{t("ceph.copyNameLabel")}</Label>
+            <Input
+              value={copyDialogName}
+              onChange={(e) => setCopyDialogName(e.target.value)}
+              placeholder={t("ceph.copyNamePlaceholder")}
+              onKeyDown={(e) => e.key === "Enter" && copyDialogName.trim() && copyMutation.mutate({ name: copyDialogName.trim() })}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCopyDialogOpen(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              onClick={() => copyDialogName.trim() && copyMutation.mutate({ name: copyDialogName.trim() })}
+              disabled={!copyDialogName.trim() || copyMutation.isPending}
+            >
+              {copyMutation.isPending ? t("ceph.copying") : t("ceph.copyToEdit")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete confirm */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent>
@@ -888,6 +941,7 @@ interface MeasurementFormProps {
   type: MeasurementType;
   points: string[];
   quadrant: string;
+  landmarks: CephLandmark[];
   onName: (v: string) => void;
   onType: (v: MeasurementType) => void;
   onPoint: (idx: number, v: string) => void;
@@ -900,7 +954,7 @@ interface MeasurementFormProps {
 }
 
 function MeasurementForm({
-  name, type, points, quadrant,
+  name, type, points, quadrant, landmarks,
   onName, onType, onPoint, onQuadrant,
   onSave, onCancel, saving, isAdd, t,
 }: MeasurementFormProps) {
@@ -945,12 +999,19 @@ function MeasurementForm({
         {Array.from({ length: n }).map((_, i) => (
           <div key={i} className="space-y-1">
             <Label className="text-xs">{pointLabel(type, i, t)}</Label>
-            <Input
-              value={points[i] ?? ""}
-              onChange={(e) => onPoint(i, e.target.value)}
-              placeholder="e.g. S"
-              className="h-8 text-sm font-mono"
-            />
+            <Select value={points[i] ?? ""} onValueChange={(v) => onPoint(i, v)}>
+              <SelectTrigger className="h-8 text-xs font-mono">
+                <SelectValue placeholder="—" />
+              </SelectTrigger>
+              <SelectContent>
+                {landmarks.map((lm) => (
+                  <SelectItem key={lm.id} value={lm.label} className="text-xs font-mono">
+                    <span className="font-semibold">{lm.label}</span>
+                    {lm.name ? <span className="text-muted-foreground ml-1">— {lm.name}</span> : null}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         ))}
       </div>

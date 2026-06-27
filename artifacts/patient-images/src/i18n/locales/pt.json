@@ -854,6 +854,8 @@
     "deleteTitle": "Excluir Modelo",
     "deleteDesc": "Isso excluirá permanentemente \"{{name}}\" e todos os seus marcos e medições. Esta ação não pode ser desfeita.",
     "systemBadge": "Sistema",
+    "landmarkCountLabel": "{{count}} marcos anatômicos",
+    "measurementCountLabel": "{{count}} medições",
     "createTitle": "Novo Modelo Cefalométrico",
     "templateName": "Nome do Modelo",
     "templateNamePlaceholder": "ex. Minha Análise Personalizada",

@@ -854,6 +854,8 @@
     "deleteTitle": "Delete Template",
     "deleteDesc": "This will permanently delete \"{{name}}\" and all its landmarks and measurements. This cannot be undone.",
     "systemBadge": "System",
+    "landmarkCountLabel": "{{count}} landmarks",
+    "measurementCountLabel": "{{count}} measurements",
     "createTitle": "New Cephalometric Template",
     "templateName": "Template Name",
     "templateNamePlaceholder": "e.g. My Custom Analysis",

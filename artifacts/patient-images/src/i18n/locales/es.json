@@ -854,6 +854,8 @@
     "deleteTitle": "Eliminar Plantilla",
     "deleteDesc": "Esto eliminará permanentemente \"{{name}}\" y todos sus puntos de referencia y mediciones. Esta acción no se puede deshacer.",
     "systemBadge": "Sistema",
+    "landmarkCountLabel": "{{count}} puntos de referencia",
+    "measurementCountLabel": "{{count}} mediciones",
     "createTitle": "Nueva Plantilla Cefalométrica",
     "templateName": "Nombre de la Plantilla",
     "templateNamePlaceholder": "ej. Mi Análisis Personalizado",

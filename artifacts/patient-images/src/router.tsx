@@ -23,6 +23,7 @@ import Templates from "@/pages/templates";
 import TemplateDesigner from "@/pages/template-designer";
 import TemplateDocumentPage from "@/pages/template-document";
 import Cephalometrics from "@/pages/cephalometrics";
+import CephalometricsNew from "@/pages/cephalometrics-new";
 import CephalometricsEditor from "@/pages/cephalometrics-editor";
 
 function NotAuthorized() {
@@ -62,6 +63,7 @@ function Router() {
         <Route path="/templates/:id" component={TemplateDesigner} />
         <Route path="/template-documents/:id" component={TemplateDocumentPage} />
         <Route path="/cephalometrics" component={Cephalometrics} />
+        <Route path="/cephalometrics/templates/new" component={isAdmin ? CephalometricsNew : NotAuthorized} />
         <Route path="/cephalometrics/templates/:id/edit" component={CephalometricsEditor} />
         <Route component={NotFound} />
       </Switch>

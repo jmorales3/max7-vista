@@ -9,14 +9,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { BrainCircuit, Plus, Pencil, Trash2, Copy, Lock, Eye } from "lucide-react";
+import { BrainCircuit, Plus, Trash2, Copy, Lock, Eye, Pencil } from "lucide-react";
 
 interface CephTemplate {
   id: number;
@@ -26,6 +25,8 @@ interface CephTemplate {
   locked: boolean;
   createdAt: string;
   updatedAt: string;
+  landmarkCount?: number;
+  measurementCount?: number;
 }
 
 const QUERY_KEY = ["ceph-templates"];
@@ -36,10 +37,6 @@ export default function Cephalometrics() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin" || user?.role === "superadmin";
-
-  const [createOpen, setCreateOpen] = useState(false);
-  const [createName, setCreateName] = useState("");
-  const [createDesc, setCreateDesc] = useState("");
 
   const [copyTarget, setCopyTarget] = useState<CephTemplate | null>(null);
   const [copyName, setCopyName] = useState("");
@@ -53,20 +50,6 @@ export default function Cephalometrics() {
 
   const systemTemplates = templates.filter((tmpl) => tmpl.locked);
   const clinicTemplates = templates.filter((tmpl) => !tmpl.locked);
-
-  const createMutation = useMutation<CephTemplate, Error, { name: string; description?: string }>({
-    mutationFn: (body) =>
-      customFetch<CephTemplate>("/api/ceph/templates", {
-        method: "POST",
-        body: JSON.stringify(body),
-      }),
-    onSuccess: (tmpl) => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
-      setCreateOpen(false);
-      navigate(`/cephalometrics/templates/${tmpl.id}/edit`);
-    },
-    onError: () => toast({ title: t("ceph.createFailed"), variant: "destructive" }),
-  });
 
   const copyMutation = useMutation<CephTemplate, Error, { id: number; name: string }>({
     mutationFn: ({ id, name }) =>
@@ -98,14 +81,6 @@ export default function Cephalometrics() {
     setCopyName(`${tmpl.name} (copy)`);
   }
 
-  function handleCreate() {
-    if (!createName.trim()) return;
-    createMutation.mutate({
-      name: createName.trim(),
-      description: createDesc.trim() || undefined,
-    });
-  }
-
   function handleCopyConfirm() {
     if (!copyTarget || !copyName.trim()) return;
     copyMutation.mutate({ id: copyTarget.id, name: copyName.trim() });
@@ -128,6 +103,20 @@ export default function Cephalometrics() {
             <CardDescription className="text-xs line-clamp-2 mt-1">
               {tmpl.description}
             </CardDescription>
+          )}
+          {(tmpl.landmarkCount !== undefined || tmpl.measurementCount !== undefined) && (
+            <div className="flex items-center gap-3 mt-2">
+              {tmpl.landmarkCount !== undefined && (
+                <span className="text-xs text-muted-foreground">
+                  {t("ceph.landmarkCountLabel", { count: tmpl.landmarkCount })}
+                </span>
+              )}
+              {tmpl.measurementCount !== undefined && (
+                <span className="text-xs text-muted-foreground">
+                  {t("ceph.measurementCountLabel", { count: tmpl.measurementCount })}
+                </span>
+              )}
+            </div>
           )}
         </CardHeader>
         <CardContent className="flex-1 pb-2" />
@@ -198,13 +187,7 @@ export default function Cephalometrics() {
           <p className="text-muted-foreground text-sm mt-1">{t("ceph.subtitle")}</p>
         </div>
         {isAdmin && (
-          <Button
-            onClick={() => {
-              setCreateName("");
-              setCreateDesc("");
-              setCreateOpen(true);
-            }}
-          >
+          <Button onClick={() => navigate("/cephalometrics/templates/new")}>
             <Plus className="h-4 w-4 mr-2" />
             {t("ceph.newTemplate")}
           </Button>
@@ -260,48 +243,6 @@ export default function Cephalometrics() {
           </div>
         </>
       )}
-
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t("ceph.createTitle")}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label>{t("ceph.templateName")}</Label>
-              <Input
-                value={createName}
-                onChange={(e) => setCreateName(e.target.value)}
-                placeholder={t("ceph.templateNamePlaceholder")}
-                onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>
-                {t("ceph.description")}{" "}
-                <span className="text-muted-foreground text-xs">({t("ceph.optional")})</span>
-              </Label>
-              <Textarea
-                value={createDesc}
-                onChange={(e) => setCreateDesc(e.target.value)}
-                placeholder={t("ceph.descriptionPlaceholder")}
-                rows={2}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>
-              {t("common.cancel")}
-            </Button>
-            <Button
-              onClick={handleCreate}
-              disabled={!createName.trim() || createMutation.isPending}
-            >
-              {createMutation.isPending ? t("ceph.creating") : t("ceph.createAndEdit")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={!!copyTarget} onOpenChange={(o) => !o && setCopyTarget(null)}>
         <DialogContent className="max-w-sm">

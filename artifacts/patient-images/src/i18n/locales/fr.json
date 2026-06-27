@@ -854,6 +854,8 @@
     "deleteTitle": "Supprimer le Modèle",
     "deleteDesc": "Cette action supprimera définitivement \"{{name}}\" et tous ses points de repère et mesures. Elle est irréversible.",
     "systemBadge": "Système",
+    "landmarkCountLabel": "{{count}} points de repère",
+    "measurementCountLabel": "{{count}} mesures",
     "createTitle": "Nouveau Modèle Céphalométrique",
     "templateName": "Nom du Modèle",
     "templateNamePlaceholder": "ex. Mon Analyse Personnalisée",
