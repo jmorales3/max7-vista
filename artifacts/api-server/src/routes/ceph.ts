@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, isNull, or } from "drizzle-orm";
+import { eq, and, isNull, or, inArray } from "drizzle-orm";
 import {
   db,
   cephTemplatesTable,
@@ -11,6 +11,7 @@ import {
   patientsTable,
   imagesTable,
 } from "@workspace/db";
+import { getAccessiblePatientIds, canAccessPatient } from "../lib/patientAccess";
 
 const router: IRouter = Router();
 
@@ -405,9 +406,16 @@ router.put("/ceph/templates/:id/measurements/reorder", async (req, res): Promise
 router.get("/ceph/tracings", async (req, res): Promise<void> => {
   try {
     const tenantId = tid(req);
+    const accessibleIds = await getAccessiblePatientIds(req);
     const patientId = req.query.patientId ? parseInt(req.query.patientId as string, 10) : null;
     const conditions: any[] = [eq(cephTracingsTable.tenantId, tenantId)];
-    if (patientId !== null && !isNaN(patientId)) conditions.push(eq(cephTracingsTable.patientId, patientId));
+    if (patientId !== null && !isNaN(patientId)) {
+      if (!canAccessPatient(accessibleIds, patientId)) { res.status(403).json({ error: "Access denied to this patient" }); return; }
+      conditions.push(eq(cephTracingsTable.patientId, patientId));
+    } else if (accessibleIds !== null) {
+      if (accessibleIds.length === 0) { res.json([]); return; }
+      conditions.push(inArray(cephTracingsTable.patientId, accessibleIds));
+    }
     const tracings = await db.select().from(cephTracingsTable).where(and(...conditions)).orderBy(cephTracingsTable.createdAt);
     res.json(tracings);
   } catch (err: any) { errRes(res, err); }
@@ -421,6 +429,8 @@ router.get("/ceph/tracings/:id", async (req, res): Promise<void> => {
     if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
     const [tracing] = await db.select().from(cephTracingsTable).where(and(eq(cephTracingsTable.id, id), eq(cephTracingsTable.tenantId, tenantId)));
     if (!tracing) { res.status(404).json({ error: "Tracing not found" }); return; }
+    const accessibleIds = await getAccessiblePatientIds(req);
+    if (!canAccessPatient(accessibleIds, tracing.patientId)) { res.status(403).json({ error: "Access denied to this patient" }); return; }
     const points = await db.select().from(cephTracingPointsTable).where(eq(cephTracingPointsTable.tracingId, id));
     const results = await db.select().from(cephTracingResultsTable).where(eq(cephTracingResultsTable.tracingId, id));
     res.json({ ...tracing, points, results });
@@ -439,11 +449,13 @@ router.post("/ceph/tracings", async (req, res): Promise<void> => {
     const parsedTemplateId = templateId ? parseInt(templateId, 10) : null;
     if (isNaN(parsedPatientId)) { res.status(400).json({ error: "Invalid patientId" }); return; }
 
-    // Verify patient belongs to caller's tenant
+    // Verify patient belongs to caller's tenant and is accessible to this user
     const [patient] = await db.select({ id: patientsTable.id })
       .from(patientsTable)
       .where(and(eq(patientsTable.id, parsedPatientId), eq(patientsTable.tenantId, tenantId)));
     if (!patient) { res.status(403).json({ error: "Patient not found in your organization" }); return; }
+    const accessibleIds = await getAccessiblePatientIds(req);
+    if (!canAccessPatient(accessibleIds, parsedPatientId)) { res.status(403).json({ error: "Access denied to this patient" }); return; }
 
     // Verify image belongs to this patient (if provided)
     if (parsedImageId !== null) {
@@ -486,6 +498,8 @@ router.patch("/ceph/tracings/:id", async (req, res): Promise<void> => {
     if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
     const [existing] = await db.select().from(cephTracingsTable).where(and(eq(cephTracingsTable.id, id), eq(cephTracingsTable.tenantId, tenantId)));
     if (!existing) { res.status(404).json({ error: "Tracing not found" }); return; }
+    const accessibleIds = await getAccessiblePatientIds(req);
+    if (!canAccessPatient(accessibleIds, existing.patientId)) { res.status(403).json({ error: "Access denied to this patient" }); return; }
     const { pxPerMm, name } = req.body as Record<string, any>;
     const patch: Record<string, unknown> = {};
     if (pxPerMm !== undefined) patch.pxPerMm = String(pxPerMm);
@@ -503,6 +517,8 @@ router.delete("/ceph/tracings/:id", async (req, res): Promise<void> => {
     if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
     const [existing] = await db.select().from(cephTracingsTable).where(and(eq(cephTracingsTable.id, id), eq(cephTracingsTable.tenantId, tenantId)));
     if (!existing) { res.status(404).json({ error: "Tracing not found" }); return; }
+    const accessibleIds = await getAccessiblePatientIds(req);
+    if (!canAccessPatient(accessibleIds, existing.patientId)) { res.status(403).json({ error: "Access denied to this patient" }); return; }
     await db.delete(cephTracingsTable).where(eq(cephTracingsTable.id, id));
     res.sendStatus(204);
   } catch (err: any) { errRes(res, err); }
@@ -518,6 +534,8 @@ router.put("/ceph/tracings/:id/points", async (req, res): Promise<void> => {
     if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
     const [existing] = await db.select().from(cephTracingsTable).where(and(eq(cephTracingsTable.id, id), eq(cephTracingsTable.tenantId, tenantId)));
     if (!existing) { res.status(404).json({ error: "Tracing not found" }); return; }
+    const accessibleIds = await getAccessiblePatientIds(req);
+    if (!canAccessPatient(accessibleIds, existing.patientId)) { res.status(403).json({ error: "Access denied to this patient" }); return; }
     const { points } = req.body as { points?: { landmarkLabel: string; x: number; y: number }[] };
     if (!Array.isArray(points)) { res.status(400).json({ error: "points must be an array" }); return; }
     // Replace all points
@@ -542,6 +560,8 @@ router.post("/ceph/tracings/:id/compute", async (req, res): Promise<void> => {
     if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
     const [tracing] = await db.select().from(cephTracingsTable).where(and(eq(cephTracingsTable.id, id), eq(cephTracingsTable.tenantId, tenantId)));
     if (!tracing) { res.status(404).json({ error: "Tracing not found" }); return; }
+    const accessibleIds = await getAccessiblePatientIds(req);
+    if (!canAccessPatient(accessibleIds, tracing.patientId)) { res.status(403).json({ error: "Access denied to this patient" }); return; }
 
     const pxPerMm = tracing.pxPerMm ? parseFloat(String(tracing.pxPerMm)) : null;
     if (!pxPerMm || pxPerMm <= 0) { res.status(400).json({ error: "pxPerMm must be set and positive" }); return; }
