@@ -45,6 +45,18 @@ interface TracingDetail {
   results: { id: number; measurementName: string; value: string | null; unit: string }[];
 }
 
+interface MeasurementDef {
+  id: number;
+  name: string;
+  type: "Line" | "Angle" | "Perpendicular" | "LineLineAngle";
+  p1Label: string | null;
+  p2Label: string | null;
+  p3Label: string | null;
+  p4Label: string | null;
+  quadrant: number | null;
+  displayOrder: number;
+}
+
 interface LandmarkDef {
   label: string;
   name: string;
@@ -70,6 +82,80 @@ function imgToScreen(ix: number, iy: number, cw: number, ch: number, scale: numb
   return { x: ix * scale + cw / 2 + panX, y: iy * scale + ch / 2 + panY };
 }
 
+function drawMeasurementOverlays(
+  ctx: CanvasRenderingContext2D,
+  measurements: MeasurementDef[],
+  placed: PlacedPoint[],
+  scale: number,
+) {
+  if (measurements.length === 0 || placed.length === 0) return;
+  const ptMap = new Map(placed.map((p) => [p.label, p]));
+  const lw = 1.5 / scale;
+
+  for (const m of measurements) {
+    const p1 = m.p1Label ? ptMap.get(m.p1Label) : null;
+    const p2 = m.p2Label ? ptMap.get(m.p2Label) : null;
+    const p3 = m.p3Label ? ptMap.get(m.p3Label) : null;
+    const p4 = m.p4Label ? ptMap.get(m.p4Label) : null;
+
+    ctx.save();
+    ctx.strokeStyle = "#f472b6";
+    ctx.lineWidth = lw;
+    ctx.globalAlpha = 0.55;
+
+    if (m.type === "Line" && p1 && p2) {
+      ctx.setLineDash([5 / scale, 5 / scale]);
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+    } else if (m.type === "Angle" && p1 && p2 && p3) {
+      ctx.setLineDash([5 / scale, 5 / scale]);
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.lineTo(p3.x, p3.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const r = 22 / scale;
+      const a1 = Math.atan2(p1.y - p2.y, p1.x - p2.x);
+      const a2 = Math.atan2(p3.y - p2.y, p3.x - p2.x);
+      ctx.globalAlpha = 0.4;
+      ctx.beginPath();
+      ctx.arc(p2.x, p2.y, r, Math.min(a1, a2), Math.max(a1, a2));
+      ctx.stroke();
+    } else if (m.type === "LineLineAngle" && p1 && p2 && p3 && p4) {
+      ctx.setLineDash([5 / scale, 5 / scale]);
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(p3.x, p3.y);
+      ctx.lineTo(p4.x, p4.y);
+      ctx.stroke();
+    } else if (m.type === "Perpendicular" && p1 && p2 && p3) {
+      const dx = p3.x - p2.x;
+      const dy = p3.y - p2.y;
+      const len2 = dx * dx + dy * dy;
+      const t = len2 > 0 ? ((p1.x - p2.x) * dx + (p1.y - p2.y) * dy) / len2 : 0;
+      const foot = { x: p2.x + t * dx, y: p2.y + t * dy };
+      ctx.setLineDash([5 / scale, 5 / scale]);
+      ctx.beginPath();
+      ctx.moveTo(p2.x, p2.y);
+      ctx.lineTo(p3.x, p3.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(foot.x, foot.y);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+}
+
 function renderCanvas(
   canvas: HTMLCanvasElement,
   img: HTMLImageElement | null,
@@ -77,6 +163,7 @@ function renderCanvas(
   panX: number,
   panY: number,
   placed: PlacedPoint[],
+  measurements: MeasurementDef[],
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -91,6 +178,8 @@ function renderCanvas(
   if (img && img.complete && img.naturalWidth > 0) {
     ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
   }
+
+  drawMeasurementOverlays(ctx, measurements, placed, scale);
 
   for (const pt of placed) {
     const r = LM_RADIUS / scale;
@@ -140,9 +229,9 @@ export default function CephalometricsTracing() {
     enabled: !!tracingId,
   });
 
-  const { data: templateDetail } = useQuery<{ landmarks: LandmarkDef[] }>({
+  const { data: templateDetail } = useQuery<{ landmarks: LandmarkDef[]; measurements: MeasurementDef[] }>({
     queryKey: ["ceph-template-detail", tracing?.templateId],
-    queryFn: () => customFetch<{ landmarks: LandmarkDef[] }>(`/api/ceph/templates/${tracing!.templateId}`),
+    queryFn: () => customFetch<{ landmarks: LandmarkDef[]; measurements: MeasurementDef[] }>(`/api/ceph/templates/${tracing!.templateId}`),
     enabled: !!tracing?.templateId,
   });
 
@@ -188,15 +277,17 @@ export default function CephalometricsTracing() {
     };
   }, [tracing?.imageId]);
 
+  const measurements = templateDetail?.measurements ?? [];
+
   function doRender() {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    renderCanvas(canvas, imgRef.current, scale, panX, panY, placed);
+    renderCanvas(canvas, imgRef.current, scale, panX, panY, placed, measurements);
   }
 
   useEffect(() => {
     doRender();
-  }, [scale, panX, panY, placed.length]);
+  }, [scale, panX, panY, placed.length, measurements.length]);
 
   useEffect(() => {
     function handleResize() {
@@ -357,7 +448,10 @@ export default function CephalometricsTracing() {
                       <Badge variant="outline" className="font-mono text-xs px-1 py-0">
                         {p.label}
                       </Badge>
-                      <span className="text-muted-foreground truncate">{p.name ?? p.label}</span>
+                      <span className="text-muted-foreground truncate flex-1">{p.name ?? p.label}</span>
+                      <span className="font-mono text-[10px] text-muted-foreground/50 shrink-0">
+                        {Math.round(p.x)},{Math.round(p.y)}
+                      </span>
                     </div>
                   ))}
                 </div>

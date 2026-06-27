@@ -44,10 +44,23 @@ interface LandmarkDef {
   displayOrder: number;
 }
 
+interface MeasurementDef {
+  id: number;
+  name: string;
+  type: "Line" | "Angle" | "Perpendicular" | "LineLineAngle";
+  p1Label: string | null;
+  p2Label: string | null;
+  p3Label: string | null;
+  p4Label: string | null;
+  quadrant: number | null;
+  displayOrder: number;
+}
+
 interface CephTemplateDetail {
   id: number;
   name: string;
   landmarks: LandmarkDef[];
+  measurements: MeasurementDef[];
 }
 
 interface PlacedPoint {
@@ -150,6 +163,80 @@ function drawLandmarks(
   }
 }
 
+function drawMeasurementOverlays(
+  ctx: CanvasRenderingContext2D,
+  measurements: MeasurementDef[],
+  placed: PlacedPoint[],
+  scale: number,
+) {
+  if (measurements.length === 0 || placed.length === 0) return;
+  const ptMap = new Map(placed.map((p) => [p.label, p]));
+  const lw = 1.5 / scale;
+
+  for (const m of measurements) {
+    const p1 = m.p1Label ? ptMap.get(m.p1Label) : null;
+    const p2 = m.p2Label ? ptMap.get(m.p2Label) : null;
+    const p3 = m.p3Label ? ptMap.get(m.p3Label) : null;
+    const p4 = m.p4Label ? ptMap.get(m.p4Label) : null;
+
+    ctx.save();
+    ctx.strokeStyle = "#f472b6";
+    ctx.lineWidth = lw;
+    ctx.globalAlpha = 0.55;
+
+    if (m.type === "Line" && p1 && p2) {
+      ctx.setLineDash([5 / scale, 5 / scale]);
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+    } else if (m.type === "Angle" && p1 && p2 && p3) {
+      ctx.setLineDash([5 / scale, 5 / scale]);
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.lineTo(p3.x, p3.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const r = 22 / scale;
+      const a1 = Math.atan2(p1.y - p2.y, p1.x - p2.x);
+      const a2 = Math.atan2(p3.y - p2.y, p3.x - p2.x);
+      ctx.globalAlpha = 0.4;
+      ctx.beginPath();
+      ctx.arc(p2.x, p2.y, r, Math.min(a1, a2), Math.max(a1, a2));
+      ctx.stroke();
+    } else if (m.type === "LineLineAngle" && p1 && p2 && p3 && p4) {
+      ctx.setLineDash([5 / scale, 5 / scale]);
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(p3.x, p3.y);
+      ctx.lineTo(p4.x, p4.y);
+      ctx.stroke();
+    } else if (m.type === "Perpendicular" && p1 && p2 && p3) {
+      const dx = p3.x - p2.x;
+      const dy = p3.y - p2.y;
+      const len2 = dx * dx + dy * dy;
+      const t = len2 > 0 ? ((p1.x - p2.x) * dx + (p1.y - p2.y) * dy) / len2 : 0;
+      const foot = { x: p2.x + t * dx, y: p2.y + t * dy };
+      ctx.setLineDash([5 / scale, 5 / scale]);
+      ctx.beginPath();
+      ctx.moveTo(p2.x, p2.y);
+      ctx.lineTo(p3.x, p3.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(foot.x, foot.y);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+}
+
 function renderCanvas(
   canvas: HTMLCanvasElement,
   img: HTMLImageElement | null,
@@ -161,6 +248,7 @@ function renderCanvas(
   placed: PlacedPoint[],
   activeLabel: string | null,
   dragIdx: number | null,
+  measurements: MeasurementDef[],
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -178,6 +266,10 @@ function renderCanvas(
 
   if (step === "calibrate" || step === "landmarks" || step === "results") {
     drawCalibration(ctx, calPoints, scale);
+  }
+
+  if (step === "results") {
+    drawMeasurementOverlays(ctx, measurements, placed, scale);
   }
 
   if (step === "landmarks" || step === "results") {
@@ -310,6 +402,8 @@ export default function CephalometricsTrace() {
   const nextLandmark = landmarks.find((lm) => !placed.some((p) => p.label === lm.label)) ?? null;
   const allPlaced = landmarks.length > 0 && placed.length >= landmarks.length;
 
+  const measurements = templateDetail?.measurements ?? [];
+
   const doRender = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -324,12 +418,13 @@ export default function CephalometricsTrace() {
       placed,
       nextLandmark?.label ?? null,
       dragIdx,
+      measurements,
     );
-  }, [scale, panX, panY, step, calPoints, placed, dragIdx, nextLandmark]);
+  }, [scale, panX, panY, step, calPoints, placed, dragIdx, nextLandmark, measurements]);
 
   useEffect(() => {
     scheduleRender();
-  }, [scale, panX, panY, step, calPoints, placed, dragIdx, nextLandmark]);
+  }, [scale, panX, panY, step, calPoints, placed, dragIdx, nextLandmark, measurements]);
 
   useEffect(() => {
     function handleResize() {
@@ -741,7 +836,8 @@ export default function CephalometricsTrace() {
 
                   <div className="space-y-0.5 max-h-48 overflow-y-auto">
                     {landmarks.map((lm) => {
-                      const isPlaced = placed.some((p) => p.label === lm.label);
+                      const placedPt = placed.find((p) => p.label === lm.label);
+                      const isPlaced = !!placedPt;
                       const isCurrent = nextLandmark?.label === lm.label;
                       return (
                         <div
@@ -754,8 +850,13 @@ export default function CephalometricsTrace() {
                           )}
                         >
                           <span className="font-mono w-6 shrink-0">{lm.label}</span>
-                          <span className="truncate">{lm.name}</span>
-                          {isPlaced && <CheckCircle2 className="h-3 w-3 ml-auto shrink-0 text-green-500" />}
+                          <span className="truncate flex-1">{lm.name}</span>
+                          {isPlaced && placedPt && (
+                            <span className="font-mono text-[10px] text-muted-foreground/50 shrink-0">
+                              {Math.round(placedPt.x)},{Math.round(placedPt.y)}
+                            </span>
+                          )}
+                          {isPlaced && <CheckCircle2 className="h-3 w-3 shrink-0 text-green-500" />}
                           {isCurrent && <div className="h-1.5 w-1.5 rounded-full bg-primary ml-auto shrink-0" />}
                         </div>
                       );
@@ -765,6 +866,17 @@ export default function CephalometricsTrace() {
                   <p className="text-xs text-muted-foreground/60 italic">
                     {t("ceph.trace.dragHint")}
                   </p>
+
+                  {placed.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full h-7 text-xs"
+                      onClick={() => setPlaced((prev) => prev.slice(0, -1))}
+                    >
+                      ↩ {t("ceph.trace.undoLandmark")}
+                    </Button>
+                  )}
                 </div>
               )}
 

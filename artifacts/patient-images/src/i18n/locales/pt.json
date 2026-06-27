@@ -586,7 +586,7 @@
     },
     "cephalometrics": {
       "heading": "Análise Cefalométrica",
-      "body": "O módulo de Cefalometria (Ferramentas Clínicas → Cefalometria na barra lateral) permite o traçado de pontos cefalométricos e a medição automatizada em telerradiografias laterais.\n\nPainel de Modelos: Lista os Modelos do Sistema (somente leitura) e os Modelos da Clínica (criados por administradores). Os modelos do sistema incluem Steiner, Ricketts e Tweed. Os cartões exibem o nome, a descrição e a contagem de marcos e medições. Clique em 'Ver' para abrir um modelo. Para modelos do sistema, clique em 'Copiar para Editar' para criar uma cópia editável que abre diretamente no editor.\n\nEditor de Modelos: O editor tem dois painéis — Marcos Anatômicos (esquerda) e Medições (direita). Painel de marcos: adicione um rótulo curto e um nome completo. Cada linha exibe um número de ordem. Painel de medições: defina o nome, o tipo, os pontos (selecionados a partir dos marcos), a unidade e o quadrante. Arraste as linhas para reordenar. Os modelos do sistema exibem um aviso somente leitura; use 'Copiar para Editar' no cabeçalho para criar uma cópia editável."
+      "body": "O módulo de Cefalometria (Ferramentas Clínicas → Cefalometria na barra lateral) permite o traçado de pontos cefalométricos e a medição automatizada em telerradiografias laterais.\n\nPainel de Modelos: Lista os Modelos do Sistema (somente leitura) e os Modelos da Clínica (criados por administradores). Os modelos do sistema incluem Steiner, Ricketts e Tweed. Os cartões exibem o nome, a descrição e a contagem de marcos e medições. Clique em 'Ver' para abrir um modelo. Para modelos do sistema, clique em 'Copiar para Editar' para criar uma cópia editável que abre diretamente no editor.\n\nEditor de Modelos: O editor tem dois painéis — Marcos Anatômicos (esquerda) e Medições (direita). Painel de marcos: adicione um rótulo curto e um nome completo. Cada linha exibe um número de ordem. Painel de medições: defina o nome, o tipo, os pontos (selecionados a partir dos marcos), a unidade e o quadrante. Arraste as linhas para reordenar. Os modelos do sistema exibem um aviso somente leitura; use 'Copiar para Editar' no cabeçalho para criar uma cópia editável.\n\nRealizar um Traçado: Na página de detalhes do paciente, role até 'Traçados Cefalométricos' e clique em 'Novo Traçado', depois selecione a radiografia a traçar. O fluxo de trabalho tem três etapas:\n\n1. Calibrar — Clique em dois pontos de uma referência conhecida na imagem (ex. régua ou implante). Insira o comprimento real em mm e clique em 'Aplicar Calibração'.\n\n2. Marcos — O painel lateral mostra o próximo marco a posicionar. Clique no ponto anatômico correspondente. Arraste qualquer marco posicionado para ajustar. Use 'Desfazer Último Marco' para remover o último, ou 'Salvar Progresso' para salvar sem concluir.\n\n3. Resultados — Após posicionar todos os marcos, clique em 'Calcular Medições'. As medições são exibidas na tabela e linhas e arcos são desenhados na imagem. Clique em 'Ver Resultados' para ir ao resultado permanente.\n\nOs traçados concluídos aparecem em 'Traçados Cefalométricos' na página do paciente. Clique em 'Ver' para reabrir, ou no ícone de lixeira para excluir."
     }
   },
   "bulkImport": {
@@ -987,7 +987,8 @@
       "deleteTitle": "Excluir Traçado",
       "deleteDesc": "Isso excluirá permanentemente o traçado e todas as suas medições. Esta ação não pode ser desfeita.",
       "notFound": "Traçado não encontrado.",
-      "zoomHint": "Role para ampliar · Alt+arrastar para mover"
+      "zoomHint": "Role para ampliar · Alt+arrastar para mover",
+      "undoLandmark": "Desfazer Último Marco"
     }
   },
   "idleTimeout": {
