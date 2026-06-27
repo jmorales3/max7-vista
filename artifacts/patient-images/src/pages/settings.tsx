@@ -20,7 +20,15 @@ import {
   RefreshCw, Save, HardDrive, Database, Users, ImageIcon,
   AlertCircle, Tag, Plus, X, ClipboardList, KeyRound,
   Download, Upload, ArrowRightLeft, ShieldCheck, RotateCcw,
+  Search, ChevronLeft, ChevronRight, Filter,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
@@ -72,6 +80,14 @@ export default function Settings() {
   const [newUsername, setNewUsername] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [auditAction, setAuditAction] = useState("all");
+  const [auditUsername, setAuditUsername] = useState("");
+  const [auditEntityId, setAuditEntityId] = useState("");
+  const [auditDateFrom, setAuditDateFrom] = useState("");
+  const [auditDateTo, setAuditDateTo] = useState("");
+  const [auditPage, setAuditPage] = useState(1);
+  const AUDIT_PAGE_SIZE = 50;
 
   const [migrationExporting, setMigrationExporting] = useState(false);
   const [migrationImporting, setMigrationImporting] = useState(false);
@@ -177,16 +193,40 @@ export default function Settings() {
 
   const isAdmin = user?.role === "superadmin" || user?.role === "admin";
 
-  const { data: auditLogs, isLoading: loadingAudit } = useQuery<AuditLogEntry[]>({
-    queryKey: ["audit-log"],
+  const auditQueryKey = ["audit-log", auditAction, auditUsername, auditEntityId, auditDateFrom, auditDateTo, auditPage];
+
+  const { data: auditData, isLoading: loadingAudit } = useQuery<{ items: AuditLogEntry[]; total: number; totalPages: number; page: number }>({
+    queryKey: auditQueryKey,
     queryFn: async () => {
-      const res = await fetch("/api/audit-log", { credentials: "include" });
+      const params = new URLSearchParams();
+      params.set("limit", String(AUDIT_PAGE_SIZE));
+      params.set("page", String(auditPage));
+      if (auditAction && auditAction !== "all") params.set("action", auditAction);
+      if (auditUsername.trim()) params.set("username", auditUsername.trim());
+      if (auditEntityId.trim() && /^\d+$/.test(auditEntityId.trim())) params.set("entityId", auditEntityId.trim());
+      if (auditDateFrom) params.set("from", auditDateFrom);
+      if (auditDateTo) params.set("to", auditDateTo);
+      const res = await fetch(`/api/audit-logs?${params.toString()}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch audit log");
-      const data = await res.json();
-      return data.items ?? data;
+      return res.json();
     },
     enabled: isAdmin,
   });
+
+  const auditLogs = auditData?.items ?? [];
+  const auditTotalPages = auditData?.totalPages ?? 1;
+  const auditTotal = auditData?.total ?? 0;
+
+  const hasAuditFilters = (auditAction && auditAction !== "all") || auditUsername.trim() || auditEntityId.trim() || auditDateFrom || auditDateTo;
+
+  function clearAuditFilters() {
+    setAuditAction("all");
+    setAuditUsername("");
+    setAuditEntityId("");
+    setAuditDateFrom("");
+    setAuditDateTo("");
+    setAuditPage(1);
+  }
 
   const { data: settings, isLoading: loadingSettings } = useGetSettings({
     query: { queryKey: getGetSettingsQueryKey() }
@@ -841,55 +881,168 @@ export default function Settings() {
               A record of who viewed, uploaded, edited, or deleted patient images and records.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {/* Filter bar */}
+            <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Filter className="h-4 w-4" />
+                Filter entries
+                {hasAuditFilters && (
+                  <button
+                    onClick={clearAuditFilters}
+                    className="ml-auto flex items-center gap-1 text-xs text-primary hover:underline"
+                  >
+                    <X className="h-3 w-3" />
+                    Clear filters
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {/* Username search */}
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                  <Input
+                    placeholder="Search by username"
+                    value={auditUsername}
+                    onChange={(e) => { setAuditUsername(e.target.value); setAuditPage(1); }}
+                    className="pl-8 h-9 text-sm"
+                  />
+                </div>
+                {/* Patient / Image ID */}
+                <Input
+                  type="number"
+                  placeholder="Patient or image ID (e.g. 42)"
+                  value={auditEntityId}
+                  onChange={(e) => { setAuditEntityId(e.target.value); setAuditPage(1); }}
+                  className="h-9 text-sm"
+                  min={1}
+                />
+                {/* Action type */}
+                <Select
+                  value={auditAction}
+                  onValueChange={(v) => { setAuditAction(v); setAuditPage(1); }}
+                >
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="All action types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All action types</SelectItem>
+                    <SelectItem value="view">View</SelectItem>
+                    <SelectItem value="upload">Upload</SelectItem>
+                    <SelectItem value="create">Create</SelectItem>
+                    <SelectItem value="edit">Edit</SelectItem>
+                    <SelectItem value="delete">Delete</SelectItem>
+                    <SelectItem value="replace_file">Replace File</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {/* Date from */}
+                <div className="flex items-center gap-1.5">
+                  <Label className="text-xs text-muted-foreground shrink-0">From</Label>
+                  <Input
+                    type="date"
+                    value={auditDateFrom}
+                    onChange={(e) => { setAuditDateFrom(e.target.value); setAuditPage(1); }}
+                    className="h-9 text-sm flex-1"
+                  />
+                </div>
+                {/* Date to */}
+                <div className="flex items-center gap-1.5">
+                  <Label className="text-xs text-muted-foreground shrink-0">To</Label>
+                  <Input
+                    type="date"
+                    value={auditDateTo}
+                    onChange={(e) => { setAuditDateTo(e.target.value); setAuditPage(1); }}
+                    className="h-9 text-sm flex-1"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Results */}
             {loadingAudit ? (
               <div className="space-y-2">
                 {[1, 2, 3, 4, 5].map((i) => (
                   <Skeleton key={i} className="h-12 w-full" />
                 ))}
               </div>
-            ) : !auditLogs || auditLogs.length === 0 ? (
+            ) : auditLogs.length === 0 ? (
               <p className="text-sm text-muted-foreground py-4 text-center">
-                No audit log entries yet. Actions on images and patients will appear here.
+                {hasAuditFilters
+                  ? "No entries match your filters. Try adjusting the search criteria."
+                  : "No audit log entries yet. Actions on images and patients will appear here."}
               </p>
             ) : (
-              <div className="divide-y rounded-md border overflow-hidden">
-                {auditLogs.map((entry) => (
-                  <div key={entry.id} className="flex items-start gap-3 px-4 py-3 text-sm bg-background hover:bg-muted/30 transition-colors">
-                    <Badge
-                      variant={ACTION_VARIANTS[entry.action] ?? "outline"}
-                      className="mt-0.5 shrink-0 capitalize"
-                    >
-                      {ACTION_LABELS[entry.action] ?? entry.action}
-                    </Badge>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-medium">
-                          {entry.username ?? "System"}
-                        </span>
-                        <span className="text-muted-foreground">·</span>
-                        <span className="text-muted-foreground capitalize">
-                          {entry.entityType} {entry.entityId ? `#${entry.entityId}` : ""}
-                        </span>
+              <>
+                <div className="divide-y rounded-md border overflow-hidden">
+                  {auditLogs.map((entry) => (
+                    <div key={entry.id} className="flex items-start gap-3 px-4 py-3 text-sm bg-background hover:bg-muted/30 transition-colors">
+                      <Badge
+                        variant={ACTION_VARIANTS[entry.action] ?? "outline"}
+                        className="mt-0.5 shrink-0 capitalize"
+                      >
+                        {ACTION_LABELS[entry.action] ?? entry.action}
+                      </Badge>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-medium">
+                            {entry.username ?? "System"}
+                          </span>
+                          <span className="text-muted-foreground">·</span>
+                          <span className="text-muted-foreground capitalize">
+                            {entry.entityType} {entry.entityId ? `#${entry.entityId}` : ""}
+                          </span>
+                        </div>
+                        {entry.details && (() => {
+                          try {
+                            const parsed = JSON.parse(entry.details);
+                            const label = parsed.fileName ?? parsed.name ?? parsed.patientCode ?? null;
+                            return label ? (
+                              <p className="text-muted-foreground text-xs mt-0.5 truncate">{label}</p>
+                            ) : null;
+                          } catch {
+                            return null;
+                          }
+                        })()}
                       </div>
-                      {entry.details && (() => {
-                        try {
-                          const parsed = JSON.parse(entry.details);
-                          const label = parsed.fileName ?? parsed.name ?? parsed.patientCode ?? null;
-                          return label ? (
-                            <p className="text-muted-foreground text-xs mt-0.5 truncate">{label}</p>
-                          ) : null;
-                        } catch {
-                          return null;
-                        }
-                      })()}
+                      <span className="text-xs text-muted-foreground shrink-0 mt-0.5">
+                        {format(new Date(entry.createdAt), "MMM d, yyyy h:mm a")}
+                      </span>
                     </div>
-                    <span className="text-xs text-muted-foreground shrink-0 mt-0.5">
-                      {format(new Date(entry.createdAt), "MMM d, yyyy h:mm a")}
+                  ))}
+                </div>
+
+                {/* Pagination */}
+                {auditTotalPages > 1 && (
+                  <div className="flex items-center justify-between pt-1 text-sm text-muted-foreground">
+                    <span>
+                      Showing {((auditPage - 1) * AUDIT_PAGE_SIZE) + 1}–{Math.min(auditPage * AUDIT_PAGE_SIZE, auditTotal)} of {auditTotal} entries
                     </span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAuditPage((p) => Math.max(1, p - 1))}
+                        disabled={auditPage <= 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="px-2 text-xs">
+                        Page {auditPage} of {auditTotalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAuditPage((p) => Math.min(auditTotalPages, p + 1))}
+                        disabled={auditPage >= auditTotalPages}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

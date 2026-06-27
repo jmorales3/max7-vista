@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { desc, eq, and, gte, lte, ilike, inArray, SQL } from "drizzle-orm";
+import { desc, eq, and, or, gte, lte, ilike, inArray, SQL } from "drizzle-orm";
 import { db, auditLogTable, patientsTable } from "@workspace/db";
 import { requireRole } from "../middlewares/requireAuth";
 
@@ -22,11 +22,13 @@ async function handleAuditLog(req: any, res: any): Promise<void> {
       offset = (page - 1) * limitRaw;
     }
 
-    // Params: new-style (from, to, userId, patientId, patient) + old-style (dateFrom, dateTo, username)
+    // Params: new-style (from, to, userId, patientId, entityId, patient) + old-style (dateFrom, dateTo, username)
     const action = req.query.action as string | undefined;
     const username = req.query.username as string | undefined;
     const userId = req.query.userId ? parseInt(String(req.query.userId), 10) : undefined;
     const patientIdParam = req.query.patientId ? parseInt(String(req.query.patientId), 10) : undefined;
+    // entityId: searches audit rows where entityId OR patientId matches (covers image IDs and patient IDs in one field)
+    const entityIdParam = req.query.entityId ? parseInt(String(req.query.entityId), 10) : undefined;
     const patientSearch = req.query.patient as string | undefined; // text search by patient name/code
     const dateFrom = (req.query.from ?? req.query.dateFrom) as string | undefined;
     const dateTo = (req.query.to ?? req.query.dateTo) as string | undefined;
@@ -62,6 +64,15 @@ async function handleAuditLog(req: any, res: any): Promise<void> {
     if (action) conditions.push(eq(auditLogTable.action, action));
     if (username) conditions.push(ilike(auditLogTable.username as any, `%${username}%`));
     if (userId && !isNaN(userId)) conditions.push(eq(auditLogTable.userId as any, userId));
+    // entityId param: match rows where entityId OR patientId equals the value
+    if (entityIdParam && !isNaN(entityIdParam)) {
+      conditions.push(
+        or(
+          eq(auditLogTable.entityId as any, entityIdParam),
+          eq(auditLogTable.patientId as any, entityIdParam),
+        ) as SQL
+      );
+    }
     if (patientIdParam && !isNaN(patientIdParam)) {
       conditions.push(eq(auditLogTable.patientId as any, patientIdParam));
     } else if (resolvedPatientIds !== undefined) {
