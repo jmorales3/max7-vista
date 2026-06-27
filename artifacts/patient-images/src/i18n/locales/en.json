@@ -857,6 +857,7 @@
     "landmarkCountLabel": "{{count}} landmarks",
     "measurementCountLabel": "{{count}} measurements",
     "createTitle": "New Cephalometric Template",
+    "saving": "Saving…",
     "templateName": "Template Name",
     "templateNamePlaceholder": "e.g. My Custom Analysis",
     "description": "Description",

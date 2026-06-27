@@ -857,6 +857,7 @@
     "landmarkCountLabel": "{{count}} points de repère",
     "measurementCountLabel": "{{count}} mesures",
     "createTitle": "Nouveau Modèle Céphalométrique",
+    "saving": "Enregistrement…",
     "templateName": "Nom du Modèle",
     "templateNamePlaceholder": "ex. Mon Analyse Personnalisée",
     "description": "Description",

@@ -116,7 +116,35 @@ router.get("/ceph/templates", async (req, res): Promise<void> => {
       .from(cephTemplatesTable)
       .where(or(isNull(cephTemplatesTable.tenantId), eq(cephTemplatesTable.tenantId, tenantId)))
       .orderBy(cephTemplatesTable.name);
-    res.json(templates);
+
+    // Attach landmark and measurement counts efficiently
+    const ids = templates.map((t) => t.id);
+    let landmarkCounts: Record<number, number> = {};
+    let measurementCounts: Record<number, number> = {};
+    if (ids.length > 0) {
+      const lmRows = await db
+        .select({ templateId: cephLandmarksTable.templateId })
+        .from(cephLandmarksTable)
+        .where(inArray(cephLandmarksTable.templateId, ids));
+      const mRows = await db
+        .select({ templateId: cephMeasurementsTable.templateId })
+        .from(cephMeasurementsTable)
+        .where(inArray(cephMeasurementsTable.templateId, ids));
+      for (const row of lmRows) {
+        landmarkCounts[row.templateId] = (landmarkCounts[row.templateId] ?? 0) + 1;
+      }
+      for (const row of mRows) {
+        measurementCounts[row.templateId] = (measurementCounts[row.templateId] ?? 0) + 1;
+      }
+    }
+
+    res.json(
+      templates.map((t) => ({
+        ...t,
+        landmarkCount: landmarkCounts[t.id] ?? 0,
+        measurementCount: measurementCounts[t.id] ?? 0,
+      }))
+    );
   } catch (err: any) { errRes(res, err); }
 });
 

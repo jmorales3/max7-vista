@@ -857,6 +857,7 @@
     "landmarkCountLabel": "{{count}} puntos de referencia",
     "measurementCountLabel": "{{count}} mediciones",
     "createTitle": "Nueva Plantilla Cefalométrica",
+    "saving": "Guardando…",
     "templateName": "Nombre de la Plantilla",
     "templateNamePlaceholder": "ej. Mi Análisis Personalizado",
     "description": "Descripción",

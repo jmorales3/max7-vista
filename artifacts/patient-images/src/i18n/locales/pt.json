@@ -857,6 +857,7 @@
     "landmarkCountLabel": "{{count}} marcos anatômicos",
     "measurementCountLabel": "{{count}} medições",
     "createTitle": "Novo Modelo Cefalométrico",
+    "saving": "Salvando…",
     "templateName": "Nome do Modelo",
     "templateNamePlaceholder": "ex. Minha Análise Personalizada",
     "description": "Descrição",
