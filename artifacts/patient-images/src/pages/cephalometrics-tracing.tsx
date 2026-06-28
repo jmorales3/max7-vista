@@ -275,19 +275,20 @@ export default function CephalometricsTracing() {
     img.src = `/api/images/${tracing.imageId}/file`;
     img.onload = () => {
       imgRef.current = img;
-      if (canvasRef.current) {
-        // Fallback to container bounding rect when canvas buffer hasn't been
-        // initialised yet (e.g. cached image fires onload before ResizeObserver).
-        let cw = canvasRef.current.width;
-        let ch = canvasRef.current.height;
-        if (cw <= 1 || ch <= 1) {
-          const rect = containerRef.current?.getBoundingClientRect();
-          if (rect && rect.width > 0) {
-            cw = Math.round(rect.width);
-            ch = Math.round(rect.height);
-            canvasRef.current.width = cw;
-            canvasRef.current.height = ch;
-          }
+      const canvas = canvasRef.current;
+      const container = containerRef.current;
+      if (canvas && container) {
+        // Always derive dimensions from the container's bounding rect so that
+        // a cached image (which fires onload before ResizeObserver) does not
+        // use the HTML canvas default of 300×150 — which causes the browser
+        // to CSS-stretch a tiny buffer into the full container and appear
+        // to compress the image horizontally.
+        const rect = container.getBoundingClientRect();
+        const cw = rect.width > 0 ? Math.round(rect.width) : canvas.width;
+        const ch = rect.height > 0 ? Math.round(rect.height) : canvas.height;
+        if (canvas.width !== cw || canvas.height !== ch) {
+          canvas.width = cw;
+          canvas.height = ch;
         }
         if (cw > 0 && ch > 0) {
           const s = Math.min(cw / img.naturalWidth, ch / img.naturalHeight) * 0.9;
