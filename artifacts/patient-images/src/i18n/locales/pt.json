@@ -988,7 +988,9 @@
       "deleteDesc": "Isso excluirá permanentemente o traçado e todas as suas medições. Esta ação não pode ser desfeita.",
       "notFound": "Traçado não encontrado.",
       "zoomHint": "Role para ampliar · Alt+arrastar para mover",
-      "undoLandmark": "Desfazer Último Marco"
+      "undoLandmark": "Desfazer Último Marco",
+      "showOverlay": "Mostrar Traçado",
+      "hideOverlay": "Ocultar Traçado"
     },
     "lm": {
       "Sella": { "name": "Sella", "desc": "Centro da sela túrcica" },

@@ -988,7 +988,9 @@
       "deleteDesc": "This will permanently delete the tracing and all its measurements. This cannot be undone.",
       "notFound": "Tracing not found.",
       "zoomHint": "Scroll to zoom · Alt+drag to pan",
-      "undoLandmark": "Undo Last Landmark"
+      "undoLandmark": "Undo Last Landmark",
+      "showOverlay": "Show Tracing",
+      "hideOverlay": "Hide Tracing"
     },
     "lm": {
       "Sella": { "name": "Sella", "desc": "Center of sella turcica" },

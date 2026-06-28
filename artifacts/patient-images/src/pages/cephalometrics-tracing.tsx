@@ -29,6 +29,8 @@ import {
   Loader2,
   Calendar,
   Ruler,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -168,6 +170,7 @@ function renderCanvas(
   measurements: MeasurementDef[],
   lineColor: string,
   dotColor: string,
+  showOverlay: boolean,
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -183,21 +186,23 @@ function renderCanvas(
     ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
   }
 
-  drawMeasurementOverlays(ctx, measurements, placed, scale, lineColor);
+  if (showOverlay) {
+    drawMeasurementOverlays(ctx, measurements, placed, scale, lineColor);
 
-  for (const pt of placed) {
-    const r = LM_RADIUS / scale;
-    const lw = 1.5 / scale;
+    for (const pt of placed) {
+      const r = LM_RADIUS / scale;
+      const lw = 1.5 / scale;
 
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(pt.x, pt.y, r, 0, 2 * Math.PI);
-    ctx.fillStyle = dotColor;
-    ctx.fill();
-    ctx.strokeStyle = "#fff";
-    ctx.lineWidth = lw;
-    ctx.stroke();
-    ctx.restore();
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, r, 0, 2 * Math.PI);
+      ctx.fillStyle = dotColor;
+      ctx.fill();
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = lw;
+      ctx.stroke();
+      ctx.restore();
+    }
   }
 
   ctx.restore();
@@ -215,6 +220,7 @@ export default function CephalometricsTracing() {
   const [panY, setPanY] = useState(0);
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState<{ mx: number; my: number; ox: number; oy: number } | null>(null);
+  const [showOverlay, setShowOverlay] = useState(true);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -278,15 +284,15 @@ export default function CephalometricsTracing() {
 
   const phaseColor = PHASE_COLORS[tracing?.recordPhase ?? "initial"] ?? PHASE_COLORS.initial;
 
-  function doRender() {
+  function doRender(overlay = showOverlay) {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    renderCanvas(canvas, imgRef.current, scale, panX, panY, placed, measurements, phaseColor, phaseColor + "cc");
+    renderCanvas(canvas, imgRef.current, scale, panX, panY, placed, measurements, phaseColor, phaseColor + "cc", overlay);
   }
 
   useEffect(() => {
     doRender();
-  }, [scale, panX, panY, placed.length, measurements.length, phaseColor]);
+  }, [scale, panX, panY, placed.length, measurements.length, phaseColor, showOverlay]);
 
   useEffect(() => {
     function handleResize() {
@@ -416,6 +422,19 @@ export default function CephalometricsTracing() {
             )}
           </div>
         </div>
+
+        <Button
+          variant={showOverlay ? "secondary" : "outline"}
+          size="sm"
+          className="h-8 gap-1.5 text-xs shrink-0"
+          onClick={() => setShowOverlay((v) => !v)}
+          title={showOverlay ? t("ceph.trace.hideOverlay") : t("ceph.trace.showOverlay")}
+        >
+          {showOverlay ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+          <span className="hidden sm:inline">
+            {showOverlay ? t("ceph.trace.hideOverlay") : t("ceph.trace.showOverlay")}
+          </span>
+        </Button>
 
         <div className="flex items-center gap-1 border rounded-md">
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setScale((s) => Math.min(20, s * 1.2))}>

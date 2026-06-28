@@ -988,7 +988,9 @@
       "deleteDesc": "Esto eliminará permanentemente el trazado y todas sus mediciones. Esta acción no se puede deshacer.",
       "notFound": "Trazado no encontrado.",
       "zoomHint": "Desplace para hacer zoom · Alt+arrastrar para desplazar",
-      "undoLandmark": "Deshacer Último Punto"
+      "undoLandmark": "Deshacer Último Punto",
+      "showOverlay": "Mostrar Trazado",
+      "hideOverlay": "Ocultar Trazado"
     },
     "lm": {
       "Sella": { "name": "Sella", "desc": "Centro de la silla turca" },

@@ -988,7 +988,9 @@
       "deleteDesc": "Cela supprimera définitivement le tracé et toutes ses mesures. Cette action est irréversible.",
       "notFound": "Tracé introuvable.",
       "zoomHint": "Défilez pour zoomer · Alt+glisser pour déplacer",
-      "undoLandmark": "Annuler Dernier Point"
+      "undoLandmark": "Annuler Dernier Point",
+      "showOverlay": "Afficher le Tracé",
+      "hideOverlay": "Masquer le Tracé"
     },
     "lm": {
       "Sella": { "name": "Sella", "desc": "Centre de la selle turcique" },
