@@ -15,7 +15,7 @@ const { spawn } = require("child_process");
 const path = require("path");
 
 const publicPort = parseInt(process.env.PORT || "5000");
-const metroPort = publicPort + 1; // Metro runs on PORT+1 internally
+const metroPort = parseInt(process.env.METRO_PORT || "19000"); // fixed internal port avoids race with other services
 
 const appDir = path.resolve(__dirname, "..");
 

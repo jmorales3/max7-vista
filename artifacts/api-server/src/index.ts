@@ -402,6 +402,13 @@ async function initPostgres() {
       value NUMERIC,
       unit TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS sessions (
+      sid    VARCHAR      NOT NULL PRIMARY KEY,
+      sess   JSON         NOT NULL,
+      expire TIMESTAMP(6) NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_session_expire ON sessions (expire);
   `);
   logger.info("PostgreSQL tables ensured");
 
