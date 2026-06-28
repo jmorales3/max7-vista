@@ -103,6 +103,7 @@ if (IS_SQLITE) {
       store: new PgSession({
         conString: process.env["DATABASE_URL"],
         tableName: "sessions",
+        createTableIfMissing: true,
       }),
       name: "max7.sid",
       secret: process.env["SESSION_SECRET"] || "max7-vista-dev-secret-change-in-prod",
