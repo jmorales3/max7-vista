@@ -47,3 +47,7 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Large binary / upload directories — never commit to git
+artifacts/api-server/uploads/
+attached_assets/
