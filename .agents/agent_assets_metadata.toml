@@ -17,3 +17,9 @@ id = "RqJanBEPZ8QQ0ncnLxrz6"
 uri = "file://max7-transfer-register.txt"
 type = "text"
 title = "Max7 Transfer Register (text file)"
+
+[[outputs]]
+id = "1Pd4PBDkXQ75FcOWE5_lR"
+uri = "file://max7-transfer-register.md"
+type = "text"
+title = "Max7 Vista → Max7 Feature Transfer Register"
