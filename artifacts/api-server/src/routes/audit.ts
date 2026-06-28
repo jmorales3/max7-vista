@@ -2,6 +2,11 @@ import { Router, type IRouter } from "express";
 import { desc, eq, and, or, gte, lte, ilike, inArray, SQL } from "drizzle-orm";
 import { db, auditLogTable, patientsTable } from "@workspace/db";
 import { requireRole } from "../middlewares/requireAuth";
+import {
+  getAuditRetentionYears,
+  setAuditRetentionYears,
+  performAuditCleanup,
+} from "../lib/auditCleanup";
 
 const router: IRouter = Router();
 
@@ -115,5 +120,42 @@ router.get("/audit-logs", requireRole("admin", "superadmin"), handleAuditLog);
 
 // Backward-compat alias
 router.get("/audit-log", requireRole("admin", "superadmin"), handleAuditLog);
+
+// ── Retention policy ─────────────────────────────────────────────────────────
+
+router.get("/audit-logs/retention", requireRole("admin", "superadmin"), async (_req, res): Promise<void> => {
+  try {
+    const retentionYears = await getAuditRetentionYears();
+    res.json({ retentionYears });
+  } catch (err) {
+    console.error("[audit] Failed to get retention policy:", err);
+    res.status(500).json({ error: "Failed to get retention policy" });
+  }
+});
+
+router.put("/audit-logs/retention", requireRole("admin", "superadmin"), async (req, res): Promise<void> => {
+  try {
+    const years = parseInt(String(req.body?.retentionYears), 10);
+    if (!Number.isFinite(years) || years < 1 || years > 99) {
+      res.status(400).json({ error: "retentionYears must be a number between 1 and 99" });
+      return;
+    }
+    await setAuditRetentionYears(years);
+    res.json({ retentionYears: years });
+  } catch (err) {
+    console.error("[audit] Failed to update retention policy:", err);
+    res.status(500).json({ error: "Failed to update retention policy" });
+  }
+});
+
+router.post("/audit-logs/cleanup", requireRole("admin", "superadmin"), async (_req, res): Promise<void> => {
+  try {
+    const result = await performAuditCleanup();
+    res.json(result);
+  } catch (err) {
+    console.error("[audit] Manual cleanup failed:", err);
+    res.status(500).json({ error: "Cleanup failed" });
+  }
+});
 
 export default router;

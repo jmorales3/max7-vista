@@ -20,7 +20,7 @@ import {
   RefreshCw, Save, HardDrive, Database, Users, ImageIcon,
   AlertCircle, Tag, Plus, X, ClipboardList, KeyRound,
   Download, Upload, ArrowRightLeft, ShieldCheck, RotateCcw,
-  Search, ChevronLeft, ChevronRight, Filter,
+  Search, ChevronLeft, ChevronRight, Filter, Clock, Trash2,
 } from "lucide-react";
 import {
   Select,
@@ -73,6 +73,7 @@ export default function Settings() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const { user } = useAuth();
+  const isAdmin = user?.role === "superadmin" || user?.role === "admin";
   const [storageDirectory, setStorageDirectory] = useState("");
   const [newTagName, setNewTagName] = useState("");
 
@@ -88,6 +89,72 @@ export default function Settings() {
   const [auditDateTo, setAuditDateTo] = useState("");
   const [auditPage, setAuditPage] = useState(1);
   const AUDIT_PAGE_SIZE = 50;
+
+  const [auditRetentionYears, setAuditRetentionYears] = useState<number | null>(null);
+  const [auditCleanupResult, setAuditCleanupResult] = useState<{ deleted: number; cutoffDate: string } | null>(null);
+
+  const { data: retentionData, isLoading: loadingRetention } = useQuery<{ retentionYears: number }>({
+    queryKey: ["audit-retention"],
+    queryFn: async () => {
+      const res = await fetch("/api/audit-logs/retention", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch retention policy");
+      return res.json();
+    },
+    enabled: isAdmin,
+  });
+
+  useEffect(() => {
+    if (retentionData?.retentionYears != null) {
+      setAuditRetentionYears(retentionData.retentionYears);
+    }
+  }, [retentionData]);
+
+  const saveRetention = useMutation({
+    mutationFn: async (years: number) => {
+      const res = await fetch("/api/audit-logs/retention", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ retentionYears: years }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? "Failed to save");
+      }
+      return res.json() as Promise<{ retentionYears: number }>;
+    },
+    onSuccess: () => {
+      toast({ title: "Retention policy saved" });
+      void queryClient.invalidateQueries({ queryKey: ["audit-retention"] });
+    },
+    onError: (e) => {
+      toast({ variant: "destructive", title: "Failed to save retention policy", description: e instanceof Error ? e.message : String(e) });
+    },
+  });
+
+  const runCleanup = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/audit-logs/cleanup", { method: "POST", credentials: "include" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? "Cleanup failed");
+      }
+      return res.json() as Promise<{ deleted: number; cutoffDate: string; retentionYears: number }>;
+    },
+    onSuccess: (data) => {
+      setAuditCleanupResult({ deleted: data.deleted, cutoffDate: data.cutoffDate });
+      void queryClient.invalidateQueries({ queryKey: auditQueryKey });
+      toast({
+        title: "Cleanup complete",
+        description: data.deleted > 0
+          ? `Removed ${data.deleted} expired audit log ${data.deleted === 1 ? "entry" : "entries"}.`
+          : "No expired entries to remove.",
+      });
+    },
+    onError: (e) => {
+      toast({ variant: "destructive", title: "Cleanup failed", description: e instanceof Error ? e.message : String(e) });
+    },
+  });
 
   const [migrationExporting, setMigrationExporting] = useState(false);
   const [migrationImporting, setMigrationImporting] = useState(false);
@@ -190,8 +257,6 @@ export default function Settings() {
       toast({ variant: "destructive", title: e.message });
     },
   });
-
-  const isAdmin = user?.role === "superadmin" || user?.role === "admin";
 
   const auditQueryKey = ["audit-log", auditAction, auditUsername, auditEntityId, auditDateFrom, auditDateTo, auditPage];
 
@@ -863,6 +928,83 @@ export default function Settings() {
                       ))}
                     </div>
                   </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Audit Log Retention
+            </CardTitle>
+            <CardDescription>
+              HIPAA requires audit logs to be kept for at least 6 years. Entries older than the retention period are automatically purged to save space.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex-1 space-y-1">
+                <Label htmlFor="retentionYears">Keep audit log entries for</Label>
+                {loadingRetention ? (
+                  <Skeleton className="h-10 w-40" />
+                ) : (
+                  <Select
+                    value={String(auditRetentionYears ?? 6)}
+                    onValueChange={(v) => setAuditRetentionYears(parseInt(v, 10))}
+                  >
+                    <SelectTrigger id="retentionYears" className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5, 6, 7, 10, 15, 20].map((y) => (
+                        <SelectItem key={y} value={String(y)}>
+                          {y} {y === 1 ? "year" : "years"}{y === 6 ? " (HIPAA default)" : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Entries older than this are deleted automatically at startup and once daily.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Button
+                  onClick={() => auditRetentionYears != null && saveRetention.mutate(auditRetentionYears)}
+                  disabled={saveRetention.isPending || loadingRetention || auditRetentionYears == null || auditRetentionYears === retentionData?.retentionYears}
+                >
+                  {saveRetention.isPending
+                    ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    : <Save className="mr-2 h-4 w-4" />}
+                  Save policy
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => runCleanup.mutate()}
+                  disabled={runCleanup.isPending}
+                >
+                  {runCleanup.isPending
+                    ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    : <Trash2 className="mr-2 h-4 w-4" />}
+                  Run cleanup now
+                </Button>
+              </div>
+            </div>
+
+            {auditCleanupResult && (
+              <div className="rounded-lg bg-muted/40 border p-3 text-sm">
+                {auditCleanupResult.deleted > 0 ? (
+                  <p>
+                    Removed <span className="font-medium">{auditCleanupResult.deleted}</span> expired {auditCleanupResult.deleted === 1 ? "entry" : "entries"} older than {format(new Date(auditCleanupResult.cutoffDate), "MMM d, yyyy")}.
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground">No expired entries found — the log is already within the retention window.</p>
                 )}
               </div>
             )}

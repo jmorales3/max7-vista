@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { getStorageDirectory, getSetting } from "./lib/storage";
 import { scanDirectory } from "./lib/scanDirectory";
 import { scheduleAutoBackup } from "./lib/backup";
+import { scheduleAuditCleanup } from "./lib/auditCleanup";
 import path from "path";
 import fs from "fs";
 import os from "os";
@@ -1104,6 +1105,8 @@ async function start() {
     } catch (err) {
       logger.warn({ err }, "DB schema init failed — server continues without it");
     }
+
+    scheduleAuditCleanup(logger);
 
     if (IS_SQLITE) {
       try {
