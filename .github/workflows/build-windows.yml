@@ -1,71 +1,15 @@
-name: Build Windows Installer
+# Superseded by build-win.yml — this workflow is intentionally disabled.
+name: Build Windows Installer (disabled)
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+    inputs:
+      reason:
+        description: "This workflow is disabled. Use build-win.yml instead."
+        required: false
 
 jobs:
-  build:
-    runs-on: windows-latest
-
+  noop:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 10
-
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        shell: bash
-        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - name: Cache pnpm store
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
-
-      - name: Enable Windows platform binaries
-        shell: python
-        run: |
-          import re
-          content = open('pnpm-workspace.yaml', encoding='utf-8').read()
-          # Remove overrides that exclude Win32 optional binaries (rollup, esbuild, lightningcss, tailwind oxide)
-          content = re.sub(r'[ \t]+"[^"]*win32[^"]*": "-"\r?\n', '', content)
-          content = re.sub(r'[ \t]+"[^"]*Win32[^"]*": "-"\r?\n', '', content)
-          # Allow electron to run its install script (pnpm v10 blocks it by default)
-          content = content.replace('onlyBuiltDependencies:', 'onlyBuiltDependencies:\n  - electron')
-          open('pnpm-workspace.yaml', 'w', encoding='utf-8').write(content)
-          print('pnpm-workspace.yaml patched for Windows build')
-
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Remove workspace symlinks before packaging
-        shell: bash
-        run: rm -rf artifacts/electron-app/node_modules/@workspace
-
-      - name: Build Windows installer
-        run: pnpm --filter @workspace/electron-app run package:win
-        env:
-          NODE_ENV: production
-          PORT: "8080"
-
-      - name: Upload installer
-        uses: actions/upload-artifact@v4
-        with:
-          name: max7-vista-windows
-          path: artifacts/electron-app/release/*.exe
-          retention-days: 30
+      - run: echo "This workflow is disabled. Use build-win.yml."
