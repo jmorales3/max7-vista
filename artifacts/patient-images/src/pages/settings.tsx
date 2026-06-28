@@ -92,6 +92,7 @@ export default function Settings() {
 
   const [auditRetentionYears, setAuditRetentionYears] = useState<number | null>(null);
   const [auditCleanupResult, setAuditCleanupResult] = useState<{ deleted: number; cutoffDate: string } | null>(null);
+  const [auditExporting, setAuditExporting] = useState(false);
 
   const { data: retentionData, isLoading: loadingRetention } = useQuery<{ retentionYears: number }>({
     queryKey: ["audit-retention"],
@@ -291,6 +292,36 @@ export default function Settings() {
     setAuditDateFrom("");
     setAuditDateTo("");
     setAuditPage(1);
+  }
+
+  async function handleAuditExport() {
+    setAuditExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (auditAction && auditAction !== "all") params.set("action", auditAction);
+      if (auditUsername.trim()) params.set("username", auditUsername.trim());
+      if (auditEntityId.trim() && /^\d+$/.test(auditEntityId.trim())) params.set("entityId", auditEntityId.trim());
+      if (auditDateFrom) params.set("from", auditDateFrom);
+      if (auditDateTo) params.set("to", auditDateTo);
+      const res = await fetch(`/api/audit-logs/export?${params.toString()}`, { credentials: "include" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const dateStr = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `audit-log-${dateStr}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Export complete", description: "Audit log downloaded as CSV." });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Export failed", description: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setAuditExporting(false);
+    }
   }
 
   const { data: settings, isLoading: loadingSettings } = useGetSettings({
@@ -1015,13 +1046,29 @@ export default function Settings() {
       {isAdmin && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ClipboardList className="h-5 w-5" />
-              Audit Log
-            </CardTitle>
-            <CardDescription>
-              A record of who viewed, uploaded, edited, or deleted patient images and records.
-            </CardDescription>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <ClipboardList className="h-5 w-5" />
+                  Audit Log
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  A record of who viewed, uploaded, edited, or deleted patient images and records.
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAuditExport}
+                disabled={auditExporting}
+                className="shrink-0"
+              >
+                {auditExporting
+                  ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  : <Download className="mr-2 h-4 w-4" />}
+                Export CSV
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Filter bar */}

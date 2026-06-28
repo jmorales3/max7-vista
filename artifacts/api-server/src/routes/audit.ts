@@ -115,6 +115,108 @@ async function handleAuditLog(req: any, res: any): Promise<void> {
   }
 }
 
+// ── CSV Export ───────────────────────────────────────────────────────────────
+
+router.get("/audit-logs/export", requireRole("admin", "superadmin"), async (req, res): Promise<void> => {
+  try {
+    const tenantId = req.session?.tenantId as number | undefined;
+
+    const action = req.query.action as string | undefined;
+    const username = req.query.username as string | undefined;
+    const userId = req.query.userId ? parseInt(String(req.query.userId), 10) : undefined;
+    const patientIdParam = req.query.patientId ? parseInt(String(req.query.patientId), 10) : undefined;
+    const entityIdParam = req.query.entityId ? parseInt(String(req.query.entityId), 10) : undefined;
+    const patientSearch = req.query.patient as string | undefined;
+    const dateFrom = (req.query.from ?? req.query.dateFrom) as string | undefined;
+    const dateTo = (req.query.to ?? req.query.dateTo) as string | undefined;
+
+    let resolvedPatientIds: number[] | undefined;
+    if (patientSearch && tenantId) {
+      const matches = await db
+        .select({ id: patientsTable.id })
+        .from(patientsTable)
+        .where(and(eq(patientsTable.tenantId, tenantId), ilike(patientsTable.name, `%${patientSearch}%`)));
+      const matchesCode = await db
+        .select({ id: patientsTable.id })
+        .from(patientsTable)
+        .where(and(eq(patientsTable.tenantId, tenantId), ilike(patientsTable.patientCode, `%${patientSearch}%`)));
+      const idSet = new Set([...matches.map(r => r.id), ...matchesCode.map(r => r.id)]);
+      resolvedPatientIds = [...idSet];
+    }
+
+    const conditions: SQL[] = [];
+    if (tenantId) conditions.push(eq(auditLogTable.tenantId, tenantId));
+    if (action) conditions.push(eq(auditLogTable.action, action));
+    if (username) conditions.push(ilike(auditLogTable.username as any, `%${username}%`));
+    if (userId && !isNaN(userId)) conditions.push(eq(auditLogTable.userId as any, userId));
+    if (entityIdParam && !isNaN(entityIdParam)) {
+      conditions.push(
+        or(
+          eq(auditLogTable.entityId as any, entityIdParam),
+          eq(auditLogTable.patientId as any, entityIdParam),
+        ) as SQL
+      );
+    }
+    if (patientIdParam && !isNaN(patientIdParam)) {
+      conditions.push(eq(auditLogTable.patientId as any, patientIdParam));
+    } else if (resolvedPatientIds !== undefined) {
+      if (resolvedPatientIds.length === 0) {
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader("Content-Disposition", `attachment; filename="audit-log-${new Date().toISOString().slice(0, 10)}.csv"`);
+        res.end("Timestamp,User,Action,Entity Type,Entity ID,Details\n");
+        return;
+      }
+      conditions.push(inArray(auditLogTable.patientId as any, resolvedPatientIds));
+    }
+    if (dateFrom) conditions.push(gte(auditLogTable.createdAt, new Date(dateFrom)));
+    if (dateTo) {
+      const end = new Date(dateTo);
+      end.setHours(23, 59, 59, 999);
+      conditions.push(lte(auditLogTable.createdAt, end));
+    }
+
+    const where = conditions.length ? and(...conditions) : undefined;
+
+    const rows = await db
+      .select()
+      .from(auditLogTable)
+      .where(where)
+      .orderBy(desc(auditLogTable.createdAt));
+
+    function csvEscape(value: string | number | null | undefined): string {
+      if (value == null) return "";
+      let str = String(value);
+      // Neutralize spreadsheet formula injection: prefix dangerous leading chars with a tab
+      if (/^[=+\-@\t\r]/.test(str)) {
+        str = `\t${str}`;
+      }
+      if (str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r") || str.includes("\t")) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    }
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="audit-log-${dateStr}.csv"`);
+
+    const header = "Timestamp,User,Action,Entity Type,Entity ID,Details\n";
+    const body = rows.map((r) => [
+      csvEscape(r.createdAt ? new Date(r.createdAt).toISOString() : ""),
+      csvEscape(r.username),
+      csvEscape(r.action),
+      csvEscape(r.entityType),
+      csvEscape(r.entityId),
+      csvEscape(r.details as string | null),
+    ].join(",")).join("\n");
+
+    res.end(header + body);
+  } catch (err) {
+    console.error("[audit] CSV export failed:", err);
+    res.status(500).json({ error: "Failed to export audit log" });
+  }
+});
+
 // Primary endpoint (plural) per HIPAA spec
 router.get("/audit-logs", requireRole("admin", "superadmin"), handleAuditLog);
 
