@@ -82,22 +82,30 @@ function perpendicularMm(p: Pt, a: Pt, b: Pt, pxPerMm: number): number {
   return area / lineLen / pxPerMm;
 }
 
-// Witts Appraisal: signed distance between the perpendicular feet of p1 (Point A)
-// and p2 (Point B) projected onto the occlusal plane defined by lineP→lineQ.
+// Witts Appraisal (Jacobson 1975): signed distance between the vertical-projection
+// feet of Point A (p1) and Point B (p2) on the occlusal plane defined by lineP→lineQ.
 // lineP should be the ANTERIOR occlusal point (incisal/premolar region),
 // lineQ the POSTERIOR occlusal point (molar region).
-// Sign convention (Jacobson 1975): positive = AO anterior to BO = Class III tendency;
-// negative = BO anterior to AO = Class II tendency.
+//
+// Projection method: vertical (x-coordinate) projection — the same method used by
+// clinical software (Dolphin, WinCeph) and manual tracing.  True geometric
+// perpendiculars amplify the result when A/B are far from the plane on opposite
+// sides, because the vertical distance between A and B gets dot-producted onto the
+// slight plane tilt.  Vertical projection isolates the pure anterior-posterior
+// relationship without that distortion.
+//
+// Sign convention (Jacobson 1975):
+//   negative = BO anterior to AO = Class II tendency
+//   positive = AO anterior to BO = Class III tendency
 function wittsMm(a: Pt, b: Pt, lineP: Pt, lineQ: Pt, pxPerMm: number): number {
   const dx = lineQ.x - lineP.x;
   const dy = lineQ.y - lineP.y;
-  const lenSq = dx * dx + dy * dy;
-  if (lenSq === 0) return 0;
-  // Scalar projection parameters along lineP→lineQ (anterior→posterior direction)
-  const tA = ((a.x - lineP.x) * dx + (a.y - lineP.y) * dy) / lenSq;
-  const tB = ((b.x - lineP.x) * dx + (b.y - lineP.y) * dy) / lenSq;
-  // Smaller t = more anterior; tB - tA > 0 when A is anterior to B (Class III)
-  const lineLen = Math.sqrt(lenSq);
+  if (Math.abs(dx) < 1e-9) return 0; // degenerate vertical plane
+  const lineLen = Math.sqrt(dx * dx + dy * dy);
+  // t-parameters using only the x-coordinate (vertical projection onto the plane)
+  const tA = (a.x - lineP.x) / dx;
+  const tB = (b.x - lineP.x) / dx;
+  // (tB - tA) > 0 when B's foot is more posterior (Class II), < 0 when more anterior (Class III)
   return (tB - tA) * lineLen / pxPerMm;
 }
 

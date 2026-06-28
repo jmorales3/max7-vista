@@ -4,3 +4,4 @@
 - [Deployment startup: listen before DB init](listen-before-db-init.md) — call app.listen() before any async DB work; pool.query() can hang in prod and block port open, killing the deployment health-check.
 - [Replit proxy drops multipart POST bodies](replit-multipart-proxy.md) — Replit deployment proxy silently drops multipart/form-data POST bodies; use JSON+base64 for file uploads instead.
 - [Max7 Feature Transfer Register](max7-transfer-register.md) — confirmed working Vista features to replicate in Max7's image management section; update whenever a feature is approved.
+- [Witts formula: vertical vs perpendicular projection](witts-projection.md) — use x-only (vertical) projection, not true geometric perpendicular; perpendicular amplifies A–B vertical distance onto plane tilt giving 3–5× inflated results.
