@@ -995,37 +995,124 @@
       "savedToGallery": "Image de tracé enregistrée dans la galerie du patient",
       "saveGalleryFailed": "Échec de l'enregistrement du tracé dans la galerie",
       "saveGalleryNoImage": "La radiographie n'est pas encore chargée — veuillez patienter",
-      "saveGalleryNote": "Tracé céphalométrique — {{template}}"
+      "saveGalleryNote": "Tracé céphalométrique — {{template}}",
+      "exportPdf": "Exporter PDF",
+      "pdfExportFailed": "Échec de l'export PDF",
+      "ideal": "Idéal"
     },
     "lm": {
-      "Sella": { "name": "Sella", "desc": "Centre de la selle turcique" },
-      "Nasion": { "name": "Nasion", "desc": "Suture fronto-nasale, point le plus antérieur" },
-      "Orbitale": { "name": "Orbitale", "desc": "Point le plus bas du plancher orbitaire" },
-      "Porion": { "name": "Porion", "desc": "Point le plus supérieur du méat auditif externe" },
-      "Anterior Nasal Spine": { "name": "Épine Nasale Antérieure", "desc": "Sommet de l'épine nasale antérieure" },
-      "Posterior Nasal Spine": { "name": "Épine Nasale Postérieure", "desc": "Sommet de l'épine nasale postérieure" },
-      "Point A": { "name": "Point A", "desc": "Point le plus profond sur le maxillaire antérieur (Sous-épineux)" },
-      "Point B": { "name": "Point B", "desc": "Point le plus profond sur la symphyse mandibulaire antérieure (Sus-mentonnier)" },
-      "D Point": { "name": "Point D", "desc": "Centre de la symphyse mandibulaire (Point D de Steiner)" },
-      "Pogonion": { "name": "Pogonion", "desc": "Point le plus antérieur du menton" },
-      "Gnathion": { "name": "Gnathion", "desc": "Point le plus antéro-inférieur du menton" },
-      "Menton": { "name": "Menton", "desc": "Point le plus inférieur de la symphyse mandibulaire" },
-      "Gonion": { "name": "Gonion", "desc": "Angle le plus postéro-inférieur de la mandibule" },
-      "Articulare": { "name": "Articulare", "desc": "Jonction de la base crânienne postérieure avec le col condylien" },
-      "U1 Tip": { "name": "Bord Incisal IS", "desc": "Bord incisal de l'incisive centrale supérieure la plus proéminente" },
-      "U1 Apex": { "name": "Apex IS", "desc": "Apex radiculaire de l'incisive centrale supérieure la plus proéminente" },
-      "L1 Tip": { "name": "Bord Incisal II", "desc": "Bord incisal de l'incisive centrale inférieure la plus proéminente" },
-      "L1 Apex": { "name": "Apex II", "desc": "Apex radiculaire de l'incisive centrale inférieure la plus proéminente" },
-      "Occlusal Plane Pt 1": { "name": "Plan Occlusal Pt 1", "desc": "Point sur le plan occlusal (région prémolaire)" },
-      "Occlusal Plane Pt 2": { "name": "Plan Occlusal Pt 2", "desc": "Point sur le plan occlusal (région molaire)" },
-      "Condylion (Cf)": { "name": "Condylion (Cf)", "desc": "Centre de la tête condylienne" },
-      "Condyle Center (DC)": { "name": "Centre du Condyle (DC)", "desc": "Centre de la tête condylienne sur la ligne Ba-N" },
-      "Xi Point": { "name": "Point Xi", "desc": "Centre géométrique de la branche montante mandibulaire" },
-      "Pronasal": { "name": "Pronasal", "desc": "Pointe du nez" },
-      "Infradentale": { "name": "Infradentale", "desc": "Point le plus antéro-supérieur de l'alvéole mandibulaire" },
-      "Protuberance Menti": { "name": "Protubérance Menti", "desc": "Jonction de la symphyse mandibulaire avec le menton" },
-      "Pterygomaxillary": { "name": "Ptérygomaxillaire", "desc": "Point le plus postéro-supérieur de la fissure ptérygomaxillaire" },
-      "Basion": { "name": "Basion", "desc": "Point le plus postéro-inférieur de l'os occipital" }
+      "Sella": {
+        "name": "Sella",
+        "desc": "Centre de la selle turcique"
+      },
+      "Nasion": {
+        "name": "Nasion",
+        "desc": "Suture fronto-nasale, point le plus antérieur"
+      },
+      "Orbitale": {
+        "name": "Orbitale",
+        "desc": "Point le plus bas du plancher orbitaire"
+      },
+      "Porion": {
+        "name": "Porion",
+        "desc": "Point le plus supérieur du méat auditif externe"
+      },
+      "Anterior Nasal Spine": {
+        "name": "Épine Nasale Antérieure",
+        "desc": "Sommet de l'épine nasale antérieure"
+      },
+      "Posterior Nasal Spine": {
+        "name": "Épine Nasale Postérieure",
+        "desc": "Sommet de l'épine nasale postérieure"
+      },
+      "Point A": {
+        "name": "Point A",
+        "desc": "Point le plus profond sur le maxillaire antérieur (Sous-épineux)"
+      },
+      "Point B": {
+        "name": "Point B",
+        "desc": "Point le plus profond sur la symphyse mandibulaire antérieure (Sus-mentonnier)"
+      },
+      "D Point": {
+        "name": "Point D",
+        "desc": "Centre de la symphyse mandibulaire (Point D de Steiner)"
+      },
+      "Pogonion": {
+        "name": "Pogonion",
+        "desc": "Point le plus antérieur du menton"
+      },
+      "Gnathion": {
+        "name": "Gnathion",
+        "desc": "Point le plus antéro-inférieur du menton"
+      },
+      "Menton": {
+        "name": "Menton",
+        "desc": "Point le plus inférieur de la symphyse mandibulaire"
+      },
+      "Gonion": {
+        "name": "Gonion",
+        "desc": "Angle le plus postéro-inférieur de la mandibule"
+      },
+      "Articulare": {
+        "name": "Articulare",
+        "desc": "Jonction de la base crânienne postérieure avec le col condylien"
+      },
+      "U1 Tip": {
+        "name": "Bord Incisal IS",
+        "desc": "Bord incisal de l'incisive centrale supérieure la plus proéminente"
+      },
+      "U1 Apex": {
+        "name": "Apex IS",
+        "desc": "Apex radiculaire de l'incisive centrale supérieure la plus proéminente"
+      },
+      "L1 Tip": {
+        "name": "Bord Incisal II",
+        "desc": "Bord incisal de l'incisive centrale inférieure la plus proéminente"
+      },
+      "L1 Apex": {
+        "name": "Apex II",
+        "desc": "Apex radiculaire de l'incisive centrale inférieure la plus proéminente"
+      },
+      "Occlusal Plane Pt 1": {
+        "name": "Plan Occlusal Pt 1",
+        "desc": "Point sur le plan occlusal (région prémolaire)"
+      },
+      "Occlusal Plane Pt 2": {
+        "name": "Plan Occlusal Pt 2",
+        "desc": "Point sur le plan occlusal (région molaire)"
+      },
+      "Condylion (Cf)": {
+        "name": "Condylion (Cf)",
+        "desc": "Centre de la tête condylienne"
+      },
+      "Condyle Center (DC)": {
+        "name": "Centre du Condyle (DC)",
+        "desc": "Centre de la tête condylienne sur la ligne Ba-N"
+      },
+      "Xi Point": {
+        "name": "Point Xi",
+        "desc": "Centre géométrique de la branche montante mandibulaire"
+      },
+      "Pronasal": {
+        "name": "Pronasal",
+        "desc": "Pointe du nez"
+      },
+      "Infradentale": {
+        "name": "Infradentale",
+        "desc": "Point le plus antéro-supérieur de l'alvéole mandibulaire"
+      },
+      "Protuberance Menti": {
+        "name": "Protubérance Menti",
+        "desc": "Jonction de la symphyse mandibulaire avec le menton"
+      },
+      "Pterygomaxillary": {
+        "name": "Ptérygomaxillaire",
+        "desc": "Point le plus postéro-supérieur de la fissure ptérygomaxillaire"
+      },
+      "Basion": {
+        "name": "Basion",
+        "desc": "Point le plus postéro-inférieur de l'os occipital"
+      }
     },
     "meas": {
       "Facial Axis": "Axe Facial",
@@ -1040,9 +1127,18 @@
       "IMPA (L1-Mandibular Plane)": "IMPA (II-Plan Mandibulaire)"
     },
     "tmpl": {
-      "steiner": { "name": "Analyse de Steiner", "desc": "Analyse céphalométrique classique de Steiner (1953)" },
-      "ricketts": { "name": "Analyse de Ricketts", "desc": "Analyse céphalométrique de Ricketts" },
-      "tweed": { "name": "Analyse de Tweed", "desc": "Analyse du triangle de Tweed (FMA, FMIA, IMPA)" }
+      "steiner": {
+        "name": "Analyse de Steiner",
+        "desc": "Analyse céphalométrique classique de Steiner (1953)"
+      },
+      "ricketts": {
+        "name": "Analyse de Ricketts",
+        "desc": "Analyse céphalométrique de Ricketts"
+      },
+      "tweed": {
+        "name": "Analyse de Tweed",
+        "desc": "Analyse du triangle de Tweed (FMA, FMIA, IMPA)"
+      }
     },
     "phaseLabel": "Phase d'Enregistrement",
     "phase": {
@@ -1050,7 +1146,9 @@
       "progress": "Progression",
       "final": "Final",
       "retention": "Post-Contention"
-    }
+    },
+    "idealMin": "Min Idéal",
+    "idealMax": "Max Idéal"
   },
   "idleTimeout": {
     "title": "Session Sur le Point d'Expirer",

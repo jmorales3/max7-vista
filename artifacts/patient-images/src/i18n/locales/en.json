@@ -995,37 +995,124 @@
       "savedToGallery": "Tracing image saved to patient gallery",
       "saveGalleryFailed": "Failed to save tracing to gallery",
       "saveGalleryNoImage": "Radiograph not loaded yet — please wait",
-      "saveGalleryNote": "Cephalometric tracing — {{template}}"
+      "saveGalleryNote": "Cephalometric tracing — {{template}}",
+      "exportPdf": "Export PDF",
+      "pdfExportFailed": "Failed to export PDF",
+      "ideal": "Ideal"
     },
     "lm": {
-      "Sella": { "name": "Sella", "desc": "Center of sella turcica" },
-      "Nasion": { "name": "Nasion", "desc": "Fronto-nasal suture, most anterior point" },
-      "Orbitale": { "name": "Orbitale", "desc": "Lowest point of orbital floor" },
-      "Porion": { "name": "Porion", "desc": "Most superior point of external auditory meatus" },
-      "Anterior Nasal Spine": { "name": "Anterior Nasal Spine", "desc": "Tip of anterior nasal spine" },
-      "Posterior Nasal Spine": { "name": "Posterior Nasal Spine", "desc": "Tip of posterior nasal spine" },
-      "Point A": { "name": "Point A", "desc": "Deepest point on anterior maxilla (Subspinale)" },
-      "Point B": { "name": "Point B", "desc": "Deepest point on anterior mandible (Supramentale)" },
-      "D Point": { "name": "D Point", "desc": "Center of the mandibular symphysis (Steiner's D point)" },
-      "Pogonion": { "name": "Pogonion", "desc": "Most anterior point of chin" },
-      "Gnathion": { "name": "Gnathion", "desc": "Most antero-inferior point of chin" },
-      "Menton": { "name": "Menton", "desc": "Most inferior point of mandibular symphysis" },
-      "Gonion": { "name": "Gonion", "desc": "Most postero-inferior angle of mandible" },
-      "Articulare": { "name": "Articulare", "desc": "Junction of posterior cranial base and condylar neck" },
-      "U1 Tip": { "name": "U1 Tip", "desc": "Tip of most prominent upper central incisor" },
-      "U1 Apex": { "name": "U1 Apex", "desc": "Root apex of most prominent upper central incisor" },
-      "L1 Tip": { "name": "L1 Tip", "desc": "Tip of most prominent lower central incisor" },
-      "L1 Apex": { "name": "L1 Apex", "desc": "Root apex of most prominent lower central incisor" },
-      "Occlusal Plane Pt 1": { "name": "Occlusal Plane Pt 1", "desc": "Point on occlusal plane (premolar region)" },
-      "Occlusal Plane Pt 2": { "name": "Occlusal Plane Pt 2", "desc": "Point on occlusal plane (molar region)" },
-      "Condylion (Cf)": { "name": "Condylion (Cf)", "desc": "Center of condylar head" },
-      "Condyle Center (DC)": { "name": "Condyle Center (DC)", "desc": "Center of condylar head on Ba-N line" },
-      "Xi Point": { "name": "Xi Point", "desc": "Geometric center of mandibular ramus" },
-      "Pronasal": { "name": "Pronasal", "desc": "Tip of the nose" },
-      "Infradentale": { "name": "Infradentale", "desc": "Most anterior-superior point of mandibular alveolus" },
-      "Protuberance Menti": { "name": "Protuberance Menti", "desc": "Junction of mandibular symphysis with chin" },
-      "Pterygomaxillary": { "name": "Pterygomaxillary", "desc": "Most posterior-superior point of PTM fissure" },
-      "Basion": { "name": "Basion", "desc": "Most inferior posterior point of occipital bone" }
+      "Sella": {
+        "name": "Sella",
+        "desc": "Center of sella turcica"
+      },
+      "Nasion": {
+        "name": "Nasion",
+        "desc": "Fronto-nasal suture, most anterior point"
+      },
+      "Orbitale": {
+        "name": "Orbitale",
+        "desc": "Lowest point of orbital floor"
+      },
+      "Porion": {
+        "name": "Porion",
+        "desc": "Most superior point of external auditory meatus"
+      },
+      "Anterior Nasal Spine": {
+        "name": "Anterior Nasal Spine",
+        "desc": "Tip of anterior nasal spine"
+      },
+      "Posterior Nasal Spine": {
+        "name": "Posterior Nasal Spine",
+        "desc": "Tip of posterior nasal spine"
+      },
+      "Point A": {
+        "name": "Point A",
+        "desc": "Deepest point on anterior maxilla (Subspinale)"
+      },
+      "Point B": {
+        "name": "Point B",
+        "desc": "Deepest point on anterior mandible (Supramentale)"
+      },
+      "D Point": {
+        "name": "D Point",
+        "desc": "Center of the mandibular symphysis (Steiner's D point)"
+      },
+      "Pogonion": {
+        "name": "Pogonion",
+        "desc": "Most anterior point of chin"
+      },
+      "Gnathion": {
+        "name": "Gnathion",
+        "desc": "Most antero-inferior point of chin"
+      },
+      "Menton": {
+        "name": "Menton",
+        "desc": "Most inferior point of mandibular symphysis"
+      },
+      "Gonion": {
+        "name": "Gonion",
+        "desc": "Most postero-inferior angle of mandible"
+      },
+      "Articulare": {
+        "name": "Articulare",
+        "desc": "Junction of posterior cranial base and condylar neck"
+      },
+      "U1 Tip": {
+        "name": "U1 Tip",
+        "desc": "Tip of most prominent upper central incisor"
+      },
+      "U1 Apex": {
+        "name": "U1 Apex",
+        "desc": "Root apex of most prominent upper central incisor"
+      },
+      "L1 Tip": {
+        "name": "L1 Tip",
+        "desc": "Tip of most prominent lower central incisor"
+      },
+      "L1 Apex": {
+        "name": "L1 Apex",
+        "desc": "Root apex of most prominent lower central incisor"
+      },
+      "Occlusal Plane Pt 1": {
+        "name": "Occlusal Plane Pt 1",
+        "desc": "Point on occlusal plane (premolar region)"
+      },
+      "Occlusal Plane Pt 2": {
+        "name": "Occlusal Plane Pt 2",
+        "desc": "Point on occlusal plane (molar region)"
+      },
+      "Condylion (Cf)": {
+        "name": "Condylion (Cf)",
+        "desc": "Center of condylar head"
+      },
+      "Condyle Center (DC)": {
+        "name": "Condyle Center (DC)",
+        "desc": "Center of condylar head on Ba-N line"
+      },
+      "Xi Point": {
+        "name": "Xi Point",
+        "desc": "Geometric center of mandibular ramus"
+      },
+      "Pronasal": {
+        "name": "Pronasal",
+        "desc": "Tip of the nose"
+      },
+      "Infradentale": {
+        "name": "Infradentale",
+        "desc": "Most anterior-superior point of mandibular alveolus"
+      },
+      "Protuberance Menti": {
+        "name": "Protuberance Menti",
+        "desc": "Junction of mandibular symphysis with chin"
+      },
+      "Pterygomaxillary": {
+        "name": "Pterygomaxillary",
+        "desc": "Most posterior-superior point of PTM fissure"
+      },
+      "Basion": {
+        "name": "Basion",
+        "desc": "Most inferior posterior point of occipital bone"
+      }
     },
     "meas": {
       "Facial Axis": "Facial Axis",
@@ -1040,9 +1127,18 @@
       "IMPA (L1-Mandibular Plane)": "IMPA (L1-Mandibular Plane)"
     },
     "tmpl": {
-      "steiner": { "name": "Steiner Analysis", "desc": "Classic Steiner cephalometric analysis (1953)" },
-      "ricketts": { "name": "Ricketts Analysis", "desc": "Ricketts cephalometric analysis" },
-      "tweed": { "name": "Tweed Analysis", "desc": "Tweed triangle cephalometric analysis (FMA, FMIA, IMPA)" }
+      "steiner": {
+        "name": "Steiner Analysis",
+        "desc": "Classic Steiner cephalometric analysis (1953)"
+      },
+      "ricketts": {
+        "name": "Ricketts Analysis",
+        "desc": "Ricketts cephalometric analysis"
+      },
+      "tweed": {
+        "name": "Tweed Analysis",
+        "desc": "Tweed triangle cephalometric analysis (FMA, FMIA, IMPA)"
+      }
     },
     "phaseLabel": "Record Phase",
     "phase": {
@@ -1050,7 +1146,9 @@
       "progress": "Progress",
       "final": "Final",
       "retention": "Post-Retention"
-    }
+    },
+    "idealMin": "Ideal Min",
+    "idealMax": "Ideal Max"
   },
   "idleTimeout": {
     "title": "Session About to Expire",

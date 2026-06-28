@@ -359,7 +359,7 @@ router.post("/ceph/templates/:id/measurements", async (req, res): Promise<void> 
     const [tmpl] = await db.select().from(cephTemplatesTable).where(eq(cephTemplatesTable.id, templateId));
     if (!tmpl || tmpl.tenantId !== tenantId) { res.status(404).json({ error: "Template not found" }); return; }
     if (tmpl.locked) { res.status(403).json({ error: "System templates are read-only" }); return; }
-    const { name, type, p1Label, p2Label, p3Label, p4Label, angleQuadrant, unit, displayOrder } = req.body as Record<string, any>;
+    const { name, type, p1Label, p2Label, p3Label, p4Label, angleQuadrant, unit, idealMin, idealMax, displayOrder } = req.body as Record<string, any>;
     if (!name?.trim() || !type || !p1Label || !p2Label || !unit) {
       res.status(400).json({ error: "name, type, p1Label, p2Label, unit are required" }); return;
     }
@@ -368,7 +368,10 @@ router.post("/ceph/templates/:id/measurements", async (req, res): Promise<void> 
     const [m] = await db.insert(cephMeasurementsTable).values({
       templateId, name: name.trim(), type, p1Label, p2Label,
       p3Label: p3Label ?? null, p4Label: p4Label ?? null,
-      angleQuadrant: angleQuadrant ?? null, unit, displayOrder: displayOrder ?? 0,
+      angleQuadrant: angleQuadrant ?? null, unit,
+      idealMin: idealMin != null ? String(idealMin) : null,
+      idealMax: idealMax != null ? String(idealMax) : null,
+      displayOrder: displayOrder ?? 0,
     }).returning();
     res.status(201).json(m);
   } catch (err: any) { errRes(res, err); }
@@ -384,7 +387,7 @@ router.patch("/ceph/templates/:id/measurements/:mId", async (req, res): Promise<
     const [tmpl] = await db.select().from(cephTemplatesTable).where(eq(cephTemplatesTable.id, templateId));
     if (!tmpl || tmpl.tenantId !== tenantId || tmpl.locked) { res.status(403).json({ error: "Forbidden" }); return; }
     const patch: Record<string, unknown> = {};
-    const allowed = ["name", "type", "p1Label", "p2Label", "p3Label", "p4Label", "angleQuadrant", "unit", "displayOrder"];
+    const allowed = ["name", "type", "p1Label", "p2Label", "p3Label", "p4Label", "angleQuadrant", "unit", "idealMin", "idealMax", "displayOrder"];
     for (const key of allowed) {
       if (key in req.body) patch[key] = req.body[key];
     }

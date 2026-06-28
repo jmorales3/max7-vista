@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { cephTemplatesTable } from "./ceph-templates";
 
 export const cephMeasurementsTable = sqliteTable("ceph_measurements", {
@@ -12,6 +12,8 @@ export const cephMeasurementsTable = sqliteTable("ceph_measurements", {
   p4Label: text("p4_label"),
   angleQuadrant: text("angle_quadrant"),
   unit: text("unit").notNull(),
+  idealMin: real("ideal_min"),
+  idealMax: real("ideal_max"),
   displayOrder: integer("display_order").notNull().default(0),
 });
 

@@ -995,37 +995,124 @@
       "savedToGallery": "Imagen de trazado guardada en la galería del paciente",
       "saveGalleryFailed": "Error al guardar el trazado en la galería",
       "saveGalleryNoImage": "La radiografía aún no está cargada — por favor espere",
-      "saveGalleryNote": "Trazado cefalométrico — {{template}}"
+      "saveGalleryNote": "Trazado cefalométrico — {{template}}",
+      "exportPdf": "Exportar PDF",
+      "pdfExportFailed": "Error al exportar PDF",
+      "ideal": "Ideal"
     },
     "lm": {
-      "Sella": { "name": "Sella", "desc": "Centro de la silla turca" },
-      "Nasion": { "name": "Nasion", "desc": "Sutura fronto-nasal, punto más anterior" },
-      "Orbitale": { "name": "Orbitale", "desc": "Punto más inferior del piso orbitario" },
-      "Porion": { "name": "Porion", "desc": "Punto más superior del meato auditivo externo" },
-      "Anterior Nasal Spine": { "name": "Espina Nasal Anterior", "desc": "Punta de la espina nasal anterior" },
-      "Posterior Nasal Spine": { "name": "Espina Nasal Posterior", "desc": "Punta de la espina nasal posterior" },
-      "Point A": { "name": "Punto A", "desc": "Punto más profundo sobre el maxilar anterior (Subespinal)" },
-      "Point B": { "name": "Punto B", "desc": "Punto más profundo sobre la mandíbula anterior (Supramental)" },
-      "D Point": { "name": "Punto D", "desc": "Centro de la sínfisis mandibular (Punto D de Steiner)" },
-      "Pogonion": { "name": "Pogonion", "desc": "Punto más anterior del mentón" },
-      "Gnathion": { "name": "Gnation", "desc": "Punto más ántero-inferior del mentón" },
-      "Menton": { "name": "Mentón", "desc": "Punto más inferior de la sínfisis mandibular" },
-      "Gonion": { "name": "Gonion", "desc": "Ángulo más póstero-inferior de la mandíbula" },
-      "Articulare": { "name": "Articulare", "desc": "Unión de la base craneal posterior con el cuello condilar" },
-      "U1 Tip": { "name": "Borde Incisal IS", "desc": "Borde incisal del incisivo superior central más prominente" },
-      "U1 Apex": { "name": "Ápice IS", "desc": "Ápice radicular del incisivo superior central más prominente" },
-      "L1 Tip": { "name": "Borde Incisal II", "desc": "Borde incisal del incisivo inferior central más prominente" },
-      "L1 Apex": { "name": "Ápice II", "desc": "Ápice radicular del incisivo inferior central más prominente" },
-      "Occlusal Plane Pt 1": { "name": "Plano Oclusal Pto 1", "desc": "Punto del plano oclusal (región de premolares)" },
-      "Occlusal Plane Pt 2": { "name": "Plano Oclusal Pto 2", "desc": "Punto del plano oclusal (región de molares)" },
-      "Condylion (Cf)": { "name": "Condilión (Cf)", "desc": "Centro de la cabeza condilar" },
-      "Condyle Center (DC)": { "name": "Centro del Cóndilo (DC)", "desc": "Centro de la cabeza condilar sobre la línea Ba-N" },
-      "Xi Point": { "name": "Punto Xi", "desc": "Centro geométrico de la rama mandibular" },
-      "Pronasal": { "name": "Pronasal", "desc": "Punta de la nariz" },
-      "Infradentale": { "name": "Infradental", "desc": "Punto más ántero-superior del alvéolo mandibular" },
-      "Protuberance Menti": { "name": "Protuberancia Menti", "desc": "Unión de la sínfisis mandibular con el mentón" },
-      "Pterygomaxillary": { "name": "Ptérigomaxilar", "desc": "Punto más póstero-superior de la fisura pterigomaxilar" },
-      "Basion": { "name": "Basion", "desc": "Punto más póstero-inferior del hueso occipital" }
+      "Sella": {
+        "name": "Sella",
+        "desc": "Centro de la silla turca"
+      },
+      "Nasion": {
+        "name": "Nasion",
+        "desc": "Sutura fronto-nasal, punto más anterior"
+      },
+      "Orbitale": {
+        "name": "Orbitale",
+        "desc": "Punto más inferior del piso orbitario"
+      },
+      "Porion": {
+        "name": "Porion",
+        "desc": "Punto más superior del meato auditivo externo"
+      },
+      "Anterior Nasal Spine": {
+        "name": "Espina Nasal Anterior",
+        "desc": "Punta de la espina nasal anterior"
+      },
+      "Posterior Nasal Spine": {
+        "name": "Espina Nasal Posterior",
+        "desc": "Punta de la espina nasal posterior"
+      },
+      "Point A": {
+        "name": "Punto A",
+        "desc": "Punto más profundo sobre el maxilar anterior (Subespinal)"
+      },
+      "Point B": {
+        "name": "Punto B",
+        "desc": "Punto más profundo sobre la mandíbula anterior (Supramental)"
+      },
+      "D Point": {
+        "name": "Punto D",
+        "desc": "Centro de la sínfisis mandibular (Punto D de Steiner)"
+      },
+      "Pogonion": {
+        "name": "Pogonion",
+        "desc": "Punto más anterior del mentón"
+      },
+      "Gnathion": {
+        "name": "Gnation",
+        "desc": "Punto más ántero-inferior del mentón"
+      },
+      "Menton": {
+        "name": "Mentón",
+        "desc": "Punto más inferior de la sínfisis mandibular"
+      },
+      "Gonion": {
+        "name": "Gonion",
+        "desc": "Ángulo más póstero-inferior de la mandíbula"
+      },
+      "Articulare": {
+        "name": "Articulare",
+        "desc": "Unión de la base craneal posterior con el cuello condilar"
+      },
+      "U1 Tip": {
+        "name": "Borde Incisal IS",
+        "desc": "Borde incisal del incisivo superior central más prominente"
+      },
+      "U1 Apex": {
+        "name": "Ápice IS",
+        "desc": "Ápice radicular del incisivo superior central más prominente"
+      },
+      "L1 Tip": {
+        "name": "Borde Incisal II",
+        "desc": "Borde incisal del incisivo inferior central más prominente"
+      },
+      "L1 Apex": {
+        "name": "Ápice II",
+        "desc": "Ápice radicular del incisivo inferior central más prominente"
+      },
+      "Occlusal Plane Pt 1": {
+        "name": "Plano Oclusal Pto 1",
+        "desc": "Punto del plano oclusal (región de premolares)"
+      },
+      "Occlusal Plane Pt 2": {
+        "name": "Plano Oclusal Pto 2",
+        "desc": "Punto del plano oclusal (región de molares)"
+      },
+      "Condylion (Cf)": {
+        "name": "Condilión (Cf)",
+        "desc": "Centro de la cabeza condilar"
+      },
+      "Condyle Center (DC)": {
+        "name": "Centro del Cóndilo (DC)",
+        "desc": "Centro de la cabeza condilar sobre la línea Ba-N"
+      },
+      "Xi Point": {
+        "name": "Punto Xi",
+        "desc": "Centro geométrico de la rama mandibular"
+      },
+      "Pronasal": {
+        "name": "Pronasal",
+        "desc": "Punta de la nariz"
+      },
+      "Infradentale": {
+        "name": "Infradental",
+        "desc": "Punto más ántero-superior del alvéolo mandibular"
+      },
+      "Protuberance Menti": {
+        "name": "Protuberancia Menti",
+        "desc": "Unión de la sínfisis mandibular con el mentón"
+      },
+      "Pterygomaxillary": {
+        "name": "Ptérigomaxilar",
+        "desc": "Punto más póstero-superior de la fisura pterigomaxilar"
+      },
+      "Basion": {
+        "name": "Basion",
+        "desc": "Punto más póstero-inferior del hueso occipital"
+      }
     },
     "meas": {
       "Facial Axis": "Eje Facial",
@@ -1040,9 +1127,18 @@
       "IMPA (L1-Mandibular Plane)": "IMPA (II-Plano Mandibular)"
     },
     "tmpl": {
-      "steiner": { "name": "Análisis de Steiner", "desc": "Análisis cefalométrico clásico de Steiner (1953)" },
-      "ricketts": { "name": "Análisis de Ricketts", "desc": "Análisis cefalométrico de Ricketts" },
-      "tweed": { "name": "Análisis de Tweed", "desc": "Análisis del triángulo de Tweed (FMA, FMIA, IMPA)" }
+      "steiner": {
+        "name": "Análisis de Steiner",
+        "desc": "Análisis cefalométrico clásico de Steiner (1953)"
+      },
+      "ricketts": {
+        "name": "Análisis de Ricketts",
+        "desc": "Análisis cefalométrico de Ricketts"
+      },
+      "tweed": {
+        "name": "Análisis de Tweed",
+        "desc": "Análisis del triángulo de Tweed (FMA, FMIA, IMPA)"
+      }
     },
     "phaseLabel": "Fase del Registro",
     "phase": {
@@ -1050,7 +1146,9 @@
       "progress": "Progreso",
       "final": "Final",
       "retention": "Postretención"
-    }
+    },
+    "idealMin": "Mín. Ideal",
+    "idealMax": "Máx. Ideal"
   },
   "idleTimeout": {
     "title": "La Sesión Está a Punto de Expirar",

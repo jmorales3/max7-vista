@@ -50,6 +50,8 @@ interface CephMeasurement {
   p4Label: string | null;
   angleQuadrant: string | null;
   unit: string;
+  idealMin: string | null;
+  idealMax: string | null;
   displayOrder: number;
 }
 
@@ -142,6 +144,8 @@ export default function CephalometricsEditor() {
   const [mEditQuadrant, setMEditQuadrant] = useState("none");
 
   const [mEditUnit, setMEditUnit] = useState("mm");
+  const [mEditIdealMin, setMEditIdealMin] = useState("");
+  const [mEditIdealMax, setMEditIdealMax] = useState("");
 
   const [mAddOpen, setMAddOpen] = useState(false);
   const [mAddName, setMAddName] = useState("");
@@ -149,6 +153,8 @@ export default function CephalometricsEditor() {
   const [mAddPoints, setMAddPoints] = useState<string[]>(["", ""]);
   const [mAddQuadrant, setMAddQuadrant] = useState("none");
   const [mAddUnit, setMAddUnit] = useState("mm");
+  const [mAddIdealMin, setMAddIdealMin] = useState("");
+  const [mAddIdealMax, setMAddIdealMax] = useState("");
 
   const [deleteTarget, setDeleteTarget] = useState<{ kind: "lm" | "m"; id: number } | null>(null);
 
@@ -266,6 +272,8 @@ export default function CephalometricsEditor() {
       setMAddType("line");
       setMAddPoints(["", ""]);
       setMAddQuadrant("none");
+      setMAddIdealMin("");
+      setMAddIdealMax("");
     },
     onError: () => toast({ title: t("ceph.measurementSaveFailed"), variant: "destructive" }),
   });
@@ -352,6 +360,8 @@ export default function CephalometricsEditor() {
     ]);
     setMEditQuadrant(m.angleQuadrant ?? "none");
     setMEditUnit(m.unit || unitForType(m.type));
+    setMEditIdealMin(m.idealMin ?? "");
+    setMEditIdealMax(m.idealMax ?? "");
   }
 
   function saveMEdit() {
@@ -362,6 +372,8 @@ export default function CephalometricsEditor() {
         name: mEditName.trim(),
         type: mEditType,
         ...pointsArrayToBody(mEditType, mEditPoints, mEditQuadrant, mEditUnit),
+        idealMin: mEditIdealMin !== "" ? mEditIdealMin : null,
+        idealMax: mEditIdealMax !== "" ? mEditIdealMax : null,
       },
     });
   }
@@ -372,6 +384,8 @@ export default function CephalometricsEditor() {
       name: mAddName.trim(),
       type: mAddType,
       ...pointsArrayToBody(mAddType, mAddPoints, mAddQuadrant, mAddUnit),
+      idealMin: mAddIdealMin !== "" ? mAddIdealMin : null,
+      idealMax: mAddIdealMax !== "" ? mAddIdealMax : null,
       displayOrder: measurements.length,
     });
   }
@@ -778,12 +792,16 @@ export default function CephalometricsEditor() {
                 points={mAddPoints}
                 quadrant={mAddQuadrant}
                 unit={mAddUnit}
+                idealMin={mAddIdealMin}
+                idealMax={mAddIdealMax}
                 landmarks={landmarks}
                 onName={setMAddName}
                 onType={onMAddTypeChange}
                 onPoint={updateMAddPoint}
                 onQuadrant={setMAddQuadrant}
                 onUnit={setMAddUnit}
+                onIdealMin={setMAddIdealMin}
+                onIdealMax={setMAddIdealMax}
                 onSave={handleAddM}
                 onCancel={() => setMAddOpen(false)}
                 saving={addMMutation.isPending}
@@ -816,12 +834,16 @@ export default function CephalometricsEditor() {
                           points={mEditPoints}
                           quadrant={mEditQuadrant}
                           unit={mEditUnit}
+                          idealMin={mEditIdealMin}
+                          idealMax={mEditIdealMax}
                           landmarks={landmarks}
                           onName={setMEditName}
                           onType={onMEditTypeChange}
                           onPoint={updateMEditPoint}
                           onQuadrant={setMEditQuadrant}
                           onUnit={setMEditUnit}
+                          onIdealMin={setMEditIdealMin}
+                          onIdealMax={setMEditIdealMax}
                           onSave={saveMEdit}
                           onCancel={() => setMEditId(null)}
                           saving={updateMMutation.isPending}
@@ -943,12 +965,16 @@ interface MeasurementFormProps {
   points: string[];
   quadrant: string;
   unit: string;
+  idealMin: string;
+  idealMax: string;
   landmarks: CephLandmark[];
   onName: (v: string) => void;
   onType: (v: MeasurementType) => void;
   onPoint: (idx: number, v: string) => void;
   onQuadrant: (v: string) => void;
   onUnit: (v: string) => void;
+  onIdealMin: (v: string) => void;
+  onIdealMax: (v: string) => void;
   onSave: () => void;
   onCancel: () => void;
   saving: boolean;
@@ -957,8 +983,8 @@ interface MeasurementFormProps {
 }
 
 function MeasurementForm({
-  name, type, points, quadrant, unit, landmarks,
-  onName, onType, onPoint, onQuadrant, onUnit,
+  name, type, points, quadrant, unit, idealMin, idealMax, landmarks,
+  onName, onType, onPoint, onQuadrant, onUnit, onIdealMin, onIdealMax,
   onSave, onCancel, saving, isAdd, t,
 }: MeasurementFormProps) {
   const n = pointsForType(type);
@@ -1021,7 +1047,7 @@ function MeasurementForm({
               <SelectTrigger className="h-8 text-xs font-mono">
                 <SelectValue placeholder="—" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper" className="max-h-60 overflow-y-auto">
                 {landmarks.map((lm) => (
                   <SelectItem key={lm.id} value={lm.label} className="text-xs font-mono">
                     <span className="font-semibold">{lm.label}</span>
@@ -1051,6 +1077,29 @@ function MeasurementForm({
           </Select>
         </div>
       )}
+
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label className="text-xs">{t("ceph.idealMin")}</Label>
+          <Input
+            type="number"
+            value={idealMin}
+            onChange={(e) => onIdealMin(e.target.value)}
+            placeholder="—"
+            className="h-8 text-sm font-mono"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">{t("ceph.idealMax")}</Label>
+          <Input
+            type="number"
+            value={idealMax}
+            onChange={(e) => onIdealMax(e.target.value)}
+            placeholder="—"
+            className="h-8 text-sm font-mono"
+          />
+        </div>
+      </div>
 
       <div className="flex gap-2 pt-1">
         <Button

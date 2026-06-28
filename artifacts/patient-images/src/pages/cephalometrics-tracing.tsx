@@ -33,6 +33,7 @@ import {
   Eye,
   EyeOff,
   ImagePlus,
+  FileDown,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -60,6 +61,8 @@ interface MeasurementDef {
   p4Label: string | null;
   quadrant: number | null;
   displayOrder: number;
+  idealMin: string | null;
+  idealMax: string | null;
 }
 
 interface LandmarkDef {
@@ -224,6 +227,7 @@ export default function CephalometricsTracing() {
   const [panStart, setPanStart] = useState<{ mx: number; my: number; ox: number; oy: number } | null>(null);
   const [showOverlay, setShowOverlay] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingPdf, setIsSavingPdf] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -386,6 +390,99 @@ export default function CephalometricsTracing() {
 
   const pxPerMm = tracing.pxPerMm ? parseFloat(tracing.pxPerMm) : null;
 
+  async function handleExportPdf() {
+    setIsSavingPdf(true);
+    try {
+      const { default: jsPDF } = await import("jspdf");
+      const img = imgRef.current;
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageW = 210;
+      const pageH = 297;
+      const margin = 12;
+
+      pdf.setFontSize(14);
+      pdf.setFont("helvetica", "bold");
+      pdf.text(tracing.templateName ?? t("ceph.title"), margin, margin + 6);
+
+      pdf.setFontSize(9);
+      pdf.setFont("helvetica", "normal");
+      const subtitle = [
+        format(new Date(tracing.createdAt), "MMMM d, yyyy"),
+        tracing.recordPhase ?? "initial",
+        pxPerMm ? `${pxPerMm.toFixed(2)} px/mm` : null,
+      ].filter(Boolean).join("  ·  ");
+      pdf.text(subtitle, margin, margin + 13);
+
+      let curY = margin + 20;
+
+      if (img && img.complete && img.naturalWidth > 0) {
+        const offscreen = document.createElement("canvas");
+        offscreen.width = img.naturalWidth;
+        offscreen.height = img.naturalHeight;
+        renderCanvas(offscreen, img, 1, 0, 0, placed, measurements, phaseColor, phaseColor + "cc", true);
+        const imgData = offscreen.toDataURL("image/jpeg", 0.92);
+        const imgAreaW = pageW - 2 * margin;
+        const imgAreaH = 140;
+        const imgRatio = img.naturalWidth / img.naturalHeight;
+        let drawW = imgAreaW;
+        let drawH = imgAreaW / imgRatio;
+        if (drawH > imgAreaH) { drawH = imgAreaH; drawW = imgAreaH * imgRatio; }
+        const drawX = margin + (imgAreaW - drawW) / 2;
+        pdf.addImage(imgData, "JPEG", drawX, curY, drawW, drawH);
+        curY += drawH + 8;
+      }
+
+      if (tracing.results.length > 0) {
+        pdf.setFontSize(10);
+        pdf.setFont("helvetica", "bold");
+        pdf.text(t("ceph.trace.measurementsLabel"), margin, curY);
+        curY += 5;
+
+        const colX = [margin, margin + 78, margin + 118];
+        pdf.setFontSize(8);
+        pdf.setFillColor(240, 240, 240);
+        pdf.rect(margin, curY - 3.5, pageW - 2 * margin, 6, "F");
+        pdf.text(t("ceph.trace.measurement"), colX[0], curY);
+        pdf.text(t("ceph.trace.value"), colX[1], curY);
+        pdf.text(t("ceph.trace.ideal"), colX[2], curY);
+        curY += 4;
+        pdf.setDrawColor(200, 200, 200);
+        pdf.line(margin, curY, pageW - margin, curY);
+        curY += 3;
+
+        pdf.setFont("helvetica", "normal");
+        for (const r of tracing.results) {
+          if (curY > pageH - margin - 8) { pdf.addPage(); curY = margin + 10; }
+          const mDef = measurements.find((m) => m.name === r.measurementName);
+          const numVal = r.value !== null ? parseFloat(r.value) : null;
+          const hasIdeal = mDef?.idealMin != null || mDef?.idealMax != null;
+          const isOut = numVal !== null && hasIdeal && (
+            (mDef?.idealMin != null && numVal < parseFloat(String(mDef.idealMin))) ||
+            (mDef?.idealMax != null && numVal > parseFloat(String(mDef.idealMax)))
+          );
+          const idealStr = hasIdeal
+            ? `${mDef?.idealMin ?? ""}–${mDef?.idealMax ?? ""} ${r.unit}`
+            : "—";
+          if (isOut) pdf.setTextColor(200, 40, 40);
+          pdf.text(r.measurementName, colX[0], curY);
+          pdf.text(r.value !== null ? `${numVal!.toFixed(2)} ${r.unit}` : "—", colX[1], curY);
+          pdf.text(idealStr, colX[2], curY);
+          pdf.setTextColor(0, 0, 0);
+          curY += 5;
+          pdf.setDrawColor(230, 230, 230);
+          pdf.line(margin, curY - 1, pageW - margin, curY - 1);
+        }
+      }
+
+      const date = format(new Date(tracing.createdAt), "yyyy-MM-dd");
+      pdf.save(`ceph_${(tracing.templateName ?? "tracing").replace(/\s+/g, "_")}_${date}.pdf`);
+    } catch {
+      toast({ variant: "destructive", title: t("ceph.trace.pdfExportFailed") });
+    } finally {
+      setIsSavingPdf(false);
+    }
+  }
+
   async function handleSaveToGallery() {
     const img = imgRef.current;
     if (!img || !img.complete || img.naturalWidth === 0) {
@@ -452,6 +549,18 @@ export default function CephalometricsTracing() {
             )}
           </div>
         </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 gap-1.5 text-xs shrink-0"
+          onClick={handleExportPdf}
+          disabled={isSavingPdf}
+          title={t("ceph.trace.exportPdf")}
+        >
+          {isSavingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5" />}
+          <span className="hidden sm:inline">{t("ceph.trace.exportPdf")}</span>
+        </Button>
 
         <Button
           variant="outline"
@@ -557,19 +666,34 @@ export default function CephalometricsTracing() {
                       <tr className="bg-muted/50 border-b">
                         <th className="text-left px-2 py-1.5 font-medium text-muted-foreground">{t("ceph.trace.measurement")}</th>
                         <th className="text-right px-2 py-1.5 font-medium text-muted-foreground">{t("ceph.trace.value")}</th>
+                        <th className="text-right px-2 py-1.5 font-medium text-muted-foreground">{t("ceph.trace.ideal")}</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {tracing.results.map((r) => (
-                        <tr key={r.id} className="border-b last:border-0 hover:bg-muted/30">
-                          <td className="px-2 py-1.5">{t(`ceph.meas.${r.measurementName}` as any, r.measurementName)}</td>
-                          <td className="px-2 py-1.5 text-right font-mono">
-                            {r.value !== null
-                              ? `${parseFloat(r.value).toFixed(2)} ${r.unit}`
-                              : <span className="text-muted-foreground">—</span>}
-                          </td>
-                        </tr>
-                      ))}
+                      {tracing.results.map((r) => {
+                        const mDef = measurements.find((m) => m.name === r.measurementName);
+                        const numVal = r.value !== null ? parseFloat(r.value) : null;
+                        const hasIdeal = mDef?.idealMin != null || mDef?.idealMax != null;
+                        const isOut = numVal !== null && hasIdeal && (
+                          (mDef?.idealMin != null && numVal < parseFloat(String(mDef.idealMin))) ||
+                          (mDef?.idealMax != null && numVal > parseFloat(String(mDef.idealMax)))
+                        );
+                        return (
+                          <tr key={r.id} className="border-b last:border-0 hover:bg-muted/30">
+                            <td className="px-2 py-1.5">{t(`ceph.meas.${r.measurementName}` as any, r.measurementName)}</td>
+                            <td className={`px-2 py-1.5 text-right font-mono ${isOut ? "text-destructive font-semibold" : ""}`}>
+                              {r.value !== null
+                                ? `${parseFloat(r.value).toFixed(2)} ${r.unit}`
+                                : <span className="text-muted-foreground">—</span>}
+                            </td>
+                            <td className="px-2 py-1.5 text-right font-mono text-muted-foreground">
+                              {hasIdeal
+                                ? `${mDef?.idealMin ?? ""}–${mDef?.idealMax ?? ""}`
+                                : <span>—</span>}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

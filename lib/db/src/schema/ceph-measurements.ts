@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, numeric } from "drizzle-orm/pg-core";
 import { cephTemplatesTable } from "./ceph-templates";
 
 // type: "line" → p1Label, p2Label (distance in mm)
@@ -18,6 +18,8 @@ export const cephMeasurementsTable = pgTable("ceph_measurements", {
   p4Label: text("p4_label"),
   angleQuadrant: text("angle_quadrant"), // "upper-right" | "upper-left" | "lower-right" | "lower-left" | null
   unit: text("unit").notNull(), // "mm" | "degrees"
+  idealMin: numeric("ideal_min"),
+  idealMax: numeric("ideal_max"),
   displayOrder: integer("display_order").notNull().default(0),
 });
 
