@@ -470,7 +470,7 @@ router.post("/ceph/tracings", async (req, res): Promise<void> => {
   try {
     const tenantId = tid(req);
     const userId = req.session?.userId as number | undefined;
-    const { patientId, imageId, templateId, templateName, pxPerMm, name } = req.body as Record<string, any>;
+    const { patientId, imageId, templateId, templateName, pxPerMm, name, recordPhase } = req.body as Record<string, any>;
     if (!patientId) { res.status(400).json({ error: "patientId is required" }); return; }
     const parsedPatientId = parseInt(patientId, 10);
     const parsedImageId = imageId ? parseInt(imageId, 10) : null;
