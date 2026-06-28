@@ -82,6 +82,25 @@ function perpendicularMm(p: Pt, a: Pt, b: Pt, pxPerMm: number): number {
   return area / lineLen / pxPerMm;
 }
 
+// Witts Appraisal: signed distance between the perpendicular feet of p1 (Point A)
+// and p2 (Point B) projected onto the occlusal plane defined by lineP→lineQ.
+// lineP should be the ANTERIOR occlusal point (incisal/premolar region),
+// lineQ the POSTERIOR occlusal point (molar region).
+// Sign convention (Jacobson 1975): positive = AO anterior to BO = Class III tendency;
+// negative = BO anterior to AO = Class II tendency.
+function wittsMm(a: Pt, b: Pt, lineP: Pt, lineQ: Pt, pxPerMm: number): number {
+  const dx = lineQ.x - lineP.x;
+  const dy = lineQ.y - lineP.y;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return 0;
+  // Scalar projection parameters along lineP→lineQ (anterior→posterior direction)
+  const tA = ((a.x - lineP.x) * dx + (a.y - lineP.y) * dy) / lenSq;
+  const tB = ((b.x - lineP.x) * dx + (b.y - lineP.y) * dy) / lenSq;
+  // Smaller t = more anterior; tB - tA > 0 when A is anterior to B (Class III)
+  const lineLen = Math.sqrt(lenSq);
+  return (tB - tA) * lineLen / pxPerMm;
+}
+
 function computeMeasurement(
   m: { type: string; p1Label: string; p2Label: string; p3Label: string | null; p4Label: string | null; angleQuadrant: string | null; unit: string },
   pts: Map<string, Pt>,
@@ -101,6 +120,8 @@ function computeMeasurement(
       return p3 ? perpendicularMm(p1, p2, p3, pxPerMm) : null;
     case "line_angle":
       return p3 && p4 ? lineAngleDeg(p1, p2, p3, p4, m.angleQuadrant) : null;
+    case "witts":
+      return p3 && p4 ? wittsMm(p1, p2, p3, p4, pxPerMm) : null;
     default:
       return null;
   }

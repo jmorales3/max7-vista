@@ -999,7 +999,8 @@
       "exportPdf": "Exportar PDF",
       "pdfExportFailed": "Falha ao exportar PDF",
       "ideal": "Ideal",
-      "pdfPatient": "Paciente"
+      "pdfPatient": "Paciente",
+      "wittsAppraisal": "Análise de Witts"
     },
     "lm": {
       "Sella": {

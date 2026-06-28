@@ -1055,11 +1055,42 @@ async function seedPostgres(pool: import("pg").Pool) {
       }
     }
 
+    // ── Witts Analysis ───────────────────────────────────────────────────────
+    const { rows: [witts] } = await pool.query<{ id: number }>(
+      `INSERT INTO ceph_templates (tenant_id, name, description, locked)
+       VALUES (NULL, 'Witts Analysis', 'Witts Appraisal — sagittal jaw relationship via occlusal plane projection (Jacobson 1975)', true)
+       RETURNING id`
+    );
+    if (witts) {
+      const wittsId = witts.id;
+      const wittsLandmarks = [
+        ["A",    "Point A",                  "Deepest point on anterior maxilla (Subspinale)",         0],
+        ["B",    "Point B",                  "Deepest point on anterior mandible (Supramentale)",       1],
+        ["OcP1", "Occlusal Plane (Anterior)", "Anterior occlusal reference — between upper/lower premolar cusp tips", 2],
+        ["OcP2", "Occlusal Plane (Posterior)","Posterior occlusal reference — between upper/lower molar cusp tips",  3],
+      ];
+      for (const [label, name, description, order] of wittsLandmarks) {
+        await pool.query(
+          `INSERT INTO ceph_landmarks (template_id, label, name, description, display_order) VALUES ($1,$2,$3,$4,$5)`,
+          [wittsId, label, name, description, order]
+        );
+      }
+      // Witts Appraisal: distance between perpendicular feet of A and B on occlusal plane
+      // p1=A, p2=B, p3=OcP1 (anterior), p4=OcP2 (posterior)
+      // Sign: positive = AO anterior to BO = Class III; negative = Class II
+      // Norms: females ≈ -1 mm, males ≈ 0 mm (range −4 to +2)
+      await pool.query(
+        `INSERT INTO ceph_measurements (template_id, name, type, p1_label, p2_label, p3_label, p4_label, angle_quadrant, unit, ideal_min, ideal_max, display_order)
+         VALUES ($1, 'Witts Appraisal', 'witts', 'A', 'B', 'OcP1', 'OcP2', NULL, 'mm', -2, 2, 0)`,
+        [wittsId]
+      );
+    }
+
     await pool.query(
       `INSERT INTO seed_state (key, value) VALUES ('ceph_templates_v2', 'seeded')
        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`
     );
-    logger.info("Cephalometric system templates seeded (Steiner+SND, Ricketts, Tweed)");
+    logger.info("Cephalometric system templates seeded (Steiner+SND, Ricketts, Tweed, Witts)");
   }
 
   logger.info("PostgreSQL seed complete (tenants + users + patients + images ensured)");

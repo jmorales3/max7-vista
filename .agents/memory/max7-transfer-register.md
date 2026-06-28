@@ -1639,4 +1639,51 @@ async function handleSaveToGallery() {
 
 ---
 
+## FEAT-016 — Witts Analysis (new geometry type: witts)
+
+**Status:** ✅ Confirmed working in Vista  
+**Date:** 2026-06-28  
+**Vista files:**
+- `artifacts/api-server/src/routes/ceph.ts` — `wittsMm()` function + `case "witts"` in `computeMeasurement`
+- `artifacts/api-server/src/index.ts` — seed block for Witts Analysis template
+
+### What it does
+Adds a 4th system cephalometric analysis template — the Witts Appraisal — which measures the sagittal jaw relationship by projecting Points A and B perpendicularly onto the occlusal plane and computing the signed distance between their feet (AO and BO).
+
+### New measurement type: `witts`
+The existing 4 types (line, angle, perpendicular, line_angle) cannot express this because they don't compute derived intermediate points. A new 5th type was required:
+- `p1` = Point A, `p2` = Point B
+- `p3` = anterior occlusal reference (OcP1 — premolar region), `p4` = posterior reference (OcP2 — molar region)
+- Result unit: **mm**, signed
+
+```typescript
+function wittsMm(a: Pt, b: Pt, lineP: Pt, lineQ: Pt, pxPerMm: number): number {
+  const dx = lineQ.x - lineP.x, dy = lineQ.y - lineP.y;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return 0;
+  const tA = ((a.x - lineP.x) * dx + (a.y - lineP.y) * dy) / lenSq;
+  const tB = ((b.x - lineP.x) * dx + (b.y - lineP.y) * dy) / lenSq;
+  // tB - tA > 0 when A is anterior to B (Class III)
+  return (tB - tA) * Math.sqrt(lenSq) / pxPerMm;
+}
+```
+
+**Sign convention (Jacobson 1975):** positive = AO anterior to BO = Class III tendency; negative = Class II tendency. Ideal range: −2 to +2 mm.
+
+### Template landmarks
+| Label | Name |
+|-------|------|
+| A | Point A |
+| B | Point B |
+| OcP1 | Occlusal Plane (Anterior) — between upper/lower premolar cusp tips |
+| OcP2 | Occlusal Plane (Posterior) — between upper/lower molar cusp tips |
+
+### Notes for Max7 agent
+- `witts` type uses p1, p2, p3, p4 (all 4 point slots) — no `angleQuadrant` needed.
+- The `computeMeasurement` switch must include `case "witts"` returning `wittsMm(p1, p2, p3, p4, pxPerMm)`.
+- No front-end rendering change needed — result is displayed as a plain mm value like `perpendicular`.
+- i18n key: `ceph.trace.wittsAppraisal` → "Witts Appraisal" / "Valoración de Witts" / "Analyse de Witts" / "Análise de Witts"
+
+---
+
 <!-- Add new entries below as features are confirmed in Vista -->
