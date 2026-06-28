@@ -998,7 +998,8 @@
       "saveGalleryNote": "Trazado cefalométrico — {{template}}",
       "exportPdf": "Exportar PDF",
       "pdfExportFailed": "Error al exportar PDF",
-      "ideal": "Ideal"
+      "ideal": "Ideal",
+      "pdfPatient": "Paciente"
     },
     "lm": {
       "Sella": {

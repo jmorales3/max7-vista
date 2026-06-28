@@ -998,7 +998,8 @@
       "saveGalleryNote": "Cephalometric tracing — {{template}}",
       "exportPdf": "Export PDF",
       "pdfExportFailed": "Failed to export PDF",
-      "ideal": "Ideal"
+      "ideal": "Ideal",
+      "pdfPatient": "Patient"
     },
     "lm": {
       "Sella": {

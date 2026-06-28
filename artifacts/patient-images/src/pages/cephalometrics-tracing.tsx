@@ -40,6 +40,7 @@ import { format } from "date-fns";
 interface TracingDetail {
   id: number;
   patientId: number;
+  patientName: string | null;
   imageId: number | null;
   templateId: number | null;
   templateName: string | null;
@@ -214,7 +215,7 @@ function renderCanvas(
 }
 
 export default function CephalometricsTracing() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [, params] = useRoute("/cephalometrics/tracings/:id");
   const tracingId = parseInt(params?.id || "0", 10);
   const [, setLocation] = useLocation();
@@ -414,21 +415,31 @@ export default function CephalometricsTracing() {
       const pageH = 279.4;
       const margin = 12;
 
+      // ── Header ──────────────────────────────────────────────────────────
       pdf.setFontSize(14);
       pdf.setFont("helvetica", "bold");
       pdf.text(tracing.templateName ?? t("ceph.title"), margin, margin + 6);
 
       pdf.setFontSize(9);
-      pdf.setFont("helvetica", "normal");
-      const subtitle = [
-        format(new Date(tracing.createdAt), "MMMM d, yyyy"),
-        tracing.recordPhase ?? "initial",
-        pxPerMm ? `${pxPerMm.toFixed(2)} px/mm` : null,
-      ].filter(Boolean).join("  ·  ");
-      pdf.text(subtitle, margin, margin + 13);
+      if (tracing.patientName) {
+        pdf.setFont("helvetica", "bold");
+        pdf.text(`${t("ceph.trace.pdfPatient")}: ${tracing.patientName}`, margin, margin + 13);
+        pdf.setFont("helvetica", "normal");
+      }
 
-      let curY = margin + 20;
+      const lang = i18n.language ?? "en";
+      const dateStr = new Date(tracing.createdAt).toLocaleDateString(lang, {
+        year: "numeric", month: "long", day: "numeric",
+      });
+      const phaseStr = t(`ceph.phase.${tracing.recordPhase ?? "initial"}` as any, tracing.recordPhase ?? "initial");
+      const subtitle = [dateStr, phaseStr, pxPerMm ? `${pxPerMm.toFixed(2)} px/mm` : null]
+        .filter(Boolean).join("  ·  ");
+      const subtitleY = tracing.patientName ? margin + 20 : margin + 13;
+      pdf.text(subtitle, margin, subtitleY);
 
+      let curY = subtitleY + 7;
+
+      // ── Radiograph image ─────────────────────────────────────────────────
       if (img && img.complete && img.naturalWidth > 0) {
         const offscreen = document.createElement("canvas");
         offscreen.width = img.naturalWidth;
@@ -436,7 +447,7 @@ export default function CephalometricsTracing() {
         renderCanvas(offscreen, img, 1, 0, 0, placed, measurements, phaseColor, phaseColor + "cc", true);
         const imgData = offscreen.toDataURL("image/jpeg", 0.92);
         const imgAreaW = pageW - 2 * margin;
-        const imgAreaH = 140;
+        const imgAreaH = 130;
         const imgRatio = img.naturalWidth / img.naturalHeight;
         let drawW = imgAreaW;
         let drawH = imgAreaW / imgRatio;
@@ -446,27 +457,35 @@ export default function CephalometricsTracing() {
         curY += drawH + 8;
       }
 
+      // ── Measurements table — two-column layout ───────────────────────────
       if (tracing.results.length > 0) {
         pdf.setFontSize(10);
         pdf.setFont("helvetica", "bold");
         pdf.text(t("ceph.trace.measurementsLabel"), margin, curY);
-        curY += 5;
+        curY += 6;
 
-        const colX = [margin, margin + 78, margin + 118];
-        pdf.setFontSize(8);
-        pdf.setFillColor(240, 240, 240);
-        pdf.rect(margin, curY - 3.5, pageW - 2 * margin, 6, "F");
-        pdf.text(t("ceph.trace.measurement"), colX[0], curY);
-        pdf.text(t("ceph.trace.value"), colX[1], curY);
-        pdf.text(t("ceph.trace.ideal"), colX[2], curY);
-        curY += 4;
-        pdf.setDrawColor(200, 200, 200);
-        pdf.line(margin, curY, pageW - margin, curY);
-        curY += 3;
+        // Each page half is ~93 mm wide; within each half:
+        //   name 48mm | value 22mm | ideal 23mm
+        const colW  = 93;   // width of one half-page column
+        const gap   = 6;    // gap between the two halves
+        const nameW = 48;
+        const valW  = 22;
 
-        pdf.setFont("helvetica", "normal");
-        for (const r of tracing.results) {
-          if (curY > pageH - margin - 8) { pdf.addPage(); curY = margin + 10; }
+        const lName  = margin;
+        const lVal   = margin + nameW;
+        const lIdeal = margin + nameW + valW;
+        const rBase  = margin + colW + gap;
+        const rName  = rBase;
+        const rVal   = rBase + nameW;
+        const rIdeal = rBase + nameW + valW;
+
+        const rowH = 5;
+
+        // Helper to render one measurement row at a given y
+        const renderMeasRow = (
+          r: { measurementName: string; value: string | null; unit: string },
+          nx: number, vx: number, ix: number, y: number,
+        ) => {
           const mDef = measurements.find((m) => m.name === r.measurementName);
           const numVal = r.value !== null ? parseFloat(r.value) : null;
           const hasIdeal = mDef?.idealMin != null || mDef?.idealMax != null;
@@ -476,14 +495,44 @@ export default function CephalometricsTracing() {
           );
           const displayUnit = r.unit === "degrees" || r.unit === "degree" ? "°" : r.unit;
           const idealStr = hasIdeal
-            ? `${mDef?.idealMin ?? ""}–${mDef?.idealMax ?? ""} ${displayUnit}`
-            : "—";
+            ? `${mDef?.idealMin ?? ""}–${mDef?.idealMax ?? ""} ${displayUnit}` : "—";
+          const measName = t(`ceph.meas.${r.measurementName}` as any, r.measurementName);
           if (isOut) pdf.setTextColor(200, 40, 40);
-          pdf.text(r.measurementName, colX[0], curY);
-          pdf.text(r.value !== null ? `${numVal!.toFixed(2)} ${displayUnit}` : "—", colX[1], curY);
-          pdf.text(idealStr, colX[2], curY);
+          pdf.text(measName, nx, y);
+          pdf.text(r.value !== null ? `${numVal!.toFixed(2)} ${displayUnit}` : "—", vx, y);
+          pdf.text(idealStr, ix, y);
           pdf.setTextColor(0, 0, 0);
-          curY += 5;
+        };
+
+        // Draw column headers (spanning full width)
+        pdf.setFontSize(8);
+        pdf.setFont("helvetica", "bold");
+        pdf.setFillColor(240, 240, 240);
+        pdf.rect(margin, curY - 3.5, pageW - 2 * margin, 6, "F");
+        pdf.text(t("ceph.trace.measurement"), lName, curY);
+        pdf.text(t("ceph.trace.value"), lVal, curY);
+        pdf.text(t("ceph.trace.ideal"), lIdeal, curY);
+        pdf.text(t("ceph.trace.measurement"), rName, curY);
+        pdf.text(t("ceph.trace.value"), rVal, curY);
+        pdf.text(t("ceph.trace.ideal"), rIdeal, curY);
+        curY += 4;
+        pdf.setDrawColor(200, 200, 200);
+        pdf.line(margin, curY, pageW - margin, curY);
+        curY += 3;
+
+        // Split results into two halves
+        const half = Math.ceil(tracing.results.length / 2);
+        const leftRows  = tracing.results.slice(0, half);
+        const rightRows = tracing.results.slice(half);
+
+        pdf.setFont("helvetica", "normal");
+        for (let i = 0; i < leftRows.length; i++) {
+          if (curY > pageH - margin - 8) { pdf.addPage(); curY = margin + 10; }
+          renderMeasRow(leftRows[i],  lName, lVal,  lIdeal, curY);
+          if (i < rightRows.length) {
+            renderMeasRow(rightRows[i], rName, rVal, rIdeal, curY);
+          }
+          curY += rowH;
           pdf.setDrawColor(230, 230, 230);
           pdf.line(margin, curY - 1, pageW - margin, curY - 1);
         }

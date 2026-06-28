@@ -465,7 +465,8 @@ router.get("/ceph/tracings/:id", async (req, res): Promise<void> => {
     if (!canAccessPatient(accessibleIds, tracing.patientId)) { res.status(403).json({ error: "Access denied to this patient" }); return; }
     const points = await db.select().from(cephTracingPointsTable).where(eq(cephTracingPointsTable.tracingId, id));
     const results = await db.select().from(cephTracingResultsTable).where(eq(cephTracingResultsTable.tracingId, id));
-    res.json({ ...tracing, points, results });
+    const [patient] = await db.select({ name: patientsTable.name }).from(patientsTable).where(eq(patientsTable.id, tracing.patientId));
+    res.json({ ...tracing, points, results, patientName: patient?.name ?? null });
   } catch (err: any) { errRes(res, err); }
 });
 
