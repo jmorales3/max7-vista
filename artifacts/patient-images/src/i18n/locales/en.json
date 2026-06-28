@@ -990,7 +990,12 @@
       "zoomHint": "Scroll to zoom · Alt+drag to pan",
       "undoLandmark": "Undo Last Landmark",
       "showOverlay": "Show Tracing",
-      "hideOverlay": "Hide Tracing"
+      "hideOverlay": "Hide Tracing",
+      "saveToGallery": "Save to Gallery",
+      "savedToGallery": "Tracing image saved to patient gallery",
+      "saveGalleryFailed": "Failed to save tracing to gallery",
+      "saveGalleryNoImage": "Radiograph not loaded yet — please wait",
+      "saveGalleryNote": "Cephalometric tracing — {{template}}"
     },
     "lm": {
       "Sella": { "name": "Sella", "desc": "Center of sella turcica" },

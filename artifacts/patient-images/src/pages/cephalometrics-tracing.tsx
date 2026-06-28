@@ -5,6 +5,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { uploadPatientImage } from "@/lib/upload";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,6 +32,7 @@ import {
   Ruler,
   Eye,
   EyeOff,
+  ImagePlus,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -221,6 +223,7 @@ export default function CephalometricsTracing() {
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState<{ mx: number; my: number; ox: number; oy: number } | null>(null);
   const [showOverlay, setShowOverlay] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -383,6 +386,33 @@ export default function CephalometricsTracing() {
 
   const pxPerMm = tracing.pxPerMm ? parseFloat(tracing.pxPerMm) : null;
 
+  async function handleSaveToGallery() {
+    const img = imgRef.current;
+    if (!img || !img.complete || img.naturalWidth === 0) {
+      toast({ variant: "destructive", title: t("ceph.trace.saveGalleryNoImage") });
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const offscreen = document.createElement("canvas");
+      offscreen.width = img.naturalWidth;
+      offscreen.height = img.naturalHeight;
+      renderCanvas(offscreen, img, 1, 0, 0, placed, measurements, phaseColor, phaseColor + "cc", true);
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        offscreen.toBlob((b) => b ? resolve(b) : reject(new Error("toBlob failed")), "image/png");
+      });
+      const date = format(new Date(tracing.createdAt), "yyyy-MM-dd");
+      const name = `${tracing.templateName ?? "Tracing"}_${date}.png`;
+      const file = new File([blob], name, { type: "image/png" });
+      await uploadPatientImage(file, tracing.patientId, t("ceph.trace.saveGalleryNote", { template: tracing.templateName ?? t("ceph.title") }));
+      toast({ title: t("ceph.trace.savedToGallery") });
+    } catch {
+      toast({ variant: "destructive", title: t("ceph.trace.saveGalleryFailed") });
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   return (
     <div className="flex flex-col h-[calc(100vh-120px)]">
       {/* Header */}
@@ -422,6 +452,18 @@ export default function CephalometricsTracing() {
             )}
           </div>
         </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 gap-1.5 text-xs shrink-0"
+          onClick={handleSaveToGallery}
+          disabled={isSaving}
+          title={t("ceph.trace.saveToGallery")}
+        >
+          {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
+          <span className="hidden sm:inline">{t("ceph.trace.saveToGallery")}</span>
+        </Button>
 
         <Button
           variant={showOverlay ? "secondary" : "outline"}

@@ -990,7 +990,12 @@
       "zoomHint": "Défilez pour zoomer · Alt+glisser pour déplacer",
       "undoLandmark": "Annuler Dernier Point",
       "showOverlay": "Afficher le Tracé",
-      "hideOverlay": "Masquer le Tracé"
+      "hideOverlay": "Masquer le Tracé",
+      "saveToGallery": "Enregistrer dans la Galerie",
+      "savedToGallery": "Image de tracé enregistrée dans la galerie du patient",
+      "saveGalleryFailed": "Échec de l'enregistrement du tracé dans la galerie",
+      "saveGalleryNoImage": "La radiographie n'est pas encore chargée — veuillez patienter",
+      "saveGalleryNote": "Tracé céphalométrique — {{template}}"
     },
     "lm": {
       "Sella": { "name": "Sella", "desc": "Centre de la selle turcique" },

@@ -990,7 +990,12 @@
       "zoomHint": "Desplace para hacer zoom · Alt+arrastrar para desplazar",
       "undoLandmark": "Deshacer Último Punto",
       "showOverlay": "Mostrar Trazado",
-      "hideOverlay": "Ocultar Trazado"
+      "hideOverlay": "Ocultar Trazado",
+      "saveToGallery": "Guardar en Galería",
+      "savedToGallery": "Imagen de trazado guardada en la galería del paciente",
+      "saveGalleryFailed": "Error al guardar el trazado en la galería",
+      "saveGalleryNoImage": "La radiografía aún no está cargada — por favor espere",
+      "saveGalleryNote": "Trazado cefalométrico — {{template}}"
     },
     "lm": {
       "Sella": { "name": "Sella", "desc": "Centro de la silla turca" },

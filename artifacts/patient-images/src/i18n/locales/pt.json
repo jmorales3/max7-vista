@@ -990,7 +990,12 @@
       "zoomHint": "Role para ampliar · Alt+arrastar para mover",
       "undoLandmark": "Desfazer Último Marco",
       "showOverlay": "Mostrar Traçado",
-      "hideOverlay": "Ocultar Traçado"
+      "hideOverlay": "Ocultar Traçado",
+      "saveToGallery": "Salvar na Galeria",
+      "savedToGallery": "Imagem do traçado salva na galeria do paciente",
+      "saveGalleryFailed": "Falha ao salvar o traçado na galeria",
+      "saveGalleryNoImage": "Radiografia ainda não carregada — aguarde",
+      "saveGalleryNote": "Traçado cefalométrico — {{template}}"
     },
     "lm": {
       "Sella": { "name": "Sella", "desc": "Centro da sela túrcica" },
