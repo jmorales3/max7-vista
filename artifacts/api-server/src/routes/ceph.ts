@@ -239,6 +239,7 @@ router.post("/ceph/templates/:id/copy", async (req, res): Promise<void> => {
         templateId: newTemplate.id, name: m.name, type: m.type,
         p1Label: m.p1Label, p2Label: m.p2Label, p3Label: m.p3Label, p4Label: m.p4Label,
         angleQuadrant: m.angleQuadrant, unit: m.unit, displayOrder: m.displayOrder,
+        idealMin: m.idealMin ?? null, idealMax: m.idealMax ?? null,
       })));
     }
     const [full] = await db.select().from(cephTemplatesTable).where(eq(cephTemplatesTable.id, newTemplate.id));

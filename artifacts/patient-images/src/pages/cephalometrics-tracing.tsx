@@ -276,12 +276,25 @@ export default function CephalometricsTracing() {
     img.onload = () => {
       imgRef.current = img;
       if (canvasRef.current) {
-        const cw = canvasRef.current.width;
-        const ch = canvasRef.current.height;
-        const s = Math.min(cw / img.naturalWidth, ch / img.naturalHeight) * 0.9;
-        setScale(s);
-        setPanX(0);
-        setPanY(0);
+        // Fallback to container bounding rect when canvas buffer hasn't been
+        // initialised yet (e.g. cached image fires onload before ResizeObserver).
+        let cw = canvasRef.current.width;
+        let ch = canvasRef.current.height;
+        if (cw <= 1 || ch <= 1) {
+          const rect = containerRef.current?.getBoundingClientRect();
+          if (rect && rect.width > 0) {
+            cw = Math.round(rect.width);
+            ch = Math.round(rect.height);
+            canvasRef.current.width = cw;
+            canvasRef.current.height = ch;
+          }
+        }
+        if (cw > 0 && ch > 0) {
+          const s = Math.min(cw / img.naturalWidth, ch / img.naturalHeight) * 0.9;
+          setScale(s);
+          setPanX(0);
+          setPanY(0);
+        }
       }
       doRender();
     };
@@ -460,12 +473,13 @@ export default function CephalometricsTracing() {
             (mDef?.idealMin != null && numVal < parseFloat(String(mDef.idealMin))) ||
             (mDef?.idealMax != null && numVal > parseFloat(String(mDef.idealMax)))
           );
+          const displayUnit = r.unit === "degrees" || r.unit === "degree" ? "°" : r.unit;
           const idealStr = hasIdeal
-            ? `${mDef?.idealMin ?? ""}–${mDef?.idealMax ?? ""} ${r.unit}`
+            ? `${mDef?.idealMin ?? ""}–${mDef?.idealMax ?? ""} ${displayUnit}`
             : "—";
           if (isOut) pdf.setTextColor(200, 40, 40);
           pdf.text(r.measurementName, colX[0], curY);
-          pdf.text(r.value !== null ? `${numVal!.toFixed(2)} ${r.unit}` : "—", colX[1], curY);
+          pdf.text(r.value !== null ? `${numVal!.toFixed(2)} ${displayUnit}` : "—", colX[1], curY);
           pdf.text(idealStr, colX[2], curY);
           pdf.setTextColor(0, 0, 0);
           curY += 5;
@@ -683,12 +697,12 @@ export default function CephalometricsTracing() {
                             <td className="px-2 py-1.5">{t(`ceph.meas.${r.measurementName}` as any, r.measurementName)}</td>
                             <td className={`px-2 py-1.5 text-right font-mono ${isOut ? "text-destructive font-semibold" : ""}`}>
                               {r.value !== null
-                                ? `${parseFloat(r.value).toFixed(2)} ${r.unit}`
+                                ? `${parseFloat(r.value).toFixed(2)} ${r.unit === "degrees" || r.unit === "degree" ? "°" : r.unit}`
                                 : <span className="text-muted-foreground">—</span>}
                             </td>
                             <td className="px-2 py-1.5 text-right font-mono text-muted-foreground">
                               {hasIdeal
-                                ? `${mDef?.idealMin ?? ""}–${mDef?.idealMax ?? ""}`
+                                ? `${mDef?.idealMin ?? ""}–${mDef?.idealMax ?? ""} ${r.unit === "degrees" || r.unit === "degree" ? "°" : r.unit}`
                                 : <span>—</span>}
                             </td>
                           </tr>

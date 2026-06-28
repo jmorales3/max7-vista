@@ -934,7 +934,7 @@ export default function CephalometricsTrace() {
                               <td className="px-2 py-1.5">{t(`ceph.meas.${r.measurementName}` as any, r.measurementName)}</td>
                               <td className="px-2 py-1.5 text-right font-mono">
                                 {r.value !== null
-                                  ? `${parseFloat(r.value).toFixed(2)} ${r.unit}`
+                                  ? `${parseFloat(r.value).toFixed(2)} ${r.unit === "degrees" || r.unit === "degree" ? "°" : r.unit}`
                                   : <span className="text-muted-foreground">—</span>}
                               </td>
                             </tr>
