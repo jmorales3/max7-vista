@@ -16,6 +16,7 @@ localPort = 8081
 
 [services.development]
 run = "pnpm --filter @workspace/patient-images-mobile run dev"
+autoStart = true
 
 [services.production]
 build = [ "pnpm", "--filter", "@workspace/patient-images-mobile", "run", "build" ]
