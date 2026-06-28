@@ -1504,4 +1504,139 @@ Manual section key: `manual.sections.patientAccess` + `manual.patientAccess.{hea
 
 ---
 
+## FEAT-017 — Ceph Tracing: Treatment Phase Selection & Colour Coding
+
+**Status:** ✅ Confirmed working in Vista  
+**Date:** 2026-06-28  
+**Vista files:**
+- `artifacts/patient-images/src/pages/cephalometrics-trace.tsx` — phase selector in setup dialog
+- `artifacts/patient-images/src/pages/cephalometrics-tracing.tsx` — phase badge + colour-coded canvas
+- `lib/db/src/schema/ceph-tracings.ts` — `record_phase TEXT DEFAULT 'initial'` column
+- `artifacts/api-server/src/routes/ceph.ts` — POST stores `recordPhase`, GET returns it
+
+### What it does
+Each ceph tracing is tagged with a treatment phase (Initial · Progress · Final · Retention). The phase is set in the "New Tracing" setup dialog and is stored persistently. In the result view, the phase badge is colour-coded and the tracing lines + landmark dots use the same phase colour instead of a fixed colour.
+
+### Phase colours
+```typescript
+const PHASE_COLORS: Record<string, string> = {
+  initial:   "#3b82f6",  // blue
+  progress:  "#f59e0b",  // amber
+  final:     "#22c55e",  // green
+  retention: "#a855f7",  // purple
+};
+```
+
+### DB column
+```sql
+ALTER TABLE ceph_tracings ADD COLUMN IF NOT EXISTS record_phase TEXT DEFAULT 'initial';
+```
+
+### API
+- **POST** `/api/ceph/tracings` — accepts `recordPhase` in body, validates against `['initial','progress','final','retention']`, defaults to `'initial'`
+- **GET** `/api/ceph/tracings/:id` — returns `recordPhase` in response
+
+### i18n keys (all 4 locales: en / es / fr / pt)
+```
+ceph.phase.initial, ceph.phase.progress, ceph.phase.final, ceph.phase.retention
+ceph.trace.selectPhase
+```
+
+---
+
+## FEAT-018 — Ceph Result View: Show/Hide Tracing Overlay Toggle
+
+**Status:** ✅ Confirmed working in Vista  
+**Date:** 2026-06-28  
+**Vista file:** `artifacts/patient-images/src/pages/cephalometrics-tracing.tsx`
+
+### What it does
+An Eye/EyeOff toggle button in the tracing result header lets the clinician hide all tracing overlays (landmark dots and measurement lines) from the canvas, revealing the raw radiograph underneath. Clicking again restores the overlay. This allows direct visual comparison without leaving the page.
+
+### Implementation
+```typescript
+const [showOverlay, setShowOverlay] = useState(true);
+
+// renderCanvas now accepts showOverlay param
+function renderCanvas(..., showOverlay: boolean) {
+  // draw image always
+  if (img && img.complete) ctx.drawImage(img, ...);
+  // conditionally draw overlays
+  if (showOverlay) {
+    drawMeasurementOverlays(...);
+    for (const pt of placed) { /* draw dots */ }
+  }
+}
+
+function doRender(overlay = showOverlay) {
+  renderCanvas(canvas, imgRef.current, scale, panX, panY, placed, measurements, phaseColor, phaseColor + "cc", overlay);
+}
+
+useEffect(() => { doRender(); }, [scale, panX, panY, placed.length, measurements.length, phaseColor, showOverlay]);
+```
+
+### Button (placed in header between info and zoom controls)
+```jsx
+<Button variant={showOverlay ? "secondary" : "outline"} size="sm"
+  onClick={() => setShowOverlay(v => !v)}>
+  {showOverlay ? <Eye /> : <EyeOff />}
+  {showOverlay ? t("ceph.trace.hideOverlay") : t("ceph.trace.showOverlay")}
+</Button>
+```
+
+### i18n keys
+`ceph.trace.showOverlay`, `ceph.trace.hideOverlay`
+
+---
+
+## FEAT-019 — Ceph Result View: Save Traced Radiograph to Patient Gallery
+
+**Status:** ✅ Confirmed working in Vista  
+**Date:** 2026-06-28  
+**Vista file:** `artifacts/patient-images/src/pages/cephalometrics-tracing.tsx`
+
+### What it does
+An "ImagePlus" button in the tracing result header renders the radiograph + full tracing overlay at the **original image resolution** (not the viewport size) into an offscreen canvas and uploads it as a new PNG in the patient's image gallery. The saved image can then be used in presentations, superimpositions, and print documents.
+
+### Implementation
+```typescript
+import { uploadPatientImage } from "@/lib/upload";
+
+async function handleSaveToGallery() {
+  const img = imgRef.current;
+  if (!img || !img.complete || img.naturalWidth === 0) { /* toast error */ return; }
+  setIsSaving(true);
+  try {
+    // Offscreen canvas at full image resolution
+    const offscreen = document.createElement("canvas");
+    offscreen.width = img.naturalWidth;
+    offscreen.height = img.naturalHeight;
+    // Render at scale=1, panX=0, panY=0 → fills canvas at 1:1 pixel quality
+    renderCanvas(offscreen, img, 1, 0, 0, placed, measurements, phaseColor, phaseColor + "cc", true);
+    const blob = await new Promise<Blob>((resolve, reject) =>
+      offscreen.toBlob(b => b ? resolve(b) : reject(), "image/png")
+    );
+    const name = `${tracing.templateName ?? "Tracing"}_${format(new Date(tracing.createdAt), "yyyy-MM-dd")}.png`;
+    const file = new File([blob], name, { type: "image/png" });
+    await uploadPatientImage(file, tracing.patientId, `Cephalometric tracing — ${tracing.templateName}`);
+    toast({ title: t("ceph.trace.savedToGallery") });
+  } catch {
+    toast({ variant: "destructive", title: t("ceph.trace.saveGalleryFailed") });
+  } finally {
+    setIsSaving(false);
+  }
+}
+```
+
+### Key notes for Max7 agent
+- Uses `renderCanvas` with `scale=1, panX=0, panY=0` — this makes the image fill the offscreen canvas at pixel-perfect resolution because the canvas transform becomes `translate(w/2, h/2), scale(1)` and the image is drawn at `(-w/2, -h/2)`.
+- Always saves with `showOverlay=true` regardless of the current toggle state.
+- Reuses the existing `uploadPatientImage` three-step signed-URL flow (FEAT-006) — no new API endpoints needed.
+- After upload, the gallery query cache is automatically invalidated by `uploadPatientImage`.
+
+### i18n keys
+`ceph.trace.saveToGallery`, `ceph.trace.savedToGallery`, `ceph.trace.saveGalleryFailed`, `ceph.trace.saveGalleryNoImage`, `ceph.trace.saveGalleryNote`
+
+---
+
 <!-- Add new entries below as features are confirmed in Vista -->
