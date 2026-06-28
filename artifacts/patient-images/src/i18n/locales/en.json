@@ -1036,6 +1036,13 @@
       "steiner": { "name": "Steiner Analysis", "desc": "Classic Steiner cephalometric analysis (1953)" },
       "ricketts": { "name": "Ricketts Analysis", "desc": "Ricketts cephalometric analysis" },
       "tweed": { "name": "Tweed Analysis", "desc": "Tweed triangle cephalometric analysis (FMA, FMIA, IMPA)" }
+    },
+    "phaseLabel": "Record Phase",
+    "phase": {
+      "initial": "Initial",
+      "progress": "Progress",
+      "final": "Final",
+      "retention": "Post-Retention"
     }
   },
   "idleTimeout": {

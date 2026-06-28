@@ -40,6 +40,7 @@ interface TracingDetail {
   templateName: string | null;
   pxPerMm: string | null;
   name: string | null;
+  recordPhase: string | null;
   createdAt: string;
   points: { id: number; landmarkLabel: string; x: string; y: string }[];
   results: { id: number; measurementName: string; value: string | null; unit: string }[];
@@ -71,8 +72,14 @@ interface PlacedPoint {
   name?: string;
 }
 
-const LM_RADIUS = 7;
-const LM_COLOR = "#818cf8";
+const LM_RADIUS = 4;
+
+const PHASE_COLORS: Record<string, string> = {
+  initial:   "#3b82f6",
+  progress:  "#f59e0b",
+  final:     "#22c55e",
+  retention: "#a855f7",
+};
 
 function screenToImg(sx: number, sy: number, cw: number, ch: number, scale: number, panX: number, panY: number) {
   return { x: (sx - cw / 2 - panX) / scale, y: (sy - ch / 2 - panY) / scale };
@@ -87,6 +94,7 @@ function drawMeasurementOverlays(
   measurements: MeasurementDef[],
   placed: PlacedPoint[],
   scale: number,
+  lineColor: string,
 ) {
   if (measurements.length === 0 || placed.length === 0) return;
   const ptMap = new Map(placed.map((p) => [p.label, p]));
@@ -99,33 +107,29 @@ function drawMeasurementOverlays(
     const p4 = m.p4Label ? ptMap.get(m.p4Label) : null;
 
     ctx.save();
-    ctx.strokeStyle = "#f472b6";
+    ctx.strokeStyle = lineColor;
     ctx.lineWidth = lw;
-    ctx.globalAlpha = 0.55;
+    ctx.globalAlpha = 0.7;
 
     if (m.type === "line" && p1 && p2) {
-      ctx.setLineDash([5 / scale, 5 / scale]);
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(p2.x, p2.y);
       ctx.stroke();
     } else if (m.type === "angle" && p1 && p2 && p3) {
-      ctx.setLineDash([5 / scale, 5 / scale]);
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(p2.x, p2.y);
       ctx.lineTo(p3.x, p3.y);
       ctx.stroke();
-      ctx.setLineDash([]);
       const r = 22 / scale;
       const a1 = Math.atan2(p1.y - p2.y, p1.x - p2.x);
       const a2 = Math.atan2(p3.y - p2.y, p3.x - p2.x);
-      ctx.globalAlpha = 0.4;
+      ctx.globalAlpha = 0.35;
       ctx.beginPath();
       ctx.arc(p2.x, p2.y, r, Math.min(a1, a2), Math.max(a1, a2));
       ctx.stroke();
     } else if (m.type === "line_angle" && p1 && p2 && p3 && p4) {
-      ctx.setLineDash([5 / scale, 5 / scale]);
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(p2.x, p2.y);
@@ -140,12 +144,10 @@ function drawMeasurementOverlays(
       const len2 = dx * dx + dy * dy;
       const t = len2 > 0 ? ((p1.x - p2.x) * dx + (p1.y - p2.y) * dy) / len2 : 0;
       const foot = { x: p2.x + t * dx, y: p2.y + t * dy };
-      ctx.setLineDash([5 / scale, 5 / scale]);
       ctx.beginPath();
       ctx.moveTo(p2.x, p2.y);
       ctx.lineTo(p3.x, p3.y);
       ctx.stroke();
-      ctx.setLineDash([]);
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(foot.x, foot.y);
@@ -164,6 +166,8 @@ function renderCanvas(
   panY: number,
   placed: PlacedPoint[],
   measurements: MeasurementDef[],
+  lineColor: string,
+  dotColor: string,
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -179,27 +183,20 @@ function renderCanvas(
     ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
   }
 
-  drawMeasurementOverlays(ctx, measurements, placed, scale);
+  drawMeasurementOverlays(ctx, measurements, placed, scale, lineColor);
 
   for (const pt of placed) {
     const r = LM_RADIUS / scale;
-    const fs = 11 / scale;
     const lw = 1.5 / scale;
 
     ctx.save();
     ctx.beginPath();
     ctx.arc(pt.x, pt.y, r, 0, 2 * Math.PI);
-    ctx.fillStyle = LM_COLOR + "cc";
+    ctx.fillStyle = dotColor;
     ctx.fill();
     ctx.strokeStyle = "#fff";
     ctx.lineWidth = lw;
     ctx.stroke();
-
-    ctx.font = `bold ${fs}px sans-serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = "#fff";
-    ctx.fillText(pt.label, pt.x, pt.y);
     ctx.restore();
   }
 
@@ -279,15 +276,17 @@ export default function CephalometricsTracing() {
 
   const measurements = templateDetail?.measurements ?? [];
 
+  const phaseColor = PHASE_COLORS[tracing?.recordPhase ?? "initial"] ?? PHASE_COLORS.initial;
+
   function doRender() {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    renderCanvas(canvas, imgRef.current, scale, panX, panY, placed, measurements);
+    renderCanvas(canvas, imgRef.current, scale, panX, panY, placed, measurements, phaseColor, phaseColor + "cc");
   }
 
   useEffect(() => {
     doRender();
-  }, [scale, panX, panY, placed.length, measurements.length]);
+  }, [scale, panX, panY, placed.length, measurements.length, phaseColor]);
 
   useEffect(() => {
     function handleResize() {
@@ -398,6 +397,13 @@ export default function CephalometricsTracing() {
                 {tracing.templateName}
               </span>
             )}
+            <span
+              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
+              style={{ backgroundColor: phaseColor + "22", color: phaseColor }}
+            >
+              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: phaseColor }} />
+              {t(`ceph.phase.${tracing.recordPhase ?? "initial"}` as any, tracing.recordPhase ?? "initial")}
+            </span>
             <span className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
               {format(new Date(tracing.createdAt), "MMM d, yyyy")}

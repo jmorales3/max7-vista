@@ -11,6 +11,7 @@ export const cephTracingsTable = pgTable("ceph_tracings", {
   templateName: text("template_name"),
   pxPerMm: numeric("px_per_mm"),
   name: text("name"),
+  recordPhase: text("record_phase").$default(() => "initial"),
   createdBy: integer("created_by"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

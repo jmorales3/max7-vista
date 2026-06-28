@@ -1036,6 +1036,13 @@
       "steiner": { "name": "Análisis de Steiner", "desc": "Análisis cefalométrico clásico de Steiner (1953)" },
       "ricketts": { "name": "Análisis de Ricketts", "desc": "Análisis cefalométrico de Ricketts" },
       "tweed": { "name": "Análisis de Tweed", "desc": "Análisis del triángulo de Tweed (FMA, FMIA, IMPA)" }
+    },
+    "phaseLabel": "Fase del Registro",
+    "phase": {
+      "initial": "Inicial",
+      "progress": "Progreso",
+      "final": "Final",
+      "retention": "Postretención"
     }
   },
   "idleTimeout": {

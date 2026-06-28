@@ -504,6 +504,7 @@ router.post("/ceph/tracings", async (req, res): Promise<void> => {
       if (!tmpl) { res.status(403).json({ error: "Template not accessible" }); return; }
     }
 
+    const validPhases = ["initial", "progress", "final", "retention"];
     const [tracing] = await db.insert(cephTracingsTable).values({
       tenantId,
       patientId: parsedPatientId,
@@ -512,6 +513,7 @@ router.post("/ceph/tracings", async (req, res): Promise<void> => {
       templateName: templateName ?? null,
       pxPerMm: pxPerMm ? String(pxPerMm) : null,
       name: name ?? null,
+      recordPhase: (recordPhase && validPhases.includes(recordPhase)) ? recordPhase : "initial",
       createdBy: userId ?? null,
     }).returning();
     res.status(201).json(tracing);
@@ -528,10 +530,12 @@ router.patch("/ceph/tracings/:id", async (req, res): Promise<void> => {
     if (!existing) { res.status(404).json({ error: "Tracing not found" }); return; }
     const accessibleIds = await getAccessiblePatientIds(req);
     if (!canAccessPatient(accessibleIds, existing.patientId)) { res.status(403).json({ error: "Access denied to this patient" }); return; }
-    const { pxPerMm, name } = req.body as Record<string, any>;
+    const { pxPerMm, name, recordPhase } = req.body as Record<string, any>;
     const patch: Record<string, unknown> = {};
     if (pxPerMm !== undefined) patch.pxPerMm = String(pxPerMm);
     if (name !== undefined) patch.name = name;
+    const validPhases = ["initial", "progress", "final", "retention"];
+    if (recordPhase !== undefined && validPhases.includes(recordPhase)) patch.recordPhase = recordPhase;
     const [updated] = await db.update(cephTracingsTable).set(patch).where(eq(cephTracingsTable.id, id)).returning();
     res.json(updated);
   } catch (err: any) { errRes(res, err); }

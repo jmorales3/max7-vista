@@ -85,6 +85,13 @@ const LM_COLOR = "#3b82f6";
 const LM_ACTIVE_COLOR = "#22c55e";
 const LM_PLACED_COLOR = "#818cf8";
 
+const PHASE_COLORS: Record<string, string> = {
+  initial:   "#3b82f6",
+  progress:  "#f59e0b",
+  final:     "#22c55e",
+  retention: "#a855f7",
+};
+
 function screenToImg(sx: number, sy: number, cw: number, ch: number, scale: number, panX: number, panY: number) {
   return {
     x: (sx - cw / 2 - panX) / scale,
@@ -134,12 +141,12 @@ function drawLandmarks(
   activeLabel: string | null,
   scale: number,
   dragIdx: number | null,
+  dotColor: string,
 ) {
   for (let i = 0; i < placed.length; i++) {
     const pt = placed[i];
     const isDrag = i === dragIdx;
-    const isActive = pt.label === activeLabel;
-    const color = isDrag ? LM_ACTIVE_COLOR : isActive ? LM_PLACED_COLOR : LM_PLACED_COLOR;
+    const color = isDrag ? LM_ACTIVE_COLOR : dotColor;
 
     const r = LM_RADIUS / scale;
     const lw = 1.5 / scale;
@@ -161,6 +168,7 @@ function drawMeasurementOverlays(
   measurements: MeasurementDef[],
   placed: PlacedPoint[],
   scale: number,
+  lineColor: string,
 ) {
   if (measurements.length === 0 || placed.length === 0) return;
   const ptMap = new Map(placed.map((p) => [p.label, p]));
@@ -173,33 +181,29 @@ function drawMeasurementOverlays(
     const p4 = m.p4Label ? ptMap.get(m.p4Label) : null;
 
     ctx.save();
-    ctx.strokeStyle = "#f472b6";
+    ctx.strokeStyle = lineColor;
     ctx.lineWidth = lw;
-    ctx.globalAlpha = 0.55;
+    ctx.globalAlpha = 0.7;
 
     if (m.type === "line" && p1 && p2) {
-      ctx.setLineDash([5 / scale, 5 / scale]);
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(p2.x, p2.y);
       ctx.stroke();
     } else if (m.type === "angle" && p1 && p2 && p3) {
-      ctx.setLineDash([5 / scale, 5 / scale]);
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(p2.x, p2.y);
       ctx.lineTo(p3.x, p3.y);
       ctx.stroke();
-      ctx.setLineDash([]);
       const r = 22 / scale;
       const a1 = Math.atan2(p1.y - p2.y, p1.x - p2.x);
       const a2 = Math.atan2(p3.y - p2.y, p3.x - p2.x);
-      ctx.globalAlpha = 0.4;
+      ctx.globalAlpha = 0.35;
       ctx.beginPath();
       ctx.arc(p2.x, p2.y, r, Math.min(a1, a2), Math.max(a1, a2));
       ctx.stroke();
     } else if (m.type === "line_angle" && p1 && p2 && p3 && p4) {
-      ctx.setLineDash([5 / scale, 5 / scale]);
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(p2.x, p2.y);
@@ -214,12 +218,10 @@ function drawMeasurementOverlays(
       const len2 = dx * dx + dy * dy;
       const t = len2 > 0 ? ((p1.x - p2.x) * dx + (p1.y - p2.y) * dy) / len2 : 0;
       const foot = { x: p2.x + t * dx, y: p2.y + t * dy };
-      ctx.setLineDash([5 / scale, 5 / scale]);
       ctx.beginPath();
       ctx.moveTo(p2.x, p2.y);
       ctx.lineTo(p3.x, p3.y);
       ctx.stroke();
-      ctx.setLineDash([]);
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(foot.x, foot.y);
@@ -242,6 +244,7 @@ function renderCanvas(
   activeLabel: string | null,
   dragIdx: number | null,
   measurements: MeasurementDef[],
+  phaseColor: string,
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -262,11 +265,11 @@ function renderCanvas(
   }
 
   if (step === "results") {
-    drawMeasurementOverlays(ctx, measurements, placed, scale);
+    drawMeasurementOverlays(ctx, measurements, placed, scale, phaseColor);
   }
 
   if (step === "landmarks" || step === "results") {
-    drawLandmarks(ctx, placed, activeLabel, scale, dragIdx);
+    drawLandmarks(ctx, placed, activeLabel, scale, dragIdx, phaseColor);
   }
 
   ctx.restore();
@@ -281,6 +284,7 @@ export default function CephalometricsTrace() {
 
   const [step, setStep] = useState<Step>("setup");
   const [tracingId, setTracingId] = useState<number | null>(null);
+  const [recordPhase, setRecordPhase] = useState("initial");
   const [templateDetail, setTemplateDetail] = useState<CephTemplateDetail | null>(null);
   const [calPoints, setCalPoints] = useState<{ x: number; y: number }[]>([]);
   const [mmInput, setMmInput] = useState("");
@@ -316,6 +320,7 @@ export default function CephalometricsTrace() {
       imageId: number;
       templateId: number;
       templateName: string;
+      recordPhase: string;
     }) => customFetch<{ id: number }>("/api/ceph/tracings", {
       method: "POST",
       body: JSON.stringify(data),
@@ -400,6 +405,7 @@ export default function CephalometricsTrace() {
   const doRender = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const phaseColor = PHASE_COLORS[recordPhase] ?? PHASE_COLORS.initial;
     renderCanvas(
       canvas,
       imgRef.current,
@@ -412,12 +418,13 @@ export default function CephalometricsTrace() {
       nextLandmark?.label ?? null,
       dragIdx,
       measurements,
+      phaseColor,
     );
-  }, [scale, panX, panY, step, calPoints, placed, dragIdx, nextLandmark, measurements]);
+  }, [scale, panX, panY, step, calPoints, placed, dragIdx, nextLandmark, measurements, recordPhase]);
 
   useEffect(() => {
     scheduleRender();
-  }, [scale, panX, panY, step, calPoints, placed, dragIdx, nextLandmark, measurements]);
+  }, [scale, panX, panY, step, calPoints, placed, dragIdx, nextLandmark, measurements, recordPhase]);
 
   useEffect(() => {
     function handleResize() {
@@ -587,6 +594,7 @@ export default function CephalometricsTrace() {
         imageId,
         templateId: tmpl.id,
         templateName: tmpl.name,
+        recordPhase,
       });
     });
   }
@@ -999,6 +1007,31 @@ export default function CephalometricsTrace() {
               {t("ceph.trace.selectTemplate")}
             </DialogTitle>
           </DialogHeader>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">{t("ceph.phaseLabel")}</label>
+            <div className="grid grid-cols-2 gap-2">
+              {(["initial", "progress", "final", "retention"] as const).map((phase) => (
+                <button
+                  key={phase}
+                  type="button"
+                  onClick={() => setRecordPhase(phase)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg border px-3 py-2 text-xs transition-colors",
+                    recordPhase === phase
+                      ? "border-primary bg-primary/10 font-medium"
+                      : "hover:bg-accent",
+                  )}
+                >
+                  <span
+                    className="h-2.5 w-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: PHASE_COLORS[phase] }}
+                  />
+                  {t(`ceph.phase.${phase}` as any)}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {templatesLoading ? (
             <div className="space-y-2">
