@@ -137,6 +137,77 @@ export async function getSignedUploadUrl(
 }
 
 /**
+ * Stream a video file with HTTP Range request support (required for browser <video> playback).
+ * Returns 206 Partial Content when the client sends a Range header, 200 otherwise.
+ */
+export async function streamFileWithRange(
+  filePath: string,
+  _fileName: string,
+  req: Request & { headers: { range?: string } },
+  res: Response,
+): Promise<void> {
+  const localPath = isGcsPath(filePath)
+    ? objectNameToLocalPath(fromGcsPath(filePath))
+    : filePath;
+
+  if (!fs.existsSync(localPath)) {
+    res.status(404).json({ error: "File not found" });
+    return;
+  }
+
+  const stat = fs.statSync(localPath);
+  const fileSize = stat.size;
+  const range = req.headers.range as string | undefined;
+
+  if (range) {
+    const parts = range.replace(/bytes=/, "").split("-");
+    const start = parseInt(parts[0], 10);
+    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+    const chunkSize = end - start + 1;
+    res.writeHead(206, {
+      "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+      "Accept-Ranges": "bytes",
+      "Content-Length": chunkSize,
+      "Content-Type": "video/mp4",
+    });
+    fs.createReadStream(localPath, { start, end }).pipe(res);
+  } else {
+    res.writeHead(200, {
+      "Content-Length": fileSize,
+      "Accept-Ranges": "bytes",
+      "Content-Type": "video/mp4",
+    });
+    fs.createReadStream(localPath).pipe(res);
+  }
+}
+
+/**
+ * List all files under a local storage prefix (mirrors gcsStorage.listGcsFiles).
+ * Returns object names relative to STORAGE_DIRECTORY, using forward slashes.
+ */
+export async function listGcsFiles(prefix = ""): Promise<string[]> {
+  const storageDir = getStorageDir();
+  const segments = prefix.split("/").filter(Boolean);
+  const targetDir = segments.length > 0 ? path.join(storageDir, ...segments) : storageDir;
+
+  if (!fs.existsSync(targetDir)) return [];
+
+  const results: string[] = [];
+  function walk(dir: string) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+      } else {
+        results.push(path.relative(storageDir, full).split(path.sep).join("/"));
+      }
+    }
+  }
+  walk(targetDir);
+  return results;
+}
+
+/**
  * Delete a locally-stored file. Silently ignores missing files.
  */
 export async function deleteFile(filePath: string): Promise<void> {
