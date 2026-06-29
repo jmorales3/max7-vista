@@ -198,6 +198,72 @@ async function initSqlite() {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE (tenant_id, user_id, patient_id)
     );
+
+    CREATE TABLE IF NOT EXISTS ceph_templates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id INTEGER,
+      name TEXT NOT NULL,
+      description TEXT,
+      locked INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS ceph_landmarks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      template_id INTEGER NOT NULL REFERENCES ceph_templates(id) ON DELETE CASCADE,
+      label TEXT NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      display_order INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS ceph_measurements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      template_id INTEGER NOT NULL REFERENCES ceph_templates(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      p1_label TEXT NOT NULL,
+      p2_label TEXT NOT NULL,
+      p3_label TEXT,
+      p4_label TEXT,
+      angle_quadrant TEXT,
+      unit TEXT NOT NULL,
+      ideal_min REAL,
+      ideal_max REAL,
+      display_order INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS ceph_tracings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id INTEGER NOT NULL,
+      patient_id INTEGER NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+      image_id INTEGER,
+      template_id INTEGER,
+      template_name TEXT,
+      px_per_mm REAL,
+      name TEXT,
+      record_phase TEXT DEFAULT 'initial',
+      created_by INTEGER,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS ceph_tracing_points (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tracing_id INTEGER NOT NULL REFERENCES ceph_tracings(id) ON DELETE CASCADE,
+      landmark_label TEXT NOT NULL,
+      x REAL NOT NULL,
+      y REAL NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS ceph_tracing_results (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tracing_id INTEGER NOT NULL REFERENCES ceph_tracings(id) ON DELETE CASCADE,
+      measurement_name TEXT NOT NULL,
+      value REAL,
+      unit TEXT
+    );
   `);
 
   // Migrate existing SQLite images table
@@ -220,6 +286,9 @@ async function initSqlite() {
 
   // ── First-run: seed default admin if no users exist ──────────────────────
   await seedSqlite(raw);
+
+  // ── Seed system ceph templates (Steiner, Ricketts, Tweed, Witts) ─────────
+  await seedCephTemplatesSqlite(raw);
 }
 
 async function seedSqlite(raw: {
@@ -273,6 +342,163 @@ async function seedSqlite(raw: {
       logger.warn({ err: e }, "Could not write first-run credentials file");
     }
   }
+}
+
+type RawSqliteClient = {
+  $client: {
+    exec: (sql: string) => void;
+    prepare: (sql: string) => { all: () => unknown[]; run: (...args: unknown[]) => void };
+  };
+};
+
+async function seedCephTemplatesSqlite(raw: RawSqliteClient) {
+  // Use the settings table as a seed-state flag — idempotent on every startup.
+  const already = raw.$client.prepare(
+    `SELECT value FROM settings WHERE key = 'ceph_templates_v2' LIMIT 1`
+  ).all() as { value: string }[];
+  if (already.length > 0) return;
+
+  // Clear any partial previous seed
+  raw.$client.exec(`DELETE FROM ceph_templates WHERE tenant_id IS NULL`);
+
+  const insTmpl = raw.$client.prepare(
+    `INSERT INTO ceph_templates (tenant_id, name, description, locked) VALUES (NULL, ?, ?, 1)`
+  );
+  const insLm = raw.$client.prepare(
+    `INSERT INTO ceph_landmarks (template_id, label, name, description, display_order) VALUES (?, ?, ?, ?, ?)`
+  );
+  const insMeas = raw.$client.prepare(
+    `INSERT INTO ceph_measurements (template_id, name, type, p1_label, p2_label, p3_label, p4_label, angle_quadrant, unit, display_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+  const insMeasWithNorms = raw.$client.prepare(
+    `INSERT INTO ceph_measurements (template_id, name, type, p1_label, p2_label, p3_label, p4_label, angle_quadrant, unit, ideal_min, ideal_max, display_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+  const lastId = () =>
+    (raw.$client.prepare(`SELECT last_insert_rowid() as id`).all() as { id: number }[])[0]!.id;
+
+  // ── Steiner Analysis ────────────────────────────────────────────────────
+  insTmpl.run("Steiner Analysis", "Classic Steiner cephalometric analysis (1953)");
+  const steinerId = lastId();
+  for (const [lbl, nm, desc, ord] of [
+    ["S",    "Sella",                  "Center of sella turcica",                              0],
+    ["N",    "Nasion",                 "Fronto-nasal suture, most anterior point",             1],
+    ["Or",   "Orbitale",              "Lowest point of orbital floor",                        2],
+    ["Po",   "Porion",                "Most superior point of external auditory meatus",      3],
+    ["ANS",  "Anterior Nasal Spine",  "Tip of anterior nasal spine",                         4],
+    ["PNS",  "Posterior Nasal Spine", "Tip of posterior nasal spine",                        5],
+    ["A",    "Point A",               "Deepest point on anterior maxilla (Subspinale)",       6],
+    ["B",    "Point B",               "Deepest point on anterior mandible (Supramentale)",    7],
+    ["D",    "D Point",               "Center of the mandibular symphysis (Steiner's D point)",8],
+    ["Pog",  "Pogonion",              "Most anterior point of chin",                           9],
+    ["Gn",   "Gnathion",              "Most antero-inferior point of chin",                    10],
+    ["Me",   "Menton",                "Most inferior point of mandibular symphysis",           11],
+    ["Go",   "Gonion",                "Most postero-inferior angle of mandible",               12],
+    ["Ar",   "Articulare",            "Junction of posterior cranial base and condylar neck",  13],
+    ["U1t",  "U1 Tip",                "Tip of most prominent upper central incisor",           14],
+    ["U1a",  "U1 Apex",               "Root apex of most prominent upper central incisor",     15],
+    ["L1t",  "L1 Tip",                "Tip of most prominent lower central incisor",           16],
+    ["L1a",  "L1 Apex",               "Root apex of most prominent lower central incisor",     17],
+    ["OcP1", "Occlusal Plane Pt 1",   "Point on occlusal plane (premolar region)",             18],
+    ["OcP2", "Occlusal Plane Pt 2",   "Point on occlusal plane (molar region)",                19],
+  ]) { insLm.run(steinerId, lbl, nm, desc, ord); }
+  for (const [nm, type, p1, p2, p3, p4, quad, unit, ord] of [
+    ["SNA",          "angle",        "N",    "S",    "A",    null,   null, "degrees", 0],
+    ["SNB",          "angle",        "N",    "S",    "B",    null,   null, "degrees", 1],
+    ["ANB",          "angle",        "N",    "A",    "B",    null,   null, "degrees", 2],
+    ["SND",          "angle",        "N",    "S",    "D",    null,   null, "degrees", 3],
+    ["GoGn-SN",      "line_angle",   "Go",   "Gn",   "S",    "N",    null, "degrees", 4],
+    ["Occ-SN",       "line_angle",   "OcP1", "OcP2", "S",    "N",    null, "degrees", 5],
+    ["U1-NA (mm)",   "perpendicular","U1t",  "N",    "A",    null,   null, "mm",      6],
+    ["U1-NA (\u00b0)","line_angle",  "U1a",  "U1t",  "N",    "A",    null, "degrees", 7],
+    ["L1-NB (mm)",   "perpendicular","L1t",  "N",    "B",    null,   null, "mm",      8],
+    ["L1-NB (\u00b0)","line_angle",  "L1a",  "L1t",  "N",    "B",    null, "degrees", 9],
+    ["Pog-NB (mm)",  "perpendicular","Pog",  "N",    "B",    null,   null, "mm",      10],
+    ["SN-GoMe",      "line_angle",   "S",    "N",    "Go",   "Me",   null, "degrees", 11],
+    ["SN-PNS-ANS",   "line_angle",   "S",    "N",    "PNS",  "ANS",  null, "degrees", 12],
+  ]) { insMeas.run(steinerId, nm, type, p1, p2, p3, p4, quad, unit, ord); }
+
+  // ── Ricketts Analysis ────────────────────────────────────────────────────
+  insTmpl.run("Ricketts Analysis", "Ricketts cephalometric analysis");
+  const rickettsId = lastId();
+  for (const [lbl, nm, desc, ord] of [
+    ["S",   "Sella",                 "Center of sella turcica",                             0],
+    ["N",   "Nasion",                "Fronto-nasal suture, most anterior point",            1],
+    ["A",   "Point A",               "Deepest point on anterior maxilla",                   2],
+    ["B",   "Point B",               "Deepest point on anterior mandible",                  3],
+    ["Po",  "Pogonion",              "Most anterior point of chin",                         4],
+    ["Me",  "Menton",                "Most inferior point of mandibular symphysis",         5],
+    ["Go",  "Gonion",                "Most postero-inferior angle of mandible",             6],
+    ["Cf",  "Condylion (Cf)",        "Center of condylar head",                             7],
+    ["DC",  "Condyle Center (DC)",   "Center of condylar head on Ba-N line",                8],
+    ["Xi",  "Xi Point",              "Geometric center of mandibular ramus",                9],
+    ["ANS", "Anterior Nasal Spine",  "Tip of anterior nasal spine",                        10],
+    ["Pr",  "Pronasal",              "Tip of the nose",                                     11],
+    ["Id",  "Infradentale",          "Most anterior-superior point of mandibular alveolus", 12],
+    ["Pm",  "Protuberance Menti",    "Junction of mandibular symphysis with chin",          13],
+    ["Or",  "Orbitale",              "Lowest point of orbital floor",                       14],
+    ["Ptm", "Pterygomaxillary",      "Most posterior-superior point of PTM fissure",        15],
+    ["U1t", "U1 Tip",                "Tip of upper central incisor",                        16],
+    ["U1a", "U1 Apex",               "Apex of upper central incisor",                       17],
+    ["L1t", "L1 Tip",                "Tip of lower central incisor",                        18],
+    ["L1a", "L1 Apex",               "Apex of lower central incisor",                       19],
+    ["Ba",  "Basion",                "Most inferior posterior point of occipital bone",     20],
+    ["Gn",  "Gnathion",              "Most antero-inferior point of chin",                  21],
+  ]) { insLm.run(rickettsId, lbl, nm, desc, ord); }
+  for (const [nm, type, p1, p2, p3, p4, quad, unit, ord] of [
+    ["Facial Axis",          "line_angle",    "Cf",  "Gn",  "Ba",  "N",   null, "degrees", 0],
+    ["Facial Depth",         "angle",         "N",   "Po",  "Me",  null,  null, "degrees", 1],
+    ["Mandibular Plane",     "line_angle",    "Go",  "Me",  "Or",  "Cf",  null, "degrees", 2],
+    ["Lower Facial Height",  "line_angle",    "ANS", "Xi",  "Xi",  "Pm",  null, "degrees", 3],
+    ["Mandibular Arc",       "line_angle",    "DC",  "Xi",  "Xi",  "Pm",  null, "degrees", 4],
+    ["Convexity (A-NPo)",    "perpendicular", "A",   "N",   "Po",  null,  null, "mm",      5],
+    ["A-NPo",                "perpendicular", "A",   "N",   "Po",  null,  null, "mm",      6],
+    ["L1-APo (mm)",          "perpendicular", "L1t", "A",   "Po",  null,  null, "mm",      7],
+    ["L1-APo (\u00b0)",      "line_angle",    "L1a", "L1t", "A",   "Po",  null, "degrees", 8],
+    ["U1-APo (mm)",          "perpendicular", "U1t", "A",   "Po",  null,  null, "mm",      9],
+    ["U1-APo (\u00b0)",      "line_angle",    "U1a", "U1t", "A",   "Po",  null, "degrees", 10],
+  ]) { insMeas.run(rickettsId, nm, type, p1, p2, p3, p4, quad, unit, ord); }
+
+  // ── Tweed Analysis ───────────────────────────────────────────────────────
+  insTmpl.run("Tweed Analysis", "Tweed triangle cephalometric analysis (FMA, FMIA, IMPA)");
+  const tweedId = lastId();
+  for (const [lbl, nm, desc, ord] of [
+    ["N",   "Nasion",              "Fronto-nasal suture, most anterior point",          0],
+    ["Or",  "Orbitale",           "Lowest point of orbital floor",                      1],
+    ["Po",  "Porion",             "Most superior point of external auditory meatus",    2],
+    ["ANS", "Anterior Nasal Spine","Tip of anterior nasal spine",                      3],
+    ["A",   "Point A",            "Deepest point on anterior maxilla",                  4],
+    ["Me",  "Menton",             "Most inferior point of mandibular symphysis",        5],
+    ["B",   "Point B",            "Deepest point on anterior mandible",                 6],
+    ["Go",  "Gonion",             "Most postero-inferior angle of mandible",            7],
+    ["Gn",  "Gnathion",           "Most antero-inferior point of chin",                 8],
+    ["U1t", "U1 Tip",             "Tip of upper central incisor",                       9],
+    ["U1a", "U1 Apex",            "Apex of upper central incisor",                      10],
+    ["L1t", "L1 Tip",             "Tip of lower central incisor",                       11],
+    ["L1a", "L1 Apex",            "Apex of lower central incisor",                      12],
+  ]) { insLm.run(tweedId, lbl, nm, desc, ord); }
+  for (const [nm, type, p1, p2, p3, p4, quad, unit, ord] of [
+    ["FMA (Frankfort-Mandibular)", "line_angle", "Or",  "Po",  "Go",  "Me",  null, "degrees", 0],
+    ["FMIA (Frankfort-L1 Axis)",  "line_angle", "Or",  "Po",  "L1a", "L1t", null, "degrees", 1],
+    ["IMPA (L1-Mandibular Plane)","line_angle", "L1a", "L1t", "Go",  "Me",  null, "degrees", 2],
+  ]) { insMeas.run(tweedId, nm, type, p1, p2, p3, p4, quad, unit, ord); }
+
+  // ── Witts Analysis ───────────────────────────────────────────────────────
+  insTmpl.run("Witts Analysis", "Witts Appraisal — sagittal jaw relationship via occlusal plane projection (Jacobson 1975)");
+  const wittsId = lastId();
+  for (const [lbl, nm, desc, ord] of [
+    ["A",    "Point A",                   "Deepest point on anterior maxilla (Subspinale)",                   0],
+    ["B",    "Point B",                   "Deepest point on anterior mandible (Supramentale)",                1],
+    ["OcP1", "Occlusal Plane (Anterior)", "Anterior occlusal reference — between upper/lower premolar cusp tips", 2],
+    ["OcP2", "Occlusal Plane (Posterior)","Posterior occlusal reference — between upper/lower molar cusp tips",   3],
+  ]) { insLm.run(wittsId, lbl, nm, desc, ord); }
+  insMeasWithNorms.run(wittsId, "Witts Appraisal", "witts", "A", "B", "OcP1", "OcP2", null, "mm", -2, 2, 0);
+
+  // Mark as seeded
+  raw.$client.prepare(
+    `INSERT OR REPLACE INTO settings (key, value) VALUES ('ceph_templates_v2', 'seeded')`
+  ).run();
+
+  logger.info("SQLite: ceph system templates seeded (Steiner, Ricketts, Tweed, Witts)");
 }
 
 // ─── Schema migrations ──────────────────────────────────────────────────────
