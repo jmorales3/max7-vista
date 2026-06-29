@@ -216,6 +216,48 @@ async function initSqlite() {
   }
 
   logger.info("SQLite tables initialized");
+
+  // ── First-run: seed default admin if no users exist ──────────────────────
+  await seedSqlite(raw);
+}
+
+async function seedSqlite(raw: {
+  $client: {
+    exec: (sql: string) => void;
+    prepare: (sql: string) => { all: () => unknown[]; run: (...args: unknown[]) => void };
+  };
+}) {
+  const userCount = raw.$client.prepare(`SELECT COUNT(*) as n FROM users`).all() as { n: number }[];
+  if (userCount[0]?.n > 0) return; // already set up — skip
+
+  const bcrypt = (await import("bcryptjs")).default;
+  const password = "admin1234";
+  const passwordHash = await bcrypt.hash(password, 10);
+  const username = "admin";
+
+  raw.$client.prepare(`INSERT OR IGNORE INTO tenants (name, slug, is_active) VALUES (?, ?, 1)`)
+    .run("My Clinic", "my-clinic");
+
+  const tenantRows = raw.$client.prepare(`SELECT id FROM tenants WHERE slug = 'my-clinic' LIMIT 1`).all() as { id: number }[];
+  const tenantId = tenantRows[0]?.id ?? null;
+
+  raw.$client.prepare(
+    `INSERT INTO users (username, password_hash, tenant_id, role, is_active) VALUES (?, ?, ?, 'superadmin', 1)`
+  ).run(username, passwordHash, tenantId);
+
+  logger.info("SQLite first-run: default admin user created");
+
+  // Write credentials file so Electron can show the first-run dialog
+  const userDataDir = process.env.USER_DATA_DIR;
+  if (userDataDir) {
+    try {
+      const credFile = path.join(userDataDir, "first-run-credentials.json");
+      fs.writeFileSync(credFile, JSON.stringify({ username, password }), "utf-8");
+      logger.info({ credFile }, "First-run credentials file written");
+    } catch (e) {
+      logger.warn({ err: e }, "Could not write first-run credentials file");
+    }
+  }
 }
 
 // ─── Schema migrations ──────────────────────────────────────────────────────

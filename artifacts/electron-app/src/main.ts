@@ -104,6 +104,7 @@ async function startApiServer(): Promise<void> {
     STORAGE_DIRECTORY: uploadsDir,
     BACKUP_DIR: backupDir,
     NODE_PATH: nodeModulesPath,
+    USER_DATA_DIR: app.getPath("userData"),
   });
 
   // Inject the electron-app node_modules into Module.globalPaths so that
