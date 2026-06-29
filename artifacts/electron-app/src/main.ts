@@ -130,7 +130,12 @@ async function startApiServer(): Promise<void> {
 
   try {
     await nativeImport(serverUrl);
-    console.log("[api-server] Server started in-process on port", API_PORT);
+    // nativeImport resolves as soon as the module is evaluated — the server's
+    // async start() runs in the background.  Poll the health endpoint until the
+    // server is actually accepting connections (and the DB is seeded) before
+    // returning so Electron doesn't open the login window too early.
+    await waitForApiServer();
+    console.log("[api-server] Server ready on port", API_PORT);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[api-server] Failed to start:", msg);
@@ -140,6 +145,21 @@ async function startApiServer(): Promise<void> {
     );
     app.quit();
   }
+}
+
+async function waitForApiServer(maxWaitMs = 20000, intervalMs = 250): Promise<void> {
+  const deadline = Date.now() + maxWaitMs;
+  const url = `http://127.0.0.1:${API_PORT}/api/auth/needs-setup`;
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(url);
+      if (res.status === 200 || res.status === 403) return; // server is up
+    } catch {
+      // connection refused — server not ready yet
+    }
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+  throw new Error(`API server did not become ready within ${maxWaitMs / 1000}s`);
 }
 
 function stopApiServer(): void {
