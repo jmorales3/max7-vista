@@ -1146,8 +1146,19 @@ async function seedPostgres(pool: import("pg").Pool) {
 }
 
 async function start() {
-  // Open the port first so the deployment health-check passes immediately,
-  // then run DB initialisation in the background.
+  // For SQLite (Electron desktop): init and seed the DB BEFORE opening the
+  // port so the very first login request always finds a ready database.
+  // For PostgreSQL (cloud): keep the health-check-friendly pattern of
+  // listening first and initialising in the background.
+  if (IS_SQLITE) {
+    try {
+      await initSqlite();
+      scheduleAutoBackup();
+    } catch (err) {
+      logger.warn({ err }, "SQLite init failed — server will start anyway");
+    }
+  }
+
   await new Promise<void>((resolve) => {
     app.listen(port, "0.0.0.0", () => {
       logger.info({ port }, "Server listening");
@@ -1173,13 +1184,10 @@ async function start() {
     });
   });
 
-  // DB init and first-run scan happen after the port is open.
+  // PostgreSQL init + all post-start tasks run after port is open.
   (async () => {
     try {
-      if (IS_SQLITE) {
-        await initSqlite();
-        scheduleAutoBackup();
-      } else {
+      if (!IS_SQLITE) {
         await initPostgres();
       }
     } catch (err) {
