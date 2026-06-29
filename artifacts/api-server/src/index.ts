@@ -4,6 +4,7 @@ import { getStorageDirectory, getSetting } from "./lib/storage";
 import { scanDirectory } from "./lib/scanDirectory";
 import { scheduleAutoBackup } from "./lib/backup";
 import { scheduleAuditCleanup } from "./lib/auditCleanup";
+import bcrypt from "bcryptjs";
 import path from "path";
 import fs from "fs";
 import os from "os";
@@ -230,7 +231,6 @@ async function seedSqlite(raw: {
   const userCount = raw.$client.prepare(`SELECT COUNT(*) as n FROM users`).all() as { n: number }[];
   if (userCount[0]?.n > 0) return; // already set up — skip
 
-  const bcrypt = (await import("bcryptjs")).default;
   const password = "admin1234";
   const passwordHash = await bcrypt.hash(password, 10);
   const username = "admin";
@@ -1151,11 +1151,22 @@ async function start() {
   // For PostgreSQL (cloud): keep the health-check-friendly pattern of
   // listening first and initialising in the background.
   if (IS_SQLITE) {
+    const userDataDir = process.env["USER_DATA_DIR"] ?? "";
+    const logFile = userDataDir ? path.join(userDataDir, "startup.log") : "";
+    const logLine = (msg: string) => {
+      const line = `[${new Date().toISOString()}] ${msg}\n`;
+      logger.info(msg);
+      if (logFile) { try { fs.appendFileSync(logFile, line); } catch { /* ignore */ } }
+    };
     try {
+      logLine("initSqlite: starting");
       await initSqlite();
+      logLine("initSqlite: complete");
       scheduleAutoBackup();
     } catch (err) {
-      logger.warn({ err }, "SQLite init failed — server will start anyway");
+      const msg = err instanceof Error ? err.message : String(err);
+      logLine(`initSqlite: FAILED — ${msg}`);
+      logger.error({ err }, "SQLite init failed");
     }
   }
 
