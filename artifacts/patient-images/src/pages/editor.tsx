@@ -73,6 +73,7 @@ import {
   Square,
   PaintBucket,
   FlipHorizontal2,
+  FlipVertical2,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -2140,6 +2141,56 @@ export default function Editor() {
     updateImage.mutate({ id, data: { notes, annotation: JSON.stringify(annotations) } });
   }
 
+  async function handleFlipWhole(axis: "H" | "V") {
+    const img = imgRef.current;
+    if (!img || !id) return;
+    const w = img.naturalWidth;
+    const h = img.naturalHeight;
+    const offscreen = document.createElement("canvas");
+    offscreen.width = w;
+    offscreen.height = h;
+    const ctx = offscreen.getContext("2d")!;
+    if (axis === "H") {
+      ctx.translate(w, 0);
+      ctx.scale(-1, 1);
+    } else {
+      ctx.translate(0, h);
+      ctx.scale(1, -1);
+    }
+    ctx.drawImage(img, 0, 0);
+    offscreen.toBlob((blob) => {
+      if (!blob) return;
+      const file = new File([blob], "image.png", { type: "image/png" });
+      replaceFile.mutate(
+        { id, data: { file } },
+        {
+          onSuccess: () => {
+            const reloadImg = new Image();
+            reloadImg.crossOrigin = "anonymous";
+            reloadImg.src = `/api/images/${id}/file?t=${Date.now()}`;
+            reloadImg.onload = () => {
+              imgRef.current = reloadImg;
+              const canvas = canvasRef.current;
+              const container = containerRef.current;
+              if (canvas && container) {
+                const fitScale = Math.min(
+                  container.offsetWidth / reloadImg.naturalWidth,
+                  container.offsetHeight / reloadImg.naturalHeight,
+                );
+                setScale(fitScale);
+                setPanOffset({ x: 0, y: 0 });
+                panOffsetRef.current = { x: 0, y: 0 };
+                renderCanvas(canvas, reloadImg, annotationsRef.current, fitScale, rotation, null, null, null, undefined, { x: 0, y: 0 });
+              }
+            };
+            toast({ title: t("editor.flipApplied") });
+          },
+          onError: (e) => toast({ variant: "destructive", title: t("editor.saveFailed"), description: String(e) }),
+        },
+      );
+    }, "image/png");
+  }
+
   async function handleSaveAsCopy() {
     const img = imgRef.current;
     if (!img || !image?.patientId) {
@@ -3035,6 +3086,35 @@ export default function Editor() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          {/* Flip whole image */}
+          <div className="p-4 border-b space-y-2">
+            <Label className="text-sm font-medium">{t("editor.flipImage")}</Label>
+            <div className="flex gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 h-8 gap-1.5 text-xs"
+                disabled={replaceFile.isPending}
+                onClick={() => handleFlipWhole("H")}
+                title={t("editor.flipHorizontal")}
+              >
+                <FlipHorizontal2 className="h-3.5 w-3.5" />
+                {t("editor.flipHorizontal")}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 h-8 gap-1.5 text-xs"
+                disabled={replaceFile.isPending}
+                onClick={() => handleFlipWhole("V")}
+                title={t("editor.flipVertical")}
+              >
+                <FlipVertical2 className="h-3.5 w-3.5" />
+                {t("editor.flipVertical")}
+              </Button>
             </div>
           </div>
 
