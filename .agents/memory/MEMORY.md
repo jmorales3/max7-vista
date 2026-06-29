@@ -1,0 +1,7 @@
+- [Drizzle-kit push in non-TTY shells](drizzle-no-tty.md) — drizzle-kit push asks interactive questions when new tables conflict; use executeSql directly for schema changes in CI/agent context.
+- [Stale .d.ts rebuild pattern](dist-rebuild.md) — workspace packages with composite:true + emitDeclarationOnly must be rebuilt with `pnpm exec tsc --noEmit false --emitDeclarationOnly --outDir dist` when source exports change, or downstream packages see stale types.
+- [Workflow restart method](workflow-restart.md) — use code_execution restartWorkflow(), not the restart_workflow tool, to keep servers alive; the tool triggers a screenshot which causes a Replit checkpoint/SIGTERM cycle.
+- [Deployment startup: listen before DB init](listen-before-db-init.md) — call app.listen() before any async DB work; pool.query() can hang in prod and block port open, killing the deployment health-check.
+- [Replit proxy drops multipart POST bodies](replit-multipart-proxy.md) — Replit deployment proxy silently drops multipart/form-data POST bodies; use JSON+base64 for file uploads instead.
+- [Max7 Feature Transfer Register](max7-transfer-register.md) — confirmed working Vista features to replicate in Max7's image management section; update whenever a feature is approved.
+- [Witts formula: vertical vs perpendicular projection](witts-projection.md) — use x-only (vertical) projection, not true geometric perpendicular; perpendicular amplifies A–B vertical distance onto plane tilt giving 3–5× inflated results.

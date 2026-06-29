@@ -1,0 +1,144 @@
+{
+  "name": "@workspace/electron-app",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node -e \"require('fs').copyFileSync('src/splash.html','dist/splash.html')\"",
+    "start": "electron .",
+    "dev": "tsc -p tsconfig.json && electron .",
+    "build:full": "node build-full.mjs",
+    "package": "pnpm run build:full && electron-builder --dir",
+    "package:mac": "pnpm run build:full && electron-builder --mac --publish never",
+    "package:win": "pnpm run build:full && electron-builder --win --publish never",
+    "package:linux": "pnpm run build:full && electron-builder --linux --publish never",
+    "release:mac": "pnpm run build:full && electron-builder --mac --publish always",
+    "release:win": "pnpm run build:full && electron-builder --win --publish always"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.10.0",
+    "bindings": "^1.5.0",
+    "file-uri-to-path": "^2.0.0",
+    "electron-updater": "^6.8.3"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "catalog:",
+    "electron": "^35.3.0",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.8.3"
+  },
+  "build": {
+    "appId": "com.max7vista.patient-image-manager",
+    "productName": "Max7 Vista",
+    "icon": "build/icon",
+    "directories": {
+      "output": "release"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "jmorales3",
+      "repo": "max7-vista",
+      "releaseType": "release"
+    },
+    "files": [
+      "dist/**",
+      "node_modules/**",
+      "!node_modules/@workspace/**",
+      "!**/.replit-artifact/**",
+      "!**/.replit-artifact"
+    ],
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**"
+    ],
+    "extraResources": [
+      {
+        "from": "../../artifacts/api-server/dist",
+        "to": "api-server",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../../artifacts/patient-images/dist/public",
+        "to": "api-server/dist-frontend",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "node_modules/better-sqlite3",
+        "to": "api-server/node_modules/better-sqlite3",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "node_modules/bindings",
+        "to": "api-server/node_modules/bindings",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "node_modules/file-uri-to-path",
+        "to": "api-server/node_modules/file-uri-to-path",
+        "filter": ["**/*"]
+      }
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.medical",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ],
+      "window": {
+        "width": 540,
+        "height": 380
+      }
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signingHashAlgorithms": [
+        "sha256"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Patient Image Manager"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}

@@ -1,0 +1,53 @@
+name: Build Windows Installer
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-win:
+    name: Windows NSIS Installer
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Allow Windows platform packages
+        shell: pwsh
+        run: |
+          # The workspace overrides exclude win32 native binaries because Replit
+          # runs on linux-x64 only. On the Windows CI runner we need the win32
+          # binaries (esbuild, rollup, lightningcss, etc.) so we strip those
+          # override lines before installing.
+          (Get-Content pnpm-workspace.yaml) |
+            Where-Object { $_ -notmatch 'win32' } |
+            Set-Content pnpm-workspace.yaml
+          Write-Host "Patched pnpm-workspace.yaml — win32 overrides removed"
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build and package Windows installer
+        run: pnpm --filter @workspace/electron-app run package:win
+        env:
+          NODE_ENV: production
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Max7-Vista-Setup-${{ github.run_number }}
+          path: artifacts/electron-app/release/**/*.exe
+          retention-days: 90
+          if-no-files-found: error

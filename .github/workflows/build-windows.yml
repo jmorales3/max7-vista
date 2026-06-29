@@ -1,0 +1,15 @@
+# Superseded by build-win.yml — this workflow is intentionally disabled.
+name: Build Windows Installer (disabled)
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "This workflow is disabled. Use build-win.yml instead."
+        required: false
+
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "This workflow is disabled. Use build-win.yml."

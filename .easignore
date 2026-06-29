@@ -1,0 +1,28 @@
+# EAS Build — files excluded from the upload archive
+# EAS reinstalls node_modules on their build servers, so we never need to upload them.
+
+# Dependencies (biggest savings — usually 1-2 GB)
+**/node_modules/**
+
+# Other artifacts not needed to build the mobile app
+artifacts/api-server/**
+artifacts/patient-images/**
+artifacts/mockup-sandbox/**
+
+# Git history
+.git/**
+
+# Build outputs
+**/dist/**
+**/.expo/**
+**/.turbo/**
+**/android/**
+**/ios/**
+
+# Logs, temp files and archives
+**/*.log
+**/*.map
+**/.DS_Store
+**/Thumbs.db
+**/*.zip
+**/*.tar.gz
