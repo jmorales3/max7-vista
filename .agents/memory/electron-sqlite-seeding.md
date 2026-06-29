@@ -20,7 +20,7 @@ If `initSqlite()` + `seedSqlite()` run in a fire-and-forget IIFE after `app.list
 ## Bug 3: stale corrupted hash in existing DB
 If a previous bad build ran and stored a garbage/empty `password_hash`, subsequent builds skip seeding (COUNT > 0) and login always fails.
 
-**Fix:** In `seedSqlite()`, when COUNT > 0, check if the superadmin's hash starts with `$2` (valid bcrypt). If not, re-hash `admin1234` and UPDATE the row.
+**Fix:** In `seedSqlite()`, when COUNT > 0, check if the superadmin's hash starts with `$2` (valid bcrypt). If not, re-hash the configured default seed password and UPDATE the row.
 
 ## Bug 4: wrong userData folder name
 `app.getPath("userData")` uses `app.getName()` which defaults to the npm `name` field (`@workspace/electron-app`), producing `%AppData%\@workspace\electron-app` instead of `%AppData%\Max7 Vista`.
