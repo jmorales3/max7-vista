@@ -5,6 +5,10 @@ import fs from "fs";
 import os from "os";
 import { autoUpdater } from "electron-updater";
 
+// Set the app name early so app.getPath("userData") returns the correct
+// folder name ("Max7 Vista") rather than the npm package name.
+app.setName("Max7 Vista");
+
 const API_PORT = parseInt(process.env["API_PORT"] ?? "8080", 10);
 const rawDevUrl = process.env["VITE_DEV_URL"];
 if (!rawDevUrl && process.env["NODE_ENV"] !== "production") {
