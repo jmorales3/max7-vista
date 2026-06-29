@@ -229,7 +229,22 @@ async function seedSqlite(raw: {
   };
 }) {
   const userCount = raw.$client.prepare(`SELECT COUNT(*) as n FROM users`).all() as { n: number }[];
-  if (userCount[0]?.n > 0) return; // already set up — skip
+  if ((userCount[0]?.n ?? 0) > 0) {
+    // Users already exist — but check that the superadmin has a valid bcrypt hash.
+    // A previous build may have stored an empty or corrupted hash; repair it now.
+    const admins = raw.$client
+      .prepare(`SELECT id, password_hash FROM users WHERE role = 'superadmin' LIMIT 1`)
+      .all() as { id: number; password_hash: string }[];
+    const existingHash = admins[0]?.password_hash ?? "";
+    if (admins.length > 0 && !existingHash.startsWith("$2")) {
+      const repairHash = await bcrypt.hash("admin1234", 10);
+      raw.$client
+        .prepare(`UPDATE users SET password_hash = ? WHERE id = ?`)
+        .run(repairHash, admins[0]!.id);
+      logger.info("SQLite: superadmin had invalid password hash — reset to admin1234");
+    }
+    return;
+  }
 
   const password = "admin1234";
   const passwordHash = await bcrypt.hash(password, 10);
