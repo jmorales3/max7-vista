@@ -6,3 +6,4 @@
 - [Max7 Feature Transfer Register](max7-transfer-register.md) — confirmed working Vista features to replicate in Max7's image management section; update whenever a feature is approved.
 - [Witts formula: vertical vs perpendicular projection](witts-projection.md) — use x-only (vertical) projection, not true geometric perpendicular; perpendicular amplifies A–B vertical distance onto plane tilt giving 3–5× inflated results.
 - [Electron SQLite seeding pitfalls](electron-sqlite-seeding.md) — three bugs that silently break first-run seeding in a packaged Electron app; bcrypt, DB-before-listen, and self-healing hash repair.
+- [SQLite–Postgres schema parity rule](sqlite-postgres-parity.md) — STANDING DIRECTIVE: every new table/column/seed in one DB path must be mirrored in the other; violations cause silent runtime failures.

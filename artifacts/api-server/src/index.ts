@@ -266,19 +266,29 @@ async function initSqlite() {
     );
   `);
 
-  // Migrate existing SQLite images table
-  try { exec(`ALTER TABLE images ADD COLUMN sha256 TEXT`); } catch { /* already exists */ }
-
-  // Migrate existing SQLite audit_log tables — ADD COLUMN doesn't support IF NOT EXISTS
-  // in SQLite, so each statement is wrapped in a try/catch and ignored if it fails (column exists)
-  const auditMigrations = [
+  // SQLite column migrations — ADD COLUMN doesn't support IF NOT EXISTS so each
+  // statement is wrapped in try/catch; duplicate-column errors are safe to ignore.
+  const sqliteMigrations = [
+    // images
+    `ALTER TABLE images ADD COLUMN sha256 TEXT`,
+    // audit_log
     `ALTER TABLE audit_log ADD COLUMN tenant_id INTEGER`,
     `ALTER TABLE audit_log ADD COLUMN patient_id INTEGER REFERENCES patients(id)`,
     `ALTER TABLE audit_log ADD COLUMN resource_id TEXT`,
     `ALTER TABLE audit_log ADD COLUMN ip_address TEXT`,
     `ALTER TABLE audit_log ADD COLUMN user_agent TEXT`,
+    // tenant_id on tables that had it added later (single-clinic SQLite still needs
+    // the column so drizzle queries that reference tenant_id don't error)
+    `ALTER TABLE patients  ADD COLUMN tenant_id INTEGER REFERENCES tenants(id)`,
+    `ALTER TABLE tags      ADD COLUMN tenant_id INTEGER REFERENCES tenants(id)`,
+    `ALTER TABLE templates ADD COLUMN tenant_id INTEGER REFERENCES tenants(id)`,
+    // ceph_measurements norms (used by Witts Appraisal ideal range)
+    `ALTER TABLE ceph_measurements ADD COLUMN ideal_min REAL`,
+    `ALTER TABLE ceph_measurements ADD COLUMN ideal_max REAL`,
+    // ceph_tracings treatment-phase badge
+    `ALTER TABLE ceph_tracings ADD COLUMN record_phase TEXT DEFAULT 'initial'`,
   ];
-  for (const sql of auditMigrations) {
+  for (const sql of sqliteMigrations) {
     try { exec(sql); } catch { /* column already exists — safe to ignore */ }
   }
 
@@ -547,6 +557,12 @@ async function runMigrations(pool: import("pg").Pool) {
     WHERE id NOT IN (SELECT MIN(id) FROM images GROUP BY patient_id, file_path)
   `);
   await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS images_patient_file_unique ON images(patient_id, file_path)`);
+
+  // ceph_measurements norms (Witts Appraisal ideal range)
+  await pool.query(`ALTER TABLE ceph_measurements ADD COLUMN IF NOT EXISTS ideal_min REAL`);
+  await pool.query(`ALTER TABLE ceph_measurements ADD COLUMN IF NOT EXISTS ideal_max REAL`);
+  // ceph_tracings treatment-phase badge
+  await pool.query(`ALTER TABLE ceph_tracings ADD COLUMN IF NOT EXISTS record_phase TEXT DEFAULT 'initial'`);
 
   // ── ADD FUTURE MIGRATIONS ABOVE THIS LINE ────────────────────────────────────
   logger.info("PostgreSQL schema migrations applied");
