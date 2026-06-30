@@ -299,6 +299,42 @@ async function initSqlite() {
 
   // ── Seed system ceph templates (Steiner, Ricketts, Tweed, Witts) ─────────
   await seedCephTemplatesSqlite(raw);
+
+  // ── Patch Steiner norms (runs once per install) ───────────────────────────
+  const normsFlag = raw.$client.prepare(
+    `SELECT value FROM settings WHERE key = 'ceph_norms_v1' LIMIT 1`
+  ).all() as { value: string }[];
+  if (normsFlag.length === 0) {
+    const updNorm = raw.$client.prepare(
+      `UPDATE ceph_measurements SET ideal_min = ?, ideal_max = ?
+       WHERE name = ?
+         AND template_id IN (
+           SELECT id FROM ceph_templates
+           WHERE name = 'Steiner Analysis' AND tenant_id IS NULL
+         )`
+    );
+    for (const [name, min, max] of [
+      ["SNA",           80, 84],
+      ["SNB",           78, 82],
+      ["ANB",            1,  3],
+      ["SND",           74, 78],
+      ["GoGn-SN",       28, 36],
+      ["Occ-SN",        10, 18],
+      ["U1-NA (mm)",     2,  6],
+      ["U1-NA (\u00b0)", 18, 26],
+      ["L1-NB (mm)",     2,  6],
+      ["L1-NB (\u00b0)", 22, 28],
+      ["Pog-NB (mm)",    0,  2],
+      ["SN-GoMe",       28, 36],
+      ["SN-PNS-ANS",     6, 10],
+    ] as [string, number, number][]) {
+      updNorm.run(min, max, name);
+    }
+    raw.$client.prepare(
+      `INSERT OR REPLACE INTO settings (key, value) VALUES ('ceph_norms_v1', 'seeded')`
+    ).run();
+    logger.info("SQLite: Steiner norms patched (ceph_norms_v1)");
+  }
 }
 
 async function seedSqlite(raw: {
@@ -1397,6 +1433,44 @@ async function seedPostgres(pool: import("pg").Pool) {
        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`
     );
     logger.info("Cephalometric system templates seeded (Steiner+SND, Ricketts, Tweed, Witts)");
+  }
+
+  // ── Patch Steiner norms (runs once; safe to re-run as no-op after flag set) ─
+  const { rows: normsRows } = await pool.query<{ value: string }>(
+    `SELECT value FROM seed_state WHERE key = 'ceph_norms_v1'`
+  );
+  if (!normsRows[0]) {
+    const steinerNorms: [string, number, number][] = [
+      ["SNA",           80, 84],
+      ["SNB",           78, 82],
+      ["ANB",            1,  3],
+      ["SND",           74, 78],
+      ["GoGn-SN",       28, 36],
+      ["Occ-SN",        10, 18],
+      ["U1-NA (mm)",     2,  6],
+      ["U1-NA (\u00b0)", 18, 26],
+      ["L1-NB (mm)",     2,  6],
+      ["L1-NB (\u00b0)", 22, 28],
+      ["Pog-NB (mm)",    0,  2],
+      ["SN-GoMe",       28, 36],
+      ["SN-PNS-ANS",     6, 10],
+    ];
+    for (const [name, min, max] of steinerNorms) {
+      await pool.query(
+        `UPDATE ceph_measurements SET ideal_min = $1, ideal_max = $2
+         WHERE name = $3
+           AND template_id IN (
+             SELECT id FROM ceph_templates
+             WHERE name = 'Steiner Analysis' AND tenant_id IS NULL
+           )`,
+        [min, max, name]
+      );
+    }
+    await pool.query(
+      `INSERT INTO seed_state (key, value) VALUES ('ceph_norms_v1', 'seeded')
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`
+    );
+    logger.info("Cephalometric Steiner norms patched (ceph_norms_v1)");
   }
 
   logger.info("PostgreSQL seed complete (tenants + users + patients + images ensured)");
