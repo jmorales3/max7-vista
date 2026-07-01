@@ -77,6 +77,7 @@ jobs:
         env:
           NODE_ENV: production
           PORT: "8080"
+          LICENSE_HMAC_SECRET: ${{ secrets.LICENSE_HMAC_SECRET }}
           # GH_TOKEN (custom secret) is preferred; GITHUB_TOKEN is the automatic fallback.
           # Prefer adding GH_TOKEN as a repo secret with "Contents: write" permission so
           # electron-builder can create and upload release assets. If GH_TOKEN is absent,
@@ -160,6 +161,7 @@ jobs:
         env:
           NODE_ENV: production
           PORT: "8080"
+          LICENSE_HMAC_SECRET: ${{ secrets.LICENSE_HMAC_SECRET }}
           # GH_TOKEN (custom secret) is preferred; GITHUB_TOKEN is the automatic fallback.
           # Prefer adding GH_TOKEN as a repo secret with "Contents: write" permission so
           # electron-builder can create and upload release assets. If GH_TOKEN is absent,
