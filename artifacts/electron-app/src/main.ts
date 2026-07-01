@@ -4,6 +4,7 @@ import { pathToFileURL } from "url";
 import fs from "fs";
 import os from "os";
 import { autoUpdater } from "electron-updater";
+import { LICENSE_HMAC_SECRET as _BAKED_HMAC_SECRET } from "./secrets.generated";
 
 // Set the app name early so app.getPath("userData") returns the correct
 // folder name ("Max7 Vista") rather than the npm package name.
@@ -107,6 +108,7 @@ async function startApiServer(): Promise<void> {
     DATABASE_PATH: dbPath,
     STORAGE_DIRECTORY: uploadsDir,
     BACKUP_DIR: backupDir,
+    LICENSE_HMAC_SECRET: _BAKED_HMAC_SECRET,
     NODE_PATH: nodeModulesPath,
     USER_DATA_DIR: app.getPath("userData"),
   });
