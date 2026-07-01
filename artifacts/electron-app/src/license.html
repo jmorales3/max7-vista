@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Max7 Vista — License Activation</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, #0a1628 0%, #0d2145 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #e2e8f0;
+    }
+    .card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 40px;
+      max-width: 480px;
+      width: 100%;
+      margin: 24px;
+    }
+    .logo { text-align: center; margin-bottom: 28px; }
+    .logo img { width: 200px; height: auto; }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .badge-expired { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+    .badge-tampered { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+    .badge-trial { background: rgba(234,179,8,0.15); color: #facc15; border: 1px solid rgba(234,179,8,0.3); }
+    h1 { font-size: 22px; font-weight: 700; color: #f1f5f9; margin-bottom: 8px; }
+    .desc { font-size: 14px; color: #94a3b8; line-height: 1.6; margin-bottom: 24px; }
+    .machine-id {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 24px;
+    }
+    .machine-id-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+    .machine-id-value {
+      font-family: "Courier New", monospace;
+      font-size: 13px;
+      color: #cbd5e1;
+      word-break: break-all;
+      cursor: pointer;
+      user-select: all;
+    }
+    .machine-id-hint { font-size: 11px; color: #475569; margin-top: 4px; }
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 6px; }
+    input[type="text"] {
+      width: 100%;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      color: #f1f5f9;
+      font-size: 14px;
+      font-family: "Courier New", monospace;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus { border-color: rgba(99,102,241,0.6); }
+    input[type="text"]::placeholder { color: #475569; font-family: -apple-system, sans-serif; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 11px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: #4f46e5; color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #4338ca; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .error-msg {
+      display: none;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #f87171;
+      margin-top: 12px;
+    }
+    .success-msg {
+      display: none;
+      background: rgba(34,197,94,0.1);
+      border: 1px solid rgba(34,197,94,0.25);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #4ade80;
+      margin-top: 12px;
+      text-align: center;
+    }
+    .divider { border-top: 1px solid rgba(255,255,255,0.07); margin: 20px 0; }
+    .footer-text { font-size: 12px; color: #475569; text-align: center; line-height: 1.5; }
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <img src="./assets/max7-vista-logo.png" alt="Max7 Vista" onerror="this.style.display='none'" />
+    </div>
+
+    <div id="statusBadge" class="status-badge badge-trial" style="display:none"></div>
+    <h1 id="statusTitle">Loading…</h1>
+    <p id="statusDesc" class="desc"></p>
+
+    <div class="machine-id" id="machineIdBlock" style="display:none">
+      <div class="machine-id-label">Machine ID</div>
+      <div class="machine-id-value" id="machineIdValue" title="Click to copy"></div>
+      <div class="machine-id-hint">Share this ID with Max7 to receive your activation code.</div>
+    </div>
+
+    <div class="form-group">
+      <label for="codeInput">License Code</label>
+      <input type="text" id="codeInput" placeholder="MAX7-..." autocomplete="off" spellcheck="false" />
+    </div>
+
+    <button class="btn btn-primary" id="activateBtn" onclick="activate()">
+      Activate License
+    </button>
+    <div class="error-msg" id="errorMsg"></div>
+    <div class="success-msg" id="successMsg">✓ License activated! Opening application…</div>
+
+    <div class="divider"></div>
+    <p class="footer-text">Max7 Vista · Clinical Patient Image Manager<br />Contact support for assistance.</p>
+  </div>
+
+  <script>
+    const API_PORT = 8080;
+
+    async function loadStatus() {
+      try {
+        const res = await fetch(`http://127.0.0.1:${API_PORT}/api/license/status`);
+        const status = await res.json();
+        renderStatus(status);
+      } catch (e) {
+        document.getElementById('statusTitle').textContent = 'Unable to connect to application server';
+        document.getElementById('statusDesc').textContent = 'Please restart the application.';
+      }
+    }
+
+    function renderStatus(status) {
+      const badge = document.getElementById('statusBadge');
+      const title = document.getElementById('statusTitle');
+      const desc = document.getElementById('statusDesc');
+      const machineBlock = document.getElementById('machineIdBlock');
+      const machineVal = document.getElementById('machineIdValue');
+
+      badge.style.display = 'inline-flex';
+      machineBlock.style.display = 'block';
+      machineVal.textContent = status.machineId ?? '';
+      machineVal.onclick = () => {
+        navigator.clipboard.writeText(status.machineId ?? '').catch(() => {});
+        machineVal.textContent = 'Copied!';
+        setTimeout(() => { machineVal.textContent = status.machineId ?? ''; }, 1500);
+      };
+
+      if (status.state === 'trial_expired') {
+        badge.textContent = 'Trial Expired';
+        badge.className = 'status-badge badge-expired';
+        title.textContent = 'Your trial has expired';
+        desc.textContent = 'Your 30-day trial period has ended. Enter a license code below to continue using Max7 Vista.';
+      } else if (status.state === 'expired') {
+        badge.textContent = 'License Expired';
+        badge.className = 'status-badge badge-expired';
+        title.textContent = 'Your license has expired';
+        desc.textContent = 'Your license is no longer valid. Please renew and enter your new activation code below.';
+      } else if (status.state === 'tampered') {
+        badge.textContent = 'Tampered';
+        badge.className = 'status-badge badge-tampered';
+        title.textContent = 'License record tampered';
+        desc.textContent = 'The license file has been modified. Please enter a valid activation code to restore access.';
+      } else if (status.state === 'trial') {
+        badge.textContent = `Trial — ${status.daysLeft} day${status.daysLeft === 1 ? '' : 's'} left`;
+        badge.className = 'status-badge badge-trial';
+        title.textContent = 'Activate Max7 Vista';
+        desc.textContent = `You have ${status.daysLeft} day${status.daysLeft === 1 ? '' : 's'} remaining in your trial. Enter your license code below or close this window to continue.`;
+        // For trial, add a "skip" button to just open the app
+        addSkipButton();
+      }
+    }
+
+    function addSkipButton() {
+      const btn = document.createElement('button');
+      btn.className = 'btn';
+      btn.style.cssText = 'background:transparent;border:1px solid rgba(255,255,255,0.12);color:#94a3b8;margin-top:10px;';
+      btn.textContent = 'Continue with trial';
+      btn.onclick = () => window.electronAPI?.license?.skip?.();
+      document.getElementById('activateBtn').after(btn);
+    }
+
+    async function activate() {
+      const code = document.getElementById('codeInput').value.trim();
+      const btn = document.getElementById('activateBtn');
+      const errorMsg = document.getElementById('errorMsg');
+      const successMsg = document.getElementById('successMsg');
+
+      if (!code) {
+        showError('Please enter a license code.');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Activating…';
+      errorMsg.style.display = 'none';
+      successMsg.style.display = 'none';
+
+      try {
+        const res = await fetch(`http://127.0.0.1:${API_PORT}/api/license/activate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showError(data.error ?? 'Activation failed. Please check your code and try again.');
+          btn.disabled = false;
+          btn.textContent = 'Activate License';
+          return;
+        }
+        successMsg.style.display = 'block';
+        setTimeout(() => {
+          window.electronAPI?.license?.activated?.();
+        }, 1200);
+      } catch (e) {
+        showError('Network error. Please ensure the application is running.');
+        btn.disabled = false;
+        btn.textContent = 'Activate License';
+      }
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('errorMsg');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    document.getElementById('codeInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') activate();
+    });
+
+    loadStatus();
+  </script>
+</body>
+</html>

@@ -20,7 +20,7 @@ import {
   RefreshCw, Save, HardDrive, Database, Users, ImageIcon,
   AlertCircle, Tag, Plus, X, ClipboardList, KeyRound,
   Download, Upload, ArrowRightLeft, ShieldCheck, RotateCcw,
-  Search, ChevronLeft, ChevronRight, Filter, Clock, Trash2,
+  Search, ChevronLeft, ChevronRight, Filter, Clock, Trash2, Copy,
 } from "lucide-react";
 import {
   Select,
@@ -51,13 +51,30 @@ interface AuditLogEntry {
   createdAt: string;
 }
 
-const ACTION_LABELS: Record<string, string> = {
-  upload: "Uploaded",
-  view: "Viewed",
-  edit: "Edited",
-  delete: "Deleted",
-  replace_file: "Replaced File",
-  create: "Created",
+interface LicenseStatus {
+  state: string;
+  daysLeft: number | null;
+  trialDays: number;
+  expiresAt: string | null;
+  plan: string | null;
+  machineId: string;
+  activatedAt: string | null;
+}
+
+const LICENSE_STATE_LABELS: Record<string, string> = {
+  trial: "license.stateTrial",
+  active: "license.stateActive",
+  expired: "license.stateExpired",
+  trial_expired: "license.stateTrialExpired",
+  tampered: "license.stateTampered",
+};
+
+const LICENSE_STATE_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  trial: "secondary",
+  active: "default",
+  expired: "destructive",
+  trial_expired: "destructive",
+  tampered: "destructive",
 };
 
 const ACTION_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -73,6 +90,14 @@ export default function Settings() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const { user } = useAuth();
+  const actionLabels: Record<string, string> = {
+    upload: t("settings.auditLog.labelUploaded"),
+    view:   t("settings.auditLog.labelViewed"),
+    edit:   t("settings.auditLog.labelEdited"),
+    delete: t("settings.auditLog.labelDeleted"),
+    replace_file: t("settings.auditLog.labelReplaced"),
+    create: t("settings.auditLog.labelCreated"),
+  };
   const isAdmin = user?.role === "superadmin" || user?.role === "admin";
   const [storageDirectory, setStorageDirectory] = useState("");
   const [newTagName, setNewTagName] = useState("");
@@ -125,11 +150,11 @@ export default function Settings() {
       return res.json() as Promise<{ retentionYears: number }>;
     },
     onSuccess: () => {
-      toast({ title: "Retention policy saved" });
+      toast({ title: t("settings.retention.saved") });
       void queryClient.invalidateQueries({ queryKey: ["audit-retention"] });
     },
     onError: (e) => {
-      toast({ variant: "destructive", title: "Failed to save retention policy", description: e instanceof Error ? e.message : String(e) });
+      toast({ variant: "destructive", title: t("settings.retention.saveFailed"), description: e instanceof Error ? e.message : String(e) });
     },
   });
 
@@ -146,14 +171,14 @@ export default function Settings() {
       setAuditCleanupResult({ deleted: data.deleted, cutoffDate: data.cutoffDate });
       void queryClient.invalidateQueries({ queryKey: auditQueryKey });
       toast({
-        title: "Cleanup complete",
+        title: t("settings.retention.cleanupComplete"),
         description: data.deleted > 0
-          ? `Removed ${data.deleted} expired audit log ${data.deleted === 1 ? "entry" : "entries"}.`
-          : "No expired entries to remove.",
+          ? t("settings.retention.cleanupRemoved", { count: data.deleted, date: format(new Date(data.cutoffDate), "MMM d, yyyy") })
+          : t("settings.retention.cleanupNone"),
       });
     },
     onError: (e) => {
-      toast({ variant: "destructive", title: "Cleanup failed", description: e instanceof Error ? e.message : String(e) });
+      toast({ variant: "destructive", title: t("settings.retention.cleanupFailed"), description: e instanceof Error ? e.message : String(e) });
     },
   });
 
@@ -184,9 +209,9 @@ export default function Settings() {
       a.download = `max7-vista-migration-${dateStr}.zip`;
       a.click();
       URL.revokeObjectURL(url);
-      toast({ title: "Export complete", description: "Migration archive downloaded." });
+      toast({ title: t("settings.migration.exportComplete"), description: t("settings.migration.exportCompleteDesc") });
     } catch (err) {
-      toast({ variant: "destructive", title: "Export failed", description: err instanceof Error ? err.message : String(err) });
+      toast({ variant: "destructive", title: t("settings.migration.exportFailed"), description: err instanceof Error ? err.message : String(err) });
     } finally {
       setMigrationExporting(false);
     }
@@ -212,12 +237,12 @@ export default function Settings() {
       void queryClient.invalidateQueries({ queryKey: getGetImageStatsQueryKey() });
 
       toast({
-        title: result.errors.length === 0 ? "Migration complete" : "Migration finished with errors",
-        description: `${result.patientsImported} patients, ${result.imagesImported} images imported.`,
+        title: result.errors.length === 0 ? t("settings.migration.complete") : t("settings.migration.completeWithErrors"),
+        description: t("settings.migration.importedSummary", { patients: result.patientsImported, images: result.imagesImported }),
         variant: result.errors.length > 0 ? "destructive" : "default",
       });
     } catch (err) {
-      toast({ variant: "destructive", title: "Import failed", description: err instanceof Error ? err.message : String(err) });
+      toast({ variant: "destructive", title: t("settings.migration.importFailed"), description: err instanceof Error ? err.message : String(err) });
     } finally {
       setMigrationImporting(false);
     }
@@ -316,9 +341,9 @@ export default function Settings() {
       a.download = `audit-log-${dateStr}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-      toast({ title: "Export complete", description: "Audit log downloaded as CSV." });
+      toast({ title: t("settings.auditLog.exportComplete"), description: t("settings.auditLog.exportCompleteDesc") });
     } catch (err) {
-      toast({ variant: "destructive", title: "Export failed", description: err instanceof Error ? err.message : String(err) });
+      toast({ variant: "destructive", title: t("settings.auditLog.exportFailed"), description: err instanceof Error ? err.message : String(err) });
     } finally {
       setAuditExporting(false);
     }
@@ -409,6 +434,56 @@ export default function Settings() {
 
   const isElectron = typeof window !== "undefined" && !!window.electronAPI;
 
+  const [licenseCode, setLicenseCode] = useState("");
+  const [copiedMachineId, setCopiedMachineId] = useState(false);
+
+  const { data: licenseData, isLoading: loadingLicense, refetch: refetchLicense } = useQuery<LicenseStatus>({
+    queryKey: ["license-status"],
+    queryFn: async () => {
+      const res = await fetch("/api/license/status", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch license status");
+      return res.json() as Promise<LicenseStatus>;
+    },
+    enabled: isElectron,
+    staleTime: 30_000,
+    retry: false,
+  });
+
+  const activateLicense = useMutation({
+    mutationFn: async (code: string) => {
+      const res = await fetch("/api/license/activate", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(body.error ?? "Activation failed");
+      }
+      return res.json() as Promise<LicenseStatus>;
+    },
+    onSuccess: () => {
+      void refetchLicense();
+      setLicenseCode("");
+      toast({ title: t("license.activateSuccess"), description: t("license.activateSuccessDesc") });
+    },
+    onError: (e) => {
+      toast({
+        variant: "destructive",
+        title: t("license.activateError"),
+        description: e instanceof Error ? e.message : "Unknown error",
+      });
+    },
+  });
+
+  function copyMachineId(id: string) {
+    navigator.clipboard.writeText(id).then(() => {
+      setCopiedMachineId(true);
+      setTimeout(() => setCopiedMachineId(false), 2000);
+    }).catch(() => {});
+  }
+
   const { data: backupsData, isLoading: loadingBackups, refetch: refetchBackups } = useQuery<{ backups: BackupEntry[] }>({
     queryKey: ["backups"],
     queryFn: async () => {
@@ -432,14 +507,14 @@ export default function Settings() {
       refetchBackups();
       queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
       toast({
-        title: "Backup created",
-        description: `Saved as ${data.backup.filename}`,
+        title: t("settings.backup.created"),
+        description: t("settings.backup.savedAs", { filename: data.backup.filename }),
       });
     },
     onError: (e) => {
       toast({
         variant: "destructive",
-        title: "Backup failed",
+        title: t("settings.backup.failed"),
         description: e instanceof Error ? e.message : "An unexpected error occurred.",
       });
     },
@@ -465,7 +540,7 @@ export default function Settings() {
       setRestoringFile(null);
       refetchBackups();
       toast({
-        title: "Restore complete",
+        title: t("settings.backup.restoreComplete"),
         description: data.message,
       });
     },
@@ -473,7 +548,7 @@ export default function Settings() {
       setRestoringFile(null);
       toast({
         variant: "destructive",
-        title: "Restore failed",
+        title: t("settings.backup.restoreFailed"),
         description: e instanceof Error ? e.message : "An unexpected error occurred.",
       });
     },
@@ -721,21 +796,21 @@ export default function Settings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ShieldCheck className="h-5 w-5" />
-              Database Backups
+              {t("settings.backup.title")}
             </CardTitle>
             <CardDescription>
-              Automatic daily backups protect patient data against corruption or hardware failure. Up to 7 rolling copies are kept.
+              {t("settings.backup.desc")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="bg-muted/50 p-4 rounded-lg border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h4 className="font-medium">Last Backup</h4>
+                <h4 className="font-medium">{t("settings.backup.lastBackup")}</h4>
                 <p className="text-sm text-muted-foreground mt-1">
                   {(() => {
                     const backups = backupsData?.backups ?? [];
-                    if (loadingBackups) return "Loading…";
-                    if (backups.length === 0) return "No backups yet";
+                    if (loadingBackups) return t("common.loading");
+                    if (backups.length === 0) return t("settings.backup.noneYet");
                     const last = backups[0];
                     return `${formatDistanceToNow(new Date(last.createdAt), { addSuffix: true })} — ${(last.sizeBytes / 1024 / 1024).toFixed(1)} MB`;
                   })()}
@@ -749,12 +824,12 @@ export default function Settings() {
                 {triggerBackup.isPending ? (
                   <>
                     <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    Backing up…
+                    {t("settings.backup.backingUp")}
                   </>
                 ) : (
                   <>
                     <ShieldCheck className="mr-2 h-4 w-4" />
-                    Back Up Now
+                    {t("settings.backup.backUpNow")}
                   </>
                 )}
               </Button>
@@ -766,7 +841,7 @@ export default function Settings() {
               </div>
             ) : backupsData && backupsData.backups.length > 0 ? (
               <div>
-                <h4 className="text-sm font-medium mb-2">Available Backups</h4>
+                <h4 className="text-sm font-medium mb-2">{t("settings.backup.available")}</h4>
                 <div className="divide-y rounded-md border overflow-hidden">
                   {backupsData.backups.map((backup) => (
                     <div key={backup.filename} className="flex items-center justify-between px-4 py-3 bg-background hover:bg-muted/30 transition-colors gap-3">
@@ -788,17 +863,17 @@ export default function Settings() {
                         ) : (
                           <RotateCcw className="h-3.5 w-3.5" />
                         )}
-                        <span className="ml-1.5">Restore</span>
+                        <span className="ml-1.5">{t("settings.backup.restore")}</span>
                       </Button>
                     </div>
                   ))}
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Restoring replaces the current database. The app will need to restart afterwards.
+                  {t("settings.backup.restoreWarning")}
                 </p>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No backups found. Click "Back Up Now" to create the first one.</p>
+              <p className="text-sm text-muted-foreground">{t("settings.backup.noneFound")}</p>
             )}
           </CardContent>
         </Card>
@@ -869,10 +944,10 @@ export default function Settings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ArrowRightLeft className="h-5 w-5" />
-              Migration
+              {t("settings.migration.title")}
             </CardTitle>
             <CardDescription>
-              Move all data (patients, images, users, settings) between the LAN desktop app and the web version. Export from the source system, then import on the destination.
+              {t("settings.migration.desc")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -881,10 +956,10 @@ export default function Settings() {
               <div className="space-y-3 rounded-lg border p-4">
                 <div className="flex items-center gap-2">
                   <Download className="h-4 w-4 text-primary" />
-                  <p className="font-medium text-sm">Export from this system</p>
+                  <p className="font-medium text-sm">{t("settings.migration.exportTitle")}</p>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Downloads a ZIP archive containing all patients, images (files included), users, and settings. Use this on the LAN desktop app before switching to the web version.
+                  {t("settings.migration.exportDesc")}
                 </p>
                 <Button
                   type="button"
@@ -894,8 +969,8 @@ export default function Settings() {
                   className="w-full"
                 >
                   {migrationExporting
-                    ? <><RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Exporting…</>
-                    : <><Download className="mr-2 h-4 w-4" /> Download migration archive</>}
+                    ? <><RefreshCw className="mr-2 h-4 w-4 animate-spin" /> {t("settings.migration.exporting")}</>
+                    : <><Download className="mr-2 h-4 w-4" /> {t("settings.migration.downloadArchive")}</>}
                 </Button>
               </div>
 
@@ -903,10 +978,10 @@ export default function Settings() {
               <div className="space-y-3 rounded-lg border p-4">
                 <div className="flex items-center gap-2">
                   <Upload className="h-4 w-4 text-primary" />
-                  <p className="font-medium text-sm">Import into this system</p>
+                  <p className="font-medium text-sm">{t("settings.migration.importTitle")}</p>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Upload a migration archive exported from another Max7 Vista instance. Existing patients and users are skipped (no duplicates).
+                  {t("settings.migration.importDesc")}
                 </p>
                 <div className="space-y-2">
                   <Input
@@ -925,8 +1000,8 @@ export default function Settings() {
                     className="w-full"
                   >
                     {migrationImporting
-                      ? <><RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Importing…</>
-                      : <><Upload className="mr-2 h-4 w-4" /> Import archive</>}
+                      ? <><RefreshCw className="mr-2 h-4 w-4 animate-spin" /> {t("settings.migration.importing")}</>
+                      : <><Upload className="mr-2 h-4 w-4" /> {t("settings.migration.importArchive")}</>}
                   </Button>
                 </div>
               </div>
@@ -934,13 +1009,13 @@ export default function Settings() {
 
             {migrationResult && (
               <div className="rounded-lg border bg-muted/40 p-4 space-y-3">
-                <p className="text-sm font-medium">Import summary</p>
+                <p className="text-sm font-medium">{t("settings.migration.importSummary")}</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                   {[
-                    { label: "Patients imported", value: migrationResult.patientsImported },
-                    { label: "Patients skipped", value: migrationResult.patientsSkipped },
-                    { label: "Images imported",  value: migrationResult.imagesImported },
-                    { label: "Images skipped",   value: migrationResult.imagesSkipped },
+                    { label: t("settings.migration.patientsImported"), value: migrationResult.patientsImported },
+                    { label: t("settings.migration.patientsSkipped"),  value: migrationResult.patientsSkipped },
+                    { label: t("settings.migration.imagesImported"),   value: migrationResult.imagesImported },
+                    { label: t("settings.migration.imagesSkipped"),    value: migrationResult.imagesSkipped },
                   ].map(({ label, value }) => (
                     <div key={label} className="rounded-md bg-background border p-3">
                       <p className="text-xl font-bold">{value}</p>
@@ -950,7 +1025,7 @@ export default function Settings() {
                 </div>
                 {migrationResult.errors.length > 0 && (
                   <div className="space-y-1">
-                    <p className="text-xs font-medium text-destructive">{migrationResult.errors.length} error(s):</p>
+                    <p className="text-xs font-medium text-destructive">{t("settings.migration.errors", { count: migrationResult.errors.length })}</p>
                     <div className="max-h-32 overflow-y-auto rounded border bg-background p-2 space-y-1">
                       {migrationResult.errors.map((e, i) => (
                         <p key={i} className="text-xs font-mono text-muted-foreground">
@@ -971,16 +1046,16 @@ export default function Settings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
-              Audit Log Retention
+              {t("settings.retention.title")}
             </CardTitle>
             <CardDescription>
-              HIPAA requires audit logs to be kept for at least 6 years. Entries older than the retention period are automatically purged to save space.
+              {t("settings.retention.desc")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <div className="flex-1 space-y-1">
-                <Label htmlFor="retentionYears">Keep audit log entries for</Label>
+                <Label htmlFor="retentionYears">{t("settings.retention.keepFor")}</Label>
                 {loadingRetention ? (
                   <Skeleton className="h-10 w-40" />
                 ) : (
@@ -994,14 +1069,14 @@ export default function Settings() {
                     <SelectContent>
                       {[1, 2, 3, 4, 5, 6, 7, 10, 15, 20].map((y) => (
                         <SelectItem key={y} value={String(y)}>
-                          {y} {y === 1 ? "year" : "years"}{y === 6 ? " (HIPAA default)" : ""}
+                          {y === 1 ? t("settings.retention.year", { count: y }) : t("settings.retention.years", { count: y })}{y === 6 ? ` ${t("settings.retention.hipaaDefault")}` : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  Entries older than this are deleted automatically at startup and once daily.
+                  {t("settings.retention.autoDeleteHint")}
                 </p>
               </div>
 
@@ -1013,7 +1088,7 @@ export default function Settings() {
                   {saveRetention.isPending
                     ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                     : <Save className="mr-2 h-4 w-4" />}
-                  Save policy
+                  {t("settings.retention.savePolicy")}
                 </Button>
                 <Button
                   variant="outline"
@@ -1023,7 +1098,7 @@ export default function Settings() {
                   {runCleanup.isPending
                     ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                     : <Trash2 className="mr-2 h-4 w-4" />}
-                  Run cleanup now
+                  {t("settings.retention.runCleanup")}
                 </Button>
               </div>
             </div>
@@ -1032,10 +1107,10 @@ export default function Settings() {
               <div className="rounded-lg bg-muted/40 border p-3 text-sm">
                 {auditCleanupResult.deleted > 0 ? (
                   <p>
-                    Removed <span className="font-medium">{auditCleanupResult.deleted}</span> expired {auditCleanupResult.deleted === 1 ? "entry" : "entries"} older than {format(new Date(auditCleanupResult.cutoffDate), "MMM d, yyyy")}.
+                    {t("settings.retention.cleanupRemoved", { count: auditCleanupResult.deleted, date: format(new Date(auditCleanupResult.cutoffDate), "MMM d, yyyy") })}
                   </p>
                 ) : (
-                  <p className="text-muted-foreground">No expired entries found — the log is already within the retention window.</p>
+                  <p className="text-muted-foreground">{t("settings.retention.cleanupResultNone")}</p>
                 )}
               </div>
             )}
@@ -1050,10 +1125,10 @@ export default function Settings() {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <ClipboardList className="h-5 w-5" />
-                  Audit Log
+                  {t("settings.auditLog.title")}
                 </CardTitle>
                 <CardDescription className="mt-1">
-                  A record of who viewed, uploaded, edited, or deleted patient images and records.
+                  {t("settings.auditLog.desc")}
                 </CardDescription>
               </div>
               <Button
@@ -1066,7 +1141,7 @@ export default function Settings() {
                 {auditExporting
                   ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                   : <Download className="mr-2 h-4 w-4" />}
-                Export CSV
+                {t("settings.auditLog.exportCsv")}
               </Button>
             </div>
           </CardHeader>
@@ -1075,14 +1150,14 @@ export default function Settings() {
             <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
               <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                 <Filter className="h-4 w-4" />
-                Filter entries
+                {t("settings.auditLog.filterEntries")}
                 {hasAuditFilters && (
                   <button
                     onClick={clearAuditFilters}
                     className="ml-auto flex items-center gap-1 text-xs text-primary hover:underline"
                   >
                     <X className="h-3 w-3" />
-                    Clear filters
+                    {t("settings.auditLog.clearFilters")}
                   </button>
                 )}
               </div>
@@ -1091,7 +1166,7 @@ export default function Settings() {
                 <div className="relative">
                   <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
                   <Input
-                    placeholder="Search by username"
+                    placeholder={t("settings.auditLog.searchUsername")}
                     value={auditUsername}
                     onChange={(e) => { setAuditUsername(e.target.value); setAuditPage(1); }}
                     className="pl-8 h-9 text-sm"
@@ -1100,7 +1175,7 @@ export default function Settings() {
                 {/* Patient / Image ID */}
                 <Input
                   type="number"
-                  placeholder="Patient or image ID (e.g. 42)"
+                  placeholder={t("settings.auditLog.searchEntityId")}
                   value={auditEntityId}
                   onChange={(e) => { setAuditEntityId(e.target.value); setAuditPage(1); }}
                   className="h-9 text-sm"
@@ -1112,23 +1187,23 @@ export default function Settings() {
                   onValueChange={(v) => { setAuditAction(v); setAuditPage(1); }}
                 >
                   <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="All action types" />
+                    <SelectValue placeholder={t("settings.auditLog.allActions")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All action types</SelectItem>
-                    <SelectItem value="view">View</SelectItem>
-                    <SelectItem value="upload">Upload</SelectItem>
-                    <SelectItem value="create">Create</SelectItem>
-                    <SelectItem value="edit">Edit</SelectItem>
-                    <SelectItem value="delete">Delete</SelectItem>
-                    <SelectItem value="replace_file">Replace File</SelectItem>
+                    <SelectItem value="all">{t("settings.auditLog.allActions")}</SelectItem>
+                    <SelectItem value="view">{t("settings.auditLog.actionView")}</SelectItem>
+                    <SelectItem value="upload">{t("settings.auditLog.actionUpload")}</SelectItem>
+                    <SelectItem value="create">{t("settings.auditLog.actionCreate")}</SelectItem>
+                    <SelectItem value="edit">{t("settings.auditLog.actionEdit")}</SelectItem>
+                    <SelectItem value="delete">{t("settings.auditLog.actionDelete")}</SelectItem>
+                    <SelectItem value="replace_file">{t("settings.auditLog.actionReplaceFile")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {/* Date from */}
                 <div className="flex items-center gap-1.5">
-                  <Label className="text-xs text-muted-foreground shrink-0">From</Label>
+                  <Label className="text-xs text-muted-foreground shrink-0">{t("settings.auditLog.from")}</Label>
                   <Input
                     type="date"
                     value={auditDateFrom}
@@ -1138,7 +1213,7 @@ export default function Settings() {
                 </div>
                 {/* Date to */}
                 <div className="flex items-center gap-1.5">
-                  <Label className="text-xs text-muted-foreground shrink-0">To</Label>
+                  <Label className="text-xs text-muted-foreground shrink-0">{t("settings.auditLog.to")}</Label>
                   <Input
                     type="date"
                     value={auditDateTo}
@@ -1159,8 +1234,8 @@ export default function Settings() {
             ) : auditLogs.length === 0 ? (
               <p className="text-sm text-muted-foreground py-4 text-center">
                 {hasAuditFilters
-                  ? "No entries match your filters. Try adjusting the search criteria."
-                  : "No audit log entries yet. Actions on images and patients will appear here."}
+                  ? t("settings.auditLog.noMatch")
+                  : t("settings.auditLog.empty")}
               </p>
             ) : (
               <>
@@ -1171,7 +1246,7 @@ export default function Settings() {
                         variant={ACTION_VARIANTS[entry.action] ?? "outline"}
                         className="mt-0.5 shrink-0 capitalize"
                       >
-                        {ACTION_LABELS[entry.action] ?? entry.action}
+                        {actionLabels[entry.action] ?? entry.action}
                       </Badge>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
@@ -1206,7 +1281,7 @@ export default function Settings() {
                 {auditTotalPages > 1 && (
                   <div className="flex items-center justify-between pt-1 text-sm text-muted-foreground">
                     <span>
-                      Showing {((auditPage - 1) * AUDIT_PAGE_SIZE) + 1}–{Math.min(auditPage * AUDIT_PAGE_SIZE, auditTotal)} of {auditTotal} entries
+                      {t("settings.auditLog.showing", { from: ((auditPage - 1) * AUDIT_PAGE_SIZE) + 1, to: Math.min(auditPage * AUDIT_PAGE_SIZE, auditTotal), total: auditTotal })}
                     </span>
                     <div className="flex items-center gap-1">
                       <Button
@@ -1218,7 +1293,7 @@ export default function Settings() {
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
                       <span className="px-2 text-xs">
-                        Page {auditPage} of {auditTotalPages}
+                        {t("settings.auditLog.page", { page: auditPage, total: auditTotalPages })}
                       </span>
                       <Button
                         variant="outline"
@@ -1233,6 +1308,102 @@ export default function Settings() {
                 )}
               </>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {isElectron && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5" />
+              {t("license.title")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {loadingLicense ? (
+              <Skeleton className="h-20 w-full" />
+            ) : licenseData ? (
+              <>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant={LICENSE_STATE_VARIANTS[licenseData.state] ?? "secondary"}>
+                    {t(LICENSE_STATE_LABELS[licenseData.state] ?? "license.stateTrial")}
+                  </Badge>
+                  {licenseData.state === "trial" && licenseData.daysLeft !== null && (
+                    <span className="text-sm text-muted-foreground">
+                      {t("license.trialDaysLeft", { count: licenseData.daysLeft })}
+                    </span>
+                  )}
+                  {licenseData.state === "active" && licenseData.plan && (
+                    <span className="text-sm text-muted-foreground capitalize">{licenseData.plan}</span>
+                  )}
+                </div>
+
+                {licenseData.state === "trial_expired" && (
+                  <p className="text-sm text-destructive">{t("license.trialExpiredMsg")}</p>
+                )}
+                {licenseData.state === "tampered" && (
+                  <p className="text-sm text-destructive">{t("license.tamperedMsg")}</p>
+                )}
+                {licenseData.state === "expired" && (
+                  <p className="text-sm text-destructive">{t("license.expiredMsg")}</p>
+                )}
+                {licenseData.state === "active" && (
+                  <p className="text-sm text-muted-foreground">
+                    {t("license.activeMsg")}{" "}
+                    {licenseData.expiresAt
+                      ? `${t("license.activeExpires")} ${format(new Date(licenseData.expiresAt), "MMM d, yyyy")}`
+                      : t("license.activeLifetime")}
+                  </p>
+                )}
+
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {t("license.machineId")}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 truncate text-xs bg-muted px-3 py-2 rounded-md font-mono">
+                      {licenseData.machineId}
+                    </code>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyMachineId(licenseData.machineId)}
+                    >
+                      <Copy className="h-3.5 w-3.5 mr-1" />
+                      {copiedMachineId ? t("license.copied") : t("license.copy")}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{t("license.machineIdDesc")}</p>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">{t("license.loadError")}</p>
+            )}
+
+            <div className="border-t pt-4 space-y-3">
+              <div>
+                <p className="text-sm font-medium">{t("license.activateTitle")}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{t("license.activateDesc")}</p>
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  value={licenseCode}
+                  onChange={(e) => setLicenseCode(e.target.value)}
+                  placeholder={t("license.codePlaceholder")}
+                  className="font-mono text-sm flex-1"
+                />
+                <Button
+                  onClick={() => activateLicense.mutate(licenseCode.trim())}
+                  disabled={!licenseCode.trim() || activateLicense.isPending}
+                >
+                  {activateLicense.isPending && (
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  )}
+                  {activateLicense.isPending ? t("license.activating") : t("license.activateBtn")}
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}

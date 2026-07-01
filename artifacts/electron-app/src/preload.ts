@@ -32,4 +32,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
   /** Tell the main process to quit and install the downloaded update immediately. */
   installUpdate: (): Promise<void> =>
     ipcRenderer.invoke("updater:install-now"),
+
+  /** License & Activation */
+  license: {
+    /** Notify main that activation succeeded in the license window. */
+    activated: (): void => ipcRenderer.send("license:activated"),
+    /** Notify main that the user chose to continue the trial. */
+    skip: (): void => ipcRenderer.send("license:skip"),
+  },
 });

@@ -19,11 +19,13 @@ import templatesRouter from "./templates";
 import libraryRouter from "./library";
 import userPatientAccessRouter from "./user-patient-access";
 import cephRouter from "./ceph";
+import licenseRouter from "./license";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
+router.use(licenseRouter);
 router.use(requireAuth);
 router.use(patientsRouter);
 router.use(imagesRouter);

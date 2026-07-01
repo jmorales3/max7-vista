@@ -415,15 +415,23 @@ export default function CephalometricsTracing() {
       const pageH = 279.4;
       const margin = 12;
 
+      // jsPDF's built-in Helvetica uses WinAnsi encoding (Latin-1 + cp1252).
+      // Characters above U+00FF that aren't in cp1252 cause internal throws.
+      // Replace anything outside cp1252 with a '?' so the export never crashes.
+      const CP1252_SAFE = /[\u0000-\u00FF\u20AC\u201A\u0192\u201E\u2026\u2020\u2021\u02C6\u2030\u0160\u2039\u0152\u017D\u2018\u2019\u201C\u201D\u2022\u2013\u2014\u02DC\u2122\u0161\u203A\u0153\u017E\u0178]/;
+      function pdf$(s: string): string {
+        return s.split("").map((c) => (c.codePointAt(0)! <= 0x00FF || CP1252_SAFE.test(c) ? c : "?")).join("");
+      }
+
       // ── Header ──────────────────────────────────────────────────────────
       pdf.setFontSize(14);
       pdf.setFont("helvetica", "bold");
-      pdf.text(tracing.templateName ?? t("ceph.title"), margin, margin + 6);
+      pdf.text(pdf$(tracing.templateName ?? t("ceph.title")), margin, margin + 6);
 
       pdf.setFontSize(9);
       if (tracing.patientName) {
         pdf.setFont("helvetica", "bold");
-        pdf.text(`${t("ceph.trace.pdfPatient")}: ${tracing.patientName}`, margin, margin + 13);
+        pdf.text(pdf$(`${t("ceph.trace.pdfPatient")}: ${tracing.patientName}`), margin, margin + 13);
         pdf.setFont("helvetica", "normal");
       }
 
@@ -433,9 +441,9 @@ export default function CephalometricsTracing() {
       });
       const phaseStr = t(`ceph.phase.${tracing.recordPhase ?? "initial"}` as any, tracing.recordPhase ?? "initial");
       const subtitle = [dateStr, phaseStr, pxPerMm ? `${pxPerMm.toFixed(2)} px/mm` : null]
-        .filter(Boolean).join("  ·  ");
+        .filter(Boolean).join("  \xB7  ");
       const subtitleY = tracing.patientName ? margin + 20 : margin + 13;
-      pdf.text(subtitle, margin, subtitleY);
+      pdf.text(pdf$(subtitle), margin, subtitleY);
 
       let curY = subtitleY + 7;
 
@@ -461,7 +469,7 @@ export default function CephalometricsTracing() {
       if (tracing.results.length > 0) {
         pdf.setFontSize(10);
         pdf.setFont("helvetica", "bold");
-        pdf.text(t("ceph.trace.measurementsLabel"), margin, curY);
+        pdf.text(pdf$(t("ceph.trace.measurementsLabel")), margin, curY);
         curY += 6;
 
         // Each page half is ~93 mm wide; within each half:
@@ -493,14 +501,14 @@ export default function CephalometricsTracing() {
             (mDef?.idealMin != null && numVal < parseFloat(String(mDef.idealMin))) ||
             (mDef?.idealMax != null && numVal > parseFloat(String(mDef.idealMax)))
           );
-          const displayUnit = r.unit === "degrees" || r.unit === "degree" ? "°" : r.unit;
+          const displayUnit = r.unit === "degrees" || r.unit === "degree" ? "\xB0" : r.unit;
           const idealStr = hasIdeal
-            ? `${mDef?.idealMin ?? ""}–${mDef?.idealMax ?? ""} ${displayUnit}` : "—";
-          const measName = t(`ceph.meas.${r.measurementName}` as any, r.measurementName);
+            ? `${mDef?.idealMin ?? ""}-${mDef?.idealMax ?? ""} ${displayUnit}` : "-";
+          const measName = pdf$(t(`ceph.meas.${r.measurementName}` as any, r.measurementName));
           if (isOut) pdf.setTextColor(200, 40, 40);
           pdf.text(measName, nx, y);
-          pdf.text(r.value !== null ? `${numVal!.toFixed(2)} ${displayUnit}` : "—", vx, y);
-          pdf.text(idealStr, ix, y);
+          pdf.text(r.value !== null ? `${numVal!.toFixed(2)} ${displayUnit}` : "-", vx, y);
+          pdf.text(pdf$(idealStr), ix, y);
           pdf.setTextColor(0, 0, 0);
         };
 
@@ -509,12 +517,12 @@ export default function CephalometricsTracing() {
         pdf.setFont("helvetica", "bold");
         pdf.setFillColor(240, 240, 240);
         pdf.rect(margin, curY - 3.5, pageW - 2 * margin, 6, "F");
-        pdf.text(t("ceph.trace.measurement"), lName, curY);
-        pdf.text(t("ceph.trace.value"), lVal, curY);
-        pdf.text(t("ceph.trace.ideal"), lIdeal, curY);
-        pdf.text(t("ceph.trace.measurement"), rName, curY);
-        pdf.text(t("ceph.trace.value"), rVal, curY);
-        pdf.text(t("ceph.trace.ideal"), rIdeal, curY);
+        pdf.text(pdf$(t("ceph.trace.measurement")), lName, curY);
+        pdf.text(pdf$(t("ceph.trace.value")), lVal, curY);
+        pdf.text(pdf$(t("ceph.trace.ideal")), lIdeal, curY);
+        pdf.text(pdf$(t("ceph.trace.measurement")), rName, curY);
+        pdf.text(pdf$(t("ceph.trace.value")), rVal, curY);
+        pdf.text(pdf$(t("ceph.trace.ideal")), rIdeal, curY);
         curY += 4;
         pdf.setDrawColor(200, 200, 200);
         pdf.line(margin, curY, pageW - margin, curY);
@@ -540,8 +548,9 @@ export default function CephalometricsTracing() {
 
       const date = format(new Date(tracing.createdAt), "yyyy-MM-dd");
       pdf.save(`ceph_${(tracing.templateName ?? "tracing").replace(/\s+/g, "_")}_${date}.pdf`);
-    } catch {
-      toast({ variant: "destructive", title: t("ceph.trace.pdfExportFailed") });
+    } catch (err) {
+      console.error("[PDF export error]", err);
+      toast({ variant: "destructive", title: t("ceph.trace.pdfExportFailed"), description: err instanceof Error ? err.message : String(err) });
     } finally {
       setIsSavingPdf(false);
     }
