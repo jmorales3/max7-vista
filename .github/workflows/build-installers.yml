@@ -166,6 +166,7 @@ jobs:
           # electron-builder can create and upload release assets. If GH_TOKEN is absent,
           # the workflow falls back to the built-in GITHUB_TOKEN.
           GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          LICENSE_HMAC_SECRET: ${{ secrets.LICENSE_HMAC_SECRET }}
           # Code-signing — set these secrets in GitHub repo settings to enable signing:
           # WIN_CSC_LINK:         base64-encoded .p12 or .pfx EV certificate
           # WIN_CSC_KEY_PASSWORD: password protecting the certificate
