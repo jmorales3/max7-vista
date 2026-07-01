@@ -1,7 +1,10 @@
-name: Build Windows Installer
+name: Build & Release Windows Installer
 
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - "v*"
 
 jobs:
   build-win:
@@ -39,15 +42,9 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Build and package Windows installer
-        run: pnpm --filter @workspace/electron-app run package:win
+        run: pnpm --filter @workspace/electron-app run release:win
         env:
           NODE_ENV: production
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LICENSE_HMAC_SECRET: ${{ secrets.LICENSE_HMAC_SECRET }}
-      - name: Upload installer
-        uses: actions/upload-artifact@v4
-        with:
-          name: Max7-Vista-Setup-${{ github.run_number }}
-          path: artifacts/electron-app/release/**/*.exe
-          retention-days: 90
-          if-no-files-found: error
+      
