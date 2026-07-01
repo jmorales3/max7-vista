@@ -20,7 +20,7 @@ import {
   RefreshCw, Save, HardDrive, Database, Users, ImageIcon,
   AlertCircle, Tag, Plus, X, ClipboardList, KeyRound,
   Download, Upload, ArrowRightLeft, ShieldCheck, RotateCcw,
-  Search, ChevronLeft, ChevronRight, Filter, Clock, Trash2,
+  Search, ChevronLeft, ChevronRight, Filter, Clock, Trash2, Copy,
 } from "lucide-react";
 import {
   Select,
@@ -50,6 +50,32 @@ interface AuditLogEntry {
   details: string | null;
   createdAt: string;
 }
+
+interface LicenseStatus {
+  state: string;
+  daysLeft: number | null;
+  trialDays: number;
+  expiresAt: string | null;
+  plan: string | null;
+  machineId: string;
+  activatedAt: string | null;
+}
+
+const LICENSE_STATE_LABELS: Record<string, string> = {
+  trial: "license.stateTrial",
+  active: "license.stateActive",
+  expired: "license.stateExpired",
+  trial_expired: "license.stateTrialExpired",
+  tampered: "license.stateTampered",
+};
+
+const LICENSE_STATE_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  trial: "secondary",
+  active: "default",
+  expired: "destructive",
+  trial_expired: "destructive",
+  tampered: "destructive",
+};
 
 const ACTION_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   upload: "default",
@@ -407,6 +433,56 @@ export default function Settings() {
   });
 
   const isElectron = typeof window !== "undefined" && !!window.electronAPI;
+
+  const [licenseCode, setLicenseCode] = useState("");
+  const [copiedMachineId, setCopiedMachineId] = useState(false);
+
+  const { data: licenseData, isLoading: loadingLicense, refetch: refetchLicense } = useQuery<LicenseStatus>({
+    queryKey: ["license-status"],
+    queryFn: async () => {
+      const res = await fetch("/api/license/status", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch license status");
+      return res.json() as Promise<LicenseStatus>;
+    },
+    enabled: isElectron,
+    staleTime: 30_000,
+    retry: false,
+  });
+
+  const activateLicense = useMutation({
+    mutationFn: async (code: string) => {
+      const res = await fetch("/api/license/activate", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(body.error ?? "Activation failed");
+      }
+      return res.json() as Promise<LicenseStatus>;
+    },
+    onSuccess: () => {
+      void refetchLicense();
+      setLicenseCode("");
+      toast({ title: t("license.activateSuccess"), description: t("license.activateSuccessDesc") });
+    },
+    onError: (e) => {
+      toast({
+        variant: "destructive",
+        title: t("license.activateError"),
+        description: e instanceof Error ? e.message : "Unknown error",
+      });
+    },
+  });
+
+  function copyMachineId(id: string) {
+    navigator.clipboard.writeText(id).then(() => {
+      setCopiedMachineId(true);
+      setTimeout(() => setCopiedMachineId(false), 2000);
+    }).catch(() => {});
+  }
 
   const { data: backupsData, isLoading: loadingBackups, refetch: refetchBackups } = useQuery<{ backups: BackupEntry[] }>({
     queryKey: ["backups"],
@@ -1232,6 +1308,102 @@ export default function Settings() {
                 )}
               </>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {isElectron && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5" />
+              {t("license.title")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {loadingLicense ? (
+              <Skeleton className="h-20 w-full" />
+            ) : licenseData ? (
+              <>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant={LICENSE_STATE_VARIANTS[licenseData.state] ?? "secondary"}>
+                    {t(LICENSE_STATE_LABELS[licenseData.state] ?? "license.stateTrial")}
+                  </Badge>
+                  {licenseData.state === "trial" && licenseData.daysLeft !== null && (
+                    <span className="text-sm text-muted-foreground">
+                      {t("license.trialDaysLeft", { count: licenseData.daysLeft })}
+                    </span>
+                  )}
+                  {licenseData.state === "active" && licenseData.plan && (
+                    <span className="text-sm text-muted-foreground capitalize">{licenseData.plan}</span>
+                  )}
+                </div>
+
+                {licenseData.state === "trial_expired" && (
+                  <p className="text-sm text-destructive">{t("license.trialExpiredMsg")}</p>
+                )}
+                {licenseData.state === "tampered" && (
+                  <p className="text-sm text-destructive">{t("license.tamperedMsg")}</p>
+                )}
+                {licenseData.state === "expired" && (
+                  <p className="text-sm text-destructive">{t("license.expiredMsg")}</p>
+                )}
+                {licenseData.state === "active" && (
+                  <p className="text-sm text-muted-foreground">
+                    {t("license.activeMsg")}{" "}
+                    {licenseData.expiresAt
+                      ? `${t("license.activeExpires")} ${format(new Date(licenseData.expiresAt), "MMM d, yyyy")}`
+                      : t("license.activeLifetime")}
+                  </p>
+                )}
+
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {t("license.machineId")}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 truncate text-xs bg-muted px-3 py-2 rounded-md font-mono">
+                      {licenseData.machineId}
+                    </code>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyMachineId(licenseData.machineId)}
+                    >
+                      <Copy className="h-3.5 w-3.5 mr-1" />
+                      {copiedMachineId ? t("license.copied") : t("license.copy")}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{t("license.machineIdDesc")}</p>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">{t("license.loadError")}</p>
+            )}
+
+            <div className="border-t pt-4 space-y-3">
+              <div>
+                <p className="text-sm font-medium">{t("license.activateTitle")}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{t("license.activateDesc")}</p>
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  value={licenseCode}
+                  onChange={(e) => setLicenseCode(e.target.value)}
+                  placeholder={t("license.codePlaceholder")}
+                  className="font-mono text-sm flex-1"
+                />
+                <Button
+                  onClick={() => activateLicense.mutate(licenseCode.trim())}
+                  disabled={!licenseCode.trim() || activateLicense.isPending}
+                >
+                  {activateLicense.isPending && (
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  )}
+                  {activateLicense.isPending ? t("license.activating") : t("license.activateBtn")}
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}

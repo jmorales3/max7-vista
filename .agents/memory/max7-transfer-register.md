@@ -1686,4 +1686,110 @@ function wittsMm(a: Pt, b: Pt, lineP: Pt, lineQ: Pt, pxPerMm: number): number {
 
 ---
 
+## FEAT-020 — License & Activation System (Desktop/Electron Only)
+
+**Status:** ✅ Confirmed working in Vista  
+**Date:** 2026-07-01  
+**Vista files:**
+- `artifacts/api-server/src/lib/license.ts` — core license library
+- `artifacts/api-server/src/routes/license.ts` — GET /api/license/status, POST /api/license/activate
+- `artifacts/api-server/src/index.ts` — `license` table in `initSqlite()`
+- `artifacts/electron-app/src/main.ts` — license gate on startup, `createLicenseWindow()`, IPC handlers
+- `artifacts/electron-app/src/preload.ts` — `license.activated` / `license.skip` IPC bridges
+- `artifacts/electron-app/src/license.html` — blocking activation page
+- `artifacts/patient-images/src/components/layout.tsx` — `TrialBanner` component
+- `artifacts/patient-images/src/pages/settings.tsx` — License card section
+- `tools/gen-license.mjs` — vendor-side code generator script
+
+### What it does
+A 30-day free trial gates the desktop app. After expiry (or if a license is tampered/expired), a blocking HTML window appears at startup. Users enter a vendor-issued activation code tied to their machine ID to unlock. A trial banner appears in the sidebar during the trial period. Settings → License shows status, machine ID, and an activation form.
+
+### License code format
+`MAX7-{base64url(JSON{mid,plan,exp})}.{HMAC-SHA256-hex}`
+- `mid`: machine ID (HMAC-derived hardware fingerprint stored in `userData/machine.id`)
+- `plan`: `"standard"` | `"pro"` | `"lifetime"` | etc.
+- `exp`: ISO expiry date string, or `null` for lifetime
+
+### License states
+| State | Meaning |
+|-------|---------|
+| `trial` | Within 30-day trial window |
+| `trial_expired` | Trial period elapsed, no activation |
+| `active` | Valid license activated |
+| `expired` | Activated license past expiry date |
+| `tampered` | Record hash mismatch (DB row modified) |
+
+### SQLite schema
+```sql
+CREATE TABLE IF NOT EXISTS license (
+  id INTEGER PRIMARY KEY,
+  machineId TEXT NOT NULL,
+  code TEXT NOT NULL,
+  plan TEXT NOT NULL,
+  activatedAt TEXT NOT NULL,
+  expiresAt TEXT,
+  recordHash TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS app_meta (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+```
+- `app_meta` stores `install_date` (ISO string, set on first launch).
+- `recordHash` = HMAC-SHA256 of `${machineId}|${code}|${plan}|${activatedAt}|${expiresAt ?? ""}`.
+- Trial start = `install_date` from `app_meta`. Trial ends 30 days later.
+
+### Machine ID derivation
+```typescript
+// computeMachineId() in license.ts
+const raw = `${cpuModel}:${macAddr}:${hostname}`;
+const id = crypto.createHmac("sha256", machineSecret).update(raw).digest("hex");
+// Persisted to userData/machine.id + userData/machine.id.sig for tamper detection
+```
+`machineSecret` = `LICENSE_HMAC_SECRET` env var (baked into Electron build); same secret used for HMAC-signing license codes and record hashes.
+
+### Startup gate in main.ts
+```typescript
+const licenseStatus = await checkLicenseStatus();
+const needsLicenseScreen =
+  licenseStatus?.state === "trial_expired" ||
+  licenseStatus?.state === "expired" ||
+  licenseStatus?.state === "tampered";
+
+if (needsLicenseScreen) {
+  createLicenseWindow(); // blocking window, IPC opens main window on activation
+} else {
+  showFirstRunDialog();
+  createWindow();
+}
+```
+
+### IPC flow (license.html → main.ts → renderer)
+- `license:activated` — user activates; main.ts closes license window, calls `createWindow()`
+- `license:skip` — shown only in trial states (not in expired/tampered); same effect
+
+### Trial banner (layout.tsx)
+`TrialBanner` queries `/api/license/status` every 60 seconds (enabled only when `isElectron`). Shows yellow banner for `trial` states (with days remaining), red for `trial_expired`. Both include a link to Settings.
+
+### Settings License card (settings.tsx)
+Shown only when `isElectron`. Displays: status badge, days remaining or plan/expiry, machine ID (with one-click copy), and an activation code input form.
+
+### Vendor code generator (tools/gen-license.mjs)
+```bash
+node tools/gen-license.mjs --mid <machineId> --plan standard --exp 2027-01-01
+# Outputs: MAX7-eyJtaWQi...base64....HMAC
+```
+Run with `LICENSE_HMAC_SECRET=<production-secret>`.
+
+### i18n keys added (all 4 locales — top-level `"license"` object, NOT inside `"settings"`)
+`title`, `machineId`, `machineIdDesc`, `copy`, `copied`, `stateTrial`, `stateActive`, `stateExpired`, `stateTrialExpired`, `stateTampered`, `trialDaysLeft_one/_other`, `trialExpiredMsg`, `activeMsg`, `activePlan`, `activeExpires`, `activeLifetime`, `tamperedMsg`, `expiredMsg`, `activateTitle`, `activateDesc`, `codeLabel`, `codePlaceholder`, `activateBtn`, `activating`, `activateSuccess`, `activateSuccessDesc`, `activateError`, `loadError`, `bannerTrial_one/_other`, `bannerExpired`, `bannerActivate`
+
+### Notes for Max7 agent
+- The `IS_SQLITE` flag (`ELECTRON_MODE === "true"`) gates all license routes — they are no-ops in the PostgreSQL/web deployment.
+- `LICENSE_HMAC_SECRET` must be baked into the production build via an env var injected in `build-full.mjs`; fallback is `"max7-dev-fallback-secret-CHANGEME"`.
+- Register `licenseRouter` BEFORE `requireAuth` in the API routes so unauthenticated Electron startup can still call `/api/license/status`.
+- The blocking `license.html` is a standalone HTML file (no React); it calls the API directly via `fetch("http://127.0.0.1:<port>/api/license/...`)` and uses `window.electronAPI.license.activated()` / `license.skip()` IPC.
+
+---
+
 <!-- Add new entries below as features are confirmed in Vista -->

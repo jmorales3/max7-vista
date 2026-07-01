@@ -170,6 +170,16 @@ function stopApiServer(): void {
   // Server runs in-process; it stops automatically when Electron exits.
 }
 
+async function checkLicenseStatus(): Promise<{ state: string; daysLeft: number | null } | null> {
+  try {
+    const res = await fetch(`http://127.0.0.1:${API_PORT}/api/license/status`);
+    if (res.ok) return res.json() as Promise<{ state: string; daysLeft: number | null }>;
+  } catch {
+    // non-critical
+  }
+  return null;
+}
+
 // ─── Splash Window ───────────────────────────────────────────────────────────
 
 function createSplashWindow(): void {
@@ -263,6 +273,46 @@ function createWindow(): void {
   });
 }
 
+// ─── License Window ──────────────────────────────────────────────────────────
+
+let licenseWindow: BrowserWindow | null = null;
+
+function createLicenseWindow(): void {
+  licenseWindow = new BrowserWindow({
+    width: 520,
+    height: 640,
+    resizable: false,
+    center: true,
+    show: false,
+    title: "Max7 Vista — License Activation",
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+    },
+  });
+
+  const licensePath = IS_DEV
+    ? path.join(__dirname, "../src/license.html")
+    : path.join(__dirname, "license.html");
+
+  licenseWindow.loadFile(licensePath).catch((err) => {
+    console.error("[license] Failed to load license screen:", err);
+  });
+
+  licenseWindow.once("ready-to-show", () => {
+    closeSplashWindow();
+    licenseWindow?.show();
+  });
+
+  licenseWindow.on("closed", () => {
+    licenseWindow = null;
+    // If user closed the window without activating and no main window, quit.
+    if (!mainWindow) app.quit();
+  });
+}
+
 // ─── IPC Handlers ────────────────────────────────────────────────────────────
 
 ipcMain.handle("get-lan-addresses", (): string[] => getLanAddresses());
@@ -321,31 +371,65 @@ ipcMain.handle("updater:install-now", () => {
   autoUpdater.quitAndInstall(false, true);
 });
 
+// License IPC: called from license.html after successful activation
+ipcMain.on("license:activated", () => {
+  if (licenseWindow && !licenseWindow.isDestroyed()) {
+    licenseWindow.removeAllListeners("closed");
+    licenseWindow.close();
+    licenseWindow = null;
+  }
+  createWindow();
+});
+
+// License IPC: called from license.html when user chooses "Continue with trial"
+ipcMain.on("license:skip", () => {
+  if (licenseWindow && !licenseWindow.isDestroyed()) {
+    licenseWindow.removeAllListeners("closed");
+    licenseWindow.close();
+    licenseWindow = null;
+  }
+  createWindow();
+});
+
 // ─── App Lifecycle ────────────────────────────────────────────────────────────
+
+function showFirstRunDialog(): void {
+  const credFile = path.join(app.getPath("userData"), "first-run-credentials.json");
+  if (!fs.existsSync(credFile)) return;
+  try {
+    const creds = JSON.parse(fs.readFileSync(credFile, "utf-8")) as { username: string; password: string };
+    fs.unlinkSync(credFile);
+    dialog.showMessageBoxSync({
+      type: "info",
+      title: "First-Time Setup — Default Account Created",
+      message: "A default administrator account was created for you.",
+      detail: `Username: ${creds.username}\nPassword: ${creds.password}\n\nPlease log in and change this password immediately from the Admin panel.`,
+      buttons: ["OK, I'll note these down"],
+    });
+  } catch {
+    // ignore — non-critical
+  }
+}
 
 app.whenReady().then(async () => {
   createSplashWindow();
   await startApiServer();
 
-  // Show first-run credentials dialog if the server seeded a default admin
-  const credFile = path.join(app.getPath("userData"), "first-run-credentials.json");
-  if (fs.existsSync(credFile)) {
-    try {
-      const creds = JSON.parse(fs.readFileSync(credFile, "utf-8")) as { username: string; password: string };
-      fs.unlinkSync(credFile);
-      dialog.showMessageBoxSync({
-        type: "info",
-        title: "First-Time Setup — Default Account Created",
-        message: "A default administrator account was created for you.",
-        detail: `Username: ${creds.username}\nPassword: ${creds.password}\n\nPlease log in and change this password immediately from the Admin panel.`,
-        buttons: ["OK, I'll note these down"],
-      });
-    } catch {
-      // ignore — non-critical
-    }
-  }
+  // ── License gate (desktop-only) ──────────────────────────────────────────
+  const licenseStatus = await checkLicenseStatus();
+  const needsLicenseScreen =
+    licenseStatus?.state === "trial_expired" ||
+    licenseStatus?.state === "expired" ||
+    licenseStatus?.state === "tampered";
 
-  createWindow();
+  if (needsLicenseScreen) {
+    // Show blocking activation window; app opens only after user activates or
+    // the license IPC handlers (above) create the main window.
+    createLicenseWindow();
+  } else {
+    showFirstRunDialog();
+    createWindow();
+  }
 
   if (app.isPackaged) {
     setupAutoUpdater();

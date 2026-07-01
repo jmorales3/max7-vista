@@ -264,6 +264,17 @@ async function initSqlite() {
       value REAL,
       unit TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS license (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      machine_id TEXT NOT NULL UNIQUE,
+      first_run_date TEXT NOT NULL,
+      activated_at TEXT,
+      expires_at TEXT,
+      plan_type TEXT,
+      license_code TEXT,
+      record_hash TEXT NOT NULL
+    );
   `);
 
   // SQLite column migrations — ADD COLUMN doesn't support IF NOT EXISTS so each

@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import {
   Users,
   Image as ImageIcon,
@@ -194,6 +195,49 @@ export function AppSidebar() {
   );
 }
 
+function TrialBanner() {
+  const { t } = useTranslation();
+  const isElectron = typeof window !== "undefined" && !!(window as unknown as { electronAPI?: unknown }).electronAPI;
+  const { data } = useQuery<{ state: string; daysLeft: number | null }>({
+    queryKey: ["license-status-banner"],
+    queryFn: async () => {
+      const res = await fetch("/api/license/status", { credentials: "include" });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: isElectron,
+    staleTime: 60_000,
+    retry: false,
+  });
+
+  if (!isElectron || !data) return null;
+  if (data.state !== "trial" && data.state !== "trial_expired") return null;
+
+  const isExpired = data.state === "trial_expired";
+
+  return (
+    <div
+      className={`border-b px-4 py-2 text-sm flex items-center justify-between gap-2 no-print ${
+        isExpired
+          ? "bg-red-500/10 border-red-500/20 text-red-700 dark:text-red-400"
+          : "bg-yellow-500/10 border-yellow-500/20 text-yellow-800 dark:text-yellow-400"
+      }`}
+    >
+      <span>
+        {isExpired
+          ? t("license.bannerExpired")
+          : t("license.bannerTrial", { count: data.daysLeft ?? 0 })}
+      </span>
+      <Link
+        href="/settings"
+        className="text-xs font-semibold underline underline-offset-2 shrink-0"
+      >
+        {t("license.bannerActivate")}
+      </Link>
+    </div>
+  );
+}
+
 export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <SidebarProvider>
@@ -203,6 +247,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <header className="h-14 border-b flex items-center px-4 md:hidden">
             <SidebarTrigger />
           </header>
+          <TrialBanner />
           <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
             {children}
           </main>

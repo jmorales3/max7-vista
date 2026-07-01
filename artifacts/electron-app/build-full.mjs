@@ -49,4 +49,10 @@ fs.copyFileSync(
 );
 console.log("▶ Copied splash.html → dist/splash.html");
 
+fs.copyFileSync(
+  path.join(__dirname, "src", "license.html"),
+  path.join(__dirname, "dist", "license.html"),
+);
+console.log("▶ Copied license.html → dist/license.html");
+
 console.log("\n✅ Full build complete — ready for electron-builder packaging.");
