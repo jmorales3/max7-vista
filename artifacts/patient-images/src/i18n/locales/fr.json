@@ -270,7 +270,9 @@
     "slides": "diapositives",
     "deleteTitle": "Supprimer la Présentation",
     "deleteDesc": "Êtes-vous sûr de vouloir supprimer \"{{title}}\" ? Cette action est irréversible.",
-    "addToPresentation": "Ajouter à la Présentation"
+    "addToPresentation": "Ajouter à la Présentation",
+    "exportPdf": "Exporter en PDF",
+    "exportPptx": "Exporter en PowerPoint"
   },
   "gallery": {
     "title": "Galerie",
@@ -282,7 +284,19 @@
     "noImagesEmpty": "Votre galerie est vide. Commencez par capturer quelques photos.",
     "captureImage": "Capturer une Image",
     "columns": "{{count}} colonne",
-    "columns_plural": "{{count}} colonnes"
+    "columns_plural": "{{count}} colonnes",
+    "noImagesTags": "Aucune image ne correspond aux tags sélectionnés.",
+    "showAll": "Tout Afficher",
+    "select": "Sélectionner",
+    "selectedCount": "{{count}} sélectionnée(s)",
+    "createPresentation": "Créer une Présentation",
+    "export": "Exporter",
+    "exportZip": "Télécharger en ZIP",
+    "exportIndividually": "Télécharger Individuellement",
+    "exportFailed": "Échec de l'exportation",
+    "noSlidesToExport": "Cette présentation n'a aucune diapositive à exporter",
+    "libraryBadge": "Bibliothèque",
+    "presentationCreated": "Présentation créée"
   },
   "library": {
     "title": "Bibliothèque d'Images",

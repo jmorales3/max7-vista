@@ -31,8 +31,7 @@ export const ListPatientsResponseItem = zod.object({
   "dateOfBirth": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "createdAt": zod.string(),
-  "imageCount": zod.number().optional(),
-  "profileImageId": zod.number().nullish()
+  "imageCount": zod.number().optional()
 })
 export const ListPatientsResponse = zod.array(ListPatientsResponseItem)
 
@@ -66,8 +65,7 @@ export const GetPatientResponse = zod.object({
   "dateOfBirth": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "createdAt": zod.string(),
-  "imageCount": zod.number().optional(),
-  "profileImageId": zod.number().nullish()
+  "imageCount": zod.number().optional()
 })
 
 
@@ -86,8 +84,7 @@ export const UpdatePatientBody = zod.object({
   "name": zod.string().min(1).optional(),
   "patientCode": zod.string().min(1).optional(),
   "dateOfBirth": zod.string().optional(),
-  "notes": zod.string().optional(),
-  "profileImageId": zod.number().nullish()
+  "notes": zod.string().optional()
 })
 
 export const UpdatePatientResponse = zod.object({
@@ -97,8 +94,7 @@ export const UpdatePatientResponse = zod.object({
   "dateOfBirth": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "createdAt": zod.string(),
-  "imageCount": zod.number().optional(),
-  "profileImageId": zod.number().nullish()
+  "imageCount": zod.number().optional()
 })
 
 
@@ -286,7 +282,8 @@ export const ListPatientImagesResponse = zod.array(ListPatientImagesResponseItem
 export const ListImagesQueryParams = zod.object({
   "patientId": zod.coerce.number().optional(),
   "dateFrom": zod.coerce.string().optional(),
-  "dateTo": zod.coerce.string().optional()
+  "dateTo": zod.coerce.string().optional(),
+  "tagIds": zod.coerce.string().optional().describe('Comma-separated tag IDs. When present, only images whose patient has at least one of these tags are returned.')
 })
 
 export const ListImagesResponseItem = zod.object({
@@ -313,6 +310,14 @@ export const UploadImageBody = zod.object({
   "patientId": zod.number().optional(),
   "notes": zod.string().optional(),
   "capturedAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Export a set of images (patient images and/or library assets) as a ZIP file
+ */
+export const ExportImagesZipBody = zod.object({
+  "imageIds": zod.array(zod.number())
 })
 
 

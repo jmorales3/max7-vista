@@ -81,6 +81,7 @@
     "@clerk/themes": "^2.4.57",
     "i18next": "^26.2.0",
     "jspdf": "^4.2.1",
+    "pptxgenjs": "^4.0.1",
     "react-i18next": "^17.0.8"
   }
 }

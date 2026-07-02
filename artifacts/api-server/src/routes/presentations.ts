@@ -27,27 +27,21 @@ router.get("/presentations", async (req, res): Promise<void> => {
       return;
     }
 
-    // Presentations are scoped via patient — join to verify tenant ownership
+    // Presentations belong directly to a tenant (patientId is optional/nullable for cross-patient decks)
     const rows = query.data.patientId !== undefined
       ? await db
-          .select({ p: presentationsTable })
+          .select()
           .from(presentationsTable)
-          .innerJoin(patientsTable, and(
-            eq(patientsTable.id, presentationsTable.patientId),
-            eq(patientsTable.tenantId, tenantId),
+          .where(and(
+            eq(presentationsTable.tenantId, tenantId),
+            eq(presentationsTable.patientId, query.data.patientId),
           ))
-          .where(eq(presentationsTable.patientId, query.data.patientId))
           .orderBy(presentationsTable.updatedAt)
-          .then(r => r.map(x => x.p))
       : await db
-          .select({ p: presentationsTable })
+          .select()
           .from(presentationsTable)
-          .innerJoin(patientsTable, and(
-            eq(patientsTable.id, presentationsTable.patientId),
-            eq(patientsTable.tenantId, tenantId),
-          ))
-          .orderBy(presentationsTable.updatedAt)
-          .then(r => r.map(x => x.p));
+          .where(eq(presentationsTable.tenantId, tenantId))
+          .orderBy(presentationsTable.updatedAt);
 
     res.json(rows);
   } catch (err: any) {
@@ -80,6 +74,7 @@ router.post("/presentations", async (req, res): Promise<void> => {
     const [created] = await db
       .insert(presentationsTable)
       .values({
+        tenantId,
         title: body.data.title,
         slides: body.data.slides as unknown[],
         patientId: body.data.patientId ?? null,
@@ -103,15 +98,13 @@ router.get("/presentations/:id", async (req, res): Promise<void> => {
     }
 
     const [row] = await db
-      .select({ p: presentationsTable })
+      .select()
       .from(presentationsTable)
-      .innerJoin(patientsTable, and(
-        eq(patientsTable.id, presentationsTable.patientId),
-        eq(patientsTable.tenantId, tenantId),
+      .where(and(
+        eq(presentationsTable.id, params.data.id),
+        eq(presentationsTable.tenantId, tenantId),
       ))
-      .where(eq(presentationsTable.id, params.data.id))
-      .limit(1)
-      .then(r => r.map(x => x.p));
+      .limit(1);
 
     if (!row) {
       res.status(404).json({ error: "Presentation not found" });
@@ -142,13 +135,12 @@ router.put("/presentations/:id", async (req, res): Promise<void> => {
 
     // Verify tenant owns this presentation
     const [existing] = await db
-      .select({ p: presentationsTable })
+      .select()
       .from(presentationsTable)
-      .innerJoin(patientsTable, and(
-        eq(patientsTable.id, presentationsTable.patientId),
-        eq(patientsTable.tenantId, tenantId),
+      .where(and(
+        eq(presentationsTable.id, params.data.id),
+        eq(presentationsTable.tenantId, tenantId),
       ))
-      .where(eq(presentationsTable.id, params.data.id))
       .limit(1);
 
     if (!existing) {
@@ -165,7 +157,10 @@ router.put("/presentations/:id", async (req, res): Promise<void> => {
     const [updated] = await db
       .update(presentationsTable)
       .set(updates)
-      .where(eq(presentationsTable.id, params.data.id))
+      .where(and(
+        eq(presentationsTable.id, params.data.id),
+        eq(presentationsTable.tenantId, tenantId),
+      ))
       .returning();
 
     res.json(updated);
@@ -186,13 +181,12 @@ router.delete("/presentations/:id", async (req, res): Promise<void> => {
 
     // Verify tenant owns this presentation before deleting
     const [existing] = await db
-      .select({ p: presentationsTable })
+      .select()
       .from(presentationsTable)
-      .innerJoin(patientsTable, and(
-        eq(patientsTable.id, presentationsTable.patientId),
-        eq(patientsTable.tenantId, tenantId),
+      .where(and(
+        eq(presentationsTable.id, params.data.id),
+        eq(presentationsTable.tenantId, tenantId),
       ))
-      .where(eq(presentationsTable.id, params.data.id))
       .limit(1);
 
     if (!existing) {
@@ -200,7 +194,10 @@ router.delete("/presentations/:id", async (req, res): Promise<void> => {
       return;
     }
 
-    await db.delete(presentationsTable).where(eq(presentationsTable.id, params.data.id));
+    await db.delete(presentationsTable).where(and(
+      eq(presentationsTable.id, params.data.id),
+      eq(presentationsTable.tenantId, tenantId),
+    ));
     res.sendStatus(204);
   } catch (err: any) {
     if (err.status === 403) { res.status(403).json({ error: err.message }); return; }

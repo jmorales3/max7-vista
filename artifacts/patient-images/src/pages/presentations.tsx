@@ -18,9 +18,13 @@ import {
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { PlusCircle, Play, Pencil, Trash2, Images, ArrowLeft } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { PlusCircle, Play, Pencil, Trash2, Images, ArrowLeft, Download, Loader2, FileText, Presentation as PresentationIcon } from "lucide-react";
 import { format } from "date-fns";
 import { PresentationBuilder, type Slide, type PickerImage } from "@/components/PresentationBuilder";
+import { exportPresentationToPdf, exportPresentationToPptx } from "@/lib/presentationExport";
 
 type Mode = "list" | "builder";
 
@@ -33,6 +37,24 @@ export default function Presentations() {
   const [isSaved, setIsSaved] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ApiPresentation | null>(null);
   const [openViewer, setOpenViewer] = useState<ApiPresentation | null>(null);
+  const [exportingId, setExportingId] = useState<number | null>(null);
+
+  async function handleExportPresentation(p: ApiPresentation, formatType: "pdf" | "pptx") {
+    const slides = (p.slides as Slide[] | undefined) ?? [];
+    if (!slides.length) {
+      toast({ variant: "destructive", title: t("gallery.noSlidesToExport") });
+      return;
+    }
+    setExportingId(p.id);
+    try {
+      if (formatType === "pdf") await exportPresentationToPdf(p.title, slides);
+      else await exportPresentationToPptx(p.title, slides);
+    } catch {
+      toast({ variant: "destructive", title: t("gallery.exportFailed") });
+    } finally {
+      setExportingId(null);
+    }
+  }
 
   const { data: presentations = [], isLoading: presentationsLoading } = useListPresentations(
     {},
@@ -185,6 +207,21 @@ export default function Presentations() {
           <Button size="sm" className="flex-1 h-7 text-xs gap-1" onClick={() => setOpenViewer(p)}>
             <Play className="h-3 w-3" /> {t("presentation.present")}
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" disabled={exportingId === p.id}>
+                {exportingId === p.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleExportPresentation(p, "pdf")}>
+                <FileText className="h-4 w-4 mr-2" /> {t("presentation.exportPdf")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExportPresentation(p, "pptx")}>
+                <PresentationIcon className="h-4 w-4 mr-2" /> {t("presentation.exportPptx")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
             onClick={() => setDeleteTarget(p)}>
             <Trash2 className="h-3 w-3" />

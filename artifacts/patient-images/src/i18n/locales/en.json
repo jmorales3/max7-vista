@@ -270,7 +270,9 @@
     "slides": "slides",
     "deleteTitle": "Delete Presentation",
     "deleteDesc": "Are you sure you want to delete \"{{title}}\"? This cannot be undone.",
-    "addToPresentation": "Add to Presentation"
+    "addToPresentation": "Add to Presentation",
+    "exportPdf": "Export as PDF",
+    "exportPptx": "Export as PowerPoint"
   },
   "gallery": {
     "title": "Gallery",
@@ -282,7 +284,19 @@
     "noImagesEmpty": "Your gallery is empty. Start by capturing some photos.",
     "captureImage": "Capture Image",
     "columns": "{{count}} column",
-    "columns_plural": "{{count}} columns"
+    "columns_plural": "{{count}} columns",
+    "noImagesTags": "No images match the selected tags.",
+    "showAll": "Show All",
+    "select": "Select",
+    "selectedCount": "{{count}} selected",
+    "createPresentation": "Create Presentation",
+    "export": "Export",
+    "exportZip": "Download as ZIP",
+    "exportIndividually": "Download Individually",
+    "exportFailed": "Export failed",
+    "noSlidesToExport": "This presentation has no slides to export",
+    "libraryBadge": "Library",
+    "presentationCreated": "Presentation created"
   },
   "library": {
     "title": "Image Library",

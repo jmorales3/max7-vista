@@ -20,6 +20,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ExportImagesZipInput,
   HealthStatus,
   Image,
   ImageFileReplaceInput,
@@ -1561,6 +1562,77 @@ export const useUploadImage = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUploadImageMutationOptions(options));
+    }
+
+export const getExportImagesZipUrl = () => {
+
+
+
+
+  return `/api/images/export-zip`
+}
+
+/**
+ * @summary Export a set of images (patient images and/or library assets) as a ZIP file
+ */
+export const exportImagesZip = async (exportImagesZipInput: ExportImagesZipInput, options?: RequestInit): Promise<Blob> => {
+
+  return customFetch<Blob>(getExportImagesZipUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      exportImagesZipInput,)
+  }
+);}
+
+
+
+
+export const getExportImagesZipMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exportImagesZip>>, TError,{data: BodyType<ExportImagesZipInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof exportImagesZip>>, TError,{data: BodyType<ExportImagesZipInput>}, TContext> => {
+
+const mutationKey = ['exportImagesZip'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof exportImagesZip>>, {data: BodyType<ExportImagesZipInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  exportImagesZip(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExportImagesZipMutationResult = NonNullable<Awaited<ReturnType<typeof exportImagesZip>>>
+    export type ExportImagesZipMutationBody = BodyType<ExportImagesZipInput>
+    export type ExportImagesZipMutationError = ErrorType<void>
+
+    /**
+ * @summary Export a set of images (patient images and/or library assets) as a ZIP file
+ */
+export const useExportImagesZip = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exportImagesZip>>, TError,{data: BodyType<ExportImagesZipInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof exportImagesZip>>,
+        TError,
+        {data: BodyType<ExportImagesZipInput>},
+        TContext
+      > => {
+      return useMutation(getExportImagesZipMutationOptions(options));
     }
 
 export const getGetImageUrl = (id: number,) => {

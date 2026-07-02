@@ -10,4 +10,8 @@ export type ListImagesParams = {
 patientId?: number;
 dateFrom?: string;
 dateTo?: string;
+/**
+ * Comma-separated tag IDs. When present, only images whose patient has at least one of these tags are returned.
+ */
+tagIds?: string;
 };

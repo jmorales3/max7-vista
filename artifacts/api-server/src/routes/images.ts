@@ -4,7 +4,7 @@ import path from "path";
 import fs from "fs";
 import multer from "multer";
 import AdmZip from "adm-zip";
-import { db, imagesTable, patientsTable } from "@workspace/db";
+import { db, imagesTable, patientsTable, tagsTable, patientTagsTable } from "@workspace/db";
 import {
   ListImagesQueryParams,
   GetImageParams,
@@ -14,6 +14,7 @@ import {
   GetImageFileParams,
   ListPatientImagesParams,
   ReplaceImageFileParams,
+  ExportImagesZipBody,
 } from "@workspace/api-zod";
 import { logAudit } from "../lib/audit";
 import { requireRole } from "../middlewares/requireAuth";
@@ -143,6 +144,28 @@ router.get("/images", async (req, res): Promise<void> => {
     if (params.dateFrom) conditions.push(gte(imagesTable.capturedAt, new Date(params.dateFrom)));
     if (params.dateTo) conditions.push(lte(imagesTable.capturedAt, new Date(params.dateTo)));
     if (accessibleIds !== null) conditions.push(inArray(imagesTable.patientId, accessibleIds) as any);
+
+    if (params.tagIds) {
+      const tagIdList = params.tagIds
+        .split(",")
+        .map((s) => parseInt(s.trim(), 10))
+        .filter((n) => !isNaN(n));
+      if (tagIdList.length === 0) {
+        res.json([]);
+        return;
+      }
+      const taggedPatientRows = await db
+        .selectDistinct({ patientId: patientTagsTable.patientId })
+        .from(patientTagsTable)
+        .innerJoin(tagsTable, and(eq(tagsTable.id, patientTagsTable.tagId), eq(tagsTable.tenantId, tenantId)))
+        .where(inArray(patientTagsTable.tagId, tagIdList));
+      const taggedPatientIds = taggedPatientRows.map((r) => r.patientId);
+      if (taggedPatientIds.length === 0) {
+        res.json([]);
+        return;
+      }
+      conditions.push(inArray(imagesTable.patientId, taggedPatientIds) as any);
+    }
 
     const rows = await db
       .select({
@@ -521,22 +544,101 @@ router.get("/images/:id/file", async (req, res): Promise<void> => {
     if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
 
     const [image] = await db
-      .select({ img: imagesTable })
+      .select()
       .from(imagesTable)
-      .innerJoin(patientsTable, and(eq(patientsTable.id, imagesTable.patientId), eq(patientsTable.tenantId, tenantId)))
-      .where(eq(imagesTable.id, params.data.id))
-      .then(r => r.map(x => x.img));
+      .where(eq(imagesTable.id, params.data.id));
 
     if (!image) { res.status(404).json({ error: "Image not found" }); return; }
 
-    const accessibleIds = await getAccessiblePatientIds(req);
-    if (!canAccessPatient(accessibleIds, image.patientId)) {
-      res.status(403).json({ error: "Access denied" });
-      return;
+    // Library assets have no patient — they are shared, non-patient media, matching
+    // the access model already used by /api/library-assets/:id/file.
+    if (!image.isLibraryAsset) {
+      const [ownerCheck] = await db
+        .select({ id: patientsTable.id })
+        .from(patientsTable)
+        .where(and(eq(patientsTable.id, image.patientId as number), eq(patientsTable.tenantId, tenantId)));
+      if (!ownerCheck) { res.status(404).json({ error: "Image not found" }); return; }
+
+      const accessibleIds = await getAccessiblePatientIds(req);
+      if (!canAccessPatient(accessibleIds, image.patientId)) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
     }
 
     logAudit(req, "image_view", "image", params.data.id, undefined, { patientId: image.patientId ?? undefined });
     await streamFile(image.filePath, image.fileName, res);
+  } catch (err: any) {
+    if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+// POST /api/images/export-zip — export any mix of patient images and/or library
+// assets the caller has legitimate access to, as a single ZIP archive.
+router.post("/images/export-zip", async (req, res): Promise<void> => {
+  try {
+    const tenantId = tid(req);
+    const parsed = ExportImagesZipBody.safeParse(req.body);
+    if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+    const { imageIds } = parsed.data;
+    if (imageIds.length === 0) { res.status(400).json({ error: "imageIds must not be empty" }); return; }
+
+    const accessibleIds = await getAccessiblePatientIds(req);
+
+    const rows = await db
+      .select()
+      .from(imagesTable)
+      .where(inArray(imagesTable.id, imageIds));
+
+    const allowedRows = [];
+    for (const row of rows) {
+      if (row.isLibraryAsset) {
+        allowedRows.push(row);
+        continue;
+      }
+      const [ownerCheck] = await db
+        .select({ id: patientsTable.id })
+        .from(patientsTable)
+        .where(and(eq(patientsTable.id, row.patientId as number), eq(patientsTable.tenantId, tenantId)));
+      if (ownerCheck && canAccessPatient(accessibleIds, row.patientId)) {
+        allowedRows.push(row);
+      }
+    }
+
+    if (allowedRows.length === 0) {
+      res.status(404).json({ error: "No images found for export" });
+      return;
+    }
+
+    const zip = new AdmZip();
+    let added = 0;
+    for (const image of allowedRows) {
+      const buffer = await readFileAsBuffer(image.filePath);
+      if (!buffer) continue;
+      const ext = path.extname(image.fileName) || ".jpg";
+      const dateStr = new Date(image.capturedAt).toISOString().slice(0, 10);
+      const baseName = path.basename(image.fileName, ext).replace(/[^a-zA-Z0-9._-]/g, "_");
+      const entryName = `${image.id}_${dateStr}_${baseName}${ext}`;
+      zip.addFile(entryName, buffer);
+      added++;
+    }
+
+    if (added === 0) {
+      res.status(404).json({ error: "No image files could be retrieved" });
+      return;
+    }
+
+    const zipBuffer = zip.toBuffer();
+    const today = new Date().toISOString().slice(0, 10);
+    const filename = `gallery_export_${today}.zip`;
+
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(filename)}"`);
+    res.setHeader("Content-Length", String(zipBuffer.length));
+    res.end(zipBuffer);
+
+    logAudit(req, "image_export", "image", undefined, { imageCount: added, imageIds: allowedRows.map((r) => r.id) });
   } catch (err: any) {
     if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
     res.status(500).json({ error: String(err) });

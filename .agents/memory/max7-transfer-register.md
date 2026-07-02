@@ -1792,4 +1792,35 @@ Run with `LICENSE_HMAC_SECRET=<production-secret>`.
 
 ---
 
+## FEAT-011 — Gallery Tag Filtering, Presentation Creation & Export (ZIP / PDF / PPTX)
+
+**Status:** ✅ Confirmed working in Vista (e2e tested)
+**Date:** 2026-07-02
+**Vista files:**
+- `artifacts/api-server/src/routes/images.ts` — `tagIds` query filter, relaxed `/:id/file` auth for library assets, `POST /images/export-zip`
+- `artifacts/api-server/src/routes/presentations.ts` — tenant-scoped CRUD
+- `lib/db/src/schema/presentations.ts` — added `tenantId` column
+- `artifacts/patient-images/src/pages/gallery.tsx` — tag pills, selection mode, Create Presentation dialog, Export dropdown, preview dialog
+- `artifacts/patient-images/src/pages/presentations.tsx` — per-card export dropdown (PDF/PPTX)
+- `artifacts/patient-images/src/lib/imageExport.ts`, `presentationExport.ts` — ZIP/PDF/PPTX generation
+
+### What it does
+1. Gallery can filter the merged patient-image + library-asset grid by one or many tags (union match: an image matching ANY selected tag is shown). Default is "Show All" (no filter).
+2. A selection mode lets the user multi-select tiles (patient images and/or library assets together) and either:
+   - **Create a presentation** from the selection (dialog: pick existing presentation or create new, optional patient scoping), or
+   - **Export**: download a ZIP of the selected images, or download them individually.
+3. Presentations can be exported as **PDF** (jsPDF) or **PowerPoint** (PptxGenJS) from a dropdown on each presentation card (not from the gallery — exporting a *presentation* happens on the Presentations page; exporting *raw images* happens on the Gallery page).
+
+### Critical pre-existing bug found & fixed: presentations had no tenant scoping
+`presentationsTable` had **no `tenantId` column**. The GET/PUT/DELETE `/presentations/:id` routes enforced tenant isolation via an `INNER JOIN` to `patientsTable` on `patientId`. This meant **any presentation with `patientId = null` (i.e. a cross-patient / gallery-wide presentation) could never be fetched, updated, or deleted** — the join had nothing to match, so every such lookup silently 404'd. This is a strong general anti-pattern: **never enforce tenant scoping via a join through an optional/nullable foreign key** — a null FK means the row is permanently invisible.
+
+**Fix:** added a direct non-null `tenantId` column (FK to tenants) on `presentationsTable`. All routes (`POST`, `GET /:id`, `PUT /:id`, `DELETE /:id`, `GET` list) now filter by `eq(presentationsTable.tenantId, tenantId)` directly instead of joining through `patientsTable`. `patientsTable` join is now only used to *validate* an optional `patientId` belongs to the tenant on create, not for auth scoping.
+
+### Notes for Max7 agent
+- If Max7's presentations/collections table has an optional `patientId` (or any optional owner-scoping FK), check whether tenant/user scoping is enforced via a join through that same nullable column — if so it has the identical bug and null-FK rows are unreachable. Add a direct non-null `tenantId`/`userId` column instead.
+- Tag filter union-match: build the `tagIds` query filter as `IN` semantics (any selected tag matches), not `AND` (all tags must match) — this was the deliberately chosen UX for "show me anything with tag A or B".
+- Export split by page is intentional UX: Gallery = raw image export (ZIP/individual); Presentations page = formatted document export (PDF/PPTX). Don't collapse these into one control.
+
+---
+
 <!-- Add new entries below as features are confirmed in Vista -->

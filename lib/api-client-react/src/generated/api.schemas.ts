@@ -19,8 +19,6 @@ export interface Patient {
   notes?: string | null;
   createdAt: string;
   imageCount?: number;
-  /** @nullable */
-  profileImageId?: number | null;
 }
 
 export interface ImageUploadInput {
@@ -52,8 +50,6 @@ export interface PatientUpdate {
   patientCode?: string;
   dateOfBirth?: string;
   notes?: string;
-  /** @nullable */
-  profileImageId?: number | null;
 }
 
 export interface Image {
@@ -73,6 +69,10 @@ export interface Image {
   capturedAt: string;
   createdAt: string;
   isUnassigned?: boolean;
+}
+
+export interface ExportImagesZipInput {
+  imageIds: number[];
 }
 
 export interface ImageUpdate {
@@ -157,5 +157,9 @@ export type ListImagesParams = {
 patientId?: number;
 dateFrom?: string;
 dateTo?: string;
+/**
+ * Comma-separated tag IDs. When present, only images whose patient has at least one of these tags are returned.
+ */
+tagIds?: string;
 };
 

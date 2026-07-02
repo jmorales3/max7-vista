@@ -394,6 +394,12 @@ paths:
           required: false
           schema:
             type: string
+        - name: tagIds
+          in: query
+          required: false
+          description: Comma-separated tag IDs. When present, only images whose patient has at least one of these tags are returned.
+          schema:
+            type: string
       responses:
         "200":
           description: List of images
@@ -420,6 +426,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Image"
+
+  /images/export-zip:
+    post:
+      operationId: exportImagesZip
+      tags: [images]
+      summary: Export a set of images (patient images and/or library assets) as a ZIP file
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExportImagesZipInput"
+      responses:
+        "200":
+          description: ZIP archive
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: No images found
 
   /images/{id}:
     get:
@@ -691,6 +719,15 @@ components:
           type: string
         isUnassigned:
           type: boolean
+
+    ExportImagesZipInput:
+      type: object
+      required: [imageIds]
+      properties:
+        imageIds:
+          type: array
+          items:
+            type: integer
 
     ImageUpdate:
       type: object
