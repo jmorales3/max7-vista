@@ -51,3 +51,4 @@ Thumbs.db
 # Large binary / upload directories — never commit to git
 artifacts/api-server/uploads/
 attached_assets/
+artifacts/electron-app/release/
