@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   useListPresentations, getListPresentationsQueryKey,
@@ -21,7 +21,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { PlusCircle, Play, Pencil, Trash2, Images, ArrowLeft, Download, Loader2, FileText, Presentation as PresentationIcon } from "lucide-react";
+import { PlusCircle, Play, Pencil, Trash2, Images, ArrowLeft, Download, Loader2, FileText, Presentation as PresentationIcon, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import { PresentationBuilder, type Slide, type PickerImage } from "@/components/PresentationBuilder";
 import { exportPresentationToPdf, exportPresentationToPptx } from "@/lib/presentationExport";
@@ -38,6 +38,13 @@ export default function Presentations() {
   const [deleteTarget, setDeleteTarget] = useState<ApiPresentation | null>(null);
   const [openViewer, setOpenViewer] = useState<ApiPresentation | null>(null);
   const [exportingId, setExportingId] = useState<number | null>(null);
+  const viewerAnchorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (openViewer && viewerAnchorRef.current) {
+      viewerAnchorRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [openViewer]);
 
   async function handleExportPresentation(p: ApiPresentation, formatType: "pdf" | "pptx") {
     const slides = (p.slides as Slide[] | undefined) ?? [];
@@ -80,7 +87,6 @@ export default function Presentations() {
     }));
 
   const crossPatient = presentations.filter((p) => p.patientId === null || p.patientId === undefined);
-  const patientSpecific = presentations.filter((p) => p.patientId !== null && p.patientId !== undefined);
 
   const createPresentation = useCreatePresentation({
     mutation: {
@@ -249,7 +255,7 @@ export default function Presentations() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-52 rounded-xl" />)}
         </div>
-      ) : presentations.length === 0 ? (
+      ) : crossPatient.length === 0 ? (
         <div className="border-2 border-dashed rounded-xl p-16 text-center text-muted-foreground">
           <Images className="h-12 w-12 mx-auto mb-4 opacity-40" />
           <p className="font-medium">{t("presentation.noPresentations")}</p>
@@ -260,39 +266,27 @@ export default function Presentations() {
           </Button>
         </div>
       ) : (
-        <>
-          {crossPatient.length > 0 && (
-            <section>
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-3">
-                {t("presentation.crossPatientSection")}
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {crossPatient.map((p) => <PresentationCard key={p.id} p={p} />)}
-              </div>
-            </section>
-          )}
-          {patientSpecific.length > 0 && (
-            <section>
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-3">
-                {t("presentation.patientSection")}
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {patientSpecific.map((p) => <PresentationCard key={p.id} p={p} />)}
-              </div>
-            </section>
-          )}
-        </>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {crossPatient.map((p) => <PresentationCard key={p.id} p={p} />)}
+        </div>
       )}
 
       {/* Inline viewer for list page */}
       {openViewer && (
-        <PresentationBuilder
-          images={pickerImages}
-          initialSlides={(openViewer.slides as Slide[] | undefined) ?? []}
-          initialTitle={openViewer.title}
-          groupByPatient
-          headerLeft={null}
-        />
+        <div ref={viewerAnchorRef}>
+          <div className="flex flex-col items-center gap-1 py-3 text-muted-foreground animate-bounce">
+            <ChevronDown className="h-5 w-5" />
+            <span className="text-xs font-medium">{t("presentation.scrollToView")}</span>
+          </div>
+          <PresentationBuilder
+            key={openViewer.id}
+            images={pickerImages}
+            initialSlides={(openViewer.slides as Slide[] | undefined) ?? []}
+            initialTitle={openViewer.title}
+            groupByPatient
+            headerLeft={null}
+          />
+        </div>
       )}
 
       {/* Delete confirm */}

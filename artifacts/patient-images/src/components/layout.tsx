@@ -51,6 +51,7 @@ export function AppSidebar() {
     { title: t("nav.library"), url: "/library", icon: Library },
     { title: t("nav.presentations"), url: "/presentations", icon: MonitorPlay },
     { title: t("nav.templates"), url: "/templates", icon: LayoutTemplate },
+    { title: t("nav.cephalometrics"), url: "/cephalometrics", icon: BrainCircuit },
     { title: t("nav.bulkImport"), url: "/import", icon: FolderUp },
     { title: t("nav.settings"), url: "/settings", icon: Settings },
     { title: t("nav.manual"), url: "/manual", icon: BookOpen },
@@ -101,25 +102,6 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>{t("nav.clinicalTools")}</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={location.startsWith("/cephalometrics")}
-                >
-                  <Link href="/cephalometrics">
-                    <BrainCircuit />
-                    <span>{t("nav.cephalometrics")}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
