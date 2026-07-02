@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Installed via `core.hooksPath` (see scripts/setup-git-hooks.sh).
+# Fires after every commit on main and pushes to GitHub in the background so
+# the commit itself is never slowed down or blocked by network/auth issues.
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [ -n "$REPO_ROOT" ] && [ -f "$REPO_ROOT/scripts/auto-sync-github.sh" ]; then
+  nohup bash "$REPO_ROOT/scripts/auto-sync-github.sh" >/dev/null 2>&1 &
+  disown
+fi
+exit 0

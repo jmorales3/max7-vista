@@ -36,7 +36,76 @@ interface ImportSummary {
   patientsCreated: number;
   patientsMatched: number;
   imagesImported: number;
+  duplicatesSkipped?: number;
   errors: Array<{ file: string; reason: string }>;
+}
+
+interface ImportProgress {
+  current: number;
+  total: number;
+  fileName?: string;
+}
+
+// Reads a fetch Response body as newline-delimited JSON, invoking onEvent for
+// each parsed line as it streams in. Falls back to a single JSON.parse of the
+// full body when the response isn't chunked (e.g. old-style non-streaming error).
+async function consumeNdjsonStream(
+  res: Response,
+  onEvent: (event: Record<string, unknown>) => void,
+): Promise<void> {
+  const reader = res.body?.getReader();
+  if (!reader) {
+    const body = await res.json().catch(() => null);
+    if (body) onEvent(body as Record<string, unknown>);
+    return;
+  }
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      try {
+        onEvent(JSON.parse(trimmed));
+      } catch {
+        // ignore malformed line
+      }
+    }
+  }
+  const trimmed = buffer.trim();
+  if (trimmed) {
+    try {
+      onEvent(JSON.parse(trimmed));
+    } catch {
+      // ignore malformed trailing line
+    }
+  }
+}
+
+function ImportProgressBar({ progress, label }: { progress: ImportProgress; label: string }) {
+  const pct = progress.total > 0 ? Math.min(100, Math.round((progress.current / progress.total) * 100)) : 0;
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="font-medium tabular-nums">{pct}%</span>
+      </div>
+      <div className="h-2 rounded-full bg-muted overflow-hidden">
+        <div
+          className="h-full bg-primary transition-all duration-150"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      {progress.fileName && (
+        <p className="text-xs text-muted-foreground truncate font-mono">{progress.fileName}</p>
+      )}
+    </div>
+  );
 }
 
 const inlineCode = <code className="bg-muted px-1 rounded text-xs" />;
@@ -109,7 +178,7 @@ function ImportSummaryCard({ summary }: { summary: ImportSummary }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-3 gap-4 text-center">
+        <div className={`grid gap-4 text-center ${summary.duplicatesSkipped ? "grid-cols-4" : "grid-cols-3"}`}>
           <div className="rounded-lg bg-muted p-4">
             <p className="text-3xl font-bold text-primary">{summary.imagesImported}</p>
             <p className="text-xs text-muted-foreground mt-1">{t("bulkImport.statImagesImported")}</p>
@@ -122,6 +191,12 @@ function ImportSummaryCard({ summary }: { summary: ImportSummary }) {
             <p className="text-3xl font-bold">{summary.patientsMatched}</p>
             <p className="text-xs text-muted-foreground mt-1">{t("bulkImport.statPatientsMatched")}</p>
           </div>
+          {!!summary.duplicatesSkipped && (
+            <div className="rounded-lg bg-muted p-4">
+              <p className="text-3xl font-bold text-amber-500">{summary.duplicatesSkipped}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t("bulkImport.statDuplicatesSkipped")}</p>
+            </div>
+          )}
         </div>
 
         {summary.errors.length > 0 && (
@@ -166,6 +241,7 @@ function ZipImportTab() {
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState<ImportSummary | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<ImportProgress | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -174,6 +250,7 @@ function ZipImportTab() {
     setLoading(true);
     setSummary(null);
     setImportError(null);
+    setProgress(null);
 
     try {
       // Step 1 — get a signed GCS URL (bypasses Replit proxy size limit)
@@ -195,7 +272,7 @@ function ZipImportTab() {
       });
       if (!putRes.ok) throw new Error(`ZIP upload failed: HTTP ${putRes.status}`);
 
-      // Step 3 — tell the server to process the ZIP from GCS
+      // Step 3 — tell the server to process the ZIP from GCS, streaming live progress
       const csvContent = csvFile ? await csvFile.text() : undefined;
       const res = await fetch(getApiUrl("/api/import/bulk-from-gcs"), {
         method: "POST",
@@ -209,7 +286,25 @@ function ZipImportTab() {
         throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
       }
 
-      const result: ImportSummary = await res.json();
+      const outcome: { result: ImportSummary | null; streamError: string | null } = {
+        result: null,
+        streamError: null,
+      };
+      await consumeNdjsonStream(res, (event) => {
+        if (event.type === "start") {
+          setProgress({ current: 0, total: event.total as number });
+        } else if (event.type === "progress") {
+          setProgress({ current: event.current as number, total: event.total as number, fileName: event.fileName as string | undefined });
+        } else if (event.type === "done") {
+          outcome.result = event.summary as ImportSummary;
+        } else if (event.type === "error") {
+          outcome.streamError = event.error as string;
+        }
+      });
+
+      if (outcome.streamError) throw new Error(outcome.streamError);
+      if (!outcome.result) throw new Error(t("bulkImport.unknownError"));
+      const result = outcome.result;
       setSummary(result);
 
       void queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
@@ -299,6 +394,13 @@ function ZipImportTab() {
               </div>
             </div>
 
+            {loading && progress && (
+              <ImportProgressBar
+                progress={progress}
+                label={t("bulkImport.progressLabel", { current: progress.current, total: progress.total })}
+              />
+            )}
+
             <div className="flex justify-end pt-2">
               <Button type="submit" disabled={!archiveFile || loading} size="lg">
                 {loading ? (
@@ -341,6 +443,7 @@ function FolderImportTab() {
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState<ImportSummary | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<ImportProgress | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -349,6 +452,7 @@ function FolderImportTab() {
     setLoading(true);
     setSummary(null);
     setImportError(null);
+    setProgress(null);
 
     const formData = new FormData();
     formData.append("folderPath", folderPath.trim());
@@ -366,7 +470,28 @@ function FolderImportTab() {
         throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
       }
 
-      const result: ImportSummary = await res.json();
+      const outcome: { result: ImportSummary | null; streamError: string | null } = {
+        result: null,
+        streamError: null,
+      };
+      await consumeNdjsonStream(res, (event) => {
+        if (event.type === "start") {
+          setProgress({ current: 0, total: event.total as number });
+        } else if (event.type === "progress") {
+          setProgress({ current: event.current as number, total: event.total as number, fileName: event.fileName as string | undefined });
+        } else if (event.type === "done") {
+          outcome.result = event.summary as ImportSummary;
+        } else if (event.type === "error") {
+          outcome.streamError = event.error as string;
+        } else if (!("type" in event)) {
+          // Non-streamed early-return responses (e.g. "no images found") are plain JSON summaries.
+          outcome.result = event as unknown as ImportSummary;
+        }
+      });
+
+      if (outcome.streamError) throw new Error(outcome.streamError);
+      if (!outcome.result) throw new Error(t("bulkImport.unknownError"));
+      const result = outcome.result;
       setSummary(result);
 
       void queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
@@ -465,6 +590,13 @@ function FolderImportTab() {
                 onChange={setCsvFile}
               />
             </div>
+
+            {loading && progress && (
+              <ImportProgressBar
+                progress={progress}
+                label={t("bulkImport.progressLabel", { current: progress.current, total: progress.total })}
+              />
+            )}
 
             <div className="flex justify-end pt-2">
               <Button type="submit" disabled={!folderPath.trim() || loading} size="lg">

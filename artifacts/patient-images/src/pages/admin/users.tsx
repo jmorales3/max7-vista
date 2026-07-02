@@ -8,6 +8,7 @@ import {
   deleteAdminUser,
   getPatientAccess,
   setPatientAccess,
+  getPatientAccessSummary,
   type AdminUser,
   type Role,
 } from "@/lib/auth";
@@ -77,6 +78,11 @@ export default function AdminUsersPage() {
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["admin-users"],
     queryFn: listAdminUsers,
+  });
+
+  const { data: accessSummary = {} } = useQuery({
+    queryKey: ["admin-patient-access-summary"],
+    queryFn: getPatientAccessSummary,
   });
 
   const updateMutation = useMutation({
@@ -245,13 +251,14 @@ export default function AdminUsersPage() {
                 <TableHead>{t("admin.colJoined")}</TableHead>
                 <TableHead>{t("admin.colRole")}</TableHead>
                 <TableHead>{t("admin.colStatus")}</TableHead>
+                <TableHead>{t("admin.colAccess")}</TableHead>
                 <TableHead className="text-right">{t("admin.colActions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {active.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                     {t("admin.noActiveUsers")}
                   </TableCell>
                 </TableRow>
@@ -261,6 +268,7 @@ export default function AdminUsersPage() {
                   key={u.id}
                   user={u}
                   currentUserId={currentUser?.id}
+                  restrictedCount={accessSummary[u.id]}
                   onApprove={() => updateMutation.mutate({ id: u.id, updates: { isActive: true } })}
                   onDeny={() => updateMutation.mutate({ id: u.id, updates: { isActive: false } })}
                   onRoleChange={(role) => updateMutation.mutate({ id: u.id, updates: { role } })}
@@ -279,6 +287,7 @@ export default function AdminUsersPage() {
 function UserRow({
   user,
   currentUserId,
+  restrictedCount,
   onApprove,
   onDeny,
   onRoleChange,
@@ -287,6 +296,7 @@ function UserRow({
 }: {
   user: AdminUser;
   currentUserId?: number;
+  restrictedCount?: number;
   onApprove: () => void;
   onDeny: () => void;
   onRoleChange: (role: Role) => void;
@@ -347,6 +357,21 @@ function UserRow({
             >
               {user.isActive ? t("admin.statusActive") : t("admin.statusSuspended")}
             </Badge>
+          </TableCell>
+        )}
+        {!isPending && (
+          <TableCell>
+            {user.role === "user" ? (
+              restrictedCount ? (
+                <Badge variant="outline" className="text-amber-700 dark:text-amber-400 border-amber-500/40 bg-amber-500/10 text-[11px] whitespace-nowrap">
+                  {t("admin.accessRestrictedCount", { count: restrictedCount })}
+                </Badge>
+              ) : (
+                <span className="text-muted-foreground text-xs">{t("admin.accessUnrestricted")}</span>
+              )
+            ) : (
+              <span className="text-muted-foreground text-xs">—</span>
+            )}
           </TableCell>
         )}
         <TableCell className="text-right">

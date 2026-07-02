@@ -3,13 +3,20 @@ import multer from "multer";
 import AdmZip from "adm-zip";
 import path from "path";
 import fs from "fs";
+import { createHash } from "crypto";
 import { db, imagesTable, patientsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { getStorageDirectory } from "../lib/storage";
 import { logAudit } from "../lib/audit";
 import { getSignedUploadUrl, uploadToGcs, toGcsPath, readFileAsBuffer } from "../lib/gcsStorage";
 
 const router: IRouter = Router();
+
+function tid(req: { session?: { tenantId?: number } }): number {
+  const t = req.session?.tenantId;
+  if (!t) throw Object.assign(new Error("No tenant associated with this session"), { status: 403 });
+  return t;
+}
 
 const importUpload = multer({
   storage: multer.memoryStorage(),
@@ -130,6 +137,7 @@ interface ImportSummary {
   patientsCreated: number;
   patientsMatched: number;
   imagesImported: number;
+  duplicatesSkipped: number;
   errors: Array<{ file: string; reason: string }>;
 }
 
@@ -139,10 +147,11 @@ async function upsertPatient(
   patientMap: Map<string, PatientInfo>,
   summary: ImportSummary,
 ): Promise<{ id: number }> {
+  const tenantId = tid(req);
   const [existing] = await db
     .select({ id: patientsTable.id })
     .from(patientsTable)
-    .where(eq(patientsTable.patientCode, patientCode));
+    .where(and(eq(patientsTable.tenantId, tenantId), eq(patientsTable.patientCode, patientCode)));
 
   if (existing) {
     summary.patientsMatched++;
@@ -165,6 +174,7 @@ async function upsertPatient(
   const [created] = await db
     .insert(patientsTable)
     .values({
+      tenantId,
       patientCode,
       name: csvInfo?.name ?? patientCode,
       dateOfBirth: csvInfo?.dateOfBirth ?? null,
@@ -175,13 +185,31 @@ async function upsertPatient(
   return created;
 }
 
+// Returns true if an image with the same content hash already exists for
+// this patient (duplicate import), false otherwise.
+async function isDuplicateImage(patientId: number, sha256: string): Promise<boolean> {
+  const [existing] = await db
+    .select({ id: imagesTable.id })
+    .from(imagesTable)
+    .where(and(eq(imagesTable.patientId, patientId), eq(imagesTable.sha256, sha256)));
+  return !!existing;
+}
+
 async function saveImage(
   patientId: number,
   fileName: string,
   buffer: Buffer,
   capturedAt: Date,
   storageDir: string,
+  summary?: ImportSummary,
 ): Promise<void> {
+  const sha256 = createHash("sha256").update(buffer).digest("hex");
+
+  if (summary && (await isDuplicateImage(patientId, sha256))) {
+    summary.duplicatesSkipped++;
+    return;
+  }
+
   const dateStr = capturedAt.toISOString().split("T")[0];
   const subFolder = path.join(storageDir, String(patientId), dateStr);
   fs.mkdirSync(subFolder, { recursive: true });
@@ -202,6 +230,7 @@ async function saveImage(
     notes: legend || null,
     capturedAt: capturedAt,
     isUnassigned: 0 as unknown as boolean,
+    sha256,
   });
 }
 
@@ -227,6 +256,7 @@ router.post(
       patientsCreated: 0,
       patientsMatched: 0,
       imagesImported: 0,
+      duplicatesSkipped: 0,
       errors: [],
     };
 
@@ -285,8 +315,9 @@ router.post(
             capturedAt =
               zipDate instanceof Date && !isNaN(zipDate.getTime()) ? zipDate : new Date();
           }
-          await saveImage(dbPatient.id, fileName, buffer, capturedAt, storageDir);
-          summary.imagesImported++;
+          const before = summary.duplicatesSkipped;
+          await saveImage(dbPatient.id, fileName, buffer, capturedAt, storageDir, summary);
+          if (summary.duplicatesSkipped === before) summary.imagesImported++;
         } catch (err) {
           const reason = err instanceof Error ? err.message : String(err);
           console.error(`[bulk-import/zip] failed to save ${entry.entryName}:`, reason);
@@ -299,6 +330,7 @@ router.post(
       patientsCreated: summary.patientsCreated,
       patientsMatched: summary.patientsMatched,
       imagesImported: summary.imagesImported,
+      duplicatesSkipped: summary.duplicatesSkipped,
       errors: summary.errors.length,
       source: "zip",
     });
@@ -340,6 +372,7 @@ router.post("/import/bulk-from-gcs", async (req, res): Promise<void> => {
     patientsCreated: 0,
     patientsMatched: 0,
     imagesImported: 0,
+    duplicatesSkipped: 0,
     errors: [],
   };
 
@@ -366,6 +399,15 @@ router.post("/import/bulk-from-gcs", async (req, res): Promise<void> => {
     return;
   }
 
+  // From here on we stream NDJSON progress lines so the client can render a
+  // live progress bar instead of waiting silently for the whole import.
+  res.writeHead(200, {
+    "Content-Type": "application/x-ndjson",
+    "Cache-Control": "no-cache",
+    "X-Accel-Buffering": "no",
+  });
+  const emit = (event: Record<string, unknown>) => res.write(JSON.stringify(event) + "\n");
+
   // Detect single root wrapper folder
   const topLevelNames = new Set<string>();
   for (const entry of zip.getEntries()) {
@@ -390,6 +432,10 @@ router.post("/import/bulk-from-gcs", async (req, res): Promise<void> => {
     byPatient.get(patientCode)!.push(entry);
   }
 
+  const totalFiles = Array.from(byPatient.values()).reduce((n, e) => n + e.length, 0);
+  emit({ type: "start", total: totalFiles });
+  let processed = 0;
+
   for (const [patientCode, entries] of byPatient) {
     const dbPatient = await upsertPatient(req, patientCode, patientMap, summary);
 
@@ -402,6 +448,12 @@ router.post("/import/bulk-from-gcs", async (req, res): Promise<void> => {
           const zipDate = entry.header.time;
           capturedAt =
             zipDate instanceof Date && !isNaN(zipDate.getTime()) ? zipDate : new Date();
+        }
+
+        const sha256 = createHash("sha256").update(buffer).digest("hex");
+        if (await isDuplicateImage(dbPatient.id, sha256)) {
+          summary.duplicatesSkipped++;
+          continue;
         }
 
         // Save to GCS (cloud path — persists across deployments)
@@ -419,12 +471,16 @@ router.post("/import/bulk-from-gcs", async (req, res): Promise<void> => {
           notes: legend || null,
           capturedAt,
           isUnassigned: 0 as unknown as boolean,
+          sha256,
         });
 
         summary.imagesImported++;
       } catch (err) {
         const reason = err instanceof Error ? err.message : String(err);
         summary.errors.push({ file: entry.entryName, reason });
+      } finally {
+        processed++;
+        emit({ type: "progress", current: processed, total: totalFiles, patientCode, fileName });
       }
     }
   }
@@ -439,11 +495,13 @@ router.post("/import/bulk-from-gcs", async (req, res): Promise<void> => {
     patientsCreated: summary.patientsCreated,
     patientsMatched: summary.patientsMatched,
     imagesImported: summary.imagesImported,
+    duplicatesSkipped: summary.duplicatesSkipped,
     errors: summary.errors.length,
     source: "zip-gcs",
   });
 
-  res.json(summary);
+  emit({ type: "done", summary });
+  res.end();
 });
 
 // ─── Server-folder import ─────────────────────────────────────────────────────
@@ -502,6 +560,7 @@ router.post(
       patientsCreated: 0,
       patientsMatched: 0,
       imagesImported: 0,
+      duplicatesSkipped: 0,
       errors: [],
     };
 
@@ -548,6 +607,19 @@ router.post(
 
       const storageDir = await getStorageDirectory();
 
+      // From here on we stream NDJSON progress lines so the client can render a
+      // live progress bar instead of waiting silently for the whole import.
+      res.writeHead(200, {
+        "Content-Type": "application/x-ndjson",
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+      });
+      const emit = (event: Record<string, unknown>) => res.write(JSON.stringify(event) + "\n");
+
+      const totalFiles = Array.from(byPatient.values()).reduce((n, p) => n + p.length, 0);
+      emit({ type: "start", total: totalFiles });
+      let processed = 0;
+
       for (const [patientCode, filePaths] of byPatient) {
         const dbPatient = await upsertPatient(req, patientCode, patientMap, summary);
 
@@ -560,13 +632,17 @@ router.post(
               const stat = fs.statSync(srcPath);
               capturedAt = stat.mtime ?? new Date();
             }
-            await saveImage(dbPatient.id, fileName, buffer, capturedAt, storageDir);
-            summary.imagesImported++;
+            const before = summary.duplicatesSkipped;
+            await saveImage(dbPatient.id, fileName, buffer, capturedAt, storageDir, summary);
+            if (summary.duplicatesSkipped === before) summary.imagesImported++;
           } catch (err) {
             summary.errors.push({
               file: srcPath,
               reason: err instanceof Error ? err.message : String(err),
             });
+          } finally {
+            processed++;
+            emit({ type: "progress", current: processed, total: totalFiles, patientCode, fileName });
           }
         }
       }
@@ -576,14 +652,25 @@ router.post(
         patientsCreated: summary.patientsCreated,
         patientsMatched: summary.patientsMatched,
         imagesImported: summary.imagesImported,
+        duplicatesSkipped: summary.duplicatesSkipped,
         errors: summary.errors.length,
         source: "folder",
       });
 
-      res.json(summary);
+      if (res.headersSent) {
+        res.write(JSON.stringify({ type: "done", summary }) + "\n");
+        res.end();
+      } else {
+        res.json(summary);
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      res.status(500).json({ error: `Import failed: ${msg}` });
+      if (res.headersSent) {
+        res.write(JSON.stringify({ type: "error", error: `Import failed: ${msg}` }) + "\n");
+        res.end();
+      } else {
+        res.status(500).json({ error: `Import failed: ${msg}` });
+      }
     }
   },
 );

@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
@@ -238,6 +238,54 @@ function TrialBanner() {
   );
 }
 
+function UpdateBanner() {
+  const { t } = useTranslation();
+  const [status, setStatus] = useState<"idle" | "available" | "downloading" | "downloaded">("idle");
+  const [version, setVersion] = useState("");
+  const [percent, setPercent] = useState(0);
+
+  useEffect(() => {
+    const api = (window as unknown as { electronAPI?: Window["electronAPI"] }).electronAPI;
+    if (!api) return;
+
+    api.onUpdateAvailable((v) => {
+      setVersion(v);
+      setStatus("available");
+    });
+    api.onUpdateDownloadProgress((p) => {
+      setPercent(p);
+      setStatus("downloading");
+    });
+    api.onUpdateDownloaded((v) => {
+      setVersion(v);
+      setStatus("downloaded");
+    });
+  }, []);
+
+  if (status === "idle") return null;
+
+  return (
+    <div className="border-b px-4 py-2 text-sm flex items-center justify-between gap-2 no-print bg-blue-500/10 border-blue-500/20 text-blue-800 dark:text-blue-400">
+      <span>
+        {status === "downloaded"
+          ? t("updater.downloaded", { version })
+          : status === "downloading"
+            ? t("updater.downloading", { percent })
+            : t("updater.available", { version })}
+      </span>
+      {status === "downloaded" && (
+        <button
+          type="button"
+          onClick={() => window.electronAPI?.installUpdate()}
+          className="text-xs font-semibold underline underline-offset-2 shrink-0"
+        >
+          {t("updater.restartNow")}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <SidebarProvider>
@@ -248,6 +296,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <SidebarTrigger />
           </header>
           <TrialBanner />
+          <UpdateBanner />
           <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
             {children}
           </main>

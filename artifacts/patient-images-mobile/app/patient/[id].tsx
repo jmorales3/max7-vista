@@ -64,12 +64,23 @@ function ImageGridItem({
         contentFit="cover"
         transition={200}
       />
-      {columns === 1 && image.notes ? (
-        <View style={[gridStyles.noteBanner, { backgroundColor: colors.card }]}>
-          <Text style={[gridStyles.noteText, { color: colors.mutedForeground }]} numberOfLines={1}>
-            {image.notes}
-          </Text>
-        </View>
+      {image.notes ? (
+        columns === 1 ? (
+          <View style={[gridStyles.noteBanner, { backgroundColor: colors.card }]}>
+            <Text style={[gridStyles.noteText, { color: colors.mutedForeground }]} numberOfLines={1}>
+              {image.notes}
+            </Text>
+          </View>
+        ) : (
+          <View style={gridStyles.noteOverlay}>
+            <Text
+              style={[gridStyles.noteOverlayText, columns === 4 && gridStyles.noteOverlayTextSmall]}
+              numberOfLines={columns === 4 ? 1 : 2}
+            >
+              {image.notes}
+            </Text>
+          </View>
+        )
       ) : null}
     </TouchableOpacity>
   );
@@ -92,6 +103,25 @@ const gridStyles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter_400Regular",
   },
+  noteOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+    backgroundColor: "rgba(0,0,0,0.55)",
+  },
+  noteOverlayText: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontFamily: "Inter_400Regular",
+    color: "#fff",
+  },
+  noteOverlayTextSmall: {
+    fontSize: 9,
+    lineHeight: 11,
+  },
 });
 
 export default function PatientDetailScreen() {
@@ -105,7 +135,13 @@ export default function PatientDetailScreen() {
 
   const baseUrl = getBaseUrl() ?? "";
 
-  const { data: patient, isLoading: patientLoading } = useGetPatient(patientId);
+  const { data: patient, isLoading: patientLoading, isError: patientError, error: patientErrorObj } = useGetPatient(patientId);
+  const isAccessDenied =
+    patientError &&
+    typeof patientErrorObj === "object" &&
+    patientErrorObj !== null &&
+    "status" in patientErrorObj &&
+    (patientErrorObj as { status?: number }).status === 403;
   const {
     data: images,
     isLoading: imagesLoading,
@@ -193,6 +229,13 @@ export default function PatientDetailScreen() {
       paddingVertical: 8,
       backgroundColor: colors.muted,
     },
+    retryBtn: {
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      backgroundColor: colors.primary,
+      borderRadius: colors.radius,
+      marginTop: 4,
+    },
     countText: {
       fontSize: 12,
       fontFamily: "Inter_500Medium",
@@ -261,6 +304,19 @@ export default function PatientDetailScreen() {
     return (
       <View style={[s.container, s.centered]}>
         <ActivityIndicator color={colors.primary} size="large" />
+      </View>
+    );
+  }
+
+  if (isAccessDenied) {
+    return (
+      <View style={[s.container, s.centered]}>
+        <Ionicons name="lock-closed-outline" size={40} color={colors.mutedForeground} />
+        <Text style={s.emptyText}>Access denied</Text>
+        <Text style={s.emptySubtext}>You don't have access to this patient.</Text>
+        <TouchableOpacity style={s.retryBtn} onPress={() => router.back()}>
+          <Text style={{ color: colors.primaryForeground, fontFamily: "Inter_500Medium" }}>Go back</Text>
+        </TouchableOpacity>
       </View>
     );
   }

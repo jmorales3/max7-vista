@@ -80,12 +80,31 @@ app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 // Clerk JWT middleware is NOT active in the request pipeline — clerkMiddleware
 // from @clerk/express is fully stateless and requires no server-side store, but
 // it is unused here. Sessions are managed entirely by express-session below.
+//
+// Secret rotation: express-session accepts an array of secrets. New cookies
+// are always signed with the FIRST entry; verification is tried against every
+// entry in the array. This lets an admin rotate SESSION_SECRET without
+// forcibly logging everyone out — set SESSION_SECRET to the new value and
+// move the old value into SESSION_SECRET_PREVIOUS (comma-separated list
+// supported for more than one grace-period secret). Once all old sessions
+// have naturally expired (30 min idle / rolling), drop SESSION_SECRET_PREVIOUS.
+function getSessionSecrets(): string[] {
+  const current = process.env["SESSION_SECRET"] || "max7-vista-dev-secret-change-in-prod";
+  const previous = (process.env["SESSION_SECRET_PREVIOUS"] || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return [current, ...previous];
+}
+
+const sessionSecrets = getSessionSecrets();
+
 if (IS_SQLITE) {
   app.use(
     session({
       store: new SqliteSessionStore(),
       name: "max7.sid",
-      secret: process.env["SESSION_SECRET"] || "max7-vista-dev-secret-change-in-prod",
+      secret: sessionSecrets,
       resave: false,
       saveUninitialized: false,
       rolling: true,
@@ -106,7 +125,7 @@ if (IS_SQLITE) {
         createTableIfMissing: false,
       }),
       name: "max7.sid",
-      secret: process.env["SESSION_SECRET"] || "max7-vista-dev-secret-change-in-prod",
+      secret: sessionSecrets,
       resave: false,
       saveUninitialized: false,
       rolling: true,

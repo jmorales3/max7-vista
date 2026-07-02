@@ -172,4 +172,28 @@ router.get("/auth/session", (req, res) => {
   });
 });
 
+// Touches the session so its rolling expiry is extended without requiring a
+// full data request. Mobile clients call this periodically while the app is
+// in the foreground so an idle-but-open session doesn't silently expire.
+router.post("/auth/refresh", (req, res) => {
+  if (!req.session.userId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+
+  req.session.touch();
+  req.session.save((err) => {
+    if (err) {
+      res.status(500).json({ error: "Internal server error" });
+      return;
+    }
+    res.json({
+      id: req.session.userId,
+      username: req.session.username,
+      role: req.session.role,
+      tenantId: req.session.tenantId,
+    });
+  });
+});
+
 export default router;

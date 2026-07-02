@@ -5,7 +5,7 @@ import path from "path";
 import fs from "fs";
 import bcrypt from "bcryptjs";
 import { db, patientsTable, imagesTable, usersTable, settingsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { requireRole } from "../middlewares/requireAuth";
 import { setSetting } from "../lib/storage";
 import { readFileAsBuffer, uploadToGcs } from "../lib/gcsStorage";
@@ -14,6 +14,12 @@ import { logAudit } from "../lib/audit";
 const router: IRouter = Router();
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 * 1024 } });
+
+function tid(req: { session?: { tenantId?: number } }): number {
+  const t = req.session?.tenantId;
+  if (!t) throw Object.assign(new Error("No tenant associated with this session"), { status: 403 });
+  return t;
+}
 
 const MIGRATION_VERSION = "1";
 
@@ -44,7 +50,7 @@ router.get(
         return {
           patientCode: idToCode.get(img.patientId ?? -1) ?? null,
           fileName: img.fileName,
-          fileType: img.fileType ?? "application/octet-stream",
+          mediaType: img.mediaType ?? "image",
           notes: img.notes ?? null,
           capturedAt: img.capturedAt instanceof Date
             ? img.capturedAt.toISOString()
@@ -120,7 +126,7 @@ router.get(
 interface ExportedImage {
   patientCode: string | null;
   fileName: string;
-  fileType?: string;
+  mediaType?: string;
   notes: string | null;
   capturedAt: string;
   isUnassigned: boolean | number;
@@ -190,6 +196,7 @@ router.post(
       }
 
       // ── Patients ───────────────────────────────────────────────────────────
+      const tenantId = tid(req);
       const patientsEntry = zip.getEntry("data/patients.json");
       if (patientsEntry) {
         const exportedPatients: ExportedPatient[] = JSON.parse(patientsEntry.getData().toString("utf-8"));
@@ -197,11 +204,12 @@ router.post(
           try {
             const [existing] = await db.select({ id: patientsTable.id })
               .from(patientsTable)
-              .where(eq(patientsTable.patientCode, p.patientCode));
+              .where(and(eq(patientsTable.tenantId, tenantId), eq(patientsTable.patientCode, p.patientCode)));
             if (existing) {
               summary.patientsSkipped++;
             } else {
               await db.insert(patientsTable).values({
+                tenantId,
                 name: p.name,
                 patientCode: p.patientCode,
                 dateOfBirth: p.dateOfBirth ?? null,
@@ -216,7 +224,9 @@ router.post(
       }
 
       // Refresh patientCode → id map after import
-      const allPatients = await db.select({ id: patientsTable.id, patientCode: patientsTable.patientCode }).from(patientsTable);
+      const allPatients = await db.select({ id: patientsTable.id, patientCode: patientsTable.patientCode })
+        .from(patientsTable)
+        .where(eq(patientsTable.tenantId, tenantId));
       const codeToId = new Map(allPatients.map((p) => [p.patientCode, p.id]));
 
       // ── Images ─────────────────────────────────────────────────────────────
@@ -234,7 +244,7 @@ router.post(
             const objectName = patientId
               ? `images/${patientId}/${dateStr}/${storedName}`
               : `images/unassigned/${dateStr}/${storedName}`;
-            const mimeType = img.fileType ?? "application/octet-stream";
+            const mimeType = img.mediaType === "video" ? "video/mp4" : "image/jpeg";
 
             // Extract file from ZIP and store via the storage adapter
             // (uploadToGcs → GCS on cloud, local disk on Electron/LAN build)
@@ -257,6 +267,7 @@ router.post(
               patientId: patientId ?? undefined,
               filePath: storedFilePath ?? "",
               fileName: img.fileName,
+              mediaType: img.mediaType ?? "image",
               notes: img.notes ?? null,
               capturedAt: capturedAt,
               isUnassigned: (img.isUnassigned ? 1 : 0) as unknown as boolean,

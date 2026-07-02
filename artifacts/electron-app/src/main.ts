@@ -135,12 +135,15 @@ async function startApiServer(): Promise<void> {
   ) => Promise<unknown>;
 
   try {
+    sendStartupProgress("Initializing server");
     await nativeImport(serverUrl);
     // nativeImport resolves as soon as the module is evaluated — the server's
     // async start() runs in the background.  Poll the health endpoint until the
     // server is actually accepting connections (and the DB is seeded) before
     // returning so Electron doesn't open the login window too early.
+    sendStartupProgress("Loading database");
     await waitForApiServer();
+    sendStartupProgress("Preparing interface");
     console.log("[api-server] Server ready on port", API_PORT);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -184,6 +187,12 @@ async function checkLicenseStatus(): Promise<{ state: string; daysLeft: number |
 
 // ─── Splash Window ───────────────────────────────────────────────────────────
 
+function sendStartupProgress(step: string): void {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.webContents.send("startup:progress", step);
+  }
+}
+
 function createSplashWindow(): void {
   splashWindow = new BrowserWindow({
     width: 380,
@@ -196,9 +205,10 @@ function createSplashWindow(): void {
     show: false,
     title: "Patient Image Manager",
     webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true,
+      sandbox: false,
     },
   });
 
@@ -263,6 +273,7 @@ function createWindow(): void {
 
   // Once the UI finishes loading, close the splash and reveal the main window.
   mainWindow.webContents.once("did-finish-load", () => {
+    sendStartupProgress("Ready");
     closeSplashWindow();
     mainWindow?.show();
 
@@ -318,6 +329,8 @@ function createLicenseWindow(): void {
 // ─── IPC Handlers ────────────────────────────────────────────────────────────
 
 ipcMain.handle("get-lan-addresses", (): string[] => getLanAddresses());
+
+ipcMain.handle("get-app-version", (): string => app.getVersion());
 
 ipcMain.handle("dialog:openDirectory", async (): Promise<string | null> => {
   if (!mainWindow) return null;

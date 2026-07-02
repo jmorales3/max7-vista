@@ -19,6 +19,7 @@ let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
 let _sessionCookie: string | null = null;
 let _unauthorizedHandler: (() => void) | null = null;
+let _suspendedHandler: (() => void) | null = null;
 
 /**
  * Register a callback that is invoked whenever any API response returns a
@@ -29,6 +30,17 @@ let _unauthorizedHandler: (() => void) | null = null;
  */
 export function setUnauthorizedHandler(handler: (() => void) | null): void {
   _unauthorizedHandler = handler;
+}
+
+/**
+ * Register a callback that is invoked whenever any API response returns a
+ * 403 with `code: "ACCOUNT_SUSPENDED"`. Useful for redirecting the user to a
+ * dedicated "access suspended" screen from a central place.
+ *
+ * Pass `null` to clear the handler.
+ */
+export function setSuspendedHandler(handler: (() => void) | null): void {
+  _suspendedHandler = handler;
 }
 
 /**
@@ -405,6 +417,14 @@ export async function customFetch<T = unknown>(
     const errorData = await parseErrorBody(response, method);
     if (response.status === 401 && _unauthorizedHandler) {
       _unauthorizedHandler();
+    } else if (
+      response.status === 403 &&
+      _suspendedHandler &&
+      typeof errorData === "object" &&
+      errorData !== null &&
+      (errorData as { code?: string }).code === "ACCOUNT_SUSPENDED"
+    ) {
+      _suspendedHandler();
     }
     throw new ApiError(response, errorData, requestInfo);
   }

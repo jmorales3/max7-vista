@@ -116,20 +116,23 @@
   <p class="version" id="version"></p>
 
   <script>
-    const messages = [
-      "Initializing server",
-      "Loading database",
-      "Preparing interface",
-    ];
-    let idx = 0;
     const statusEl = document.getElementById("status");
-    setInterval(() => {
-      idx = (idx + 1) % messages.length;
-      statusEl.textContent = messages[idx];
-    }, 900);
 
-    if (window.__APP_VERSION__) {
-      document.getElementById("version").textContent = "v" + window.__APP_VERSION__;
+    // Real startup steps reported by the main process (see main.ts
+    // sendStartupProgress calls). Falls back to a generic message if the
+    // bridge isn't available (e.g. loaded outside Electron during dev).
+    if (window.electronAPI && typeof window.electronAPI.onStartupProgress === "function") {
+      window.electronAPI.onStartupProgress((step) => {
+        statusEl.textContent = step;
+      });
+    } else {
+      statusEl.textContent = "Starting…";
+    }
+
+    if (window.electronAPI && typeof window.electronAPI.getAppVersion === "function") {
+      window.electronAPI.getAppVersion().then((version) => {
+        document.getElementById("version").textContent = "v" + version;
+      });
     }
   </script>
 </body>

@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function LoginScreen() {
   const colors = useColors();
-  const { login, sessionExpired } = useAuth();
+  const { login, sessionExpired, suspended } = useAuth();
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -197,6 +197,15 @@ export default function LoginScreen() {
             <Ionicons name="time-outline" size={18} color="#b45309" />
             <Text style={styles.sessionBannerText}>
               Your session expired. Please sign in again.
+            </Text>
+          </View>
+        )}
+
+        {suspended && (
+          <View style={styles.errorBox}>
+            <Ionicons name="shield-outline" size={18} color={colors.destructive} />
+            <Text style={styles.errorText}>
+              Your account has been suspended. Please contact your administrator.
             </Text>
           </View>
         )}

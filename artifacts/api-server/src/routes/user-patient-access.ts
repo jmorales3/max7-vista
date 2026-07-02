@@ -11,6 +11,30 @@ function tid(req: any): number {
   return t;
 }
 
+// GET /api/users/patient-access-summary
+// Returns { [userId]: number } — count of patients each restricted user is
+// limited to. Users absent from the map are unrestricted. Lets the admin
+// user list show restriction status at a glance without N+1 requests.
+router.get(
+  "/users/patient-access-summary",
+  requireRole("admin", "superadmin"),
+  async (req, res) => {
+    const tenantId = tid(req);
+
+    const rows = await db
+      .select({ userId: patientAccessTable.userId, patientId: patientAccessTable.patientId })
+      .from(patientAccessTable)
+      .where(eq(patientAccessTable.tenantId, tenantId));
+
+    const summary: Record<number, number> = {};
+    for (const row of rows) {
+      summary[row.userId] = (summary[row.userId] ?? 0) + 1;
+    }
+
+    res.json(summary);
+  },
+);
+
 // GET /api/users/:id/patient-access
 // Returns { patientIds: number[] } — empty array means unrestricted
 router.get(

@@ -43,7 +43,10 @@
     "colJoined": "Se unió",
     "colRole": "Rol",
     "colStatus": "Estado",
+    "colAccess": "Acceso a Pacientes",
     "colActions": "Acciones",
+    "accessUnrestricted": "Sin restricción",
+    "accessRestrictedCount": "Restringido ({{count}})",
     "noActiveUsers": "No se encontraron usuarios activos.",
     "loading": "Cargando usuarios…",
     "you": "tú",
@@ -464,6 +467,7 @@
   "settings": {
     "title": "Configuración",
     "subtitle": "Gestione la configuración del sistema y el almacenamiento.",
+    "appVersion": "Versión {{version}}",
     "totalImages": "Total de Imágenes",
     "totalPatients": "Total de Pacientes",
     "unassigned": "Sin Asignar",
@@ -709,6 +713,7 @@
     "statImagesImported": "Imágenes importadas",
     "statPatientsCreated": "Pacientes creados",
     "statPatientsMatched": "Pacientes coincidentes",
+    "statDuplicatesSkipped": "Duplicados omitidos",
     "errorsCount_one": "{{count}} archivo no se pudo importar:",
     "errorsCount_other": "{{count}} archivos no se pudieron importar:",
     "colFile": "Archivo",
@@ -742,6 +747,7 @@
     "folderPathHint": "Esta ruta debe ser accesible por el proceso del servidor Max7 Vista.",
     "folderPathPlaceholder": "/data/fotos  o  C:\\Imágenes\\Pacientes",
     "importing": "Importando…",
+    "progressLabel": "Procesando {{current}} de {{total}} archivos",
     "startImport": "Iniciar importación",
     "importFailedTitle": "Error en la importación",
     "toastComplete": "Importación completa",
@@ -1323,5 +1329,11 @@
     "bannerTrial_other": "Prueba: {{count}} días restantes",
     "bannerExpired": "Prueba expirada — active su licencia para continuar",
     "bannerActivate": "Activar"
+  },
+  "updater": {
+    "available": "Hay una nueva versión ({{version}}) disponible, descargando…",
+    "downloading": "Descargando actualización… {{percent}}%",
+    "downloaded": "La versión {{version}} está lista para instalar",
+    "restartNow": "Reiniciar e Instalar"
   }
 }

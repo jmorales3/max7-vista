@@ -18,6 +18,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
   /** Return the platform string so the renderer can adjust UI accordingly. */
   platform: process.platform,
 
+  /** Return the packaged app version (from electron-app's package.json). */
+  getAppVersion: (): Promise<string> => ipcRenderer.invoke("get-app-version"),
+
+  /** Startup splash: listen for real progress steps from the main process. */
+  onStartupProgress: (cb: (step: string) => void) => {
+    ipcRenderer.on("startup:progress", (_event, step) => cb(step));
+  },
+
   /** Auto-updater: listen for update events from the main process. */
   onUpdateAvailable: (cb: (version: string) => void) => {
     ipcRenderer.on("update:available", (_event, version) => cb(version));

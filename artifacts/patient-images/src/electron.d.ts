@@ -14,6 +14,8 @@ declare global {
       getLanAddresses(): Promise<string[]>;
       /** e.g. "darwin" | "win32" | "linux" */
       platform: string;
+      /** Return the packaged app version (from electron-app's package.json). */
+      getAppVersion(): Promise<string>;
       /** Auto-updater events */
       onUpdateAvailable(cb: (version: string) => void): void;
       onUpdateDownloadProgress(cb: (percent: number) => void): void;

@@ -138,6 +138,14 @@ export async function getPatientAccess(userId: number): Promise<number[]> {
   return data.patientIds;
 }
 
+export async function getPatientAccessSummary(): Promise<Record<number, number>> {
+  const res = await fetch(getApiUrl("/api/users/patient-access-summary"), {
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to fetch patient access summary");
+  return res.json() as Promise<Record<number, number>>;
+}
+
 export async function setPatientAccess(userId: number, patientIds: number[]): Promise<number[]> {
   const res = await fetch(getApiUrl(`/api/users/${userId}/patient-access`), {
     method: "PUT",

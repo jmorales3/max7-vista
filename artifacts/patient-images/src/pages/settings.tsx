@@ -434,6 +434,19 @@ export default function Settings() {
 
   const isElectron = typeof window !== "undefined" && !!window.electronAPI;
 
+  const [appVersion, setAppVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isElectron && window.electronAPI) {
+      window.electronAPI.getAppVersion().then(setAppVersion).catch(() => setAppVersion(null));
+    } else {
+      fetch("/api/version")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => setAppVersion(data?.version ?? null))
+        .catch(() => setAppVersion(null));
+    }
+  }, [isElectron]);
+
   const [licenseCode, setLicenseCode] = useState("");
   const [copiedMachineId, setCopiedMachineId] = useState(false);
 
@@ -1406,6 +1419,12 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {appVersion && (
+        <p className="text-xs text-muted-foreground text-center pt-2">
+          {t("settings.appVersion", { version: appVersion })}
+        </p>
       )}
     </div>
   );
