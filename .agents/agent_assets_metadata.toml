@@ -23,3 +23,9 @@ id = "1Pd4PBDkXQ75FcOWE5_lR"
 uri = "file://max7-transfer-register.md"
 type = "text"
 title = "Max7 Vista → Max7 Feature Transfer Register"
+
+[[outputs]]
+id = "6qan0bDyMotOHLgWmQZOr"
+uri = "file://exports/max7-feature-transfer-register.md"
+type = "text"
+title = "Max7 Feature Transfer Register (current, 1855 lines)"
