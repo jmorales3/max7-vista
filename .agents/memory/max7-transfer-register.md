@@ -1823,4 +1823,33 @@ Run with `LICENSE_HMAC_SECRET=<production-secret>`.
 
 ---
 
+## FEAT-021 — Manual Drag-and-Drop Reordering of Patient Images
+
+**Status:** ✅ Confirmed working in Vista (e2e tested with real drag gestures)
+**Date:** 2026-07-02
+**Vista files:**
+- `lib/db/src/schema/images.ts`, `lib/db/src/schema-sqlite/images.ts` — nullable `sortOrder` integer column added to `images`
+- `artifacts/api-server/src/routes/images.ts` — `POST /images/reorder` endpoint; `GET /images` and `GET /patients/:id/images` order by `sortOrder IS NULL, sortOrder, capturedAt`
+- `lib/api-spec/openapi.yaml` — `ReorderImagesInput` schema + `/images/reorder` path (regenerates `useReorderImages` hook via orval codegen)
+- `artifacts/patient-images/src/components/image-grid.tsx` — drag-and-drop UI (only active on the single-patient gallery, not the cross-patient library gallery)
+- `artifacts/patient-images/src/pages/patient-detail.tsx` — passes `reorderablePatientId={patient.id}` to opt in
+
+### What it does
+On a patient's own image grid (patient-detail page only — NOT the cross-patient library/gallery view), each image card shows a small grip/drag-handle icon (top-left). Dragging a card to a new position reorders the grid; the new order is optimistically applied client-side and persisted server-side via `POST /images/reorder` (body: `{ patientId, orderedIds: number[] }`), which writes a 0-based `sortOrder` to every image in the list. Rows with `sortOrder = NULL` (never explicitly ordered) sort after ordered rows, by `capturedAt`, preserving the old chronological default until a user actively reorders.
+
+### Non-obvious bug found and fixed: drag-drop triggered stray navigation
+The whole card is a `<Link>` to the image editor (`/editor/:id`) so a normal click opens it. The drag handle itself guarded its own `onClick` with `preventDefault`/`stopPropagation`, but that only protects clicks landing back on the handle. **The mouseup/click that ends a drag actually fires on whichever card is under the cursor at drop time — the drop-target card, not the card the drag started on** — so dropping card A onto card B's slot fired a real click on card B's own `<Link>` and navigated to B's editor page instead of completing the reorder.
+
+**Fix pattern (generalizable to any drag-and-drop-over-clickable-cards UI):** use a single shared ref (`suppressClickRef`), not a per-card flag. Set it `true` in the drag library's `onDragEnd` (or `onDragStart`, whichever fires first) and clear it via `setTimeout(fn, 0)` (a macrotask, so it runs after the synchronous click has already been dispatched and swallowed). Every card wraps its clickable region with `onClickCapture` that checks the shared ref and calls `preventDefault`/`stopPropagation` if a drag just ended — this covers the drop-target card too, since the ref is shared across all cards, not scoped to the one being dragged. Also set `draggable={false}` on `<img>` tags inside draggable cards to stop the browser's native image-drag ghost from interfering with the drag library's own pointer tracking.
+
+### Testing caveat
+Automated Playwright-driven drag simulations that jump directly from source to target coordinates in one step can cause the collision-detection algorithm (e.g. dnd-kit's `closestCenter`) to resolve to the wrong drop index, because the algorithm needs intermediate pointermove events to track which card is currently under the cursor. Real user drags (continuous mouse movement) are unaffected. When e2e-testing this pattern, use many small incremental mouse-move steps, not one large jump.
+
+### Notes for Max7 agent
+- If Max7's image grid already opens the editor on click, this stray-navigation bug will reproduce identically — apply the shared-ref `onClickCapture` guard, not a per-handle guard.
+- Only enable reordering on the single-patient grid; the cross-patient/library gallery view should stay in its existing (non-reorderable) order to avoid ambiguous cross-patient sort semantics.
+- Keep the sort column nullable and order `NULL`-first-by-recency so existing unordered images don't visually jump around the first time this ships — only images a user has explicitly touched get a `sortOrder`.
+
+---
+
 <!-- Add new entries below as features are confirmed in Vista -->

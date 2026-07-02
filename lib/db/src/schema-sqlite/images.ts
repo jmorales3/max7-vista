@@ -13,6 +13,7 @@ export const imagesTable = sqliteTable("images", {
   capturedAt: text("captured_at").notNull().default(new Date().toISOString()),
   isUnassigned: integer("is_unassigned", { mode: "boolean" }).notNull().default(false),
   isLibraryAsset: integer("is_library_asset", { mode: "boolean" }).notNull().default(false),
+  sortOrder: integer("sort_order"),
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
   updatedAt: text("updated_at").notNull().default(new Date().toISOString()),
 });

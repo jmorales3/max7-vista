@@ -78,8 +78,11 @@ export interface ExportImagesZipInput {
 export interface ImageUpdate {
   notes?: string;
   annotation?: string;
-  patientId?: number;
-  capturedAt?: string;
+}
+
+export interface ReorderImagesInput {
+  patientId: number;
+  orderedIds: number[];
 }
 
 export interface ImageStats {

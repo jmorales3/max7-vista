@@ -277,6 +277,30 @@ export const ListPatientImagesResponse = zod.array(ListPatientImagesResponseItem
 
 
 /**
+ * @summary Persist a custom manual ordering for a patient's images
+ */
+export const ReorderImagesBody = zod.object({
+  "patientId": zod.number(),
+  "orderedIds": zod.array(zod.number())
+})
+
+export const ReorderImagesResponseItem = zod.object({
+  "id": zod.number(),
+  "patientId": zod.number().nullish(),
+  "patientName": zod.string().nullish(),
+  "patientCode": zod.string().nullish(),
+  "filePath": zod.string(),
+  "fileName": zod.string().optional(),
+  "notes": zod.string().nullish(),
+  "annotation": zod.string().nullish(),
+  "capturedAt": zod.string(),
+  "createdAt": zod.string(),
+  "isUnassigned": zod.boolean().optional()
+})
+export const ReorderImagesResponse = zod.array(ReorderImagesResponseItem)
+
+
+/**
  * @summary List all images with optional patient filter
  */
 export const ListImagesQueryParams = zod.object({
@@ -352,9 +376,7 @@ export const UpdateImageParams = zod.object({
 
 export const UpdateImageBody = zod.object({
   "notes": zod.string().optional(),
-  "annotation": zod.string().optional(),
-  "patientId": zod.number().optional(),
-  "capturedAt": zod.string().optional()
+  "annotation": zod.string().optional()
 })
 
 export const UpdateImageResponse = zod.object({

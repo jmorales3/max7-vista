@@ -15,6 +15,7 @@ import {
   ListPatientImagesParams,
   ReplaceImageFileParams,
   ExportImagesZipBody,
+  ReorderImagesBody,
 } from "@workspace/api-zod";
 import { logAudit } from "../lib/audit";
 import { requireRole } from "../middlewares/requireAuth";
@@ -184,7 +185,7 @@ router.get("/images", async (req, res): Promise<void> => {
       .from(imagesTable)
       .innerJoin(patientsTable, eq(patientsTable.id, imagesTable.patientId))
       .where(and(...conditions))
-      .orderBy(imagesTable.capturedAt);
+      .orderBy(sql`${imagesTable.sortOrder} is null`, imagesTable.sortOrder, imagesTable.capturedAt);
 
     res.json(rows.map(buildImageRow));
   } catch (err: any) {
@@ -667,13 +668,64 @@ router.get("/patients/:id/images", async (req, res): Promise<void> => {
       .from(imagesTable)
       .innerJoin(patientsTable, and(eq(patientsTable.id, imagesTable.patientId), eq(patientsTable.tenantId, tenantId)))
       .where(eq(imagesTable.patientId, params.data.id))
-      .orderBy(imagesTable.capturedAt);
+      .orderBy(sql`${imagesTable.sortOrder} is null`, imagesTable.sortOrder, imagesTable.capturedAt);
 
     res.json(rows.map(buildImageRow));
   } catch (err: any) {
     if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
     console.error("GET /patients/:id/images error:", err);
     res.status(500).json({ error: "Failed to load images", detail: String(err) });
+  }
+});
+
+router.post("/images/reorder", async (req, res): Promise<void> => {
+  try {
+    const tenantId = tid(req);
+    const parsed = ReorderImagesBody.safeParse(req.body);
+    if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+    const { patientId, orderedIds } = parsed.data;
+
+    const accessibleIds = await getAccessiblePatientIds(req);
+    if (!canAccessPatient(accessibleIds, patientId)) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+
+    // Confirm every id belongs to this patient (and tenant) before touching anything.
+    const owned = await db
+      .select({ id: imagesTable.id })
+      .from(imagesTable)
+      .innerJoin(patientsTable, and(eq(patientsTable.id, imagesTable.patientId), eq(patientsTable.tenantId, tenantId)))
+      .where(and(eq(imagesTable.patientId, patientId), inArray(imagesTable.id, orderedIds)));
+    const ownedIds = new Set(owned.map((r) => r.id));
+    if (ownedIds.size !== orderedIds.length || orderedIds.some((id) => !ownedIds.has(id))) {
+      res.status(400).json({ error: "orderedIds must exactly match the patient's own images" });
+      return;
+    }
+
+    await Promise.all(
+      orderedIds.map((imageId, index) =>
+        db.update(imagesTable).set({ sortOrder: index }).where(eq(imagesTable.id, imageId)),
+      ),
+    );
+
+    const rows = await db
+      .select({
+        id: imagesTable.id, patientId: imagesTable.patientId, filePath: imagesTable.filePath,
+        fileName: imagesTable.fileName, notes: imagesTable.notes, annotation: imagesTable.annotation,
+        capturedAt: imagesTable.capturedAt, isUnassigned: imagesTable.isUnassigned, createdAt: imagesTable.createdAt,
+        patientName: patientsTable.name, patientCode: patientsTable.patientCode,
+      })
+      .from(imagesTable)
+      .innerJoin(patientsTable, and(eq(patientsTable.id, imagesTable.patientId), eq(patientsTable.tenantId, tenantId)))
+      .where(eq(imagesTable.patientId, patientId))
+      .orderBy(sql`${imagesTable.sortOrder} is null`, imagesTable.sortOrder, imagesTable.capturedAt);
+
+    res.json(rows.map(buildImageRow));
+  } catch (err: any) {
+    if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
+    console.error("POST /images/reorder error:", err);
+    res.status(500).json({ error: "Failed to reorder images", detail: String(err) });
   }
 });
 

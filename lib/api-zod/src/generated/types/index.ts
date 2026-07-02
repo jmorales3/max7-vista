@@ -23,6 +23,7 @@ export * from './patientUpdate';
 export * from './presentation';
 export * from './presentationInput';
 export * from './presentationUpdate';
+export * from './reorderImagesInput';
 export * from './scanResult';
 export * from './settings';
 export * from './settingsUpdate';

@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface ImageUpdate {
-  notes?: string;
-  annotation?: string;
+export interface ReorderImagesInput {
+  patientId: number;
+  orderedIds: number[];
 }

@@ -373,6 +373,27 @@ paths:
                 items:
                   $ref: "#/components/schemas/Image"
 
+  /images/reorder:
+    post:
+      operationId: reorderImages
+      tags: [images]
+      summary: Persist a custom manual ordering for a patient's images
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderImagesInput"
+      responses:
+        "200":
+          description: Updated images in new order
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Image"
+
   /images:
     get:
       operationId: listImages
@@ -736,10 +757,17 @@ components:
           type: string
         annotation:
           type: string
+
+    ReorderImagesInput:
+      type: object
+      required: [patientId, orderedIds]
+      properties:
         patientId:
           type: integer
-        capturedAt:
-          type: string
+        orderedIds:
+          type: array
+          items:
+            type: integer
 
     ImageStats:
       type: object

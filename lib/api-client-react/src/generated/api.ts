@@ -37,6 +37,7 @@ import type {
   Presentation,
   PresentationInput,
   PresentationUpdate,
+  ReorderImagesInput,
   ScanResult,
   Settings,
   SettingsUpdate,
@@ -1397,6 +1398,77 @@ export function useListPatientImages<TData = Awaited<ReturnType<typeof listPatie
 
 
 
+
+export const getReorderImagesUrl = () => {
+
+
+
+
+  return `/api/images/reorder`
+}
+
+/**
+ * @summary Persist a custom manual ordering for a patient's images
+ */
+export const reorderImages = async (reorderImagesInput: ReorderImagesInput, options?: RequestInit): Promise<Image[]> => {
+
+  return customFetch<Image[]>(getReorderImagesUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      reorderImagesInput,)
+  }
+);}
+
+
+
+
+export const getReorderImagesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderImages>>, TError,{data: BodyType<ReorderImagesInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reorderImages>>, TError,{data: BodyType<ReorderImagesInput>}, TContext> => {
+
+const mutationKey = ['reorderImages'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reorderImages>>, {data: BodyType<ReorderImagesInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  reorderImages(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReorderImagesMutationResult = NonNullable<Awaited<ReturnType<typeof reorderImages>>>
+    export type ReorderImagesMutationBody = BodyType<ReorderImagesInput>
+    export type ReorderImagesMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Persist a custom manual ordering for a patient's images
+ */
+export const useReorderImages = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderImages>>, TError,{data: BodyType<ReorderImagesInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reorderImages>>,
+        TError,
+        {data: BodyType<ReorderImagesInput>},
+        TContext
+      > => {
+      return useMutation(getReorderImagesMutationOptions(options));
+    }
 
 export const getListImagesUrl = (params?: ListImagesParams,) => {
   const normalizedParams = new URLSearchParams();

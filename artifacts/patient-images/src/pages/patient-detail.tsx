@@ -504,6 +504,7 @@ export default function PatientDetail() {
             columns={gridColumns}
             profileImageId={patient.profileImageId}
             onSetProfile={handleSetProfile}
+            reorderablePatientId={patient.id}
           />
         ) : (
           <div className="flex flex-col items-center justify-center p-16 text-center border rounded-xl bg-card border-dashed">
