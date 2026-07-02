@@ -1,0 +1,9 @@
+version: 1.1.1
+files:
+  - url: Max7-Vista-1.1.1.AppImage
+    sha512: dOeEJoyyOWGTNQNhUMQTEI1Y88zzOt+7FWmlO4bOkJo2nx18/P+4Jw7scryjnW6nuORgx+yZFWpDQdqcSDJZKw==
+    size: 124481707
+    blockMapSize: 131263
+path: Max7-Vista-1.1.1.AppImage
+sha512: dOeEJoyyOWGTNQNhUMQTEI1Y88zzOt+7FWmlO4bOkJo2nx18/P+4Jw7scryjnW6nuORgx+yZFWpDQdqcSDJZKw==
+releaseDate: '2026-07-02T22:35:38.783Z'
