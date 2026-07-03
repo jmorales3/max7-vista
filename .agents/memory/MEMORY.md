@@ -9,3 +9,4 @@
 - [SQLite–Postgres schema parity rule](sqlite-postgres-parity.md) — STANDING DIRECTIVE: every new table/column/seed in one DB path must be mirrored in the other; violations cause silent runtime failures.
 - [E2E testing without known credentials](e2e-test-user-creation.md) — when no admin/test credentials are known, insert a disposable test user directly via SQL with a bcryptjs hash, then delete it after the test run.
 - [Electron cross-platform build limits](electron-cross-platform-build.md) — only Linux AppImage packages natively here; Windows/macOS installers require the GitHub Actions CI workflows, not local builds.
+- [No main-agent path to close arbitrary project tasks](project-task-completion-gap.md) — mark_task_complete/markTaskInProgress only affect the one task bound to the session; user must manually close other PENDING tasks confirmed done in code.

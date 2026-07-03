@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIdleTimeout } from "@/hooks/useIdleTimeout";
+import { refreshSession } from "@/lib/auth";
 
 const IDLE_MS = 15 * 60 * 1000;
 const WARNING_MS = 2 * 60 * 1000;
@@ -25,6 +26,11 @@ export function IdleWarningDialog() {
       void logout();
     }
   }, [showWarning, secondsLeft, logout]);
+
+  const handleStaySignedIn = () => {
+    reset();
+    void refreshSession();
+  };
 
   const minutes = Math.floor(secondsLeft / 60);
   const secs = secondsLeft % 60;
@@ -50,7 +56,7 @@ export function IdleWarningDialog() {
           <Button variant="outline" onClick={() => void logout()}>
             {t("idleTimeout.signOut")}
           </Button>
-          <Button onClick={reset}>{t("idleTimeout.staySignedIn")}</Button>
+          <Button onClick={handleStaySignedIn}>{t("idleTimeout.staySignedIn")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

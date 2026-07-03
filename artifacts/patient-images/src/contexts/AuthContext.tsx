@@ -1,6 +1,12 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
-import { getSession, login as apiLogin, logout as apiLogout, type AuthUser, PendingApprovalError } from "@/lib/auth";
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from "react";
+import { getSession, login as apiLogin, logout as apiLogout, refreshSession, type AuthUser, PendingApprovalError } from "@/lib/auth";
 import { registerForceLogout, registerSuspended } from "@/lib/authBridge";
+
+// Periodically touches the server session so an open-but-passive tab (no
+// mouse/keyboard activity, but no idle warning shown yet either) doesn't
+// silently expire between the 15-minute idle warning and the 30-minute
+// server-side session timeout. Mirrors the mobile app's heartbeat.
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -19,11 +25,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [pendingApproval, setPendingApproval] = useState(false);
   const [suspended, setSuspended] = useState(false);
+  const userRef = useRef<AuthUser | null>(null);
+  userRef.current = user;
 
   useEffect(() => {
     getSession()
       .then(setUser)
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (userRef.current) void refreshSession();
+    }, REFRESH_INTERVAL_MS);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {

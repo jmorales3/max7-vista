@@ -66,6 +66,14 @@ export async function getSession(): Promise<AuthUser | null> {
   }
 }
 
+export async function refreshSession(): Promise<boolean> {
+  const res = await fetch(getApiUrl("/api/auth/refresh"), {
+    method: "POST",
+    credentials: "include",
+  });
+  return res.ok;
+}
+
 export interface AdminUser {
   id: number;
   username: string;
