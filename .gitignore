@@ -8,6 +8,9 @@ out-tsc
 .expo
 .expo-shared
 
+# generated secrets - never commit
+artifacts/electron-app/src/secrets.generated.ts
+
 # dependencies
 node_modules
 

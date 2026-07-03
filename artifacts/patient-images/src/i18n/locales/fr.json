@@ -1329,7 +1329,9 @@
     "bannerTrial_one": "Essai : {{count}} jour restant",
     "bannerTrial_other": "Essai : {{count}} jours restants",
     "bannerExpired": "Essai expiré — activez votre licence pour continuer",
-    "bannerActivate": "Activer"
+    "bannerActivate": "Activer",
+    "bannerRenewing_one": "Renouvellement bientôt : il reste {{count}} jour sur votre forfait",
+    "bannerRenewing_other": "Renouvellement bientôt : il reste {{count}} jours sur votre forfait"
   },
   "updater": {
     "available": "Une nouvelle version ({{version}}) est disponible, téléchargement en cours…",

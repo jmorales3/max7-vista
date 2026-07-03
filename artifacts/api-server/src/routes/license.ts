@@ -4,6 +4,8 @@ import {
   parseLicenseCode,
   computeRecordHash,
   computeStatus,
+  writeLicFile,
+  verifyLicFile,
   type LicenseRecord,
 } from "../lib/license";
 
@@ -62,7 +64,8 @@ router.get("/license/status", (req, res) => {
     const client = getClient();
     const machineId = getMachineId(USER_DATA_DIR);
     const rec = ensureRecord(client, machineId);
-    return res.json(computeStatus(rec, machineId));
+    const licFileValid = verifyLicFile(USER_DATA_DIR, rec);
+    return res.json(computeStatus(rec, machineId, licFileValid));
   } catch (err) {
     return res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }
@@ -110,7 +113,14 @@ router.post("/license/activate", (req, res) => {
       .prepare("SELECT * FROM license WHERE machine_id = ? LIMIT 1")
       .get(machineId) as LicenseRecord;
 
-    return res.json(computeStatus(updated, machineId));
+    writeLicFile(USER_DATA_DIR, {
+      machineId: updated.machine_id,
+      plan: updated.plan_type,
+      expiresAt: updated.expires_at,
+      activatedAt: updated.activated_at,
+    });
+
+    return res.json(computeStatus(updated, machineId, true));
   } catch (err) {
     return res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }

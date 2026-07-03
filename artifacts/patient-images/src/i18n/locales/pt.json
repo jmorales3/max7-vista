@@ -1329,7 +1329,9 @@
     "bannerTrial_one": "Avaliação: {{count}} dia restante",
     "bannerTrial_other": "Avaliação: {{count}} dias restantes",
     "bannerExpired": "Avaliação expirada — ative sua licença para continuar",
-    "bannerActivate": "Ativar"
+    "bannerActivate": "Ativar",
+    "bannerRenewing_one": "Renovação em breve: falta {{count}} dia no seu plano",
+    "bannerRenewing_other": "Renovação em breve: faltam {{count}} dias no seu plano"
   },
   "updater": {
     "available": "Uma nova versão ({{version}}) está disponível e baixando…",

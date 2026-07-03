@@ -1329,7 +1329,9 @@
     "bannerTrial_one": "Prueba: {{count}} día restante",
     "bannerTrial_other": "Prueba: {{count}} días restantes",
     "bannerExpired": "Prueba expirada — active su licencia para continuar",
-    "bannerActivate": "Activar"
+    "bannerActivate": "Activar",
+    "bannerRenewing_one": "Renovación próxima: queda {{count}} día en su plan",
+    "bannerRenewing_other": "Renovación próxima: quedan {{count}} días en su plan"
   },
   "updater": {
     "available": "Hay una nueva versión ({{version}}) disponible, descargando…",

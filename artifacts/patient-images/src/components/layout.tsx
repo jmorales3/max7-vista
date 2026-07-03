@@ -193,9 +193,12 @@ function TrialBanner() {
   });
 
   if (!isElectron || !data) return null;
-  if (data.state !== "trial" && data.state !== "trial_expired") return null;
 
   const isExpired = data.state === "trial_expired";
+  const isRenewingSoon =
+    data.state === "active" && data.daysLeft !== null && data.daysLeft <= 14;
+
+  if (data.state !== "trial" && !isExpired && !isRenewingSoon) return null;
 
   return (
     <div
@@ -208,7 +211,9 @@ function TrialBanner() {
       <span>
         {isExpired
           ? t("license.bannerExpired")
-          : t("license.bannerTrial", { count: data.daysLeft ?? 0 })}
+          : isRenewingSoon
+            ? t("license.bannerRenewing", { count: data.daysLeft ?? 0 })
+            : t("license.bannerTrial", { count: data.daysLeft ?? 0 })}
       </span>
       <Link
         href="/settings"

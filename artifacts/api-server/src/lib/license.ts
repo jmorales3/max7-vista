@@ -22,7 +22,7 @@ export interface LicenseStatus {
 
 export interface LicensePayload {
   mid: string;
-  plan: "1yr" | "2yr" | "lifetime";
+  plan: "6mo" | "1yr" | "lifetime";
   exp: string | null;
 }
 
@@ -81,6 +81,74 @@ export function getMachineId(userDataDir: string): string {
   return id;
 }
 
+// ── Secondary Tamper File (.lic) ───────────────────────────────────────────────
+// In addition to the DB record_hash, a standalone .lic file is written on
+// activation and re-checked on every status read. This gives a second,
+// independent tamper signal: editing the DB alone (without also updating the
+// matching .lic file) is detectable, and vice versa.
+
+interface LicFileContents {
+  machineId: string;
+  plan: string | null;
+  expiresAt: string | null;
+  activatedAt: string | null;
+  sig: string;
+}
+
+function getLicFilePath(userDataDir: string): string {
+  return path.join(userDataDir, "license.lic");
+}
+
+function licFileSignaturePayload(f: Omit<LicFileContents, "sig">): string {
+  return `${f.machineId}|${f.plan ?? ""}|${f.expiresAt ?? ""}|${f.activatedAt ?? ""}`;
+}
+
+export function writeLicFile(
+  userDataDir: string,
+  data: { machineId: string; plan: string | null; expiresAt: string | null; activatedAt: string | null },
+): void {
+  const sig = signHmac(licFileSignaturePayload(data));
+  const contents: LicFileContents = { ...data, sig };
+  fs.mkdirSync(userDataDir, { recursive: true });
+  fs.writeFileSync(getLicFilePath(userDataDir), JSON.stringify(contents, null, 2), "utf-8");
+}
+
+/**
+ * Returns true if the record is not yet activated (no .lic file expected),
+ * or if the .lic file exists, is correctly signed, and matches the DB record.
+ * Returns false if activated but the .lic file is missing, corrupt, or
+ * disagrees with the DB record — signalling tampering.
+ */
+export function verifyLicFile(userDataDir: string, rec: LicenseRecord): boolean {
+  if (!rec.activated_at) return true;
+
+  const licPath = getLicFilePath(userDataDir);
+  if (!fs.existsSync(licPath)) return false;
+
+  try {
+    const raw = fs.readFileSync(licPath, "utf-8");
+    const parsed = JSON.parse(raw) as LicFileContents;
+    const expectedSig = signHmac(
+      licFileSignaturePayload({
+        machineId: parsed.machineId,
+        plan: parsed.plan,
+        expiresAt: parsed.expiresAt,
+        activatedAt: parsed.activatedAt,
+      }),
+    );
+    if (parsed.sig !== expectedSig) return false;
+
+    return (
+      parsed.machineId === rec.machine_id &&
+      parsed.plan === rec.plan_type &&
+      parsed.expiresAt === rec.expires_at &&
+      parsed.activatedAt === rec.activated_at
+    );
+  } catch {
+    return false;
+  }
+}
+
 // ── Record Integrity ──────────────────────────────────────────────────────────
 
 export function computeRecordHash(r: {
@@ -125,9 +193,13 @@ export function generateLicenseCode(payload: LicensePayload): string {
 
 // ── Status Computation ────────────────────────────────────────────────────────
 
-export function computeStatus(rec: LicenseRecord, machineId: string): LicenseStatus {
+export function computeStatus(
+  rec: LicenseRecord,
+  machineId: string,
+  licFileValid = true,
+): LicenseStatus {
   const expectedHash = computeRecordHash(rec);
-  if (rec.record_hash !== expectedHash) {
+  if (rec.record_hash !== expectedHash || !licFileValid) {
     return {
       state: "tampered",
       daysLeft: null,
@@ -141,9 +213,12 @@ export function computeStatus(rec: LicenseRecord, machineId: string): LicenseSta
 
   if (rec.activated_at) {
     const isExpired = rec.expires_at ? new Date(rec.expires_at) < new Date() : false;
+    const daysLeft = rec.expires_at && !isExpired
+      ? Math.max(0, Math.ceil((new Date(rec.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+      : null;
     return {
       state: isExpired ? "expired" : "active",
-      daysLeft: null,
+      daysLeft,
       trialDays: TRIAL_DAYS,
       expiresAt: rec.expires_at,
       plan: rec.plan_type,
