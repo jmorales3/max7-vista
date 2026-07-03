@@ -21,7 +21,7 @@ import {
   AlertCircle, Tag, Plus, X, ClipboardList, KeyRound,
   Download, Upload, ArrowRightLeft, ShieldCheck, RotateCcw,
   Search, ChevronLeft, ChevronRight, Filter, Clock, Trash2, Copy,
-  AlertTriangle,
+  AlertTriangle, Smartphone, Lock, Scale, Archive, CheckCircle2,
 } from "lucide-react";
 import {
   Select,
@@ -30,11 +30,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
-import { getTenantSettings, updateTenantSettings } from "@/lib/auth";
+import {
+  getTenantSettings, updateTenantSettings,
+  startMfaSetup, enableMfa, disableMfa, getMfaStatus,
+  type MfaSetupInfo,
+} from "@/lib/auth";
 import { getApiUrl } from "@/lib/apiUrl";
 import { ServerAddressQr } from "@/components/server-address-qr";
 import { Wifi } from "lucide-react";
@@ -125,6 +137,135 @@ export default function Settings() {
   const [auditExporting, setAuditExporting] = useState(false);
 
   const [idleTimeoutMinutesInput, setIdleTimeoutMinutesInput] = useState<number | null>(null);
+
+  const { data: mfaStatus, isLoading: loadingMfaStatus } = useQuery({
+    queryKey: ["mfa-status"],
+    queryFn: getMfaStatus,
+  });
+  const [mfaSetupOpen, setMfaSetupOpen] = useState(false);
+  const [mfaSetupInfo, setMfaSetupInfo] = useState<MfaSetupInfo | null>(null);
+  const [mfaSetupToken, setMfaSetupToken] = useState("");
+  const [mfaBackupCodes, setMfaBackupCodes] = useState<string[] | null>(null);
+  const [mfaDisableOpen, setMfaDisableOpen] = useState(false);
+  const [mfaDisablePassword, setMfaDisablePassword] = useState("");
+
+  const beginMfaSetup = useMutation({
+    mutationFn: startMfaSetup,
+    onSuccess: (info) => {
+      setMfaSetupInfo(info);
+      setMfaSetupOpen(true);
+      setMfaSetupToken("");
+    },
+    onError: (e) => {
+      toast({ variant: "destructive", title: "Failed to start MFA setup", description: e instanceof Error ? e.message : String(e) });
+    },
+  });
+
+  const confirmMfaSetup = useMutation({
+    mutationFn: () => enableMfa(mfaSetupInfo!.secret, mfaSetupToken.trim()),
+    onSuccess: (data) => {
+      setMfaBackupCodes(data.backupCodes);
+      void queryClient.invalidateQueries({ queryKey: ["mfa-status"] });
+      toast({ title: "Two-factor authentication enabled" });
+    },
+    onError: (e) => {
+      toast({ variant: "destructive", title: "Invalid code", description: e instanceof Error ? e.message : String(e) });
+    },
+  });
+
+  const disableMfaMutation = useMutation({
+    mutationFn: () => disableMfa(mfaDisablePassword),
+    onSuccess: () => {
+      setMfaDisableOpen(false);
+      setMfaDisablePassword("");
+      void queryClient.invalidateQueries({ queryKey: ["mfa-status"] });
+      toast({ title: "Two-factor authentication disabled" });
+    },
+    onError: (e) => {
+      toast({ variant: "destructive", title: "Failed to disable MFA", description: e instanceof Error ? e.message : String(e) });
+    },
+  });
+
+  function closeMfaSetupDialog() {
+    setMfaSetupOpen(false);
+    setMfaSetupInfo(null);
+    setMfaSetupToken("");
+    setMfaBackupCodes(null);
+  }
+
+  const retentionQueryKey = ["patient-retention-policy"];
+  const { data: patientRetentionPolicy, isLoading: loadingPatientRetention } = useQuery<{
+    retentionYears: number; minRetentionYears: number; maxRetentionYears: number;
+  }>({
+    queryKey: retentionQueryKey,
+    queryFn: async () => {
+      const res = await fetch(getApiUrl("/api/admin/retention-policy"), { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch retention policy");
+      return res.json();
+    },
+    enabled: isAdmin,
+  });
+  const [patientRetentionYearsInput, setPatientRetentionYearsInput] = useState<number | null>(null);
+  useEffect(() => {
+    if (patientRetentionPolicy?.retentionYears != null) {
+      setPatientRetentionYearsInput(patientRetentionPolicy.retentionYears);
+    }
+  }, [patientRetentionPolicy]);
+
+  const savePatientRetention = useMutation({
+    mutationFn: async (years: number) => {
+      const res = await fetch(getApiUrl("/api/admin/retention-policy"), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ retentionYears: years }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? "Failed to save");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Patient retention policy saved" });
+      void queryClient.invalidateQueries({ queryKey: retentionQueryKey });
+    },
+    onError: (e) => {
+      toast({ variant: "destructive", title: "Failed to save retention policy", description: e instanceof Error ? e.message : String(e) });
+    },
+  });
+
+  interface RetentionEligiblePatient {
+    id: number; name: string; patientCode: string; createdAt: string; imageCount: number;
+  }
+  const eligibleQueryKey = ["patient-retention-eligible"];
+  const { data: retentionEligible, isLoading: loadingRetentionEligible } = useQuery<{ patients: RetentionEligiblePatient[] }>({
+    queryKey: eligibleQueryKey,
+    queryFn: async () => {
+      const res = await fetch(getApiUrl("/api/admin/retention-eligible"), { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch retention-eligible patients");
+      return res.json();
+    },
+    enabled: isAdmin,
+  });
+
+  const purgePatient = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(getApiUrl(`/api/admin/retention-purge/${id}`), { method: "POST", credentials: "include" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? "Failed to purge patient");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Patient record purged" });
+      void queryClient.invalidateQueries({ queryKey: eligibleQueryKey });
+    },
+    onError: (e) => {
+      toast({ variant: "destructive", title: "Failed to purge patient", description: e instanceof Error ? e.message : String(e) });
+    },
+  });
 
   const { data: tenantSettingsData, isLoading: loadingTenantSettings } = useQuery({
     queryKey: ["tenant-settings"],
@@ -741,6 +882,144 @@ export default function Settings() {
         </CardFooter>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Smartphone className="h-5 w-5" />
+            Two-Factor Authentication
+          </CardTitle>
+          <CardDescription>
+            Require a verification code from an authenticator app in addition to your password when signing in.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {loadingMfaStatus ? (
+            <Skeleton className="h-10 w-full" />
+          ) : mfaStatus?.mfaEnabled ? (
+            <div className="flex items-center justify-between gap-4 rounded-lg border p-4 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
+                <div>
+                  <p className="font-medium">Two-factor authentication is enabled</p>
+                  <p className="text-sm text-muted-foreground">Your account is protected with an authenticator app.</p>
+                </div>
+              </div>
+              <Button variant="outline" onClick={() => setMfaDisableOpen(true)}>
+                Disable
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-4 rounded-lg border p-4">
+              <div>
+                <p className="font-medium">Two-factor authentication is not enabled</p>
+                <p className="text-sm text-muted-foreground">Set it up to add an extra layer of security to your account.</p>
+              </div>
+              <Button onClick={() => beginMfaSetup.mutate()} disabled={beginMfaSetup.isPending}>
+                {beginMfaSetup.isPending && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                Set Up
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={mfaSetupOpen} onOpenChange={(open) => { if (!open) closeMfaSetupDialog(); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Set Up Two-Factor Authentication</DialogTitle>
+            <DialogDescription>
+              {mfaBackupCodes
+                ? "Save these backup codes somewhere safe. Each can be used once if you lose access to your authenticator app."
+                : "Scan this QR code with an authenticator app (Google Authenticator, Authy, etc.), then enter the 6-digit code it generates."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {mfaBackupCodes ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-2 font-mono text-sm">
+                {mfaBackupCodes.map((code) => (
+                  <div key={code} className="rounded border px-2 py-1.5 bg-muted text-center">{code}</div>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  navigator.clipboard.writeText(mfaBackupCodes.join("\n"));
+                  toast({ title: "Backup codes copied" });
+                }}
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                Copy Codes
+              </Button>
+              <Button className="w-full" onClick={closeMfaSetupDialog}>
+                Done
+              </Button>
+            </div>
+          ) : mfaSetupInfo ? (
+            <div className="space-y-4">
+              <div className="flex justify-center">
+                <img src={mfaSetupInfo.qrCodeDataUrl} alt="MFA QR code" className="h-48 w-48 rounded border" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Can't scan? Enter this key manually:</Label>
+                <div className="font-mono text-xs break-all rounded border px-2 py-1.5 bg-muted">{mfaSetupInfo.secret}</div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mfaSetupToken">Verification Code</Label>
+                <Input
+                  id="mfaSetupToken"
+                  value={mfaSetupToken}
+                  onChange={(e) => setMfaSetupToken(e.target.value)}
+                  placeholder="123456"
+                  autoComplete="one-time-code"
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={closeMfaSetupDialog}>Cancel</Button>
+                <Button
+                  onClick={() => confirmMfaSetup.mutate()}
+                  disabled={!mfaSetupToken || confirmMfaSetup.isPending}
+                >
+                  {confirmMfaSetup.isPending && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                  Verify &amp; Enable
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={mfaDisableOpen} onOpenChange={setMfaDisableOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Disable Two-Factor Authentication</DialogTitle>
+            <DialogDescription>Enter your password to confirm.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="mfaDisablePassword">Password</Label>
+            <Input
+              id="mfaDisablePassword"
+              type="password"
+              value={mfaDisablePassword}
+              onChange={(e) => setMfaDisablePassword(e.target.value)}
+              autoComplete="current-password"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMfaDisableOpen(false)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => disableMfaMutation.mutate()}
+              disabled={!mfaDisablePassword || disableMfaMutation.isPending}
+            >
+              {disableMfaMutation.isPending && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+              Disable
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-6 flex items-center gap-4">
@@ -1327,6 +1606,94 @@ export default function Settings() {
                 )}
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Archive className="h-5 w-5" />
+              Patient Data Retention
+            </CardTitle>
+            <CardDescription>
+              Configure how long patient records are kept before they become eligible for deletion, and review records due for purge. Patients under legal hold are always excluded.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex-1 space-y-1">
+                <Label htmlFor="patientRetentionYears">Keep patient records for</Label>
+                {loadingPatientRetention ? (
+                  <Skeleton className="h-10 w-40" />
+                ) : (
+                  <Select
+                    value={String(patientRetentionYearsInput ?? 10)}
+                    onValueChange={(v) => setPatientRetentionYearsInput(parseInt(v, 10))}
+                  >
+                    <SelectTrigger id="patientRetentionYears" className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 5, 6, 7, 10, 15, 20, 25, 30, 50].map((y) => (
+                        <SelectItem key={y} value={String(y)}>{y} {y === 1 ? "year" : "years"}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Records older than this become eligible for deletion. No patient is deleted automatically — review the list below.
+                </p>
+              </div>
+              <Button
+                onClick={() => patientRetentionYearsInput != null && savePatientRetention.mutate(patientRetentionYearsInput)}
+                disabled={savePatientRetention.isPending || loadingPatientRetention || patientRetentionYearsInput == null || patientRetentionYearsInput === patientRetentionPolicy?.retentionYears}
+              >
+                {savePatientRetention.isPending
+                  ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  : <Save className="mr-2 h-4 w-4" />}
+                Save Policy
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                Eligible for Deletion
+              </Label>
+              {loadingRetentionEligible ? (
+                <Skeleton className="h-16 w-full" />
+              ) : !retentionEligible?.patients.length ? (
+                <p className="text-sm text-muted-foreground">No patient records are currently eligible for deletion.</p>
+              ) : (
+                <div className="rounded-lg border divide-y">
+                  {retentionEligible.patients.map((p) => (
+                    <div key={p.id} className="flex items-center justify-between gap-4 p-3">
+                      <div>
+                        <p className="font-medium text-sm">{p.name} <span className="text-muted-foreground font-normal">({p.patientCode})</span></p>
+                        <p className="text-xs text-muted-foreground">
+                          Created {format(new Date(p.createdAt), "MMM d, yyyy")} &middot; {p.imageCount} image{p.imageCount === 1 ? "" : "s"}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                          if (confirm(`Permanently delete ${p.name} and all associated images? This cannot be undone.`)) {
+                            purgePatient.mutate(p.id);
+                          }
+                        }}
+                        disabled={purgePatient.isPending}
+                      >
+                        <Trash2 className="mr-2 h-3.5 w-3.5" />
+                        Purge
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}

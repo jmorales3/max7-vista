@@ -5,7 +5,7 @@ export const DEFAULT_IDLE_TIMEOUT_MINUTES = 30;
 export const MIN_IDLE_TIMEOUT_MINUTES = 5;
 export const MAX_IDLE_TIMEOUT_MINUTES = 240;
 
-async function getTenantSettings(tenantId: number | null | undefined): Promise<Record<string, unknown>> {
+export async function getTenantSettings(tenantId: number | null | undefined): Promise<Record<string, unknown>> {
   if (!tenantId) return {};
   const [tenant] = await db
     .select({ settings: tenantsTable.settings })
@@ -39,5 +39,11 @@ export async function getTenantIdleTimeoutMinutes(tenantId: number | null | unde
 export async function setTenantIdleTimeoutMinutes(tenantId: number, minutes: number): Promise<void> {
   const settings = await getTenantSettings(tenantId);
   settings["idleTimeoutMinutes"] = minutes;
+  await db.update(tenantsTable).set({ settings: JSON.stringify(settings) }).where(eq(tenantsTable.id, tenantId));
+}
+
+export async function setTenantSetting(tenantId: number, key: string, value: unknown): Promise<void> {
+  const settings = await getTenantSettings(tenantId);
+  settings[key] = value;
   await db.update(tenantsTable).set({ settings: JSON.stringify(settings) }).where(eq(tenantsTable.id, tenantId));
 }

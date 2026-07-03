@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, uniqueIndex, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { tenantsTable } from "./tenants";
@@ -11,6 +11,9 @@ export const patientsTable = pgTable("patients", {
   dateOfBirth: text("date_of_birth"),
   notes: text("notes"),
   profileImageId: integer("profile_image_id"),
+  legalHold: boolean("legal_hold").notNull().default(false),
+  legalHoldReason: text("legal_hold_reason"),
+  legalHoldSetAt: timestamp("legal_hold_set_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

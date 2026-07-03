@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from "react";
-import { getSession, login as apiLogin, logout as apiLogout, refreshSession, type AuthUser, PendingApprovalError } from "@/lib/auth";
+import { getSession, login as apiLogin, logout as apiLogout, refreshSession, verifyMfaLogin, type AuthUser, PendingApprovalError, MfaRequiredError } from "@/lib/auth";
 import { registerForceLogout, registerSuspended } from "@/lib/authBridge";
 
 // Periodically touches the server session so an open-but-passive tab (no
@@ -13,7 +13,10 @@ interface AuthContextValue {
   loading: boolean;
   pendingApproval: boolean;
   suspended: boolean;
+  mfaPending: boolean;
   login: (username: string, password: string) => Promise<void>;
+  verifyMfa: (token: string) => Promise<void>;
+  cancelMfa: () => void;
   logout: () => Promise<void>;
   forceLogout: () => void;
   clearForcePasswordChange: () => void;
@@ -26,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [pendingApproval, setPendingApproval] = useState(false);
   const [suspended, setSuspended] = useState(false);
+  const [mfaPending, setMfaPending] = useState(false);
   const userRef = useRef<AuthUser | null>(null);
   userRef.current = user;
 
@@ -59,14 +63,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const u = await apiLogin(username, password);
       setPendingApproval(false);
+      setMfaPending(false);
       setUser(u);
     } catch (err) {
       if (err instanceof PendingApprovalError) {
         setPendingApproval(true);
         throw err;
       }
+      if (err instanceof MfaRequiredError) {
+        setMfaPending(true);
+        throw err;
+      }
       throw err;
     }
+  }
+
+  async function verifyMfa(token: string) {
+    const u = await verifyMfaLogin(token);
+    setMfaPending(false);
+    setUser(u);
+  }
+
+  function cancelMfa() {
+    setMfaPending(false);
   }
 
   async function logout() {
@@ -88,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, pendingApproval, suspended, login, logout, forceLogout, clearForcePasswordChange }}
+      value={{ user, loading, pendingApproval, suspended, mfaPending, login, verifyMfa, cancelMfa, logout, forceLogout, clearForcePasswordChange }}
     >
       {children}
     </AuthContext.Provider>

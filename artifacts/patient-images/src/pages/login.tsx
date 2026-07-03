@@ -12,11 +12,12 @@ type Mode = "login" | "register" | "setup";
 
 export default function LoginPage() {
   const { t } = useTranslation();
-  const { login } = useAuth();
+  const { login, mfaPending, verifyMfa, cancelMfa } = useAuth();
   const [mode, setMode] = useState<Mode>("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [mfaToken, setMfaToken] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,6 +33,19 @@ export default function LoginPage() {
       .finally(() => setCheckingSetup(false));
   }, []);
 
+  async function handleMfaSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      await verifyMfa(mfaToken.trim());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Verification failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -45,7 +59,14 @@ export default function LoginPage() {
     setLoading(true);
     try {
       if (mode === "login") {
-        await login(username.trim(), password);
+        try {
+          await login(username.trim(), password);
+        } catch (err) {
+          if (err instanceof Error && err.name === "MfaRequiredError") {
+            return;
+          }
+          throw err;
+        }
       } else if (mode === "register") {
         await register(username.trim(), password);
         setSuccess("Account created! An administrator will review your request before you can sign in.");
@@ -116,6 +137,58 @@ export default function LoginPage() {
             border: "1px solid rgba(255,255,255,0.12)",
           }}
         >
+          {mfaPending ? (
+            <>
+              <h2 className="text-lg font-semibold text-center text-white">Two-Factor Verification</h2>
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-200 text-xs">
+                <ShieldCheck className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <span>Enter the 6-digit code from your authenticator app, or a backup code.</span>
+              </div>
+              <form onSubmit={handleMfaSubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="mfaToken" className="text-blue-100">Verification Code</Label>
+                  <Input
+                    id="mfaToken"
+                    type="text"
+                    inputMode="text"
+                    autoComplete="one-time-code"
+                    autoFocus
+                    value={mfaToken}
+                    onChange={(e) => setMfaToken(e.target.value)}
+                    placeholder="123456"
+                    disabled={loading}
+                    required
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus-visible:ring-blue-400"
+                  />
+                </div>
+
+                {error && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/20 border border-red-500/30 text-red-200 text-sm">
+                    <Lock className="h-4 w-4 shrink-0" />
+                    {error}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold"
+                  disabled={loading || !mfaToken}
+                >
+                  {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  Verify
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={() => { cancelMfa(); setMfaToken(""); setError(""); setPassword(""); }}
+                  className="w-full text-center text-xs text-blue-300/60 hover:text-blue-200 transition-colors"
+                >
+                  Back to login
+                </button>
+              </form>
+            </>
+          ) : (
+          <>
           <h2 className="text-lg font-semibold text-center text-white">
             {mode === "login" && t("auth.welcome")}
             {mode === "register" && t("auth.requestAccessTitle")}
@@ -221,6 +294,8 @@ export default function LoginPage() {
                 {mode === "login" ? t("auth.noAccount") : t("auth.alreadyHaveAccount")}
               </button>
             </div>
+          )}
+          </>
           )}
         </div>
 

@@ -18,6 +18,13 @@ export class PendingApprovalError extends Error {
   }
 }
 
+export class MfaRequiredError extends Error {
+  constructor() {
+    super("Two-factor verification code required");
+    this.name = "MfaRequiredError";
+  }
+}
+
 export async function login(username: string, password: string): Promise<AuthUser> {
   const res = await fetch(getApiUrl("/api/auth/login"), {
     method: "POST",
@@ -25,14 +32,83 @@ export async function login(username: string, password: string): Promise<AuthUse
     credentials: "include",
     body: JSON.stringify({ username, password }),
   });
+  const body = await res.json().catch(() => ({})) as { error?: string; code?: string; mfaRequired?: boolean };
   if (!res.ok) {
-    const body = await res.json().catch(() => ({})) as { error?: string; code?: string };
     if (body.code === "PENDING_APPROVAL") {
       throw new PendingApprovalError(body.error || "Account pending approval");
     }
     throw new Error(body.error || "Login failed");
   }
+  if (body.mfaRequired) {
+    throw new MfaRequiredError();
+  }
+  return body as AuthUser;
+}
+
+export async function verifyMfaLogin(token: string): Promise<AuthUser> {
+  const res = await fetch(getApiUrl("/api/auth/mfa/verify"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ token }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error || "Verification failed");
+  }
   return res.json() as Promise<AuthUser>;
+}
+
+export interface MfaSetupInfo {
+  secret: string;
+  qrCodeDataUrl: string;
+}
+
+export async function startMfaSetup(): Promise<MfaSetupInfo> {
+  const res = await fetch(getApiUrl("/api/auth/mfa/setup"), {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error || "Failed to start MFA setup");
+  }
+  return res.json() as Promise<MfaSetupInfo>;
+}
+
+export async function enableMfa(secret: string, token: string): Promise<{ backupCodes: string[] }> {
+  const res = await fetch(getApiUrl("/api/auth/mfa/enable"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ secret, token }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error || "Failed to enable MFA");
+  }
+  return res.json() as Promise<{ backupCodes: string[] }>;
+}
+
+export async function disableMfa(password: string): Promise<void> {
+  const res = await fetch(getApiUrl("/api/auth/mfa/disable"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ password }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error || "Failed to disable MFA");
+  }
+}
+
+export async function getMfaStatus(): Promise<{ mfaEnabled: boolean }> {
+  const res = await fetch(getApiUrl("/api/auth/mfa/status"), {
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to fetch MFA status");
+  return res.json() as Promise<{ mfaEnabled: boolean }>;
 }
 
 export async function register(username: string, password: string): Promise<void> {

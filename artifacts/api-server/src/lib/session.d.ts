@@ -6,5 +6,6 @@ declare module "express-session" {
     username: string;
     role: "user" | "admin" | "superadmin";
     tenantId?: number;
+    mfaPendingUserId?: number;
   }
 }

@@ -34,6 +34,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -60,6 +62,9 @@ import {
   Download,
   Brain,
   ChevronRight,
+  Scale,
+  ShieldAlert,
+  FileDown,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -122,6 +127,77 @@ export default function PatientDetail() {
   const [exporting, setExporting] = useState(false);
   const [cephNewOpen, setCephNewOpen] = useState(false);
   const [deleteCephId, setDeleteCephId] = useState<number | null>(null);
+
+  const [legalHoldDialogOpen, setLegalHoldDialogOpen] = useState(false);
+  const [legalHoldReason, setLegalHoldReason] = useState("");
+  const [legalHoldSaving, setLegalHoldSaving] = useState(false);
+
+  const [disclosureReportOpen, setDisclosureReportOpen] = useState(false);
+  const [disclosureFrom, setDisclosureFrom] = useState("");
+  const [disclosureTo, setDisclosureTo] = useState("");
+  const [disclosureGenerating, setDisclosureGenerating] = useState(false);
+
+  const setLegalHold = async (legalHold: boolean, reason?: string) => {
+    setLegalHoldSaving(true);
+    try {
+      const res = await fetch(getApiUrl(`/api/admin/patients/${id}/legal-hold`), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ legalHold, reason }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
+      }
+      queryClient.invalidateQueries({ queryKey: getGetPatientQueryKey(id) });
+      setLegalHoldDialogOpen(false);
+      setLegalHoldReason("");
+      toast({ title: legalHold ? "Legal hold placed" : "Legal hold released" });
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Failed to update legal hold",
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setLegalHoldSaving(false);
+    }
+  };
+
+  const handleGenerateDisclosureReport = async (format: "csv" | "json") => {
+    setDisclosureGenerating(true);
+    try {
+      const qs = new URLSearchParams();
+      qs.set("format", format);
+      if (disclosureFrom) qs.set("from", disclosureFrom);
+      if (disclosureTo) qs.set("to", disclosureTo);
+      const res = await fetch(getApiUrl(`/api/patients/${id}/disclosure-report?${qs.toString()}`), {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `disclosure-report-${patient?.patientCode ?? id}.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setDisclosureReportOpen(false);
+      toast({ title: "Disclosure report generated" });
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Failed to generate disclosure report",
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setDisclosureGenerating(false);
+    }
+  };
 
   const openExportDialog = () => {
     setSelectedExportIds(new Set((images ?? []).map((img) => img.id)));
@@ -334,7 +410,15 @@ export default function PatientDetail() {
           </Link>
         </Button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-3xl font-bold tracking-tight text-primary truncate">{patient.name}</h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-3xl font-bold tracking-tight text-primary truncate">{patient.name}</h1>
+            {patient.legalHold && (
+              <Badge variant="destructive" className="flex items-center gap-1">
+                <ShieldAlert className="h-3.5 w-3.5" />
+                Legal Hold
+              </Badge>
+            )}
+          </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 text-sm text-muted-foreground">
             <div className="flex items-center gap-1.5 font-mono bg-muted/50 px-2 py-0.5 rounded">
               <FileText className="h-3.5 w-3.5" />
@@ -389,6 +473,26 @@ export default function PatientDetail() {
                     {t("patients.exportImages")}
                   </DropdownMenuItem>
                 </>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setDisclosureReportOpen(true)}>
+                <FileDown className="mr-2 h-4 w-4" />
+                Generate Disclosure Report
+              </DropdownMenuItem>
+              {isAdmin && (
+                <DropdownMenuItem
+                  onClick={() => {
+                    if (patient.legalHold) {
+                      setLegalHold(false);
+                    } else {
+                      setLegalHoldReason("");
+                      setLegalHoldDialogOpen(true);
+                    }
+                  }}
+                >
+                  <Scale className="mr-2 h-4 w-4" />
+                  {patient.legalHold ? "Release Legal Hold" : "Place Legal Hold"}
+                </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -906,6 +1010,68 @@ export default function PatientDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={legalHoldDialogOpen} onOpenChange={setLegalHoldDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Place Legal Hold</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Placing a legal hold prevents this patient's record from being purged by the data retention policy, even after the retention period expires. Provide a reason for the audit record.
+          </p>
+          <div className="space-y-2">
+            <Label htmlFor="legalHoldReason">Reason</Label>
+            <Textarea
+              id="legalHoldReason"
+              value={legalHoldReason}
+              onChange={(e) => setLegalHoldReason(e.target.value)}
+              placeholder="e.g. Pending litigation, subpoena, insurance dispute"
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLegalHoldDialogOpen(false)}>{t("common.cancel")}</Button>
+            <Button
+              onClick={() => setLegalHold(true, legalHoldReason.trim())}
+              disabled={!legalHoldReason.trim() || legalHoldSaving}
+            >
+              Place Hold
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={disclosureReportOpen} onOpenChange={setDisclosureReportOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Generate Disclosure Report</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Produces an accounting of disclosures for this patient's record, listing who accessed or exported their data and when. Leave dates blank to include the full history.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="disclosureFrom">From</Label>
+              <Input id="disclosureFrom" type="date" value={disclosureFrom} onChange={(e) => setDisclosureFrom(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="disclosureTo">To</Label>
+              <Input id="disclosureTo" type="date" value={disclosureTo} onChange={(e) => setDisclosureTo(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setDisclosureReportOpen(false)}>{t("common.cancel")}</Button>
+            <Button variant="outline" onClick={() => handleGenerateDisclosureReport("json")} disabled={disclosureGenerating}>
+              <FileDown className="mr-2 h-4 w-4" />
+              JSON
+            </Button>
+            <Button onClick={() => handleGenerateDisclosureReport("csv")} disabled={disclosureGenerating}>
+              <FileDown className="mr-2 h-4 w-4" />
+              CSV
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

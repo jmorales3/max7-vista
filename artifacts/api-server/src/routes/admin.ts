@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
-import { db, pool, usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, pool, usersTable, patientsTable } from "@workspace/db";
+import { eq, and, lt } from "drizzle-orm";
 import { requireRole, invalidateActiveCache } from "../middlewares/requireAuth";
 import { listGcsFiles } from "../lib/gcsStorage";
 import {
@@ -19,6 +19,14 @@ import {
   setSessionAlertThreshold,
   checkSessionGrowth,
 } from "../lib/sessionGrowthCheck";
+import {
+  getPatientRetentionYears,
+  setPatientRetentionYears,
+  isValidRetentionYears,
+  listPurgeEligiblePatients,
+  MIN_RETENTION_YEARS,
+  MAX_RETENTION_YEARS,
+} from "../lib/dataRetention";
 
 const router: IRouter = Router();
 
@@ -49,6 +57,131 @@ router.patch("/admin/tenant-settings", requireRole("admin", "superadmin"), async
   await setTenantIdleTimeoutMinutes(tenantId, idleTimeoutMinutes);
   logAudit(req, "tenant_settings_update", "tenant", tenantId, { idleTimeoutMinutes });
   return res.json({ idleTimeoutMinutes });
+});
+
+// Patient data retention policy: how long an inactive patient record may be
+// kept before it becomes eligible for manual purge. Purges are never
+// automatic — an admin must review the eligible list and confirm.
+router.get("/admin/retention-policy", requireRole("admin", "superadmin"), async (req, res) => {
+  const tenantId = req.session.tenantId;
+  if (!tenantId) {
+    return res.status(400).json({ error: "No tenant associated with this session" });
+  }
+  const retentionYears = await getPatientRetentionYears(tenantId);
+  return res.json({
+    retentionYears,
+    minRetentionYears: MIN_RETENTION_YEARS,
+    maxRetentionYears: MAX_RETENTION_YEARS,
+  });
+});
+
+router.patch("/admin/retention-policy", requireRole("admin", "superadmin"), async (req, res) => {
+  const tenantId = req.session.tenantId;
+  if (!tenantId) {
+    return res.status(400).json({ error: "No tenant associated with this session" });
+  }
+  const { retentionYears } = req.body as { retentionYears?: number };
+  if (!isValidRetentionYears(retentionYears)) {
+    return res.status(400).json({
+      error: `retentionYears must be a number between ${MIN_RETENTION_YEARS} and ${MAX_RETENTION_YEARS}`,
+    });
+  }
+  await setPatientRetentionYears(tenantId, retentionYears);
+  logAudit(req, "retention_policy_update", "tenant", tenantId, { retentionYears });
+  return res.json({ retentionYears });
+});
+
+// Lists patients past the retention cutoff and NOT on legal hold — i.e. the
+// candidate set an admin may choose to purge. Nothing here is deleted
+// automatically; this is a review queue only.
+router.get("/admin/retention-eligible", requireRole("admin", "superadmin"), async (req, res) => {
+  const tenantId = req.session.tenantId;
+  if (!tenantId) {
+    return res.status(400).json({ error: "No tenant associated with this session" });
+  }
+  const patients = await listPurgeEligiblePatients(tenantId);
+  return res.json({ patients });
+});
+
+// Permanently deletes a patient record (and cascade-deletes their images)
+// once an admin has reviewed the retention-eligible list. Legal hold always
+// blocks this, even if called directly with a held patient's id.
+router.post("/admin/retention-purge/:id", requireRole("admin", "superadmin"), async (req, res) => {
+  const tenantId = req.session.tenantId;
+  if (!tenantId) {
+    return res.status(400).json({ error: "No tenant associated with this session" });
+  }
+  const patientId = parseInt(req.params.id, 10);
+  if (!Number.isFinite(patientId)) {
+    return res.status(400).json({ error: "Invalid patient id" });
+  }
+
+  const [patient] = await db
+    .select()
+    .from(patientsTable)
+    .where(and(eq(patientsTable.id, patientId), eq(patientsTable.tenantId, tenantId)))
+    .limit(1);
+
+  if (!patient) {
+    return res.status(404).json({ error: "Patient not found" });
+  }
+  if (patient.legalHold) {
+    return res.status(403).json({ error: "This patient is on legal hold and cannot be purged" });
+  }
+
+  await db.delete(patientsTable).where(and(eq(patientsTable.id, patientId), eq(patientsTable.tenantId, tenantId)));
+
+  logAudit(req, "patient_retention_purge", "patient", patientId, {
+    patientCode: patient.patientCode,
+    name: patient.name,
+  });
+
+  return res.json({ ok: true });
+});
+
+// Legal hold suspends retention purge eligibility for a patient regardless
+// of age, e.g. during litigation or a regulatory investigation.
+router.patch("/admin/patients/:id/legal-hold", requireRole("admin", "superadmin"), async (req, res) => {
+  const tenantId = req.session.tenantId;
+  if (!tenantId) {
+    return res.status(400).json({ error: "No tenant associated with this session" });
+  }
+  const patientId = parseInt(req.params.id, 10);
+  if (!Number.isFinite(patientId)) {
+    return res.status(400).json({ error: "Invalid patient id" });
+  }
+  const { legalHold, reason } = req.body as { legalHold?: boolean; reason?: string };
+  if (typeof legalHold !== "boolean") {
+    return res.status(400).json({ error: "legalHold (boolean) is required" });
+  }
+  if (legalHold && (!reason || !reason.trim())) {
+    return res.status(400).json({ error: "A reason is required when placing a patient on legal hold" });
+  }
+
+  const [patient] = await db
+    .update(patientsTable)
+    .set({
+      legalHold,
+      legalHoldReason: legalHold ? reason!.trim() : null,
+      legalHoldSetAt: legalHold ? new Date() : null,
+    })
+    .where(and(eq(patientsTable.id, patientId), eq(patientsTable.tenantId, tenantId)))
+    .returning();
+
+  if (!patient) {
+    return res.status(404).json({ error: "Patient not found" });
+  }
+
+  logAudit(req, legalHold ? "legal_hold_placed" : "legal_hold_released", "patient", patientId, {
+    reason: legalHold ? reason!.trim() : undefined,
+  });
+
+  return res.json({
+    id: patient.id,
+    legalHold: patient.legalHold,
+    legalHoldReason: patient.legalHoldReason,
+    legalHoldSetAt: patient.legalHoldSetAt,
+  });
 });
 
 router.get("/admin/session-alert", requireRole("admin", "superadmin"), async (_req, res) => {

@@ -8,6 +8,9 @@ export const patientsTable = sqliteTable("patients", {
   patientCode: text("patient_code").notNull().unique(),
   dateOfBirth: text("date_of_birth"),
   notes: text("notes"),
+  legalHold: integer("legal_hold", { mode: "boolean" }).notNull().default(false),
+  legalHoldReason: text("legal_hold_reason"),
+  legalHoldSetAt: text("legal_hold_set_at"),
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
   updatedAt: text("updated_at").notNull().default(new Date().toISOString()),
 });

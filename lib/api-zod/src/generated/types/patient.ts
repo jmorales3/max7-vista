@@ -16,4 +16,9 @@ export interface Patient {
   notes?: string | null;
   createdAt: string;
   imageCount?: number;
+  legalHold?: boolean;
+  /** @nullable */
+  legalHoldReason?: string | null;
+  /** @nullable */
+  legalHoldSetAt?: string | null;
 }

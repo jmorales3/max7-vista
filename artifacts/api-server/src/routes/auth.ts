@@ -5,6 +5,15 @@ import { db, usersTable, tenantsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logAudit } from "../lib/audit";
 import { getTenantIdleTimeoutMinutes } from "../lib/tenantSettings";
+import {
+  generateMfaSecret,
+  buildOtpAuthUrl,
+  generateQrCodeDataUrl,
+  verifyTotpToken,
+  generateBackupCodes,
+  hashBackupCodes,
+  verifyAndConsumeBackupCode,
+} from "../lib/mfa";
 
 function buildMobileSessionCookie(sessionId: string, secret: string): string {
   const signature = crypto
@@ -130,6 +139,18 @@ router.post("/auth/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
+    if (user.mfaEnabled) {
+      // Password verified, but the session is not authenticated yet — a
+      // second factor is required before req.session.userId is set. This
+      // temporary pending state is cleared once /auth/mfa/verify succeeds.
+      req.session.mfaPendingUserId = user.id;
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => (err ? reject(err) : resolve()));
+      });
+      logAudit(req, "login_mfa_challenge", "session", user.id, undefined, { tenantId: user.tenantId ?? null });
+      return res.json({ mfaRequired: true });
+    }
+
     req.session.userId = user.id;
     req.session.username = user.username;
     req.session.role = user.role;
@@ -160,6 +181,75 @@ router.post("/auth/login", async (req, res) => {
   }
 });
 
+// Second step of a two-factor login: called after /auth/login returned
+// { mfaRequired: true } with req.session.mfaPendingUserId set. Accepts either
+// a live TOTP code or one of the user's one-time backup codes.
+router.post("/auth/mfa/verify", async (req, res) => {
+  const pendingUserId = req.session.mfaPendingUserId;
+  if (!pendingUserId) {
+    return res.status(400).json({ error: "No pending MFA challenge" });
+  }
+
+  const { token } = req.body as { token?: string };
+  if (!token) {
+    return res.status(400).json({ error: "Verification code is required" });
+  }
+
+  try {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, pendingUserId)).limit(1);
+    if (!user || !user.mfaEnabled || !user.mfaSecret) {
+      req.session.mfaPendingUserId = undefined;
+      return res.status(400).json({ error: "MFA is not enabled for this account" });
+    }
+
+    let valid = await verifyTotpToken(token, user.mfaSecret);
+    if (!valid && user.mfaBackupCodes) {
+      const hashedCodes = JSON.parse(user.mfaBackupCodes) as string[];
+      const result = await verifyAndConsumeBackupCode(token, hashedCodes);
+      if (result.valid) {
+        valid = true;
+        await db
+          .update(usersTable)
+          .set({ mfaBackupCodes: JSON.stringify(result.remaining) })
+          .where(eq(usersTable.id, user.id));
+        logAudit(req, "mfa_backup_code_used", "user", user.id, undefined, { tenantId: user.tenantId ?? null });
+      }
+    }
+
+    if (!valid) {
+      logAudit(req, "login_failed", "session", null, { username: user.username, reason: "invalid_mfa_code" }, { tenantId: user.tenantId ?? null });
+      return res.status(401).json({ error: "Invalid verification code" });
+    }
+
+    req.session.mfaPendingUserId = undefined;
+    req.session.userId = user.id;
+    req.session.username = user.username;
+    req.session.role = user.role;
+    req.session.tenantId = user.tenantId ?? undefined;
+
+    const idleTimeoutMinutes = await getTenantIdleTimeoutMinutes(user.tenantId);
+    req.session.cookie.maxAge = idleTimeoutMinutes * 60 * 1000;
+
+    await new Promise<void>((resolve, reject) => {
+      req.session.save((err) => (err ? reject(err) : resolve()));
+    });
+
+    logAudit(req, "login", "session", user.id);
+
+    return res.json({
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      tenantId: user.tenantId,
+      forcePasswordChange: user.forcePasswordChange,
+      authToken: req.sessionID,
+      idleTimeoutMinutes,
+    });
+  } catch {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.post("/auth/logout", async (req, res) => {
   logAudit(req, "logout", "session", req.session.userId ?? null);
   req.session.destroy(() => {
@@ -186,6 +276,103 @@ router.get("/auth/session", async (req, res) => {
     forcePasswordChange: user?.forcePasswordChange ?? false,
     idleTimeoutMinutes,
   });
+});
+
+// Begins MFA enrollment for the logged-in user: generates a new TOTP secret
+// (not yet persisted as enabled) and returns a QR code + manual entry key.
+// The secret is only committed to the user record once /auth/mfa/enable
+// confirms the user can actually generate a valid code with it.
+router.post("/auth/mfa/setup", async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+  try {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId)).limit(1);
+    if (!user) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    const secret = generateMfaSecret();
+    const otpAuthUrl = buildOtpAuthUrl(user.username, secret);
+    const qrCodeDataUrl = await generateQrCodeDataUrl(otpAuthUrl);
+    return res.json({ secret, qrCodeDataUrl });
+  } catch {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Confirms enrollment: verifies the code generated from the secret returned
+// by /auth/mfa/setup, then persists mfaEnabled + mfaSecret + fresh backup
+// codes. Backup codes are shown to the user exactly once, here.
+router.post("/auth/mfa/enable", async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+  const { secret, token } = req.body as { secret?: string; token?: string };
+  if (!secret || !token) {
+    return res.status(400).json({ error: "Secret and verification code are required" });
+  }
+  try {
+    if (!(await verifyTotpToken(token, secret))) {
+      return res.status(401).json({ error: "Invalid verification code" });
+    }
+
+    const backupCodes = generateBackupCodes();
+    const hashedCodes = await hashBackupCodes(backupCodes);
+
+    await db
+      .update(usersTable)
+      .set({ mfaEnabled: true, mfaSecret: secret, mfaBackupCodes: JSON.stringify(hashedCodes) })
+      .where(eq(usersTable.id, req.session.userId));
+
+    logAudit(req, "mfa_enabled", "user", req.session.userId);
+
+    return res.json({ ok: true, backupCodes });
+  } catch {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/auth/mfa/disable", async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+  const { password } = req.body as { password?: string };
+  if (!password) {
+    return res.status(400).json({ error: "Password is required to disable MFA" });
+  }
+  try {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId)).limit(1);
+    if (!user) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) {
+      return res.status(401).json({ error: "Incorrect password" });
+    }
+
+    await db
+      .update(usersTable)
+      .set({ mfaEnabled: false, mfaSecret: null, mfaBackupCodes: null })
+      .where(eq(usersTable.id, user.id));
+
+    logAudit(req, "mfa_disabled", "user", user.id);
+
+    return res.json({ ok: true });
+  } catch {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/auth/mfa/status", async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+  const [user] = await db
+    .select({ mfaEnabled: usersTable.mfaEnabled })
+    .from(usersTable)
+    .where(eq(usersTable.id, req.session.userId))
+    .limit(1);
+  return res.json({ mfaEnabled: user?.mfaEnabled ?? false });
 });
 
 router.post("/auth/change-password", async (req, res) => {

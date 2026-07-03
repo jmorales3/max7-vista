@@ -660,6 +660,12 @@ components:
           type: string
         imageCount:
           type: integer
+        legalHold:
+          type: boolean
+        legalHoldReason:
+          type: ["string", "null"]
+        legalHoldSetAt:
+          type: ["string", "null"]
 
     ImageUploadInput:
       type: object

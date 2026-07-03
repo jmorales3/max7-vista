@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { desc, eq, and, or, gte, lte, ilike, inArray, SQL } from "drizzle-orm";
 import { db, auditLogTable, patientsTable } from "@workspace/db";
 import { requireRole } from "../middlewares/requireAuth";
+import { logAudit } from "../lib/audit";
 import {
   getAuditRetentionYears,
   setAuditRetentionYears,
@@ -214,6 +215,124 @@ router.get("/audit-logs/export", requireRole("admin", "superadmin"), async (req,
   } catch (err) {
     console.error("[audit] CSV export failed:", err);
     res.status(500).json({ error: "Failed to export audit log" });
+  }
+});
+
+// ── Accounting of Disclosures (HIPAA 45 CFR §164.528) ───────────────────────
+// A patient-scoped report of who accessed/exported/shared their PHI and when.
+// Restricted to actions that represent an actual disclosure or access of a
+// patient's images/chart — not incidental system events like login/logout.
+const DISCLOSURE_ACTIONS = [
+  "patient_view",
+  "image_view",
+  "image_export",
+  "image_upload",
+  "image_edit",
+  "image_delete",
+  "image_replace",
+  "patient_edit",
+  "presentation_export",
+  "presentation_share",
+  "document_export",
+  "document_download",
+];
+
+router.get("/patients/:id/disclosure-report", requireRole("admin", "superadmin"), async (req, res): Promise<void> => {
+  try {
+    const tenantId = req.session?.tenantId as number | undefined;
+    const patientId = parseInt(req.params.id, 10);
+    if (!Number.isFinite(patientId)) {
+      res.status(400).json({ error: "Invalid patient id" });
+      return;
+    }
+    if (!tenantId) {
+      res.status(400).json({ error: "No tenant associated with this session" });
+      return;
+    }
+
+    const [patient] = await db
+      .select({ id: patientsTable.id, name: patientsTable.name, patientCode: patientsTable.patientCode })
+      .from(patientsTable)
+      .where(and(eq(patientsTable.id, patientId), eq(patientsTable.tenantId, tenantId)))
+      .limit(1);
+
+    if (!patient) {
+      res.status(404).json({ error: "Patient not found" });
+      return;
+    }
+
+    const dateFrom = req.query.from as string | undefined;
+    const dateTo = req.query.to as string | undefined;
+
+    const conditions: SQL[] = [
+      eq(auditLogTable.tenantId, tenantId),
+      eq(auditLogTable.patientId as any, patientId),
+      inArray(auditLogTable.action, DISCLOSURE_ACTIONS),
+    ];
+    if (dateFrom) conditions.push(gte(auditLogTable.createdAt, new Date(dateFrom)));
+    if (dateTo) {
+      const end = new Date(dateTo);
+      end.setHours(23, 59, 59, 999);
+      conditions.push(lte(auditLogTable.createdAt, end));
+    }
+
+    const rows = await db
+      .select()
+      .from(auditLogTable)
+      .where(and(...conditions))
+      .orderBy(desc(auditLogTable.createdAt));
+
+    if (req.query.format === "json") {
+      res.json({ patient, items: rows });
+      return;
+    }
+
+    function csvEscape(value: string | number | null | undefined): string {
+      if (value == null) return "";
+      let str = String(value);
+      if (/^[=+\-@\t\r]/.test(str)) str = `\t${str}`;
+      if (str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r") || str.includes("\t")) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    }
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="disclosure-report-${patient.patientCode}-${dateStr}.csv"`,
+    );
+
+    const meta = [
+      `Accounting of Disclosures Report`,
+      `Patient,${csvEscape(patient.name)}`,
+      `Patient Code,${csvEscape(patient.patientCode)}`,
+      `Period,${dateFrom || "all time"} to ${dateTo || "present"}`,
+      `Generated,${new Date().toISOString()}`,
+      ``,
+    ].join("\n");
+
+    const header = "Date/Time,Accessed By,Action,Entity Type,Entity ID,Details\n";
+    const body = rows
+      .map((r) =>
+        [
+          csvEscape(r.createdAt ? new Date(r.createdAt).toISOString() : ""),
+          csvEscape(r.username),
+          csvEscape(r.action),
+          csvEscape(r.entityType),
+          csvEscape(r.entityId),
+          csvEscape(r.details as string | null),
+        ].join(","),
+      )
+      .join("\n");
+
+    logAudit(req, "disclosure_report_generated", "patient", patientId, { dateFrom, dateTo, rowCount: rows.length });
+
+    res.end(meta + header + body);
+  } catch (err) {
+    console.error("[audit] Disclosure report failed:", err);
+    res.status(500).json({ error: "Failed to generate disclosure report" });
   }
 });
 
