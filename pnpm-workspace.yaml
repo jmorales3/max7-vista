@@ -73,7 +73,6 @@ autoInstallPeers: false
 # was generated without it — dangerouslyAllowAllBuilds bypasses that check).
 dangerouslyAllowAllBuilds: true
 
-
 overrides:
   # replit uses linux-x64 only, we can exclude all other platforms
   "esbuild>@esbuild/darwin-arm64": "-"

@@ -1805,6 +1805,7 @@ export default function Editor() {
     const newImg = new Image();
     newImg.onload = () => {
       imgRef.current = newImg;
+      // Scale the cropped image to fill the canvas instead of resetting to 1
       const canvas = canvasRef.current;
       const container = containerRef.current;
       const fitScale =
@@ -1822,6 +1823,7 @@ export default function Editor() {
       setPanOffset({ x: 0, y: 0 });
       panOffsetRef.current = { x: 0, y: 0 };
       setTool("pointer");
+      // Render immediately with the computed scale so there's no flash
       if (canvas && container) {
         canvas.width = container.offsetWidth;
         canvas.height = container.offsetHeight;
@@ -2265,7 +2267,6 @@ export default function Editor() {
       );
     }
   }
-
   if (isLoading) {
     return (
       <div className="p-6 h-full flex flex-col">
@@ -2382,6 +2383,274 @@ export default function Editor() {
           )}
 
 
+          {tool === "overlay" && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-muted-foreground">{t("editor.overlayPickHint")}:</span>
+              {overlayImageId && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 gap-1 text-xs"
+                  onClick={() => { setOverlayImageId(null); overlayImgRef.current = null; redrawOverlay(); }}
+                >
+                  <X className="h-3 w-3" />
+                  {t("editor.overlayNone")}
+                </Button>
+              )}
+              {patientImages.filter((pi) => String(pi.id) !== String(id)).length === 0 ? (
+                <span className="text-xs text-muted-foreground italic">{t("editor.overlayNoImages")}</span>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <button
+                    className="shrink-0 h-7 w-5 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground"
+                    onClick={() => overlayScrollRef.current?.scrollBy({ left: -160, behavior: "smooth" })}
+                  >
+                    <ChevronLeft className="h-3 w-3" />
+                  </button>
+                  <div
+                    ref={overlayScrollRef}
+                    className="flex gap-1 overflow-x-auto w-[320px] scroll-smooth"
+                    style={{ scrollbarWidth: "none" }}
+                  >
+                    {patientImages
+                      .filter((pi) => String(pi.id) !== String(id))
+                      .map((pi) => (
+                        <button
+                          key={pi.id}
+                          title={pi.notes ?? String(pi.id)}
+                          className={`shrink-0 w-9 h-9 rounded border-2 overflow-hidden transition-colors ${
+                            overlayImageId === String(pi.id) ? "border-primary" : "border-transparent hover:border-muted-foreground/40"
+                          }`}
+                          onClick={() => setOverlayImageId(overlayImageId === String(pi.id) ? null : String(pi.id))}
+                        >
+                          <img
+                            src={`/api/images/${pi.id}/file`}
+                            alt=""
+                            className="w-full h-full object-cover"
+                            crossOrigin="anonymous"
+                          />
+                        </button>
+                      ))}
+                  </div>
+                  <button
+                    className="shrink-0 h-7 w-5 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground"
+                    onClick={() => overlayScrollRef.current?.scrollBy({ left: 160, behavior: "smooth" })}
+                  >
+                    <ChevronRight className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+              {overlayImageId && (
+                <>
+                  <div className="h-4 w-px bg-border mx-0.5" />
+                  <span className="text-xs text-muted-foreground">{t("editor.overlayOpacity")}</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={overlayOpacity}
+                    onChange={(e) => setOverlayOpacity(parseFloat(e.target.value))}
+                    className="w-24 h-1.5 accent-primary"
+                  />
+                  <span className="text-xs font-mono w-8 text-center">{Math.round(overlayOpacity * 100)}%</span>
+                  <div className="h-4 w-px bg-border mx-0.5" />
+                  <span className="text-xs text-muted-foreground">{t("editor.overlayScale")}</span>
+                  <input
+                    type="range"
+                    min={0.1}
+                    max={3.0}
+                    step={0.01}
+                    value={overlayScaleCorrection}
+                    onChange={(e) => {
+                      const v = parseFloat(e.target.value);
+                      overlayScaleCorrectionRef.current = v;
+                      setOverlayScaleCorrection(v);
+                      redrawOverlay();
+                    }}
+                    className="w-24 h-1.5 accent-primary"
+                  />
+                  <span className="text-xs font-mono w-10 text-center">{Math.round(overlayScaleCorrection * 100)}%</span>
+                  {overlayScaleCorrection !== 1.0 && (
+                    <button
+                      className="text-xs text-primary hover:underline shrink-0"
+                      onClick={() => {
+                        overlayScaleCorrectionRef.current = 1.0;
+                        setOverlayScaleCorrection(1.0);
+                        redrawOverlay();
+                      }}
+                    >
+                      {t("editor.overlayOffsetReset")}
+                    </button>
+                  )}
+                  <div className="h-4 w-px bg-border mx-0.5" />
+                  <Move className="h-3 w-3 text-muted-foreground shrink-0" />
+                  <span className="text-xs text-muted-foreground">{t("editor.overlayPosition")}</span>
+                  <span className="text-xs font-mono text-muted-foreground">
+                    {overlayOffsetX},{overlayOffsetY}
+                  </span>
+                  {(overlayOffsetX !== 0 || overlayOffsetY !== 0) && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 text-xs px-2"
+                      onClick={() => {
+                        overlayOffsetXRef.current = 0;
+                        overlayOffsetYRef.current = 0;
+                        setOverlayOffsetX(0);
+                        setOverlayOffsetY(0);
+                        redrawOverlay();
+                      }}
+                    >
+                      {t("editor.overlayOffsetReset")}
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {tool === "angle" && (
+            <div className="flex items-center gap-2">
+              {angleStep > 0 ? (
+                <>
+                  <span className="text-xs text-muted-foreground bg-muted/40 px-2 py-0.5 rounded">
+                    {angleStep === 1 ? t("editor.angleClickArm1") : t("editor.angleClickArm2")}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 gap-1"
+                    onClick={() => { setAngleStep(0); anglePointsRef.current = []; }}
+                  >
+                    <X className="h-3 w-3" />
+                    {t("common.cancel")}
+                  </Button>
+                </>
+              ) : (
+                <span className="text-xs text-muted-foreground">{t("editor.angleHint")}</span>
+              )}
+            </div>
+          )}
+
+          {tool === "smooth" && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">{t("editor.smoothStrength")}</span>
+              <input
+                type="range"
+                min={1}
+                max={20}
+                value={smoothBlur}
+                onChange={(e) => setSmoothBlur(+e.target.value)}
+                className="w-20 h-1.5 accent-primary"
+              />
+              <span className="text-xs font-mono w-4 text-center">{smoothBlur}</span>
+              {pendingSmoothPath && (
+                <>
+                  <Button size="sm" className="h-8 gap-1" onClick={applySmooth}>
+                    <Check className="h-3.5 w-3.5" />
+                    {t("editor.applySmooth")}
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-8 gap-1" onClick={cancelSmooth}>
+                    <X className="h-3.5 w-3.5" />
+                    {t("common.cancel")}
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+
+          {tool !== "crop" && tool !== "pointer" && tool !== "select" && tool !== "eyedropper" && tool !== "hand" && tool !== "smooth" && (
+            <div className="relative flex items-center gap-1.5" title={t("editor.annotationColor")}>
+              <div
+                className="w-5 h-5 rounded-full border-2 border-muted-foreground/40 shadow cursor-pointer"
+                style={{ background: penColor }}
+              />
+              <input
+                type="color"
+                value={penColor}
+                onChange={(e) => setPenColor(e.target.value)}
+                className="absolute inset-0 opacity-0 w-full cursor-pointer"
+                title={t("editor.pickColor")}
+              />
+            </div>
+          )}
+
+          {(tool === "pen" || tool === "arrow" || tool === "circle" || tool === "eraser" || tool === "straightline") && (
+            <div className="flex items-center gap-1" title={t("editor.strokeWidth")}>
+              <span className="text-xs text-muted-foreground">{t("editor.strokeWidth")}</span>
+              <Button
+                variant="ghost" size="icon" className="h-6 w-6 text-base"
+                onClick={() => setStrokeWidth((w) => Math.max(1, w - 1))}
+              >−</Button>
+              <span className="text-xs font-mono w-5 text-center">{strokeWidth}</span>
+              <Button
+                variant="ghost" size="icon" className="h-6 w-6 text-base"
+                onClick={() => setStrokeWidth((w) => Math.min(30, w + 1))}
+              >+</Button>
+            </div>
+          )}
+
+          {tool === "text" && (
+            <div className="flex items-center gap-1" title={t("editor.textSize")}>
+              <span className="text-xs text-muted-foreground">{t("editor.textSize")}</span>
+              <Button
+                variant="ghost" size="icon" className="h-6 w-6 text-base"
+                onClick={() => setTextSize((s) => Math.max(10, s - 4))}
+              >−</Button>
+              <span className="text-xs font-mono w-7 text-center">{textSize}px</span>
+              <Button
+                variant="ghost" size="icon" className="h-6 w-6 text-base"
+                onClick={() => setTextSize((s) => Math.min(120, s + 4))}
+              >+</Button>
+            </div>
+          )}
+
+          <div className="h-4 w-px bg-border mx-1" />
+
+          <div className="flex items-center gap-0.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setScale((s) => Math.max(0.1, +(s - 0.1).toFixed(1)))}
+              title={t("editor.zoomOut")}
+            >
+              <ZoomOut className="h-4 w-4" />
+            </Button>
+            <span className="text-xs font-mono w-10 text-center">{Math.round(scale * 100)}%</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setScale((s) => Math.min(5, +(s + 0.1).toFixed(1)))}
+              title={t("editor.zoomIn")}
+            >
+              <ZoomIn className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setRotation((r) => (r + 90) % 360)}
+            title={t("editor.rotate")}
+          >
+            <RotateCw className="h-4 w-4" />
+          </Button>
+
+          <div className="h-4 w-px bg-border mx-1" />
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 text-xs"
+            onClick={() => setAnnotations([])}
+            title={t("editor.clearAnnotations")}
+          >
+            {t("editor.clearAnnotations")}
+          </Button>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">

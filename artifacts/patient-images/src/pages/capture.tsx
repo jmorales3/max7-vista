@@ -148,16 +148,16 @@ export default function Capture() {
     return () => cleanups.forEach((fn) => fn());
   }, [processFiles]);
 
+  const updateItemNotes = (id: string, notes: string) => {
+    setQueue((prev) => prev.map((item) => item.id === id ? { ...item, notes } : item));
+  };
+
   const removeFromQueue = (id: string) => {
     setQueue((prev) => {
       const item = prev.find((i) => i.id === id);
       if (item) URL.revokeObjectURL(item.previewUrl);
       return prev.filter((i) => i.id !== id);
     });
-  };
-
-  const updateItemNotes = (id: string, notes: string) => {
-    setQueue((prev) => prev.map((item) => item.id === id ? { ...item, notes } : item));
   };
 
   const clearQueue = () => {
@@ -383,7 +383,6 @@ export default function Capture() {
               </div>
             </div>
           )}
-
           {/* Per-image cards with individual notes */}
           {showQueue && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -25,16 +25,18 @@ router.get("/local-file/*objectPath", (req, res) => {
     return;
   }
 
-  const requestedPath = req.params.objectPath;
-  if (!requestedPath) {
+  const requestedPathParam = req.params.objectPath as unknown as string | string[] | undefined;
+  if (!requestedPathParam || requestedPathParam.length === 0) {
     res.status(400).json({ error: "No path specified" });
     return;
   }
 
+  // req.params.objectPath is an array of path segments for wildcard routes.
   // Decode each segment and reconstruct with OS separator
-  const segments = requestedPath
-    .split("/")
-    .map((s) => decodeURIComponent(s));
+  const rawSegments = Array.isArray(requestedPathParam)
+    ? requestedPathParam
+    : requestedPathParam.split("/");
+  const segments = rawSegments.map((s: string) => decodeURIComponent(s));
 
   const resolvedStorageDir = path.resolve(storageDir);
   const localPath = path.resolve(resolvedStorageDir, ...segments);

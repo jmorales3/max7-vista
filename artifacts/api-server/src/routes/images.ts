@@ -153,11 +153,11 @@ router.get("/images", async (req, res): Promise<void> => {
     }
 
     // Always inner-join patients so we get tenant isolation for free
-    const conditions: ReturnType<typeof eq>[] = [eq(patientsTable.tenantId, tenantId)];
+    const conditions: any[] = [eq(patientsTable.tenantId, tenantId)];
     if (params.patientId) conditions.push(eq(imagesTable.patientId, params.patientId));
     if (params.dateFrom) conditions.push(gte(imagesTable.capturedAt, new Date(params.dateFrom)));
     if (params.dateTo) conditions.push(lte(imagesTable.capturedAt, new Date(params.dateTo)));
-    if (accessibleIds !== null) conditions.push(inArray(imagesTable.patientId, accessibleIds) as any);
+    if (accessibleIds !== null) conditions.push(inArray(imagesTable.patientId, accessibleIds));
 
     if (params.tagIds) {
       const tagIdList = params.tagIds

@@ -15,3 +15,4 @@
 - [Expo native package version pinning](expo-package-version-mismatch.md) — loose semver on expo-* modules can resolve a version built for a newer SDK, crashing app boot; always run `npx expo install --check` after adding one.
 - [runTest iteration cap is session-wide](runtest-iteration-cap.md) — "Maximum testing iterations (10) reached" can hit after only ~2 runTest calls if prior calls this session used many steps; don't retry blindly, fall back to curl/manual verification.
 - [Raw enum/role values slip through untranslated UI](raw-enum-role-display.md) — after relabeling an enum's display text, grep for raw field renders (e.g. `user.role`), not just translation-key call sites.
+- [git-filter-repo history rewrite gotchas](git-filter-repo-rewrite.md) — stray .keep/.lock/tmp files from prior crashed attempts block fast-import; GitHub also rejects blobs >2GB and workflow-file pushes without a `workflow`-scoped PAT.

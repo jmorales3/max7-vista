@@ -35,7 +35,6 @@ function ImageInFrame({
   const frameW = frame.width * pxPerMm;
   const frameH = frame.height * pxPerMm;
   const hasImage = !!docFrame.imageId;
-
   // zoom: float scale multiplier. 1.0 = show full image fitting inside frame.
   // Legacy docs had zoom=0 (fit) or zoom=100 (fill) — treat any value ≥10 as legacy → reset to 1.
   const zoomScale = docFrame.zoom && docFrame.zoom > 0 && docFrame.zoom < 10 ? docFrame.zoom : 1.0;
@@ -660,25 +659,20 @@ export default function TemplateDocumentPage() {
           ) : (
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 max-h-[28rem] overflow-y-auto py-2 pr-1">
               {(patientImages as ImageItem[]).filter((img) => !img.patientId || img.patientId === document.patientId).map((img) => (
-                <div
+                <button
                   key={img.id}
-                  role="button"
-                  tabIndex={0}
-                  style={{
-                    width: "100%",
-                    paddingTop: "100%",
-                    borderRadius: 8,
-                    border: "2px solid transparent",
-                    cursor: "pointer",
-                    backgroundImage: `url('/api/images/${img.id}/file')`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                    backgroundRepeat: "no-repeat",
-                  }}
-                  className="hover:border-primary focus:outline-none focus:border-primary"
+                  type="button"
+                  className="block w-full rounded-lg overflow-hidden border-2 border-transparent hover:border-primary focus:outline-none focus:border-primary"
                   onClick={() => pickerFrameId && assignImage(pickerFrameId, img.id)}
-                  onKeyDown={(e) => e.key === "Enter" && pickerFrameId && assignImage(pickerFrameId, img.id)}
-                />
+                >
+                  <div className="aspect-square w-full overflow-hidden">
+                    <img
+                      src={`/api/images/${img.id}/file`}
+                      alt={img.fileName ?? ""}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </button>
               ))}
             </div>
           )}
