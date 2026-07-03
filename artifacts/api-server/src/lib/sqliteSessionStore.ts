@@ -5,7 +5,7 @@ import path from "path";
 import fs from "fs";
 import { logger } from "./logger";
 
-function resolveSessionDbPath(): string {
+export function resolveSessionDbPath(): string {
   const dbPath = process.env["DATABASE_PATH"];
   if (dbPath && dbPath !== ":memory:") {
     return path.join(path.dirname(dbPath), "sessions.db");

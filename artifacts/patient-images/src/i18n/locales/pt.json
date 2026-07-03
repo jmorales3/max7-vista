@@ -85,7 +85,8 @@
     "tagManagement": "Gerenciamento de Etiquetas",
     "auditLog": "Registro de Auditoria",
     "clinicalTools": "Ferramentas Clínicas",
-    "cephalometrics": "Cefalometria"
+    "cephalometrics": "Cefalometria",
+    "integrityCheck": "Verificação de Integridade"
   },
   "common": {
     "save": "Salvar",
@@ -480,6 +481,13 @@
     "rootDirectoryHint": "As imagens serão salvas em subpastas organizadas por ID do paciente e data:",
     "browseFolders": "Navegar…",
     "saveSettings": "Salvar Configurações",
+    "serverAddress": "Endereço do Servidor da Clínica",
+    "serverAddressDesc": "Compartilhe este endereço com a equipe para que não precisem digitá-lo no aplicativo móvel — escaneie o código QR ou copie o link.",
+    "serverAddressCopy": "Copiar",
+    "serverAddressCopied": "Copiado!",
+    "serverAddressNone": "Nenhum endereço de rede local detectado. Verifique se este dispositivo está conectado à rede/Wi-Fi da clínica.",
+    "serverAddressQrHint": "Escaneie com o botão \"Escanear Código QR\" na tela de Configuração do Servidor do aplicativo móvel.",
+    "serverAddressMultiple": "Este computador tem mais de um endereço de rede. Se a leitura não funcionar, tente outro:",
     "dirIndexing": "Indexação de Diretório",
     "dirIndexingDesc": "Escaneie o diretório de armazenamento para indexar arquivos legados ou recuperar imagens fora de sincronia.",
     "scanLegacy": "Escanear Diretório Legado",
@@ -503,6 +511,14 @@
     "credentialsUpdated": "Credenciais atualizadas com sucesso",
     "credentialsFailed": "Falha ao atualizar as credenciais",
     "noChanges": "Nada a atualizar — informe um novo usuário, nova senha ou ambos",
+    "idleTimeout": {
+      "title": "Tempo Limite de Inatividade da Sessão",
+      "description": "Encerra automaticamente a sessão dos usuários desta clínica após um período de inatividade.",
+      "minutesLabel": "Minutos de inatividade",
+      "range": "Deve estar entre {{min}} e {{max}} minutos.",
+      "saved": "Tempo limite de inatividade atualizado",
+      "saveFailed": "Falha ao atualizar o tempo limite de inatividade"
+    },
     "backup": {
       "title": "Cópias de Segurança",
       "desc": "Os backups diários automáticos protegem os dados dos pacientes contra corrupção ou falha de hardware. Até 7 cópias rotativas são mantidas.",
@@ -563,6 +579,13 @@
       "cleanupNone": "Nenhuma entrada expirada para remover.",
       "cleanupResultNone": "Nenhuma entrada expirada encontrada — o registro já está dentro do período de retenção.",
       "cleanupFailed": "Falha na limpeza"
+    },
+    "sessionAlert": {
+      "title": "Alerta de crescimento do armazenamento de sessões",
+      "desc": "O armazenamento de sessões cresceu para {{count}} linhas, ultrapassando o limite configurado de {{threshold}}. Considere investigar sessões obsoletas ou aumentar a frequência de limpeza.",
+      "healthy": "Armazenamento de sessões: {{count}} de {{threshold}} limite",
+      "recheck": "Verificar novamente",
+      "checkFailed": "Falha ao verificar novamente o crescimento de sessões"
     },
     "auditLog": {
       "title": "Registro de Auditoria",
@@ -955,6 +978,23 @@
     "totalEntries": "entradas",
     "filterPatient": "Paciente"
   },
+  "uploadQueue": {
+    "pending": "{{count}} foto aguardando envio",
+    "pending_other": "{{count}} fotos aguardando envio",
+    "detail": "Será enviada automaticamente quando a conexão voltar.",
+    "detailWithFailed": "{{pending}} pendentes, {{failed}} falharam — toque em tentar novamente.",
+    "retryNow": "Tentar novamente",
+    "discard": "Descartar",
+    "queuedTitle": "Salvo para depois",
+    "queuedDesc": "{{count}} foto não conseguiu chegar ao servidor e foi salva neste dispositivo — será enviada automaticamente quando a conexão voltar.",
+    "queuedDesc_other": "{{count}} fotos não conseguiram chegar ao servidor e foram salvas neste dispositivo — serão enviadas automaticamente quando a conexão voltar."
+  },
+  "accessHistory": {
+    "title": "Histórico de acesso",
+    "empty": "Nenhum histórico de acesso registrado ainda.",
+    "error": "Não foi possível carregar o histórico de acesso.",
+    "unknownUser": "Usuário desconhecido"
+  },
   "ceph": {
     "title": "Cefalometria",
     "subtitle": "Gerencie modelos de análise cefalométrica para rastreamento de marcos anatômicos e medições automáticas.",
@@ -1339,5 +1379,44 @@
     "downloading": "Baixando atualização… {{percent}}%",
     "downloaded": "A versão {{version}} está pronta para instalar",
     "restartNow": "Reiniciar e Instalar"
+  },
+  "adminIntegrity": {
+    "title": "Integridade das Imagens",
+    "description": "Verifique se as imagens armazenadas não foram corrompidas ou perdidas, e preencha as somas de verificação de registros antigos.",
+    "statusTitle": "Cobertura de Hash",
+    "statusDescription": "Quantas imagens têm atualmente uma soma de verificação armazenada.",
+    "totalImages": "Total de Imagens",
+    "withHash": "Com Soma de Verificação",
+    "missingHash": "Sem Soma de Verificação",
+    "backfillTitle": "Preencher Somas de Verificação",
+    "backfillDescription": "Calcula somas de verificação para imagens que ainda não têm uma.",
+    "runBackfill": "Executar Preenchimento",
+    "verifyTitle": "Verificar Integridade",
+    "verifyDescription": "Reverifica os arquivos armazenados em relação à sua soma de verificação salva para detectar corrupção ou perda.",
+    "runVerify": "Executar Verificação",
+    "scanned": "Verificadas",
+    "updated": "Atualizadas",
+    "ok": "OK",
+    "mismatches": "Discrepâncias",
+    "missingFile": "Arquivos Ausentes",
+    "errors": "Erros",
+    "backfillComplete": "Preenchimento concluído",
+    "backfillSummary": "{{updated}} de {{scanned}} imagens verificadas foram atualizadas.",
+    "verifyClean": "Nenhum problema encontrado",
+    "verifyIssuesFound": "Problemas de integridade encontrados",
+    "verifySummary": "{{ok}} de {{scanned}} imagens verificadas com sucesso.",
+    "issuesTitle": "Problemas Encontrados",
+    "issuesDescription": "Revise essas imagens — elas podem precisar ser reenviadas ou investigadas.",
+    "status": "Status",
+    "fileName": "Nome do Arquivo",
+    "patientId": "ID do Paciente",
+    "detail": "Detalhe",
+    "statusValue": {
+      "mismatch": "Discrepância",
+      "missing_file": "Arquivo Ausente",
+      "error": "Erro"
+    },
+    "statusLoadError": "Falha ao carregar o status de integridade.",
+    "workingHint": "Isso lê cada arquivo de imagem, então pode levar um momento em bibliotecas maiores…"
   }
 }

@@ -55,3 +55,6 @@ Thumbs.db
 artifacts/api-server/uploads/
 attached_assets/
 artifacts/electron-app/release/
+
+# Auto-generated self-signed TLS certs for self-hosted HTTPS (see SELF_HOSTING.md)
+.tls-cert/

@@ -19,7 +19,8 @@
     "tagManagement": "Tag Management",
     "auditLog": "Audit Log",
     "clinicalTools": "Clinical Tools",
-    "cephalometrics": "Cephalometrics"
+    "cephalometrics": "Cephalometrics",
+    "integrityCheck": "Integrity Check"
   },
   "admin": {
     "title": "User Management",
@@ -480,6 +481,13 @@
     "rootDirectoryHint": "Images will be saved to subfolders organised by patient ID and date:",
     "browseFolders": "Browse…",
     "saveSettings": "Save Settings",
+    "serverAddress": "Clinic Server Address",
+    "serverAddressDesc": "Give this address to staff so they don't have to type it into the mobile app — scan the QR code or copy the link.",
+    "serverAddressCopy": "Copy",
+    "serverAddressCopied": "Copied!",
+    "serverAddressNone": "No local network address detected. Make sure this device is connected to the clinic Wi-Fi/network.",
+    "serverAddressQrHint": "Scan with the mobile app's \"Scan QR Code\" button on the Server Setup screen.",
+    "serverAddressMultiple": "This computer has more than one network address. If scanning doesn't work, try picking a different one:",
     "dirIndexing": "Directory Indexing",
     "dirIndexingDesc": "Scan the storage directory to index legacy files or recover out-of-sync images.",
     "scanLegacy": "Scan Legacy Directory",
@@ -503,6 +511,14 @@
     "credentialsUpdated": "Credentials updated successfully",
     "credentialsFailed": "Failed to update credentials",
     "noChanges": "Nothing to update — enter a new username, new password, or both",
+    "idleTimeout": {
+      "title": "Session Timeout",
+      "description": "Sign users out of this clinic's account automatically after a period of inactivity.",
+      "minutesLabel": "Minutes of inactivity",
+      "range": "Must be between {{min}} and {{max}} minutes.",
+      "saved": "Session timeout updated",
+      "saveFailed": "Failed to update session timeout"
+    },
     "backup": {
       "title": "Database Backups",
       "desc": "Automatic daily backups protect patient data against corruption or hardware failure. Up to 7 rolling copies are kept.",
@@ -563,6 +579,13 @@
       "cleanupNone": "No expired entries to remove.",
       "cleanupResultNone": "No expired entries found — the log is already within the retention window.",
       "cleanupFailed": "Cleanup failed"
+    },
+    "sessionAlert": {
+      "title": "Session Storage Growth Alert",
+      "desc": "The session store has grown to {{count}} rows, exceeding the configured threshold of {{threshold}}. Consider investigating stale sessions or increasing session cleanup frequency.",
+      "healthy": "Session store: {{count}} of {{threshold}} threshold",
+      "recheck": "Re-check now",
+      "checkFailed": "Failed to re-check session growth"
     },
     "auditLog": {
       "title": "Audit Log",
@@ -955,6 +978,23 @@
     "totalEntries": "entries",
     "filterPatient": "Patient"
   },
+  "uploadQueue": {
+    "pending": "{{count}} photo waiting to upload",
+    "pending_other": "{{count}} photos waiting to upload",
+    "detail": "We'll upload it automatically once the connection is back.",
+    "detailWithFailed": "{{pending}} pending, {{failed}} failed — tap retry to try again.",
+    "retryNow": "Retry now",
+    "discard": "Discard",
+    "queuedTitle": "Saved for later",
+    "queuedDesc": "{{count}} photo couldn't reach the server and was saved on this device — it will upload automatically once the connection returns.",
+    "queuedDesc_other": "{{count}} photos couldn't reach the server and were saved on this device — they will upload automatically once the connection returns."
+  },
+  "accessHistory": {
+    "title": "Access History",
+    "empty": "No access history recorded yet.",
+    "error": "Couldn't load access history.",
+    "unknownUser": "Unknown user"
+  },
   "ceph": {
     "title": "Cephalometrics",
     "subtitle": "Manage cephalometric analysis templates for landmark tracing and automated measurements.",
@@ -1339,5 +1379,44 @@
     "downloading": "Downloading update… {{percent}}%",
     "downloaded": "Version {{version}} is ready to install",
     "restartNow": "Restart & Install"
+  },
+  "adminIntegrity": {
+    "title": "Image Integrity",
+    "description": "Verify stored images haven't been corrupted or lost, and backfill checksums for older records.",
+    "statusTitle": "Hash Coverage",
+    "statusDescription": "How many images currently have a stored checksum.",
+    "totalImages": "Total Images",
+    "withHash": "With Checksum",
+    "missingHash": "Missing Checksum",
+    "backfillTitle": "Backfill Checksums",
+    "backfillDescription": "Computes checksums for images that don't have one yet.",
+    "runBackfill": "Run Backfill",
+    "verifyTitle": "Verify Integrity",
+    "verifyDescription": "Re-checks stored files against their saved checksum to detect corruption or loss.",
+    "runVerify": "Run Verification",
+    "scanned": "Scanned",
+    "updated": "Updated",
+    "ok": "OK",
+    "mismatches": "Mismatches",
+    "missingFile": "Missing Files",
+    "errors": "Errors",
+    "backfillComplete": "Backfill complete",
+    "backfillSummary": "Updated {{updated}} of {{scanned}} scanned images.",
+    "verifyClean": "No issues found",
+    "verifyIssuesFound": "Integrity issues found",
+    "verifySummary": "{{ok}} of {{scanned}} images verified OK.",
+    "issuesTitle": "Issues Found",
+    "issuesDescription": "Review these images — they may need to be re-uploaded or investigated.",
+    "status": "Status",
+    "fileName": "File Name",
+    "patientId": "Patient ID",
+    "detail": "Detail",
+    "statusValue": {
+      "mismatch": "Mismatch",
+      "missing_file": "Missing File",
+      "error": "Error"
+    },
+    "statusLoadError": "Failed to load integrity status.",
+    "workingHint": "This reads every image file, so it may take a moment for larger libraries…"
   }
 }

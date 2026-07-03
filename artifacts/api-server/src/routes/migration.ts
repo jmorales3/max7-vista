@@ -300,6 +300,7 @@ router.post(
                 continue;
               }
               await db.insert(usersTable).values({
+                tenantId,
                 username: u.username,
                 passwordHash: u.passwordHash,
                 role: (["user", "admin", "superadmin"].includes(u.role) ? u.role : "user") as "user" | "admin" | "superadmin",

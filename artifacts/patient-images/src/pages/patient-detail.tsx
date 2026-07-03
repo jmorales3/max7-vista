@@ -4,6 +4,7 @@ import { Link, useRoute } from "wouter";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import { getApiUrl } from "@/lib/apiUrl";
+import { PatientAccessHistory } from "@/components/patient-access-history";
 import {
   useGetPatient,
   getGetPatientQueryKey,
@@ -645,6 +646,8 @@ export default function PatientDetail() {
           </div>
         )}
       </div>
+
+      <PatientAccessHistory patientId={patient.id} />
 
       <Dialog open={templateDocOpen} onOpenChange={(o) => { if (!o) { setTemplateDocOpen(false); setPendingTemplate(null); setDocName(""); } }}>
         <DialogContent className="max-w-md">

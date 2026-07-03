@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { CameraView, useCameraPermissions, type CameraType, type FlashMode } from "expo-camera";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -36,6 +37,13 @@ export default function CameraScreen() {
   const [uploadState, setUploadState] = useState<UploadState>("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [imageNotes, setImageNotes] = useState("");
+
+  const [viewfinderOpen, setViewfinderOpen] = useState(false);
+  const [facing, setFacing] = useState<CameraType>("back");
+  const [flash, setFlash] = useState<FlashMode>("off");
+  const [isCapturing, setIsCapturing] = useState(false);
+  const cameraRef = useRef<CameraView>(null);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
   const { data: patients } = useListPatients(
     patientSearch ? { search: patientSearch } : {},
@@ -83,7 +91,10 @@ export default function CameraScreen() {
       Alert.alert("Camera", "Camera is only available on mobile devices.");
       return;
     }
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    let permission = cameraPermission;
+    if (!permission || !permission.granted) {
+      permission = await requestCameraPermission();
+    }
     if (!permission.granted) {
       if (!permission.canAskAgain) {
         Alert.alert(
@@ -109,16 +120,37 @@ export default function CameraScreen() {
       }
       return;
     }
-    const picked = await ImagePicker.launchCameraAsync({
-      mediaTypes: "images",
-      quality: 0.9,
-      allowsEditing: false,
-    });
-    if (!picked.canceled && picked.assets[0]) {
-      setCapturedUri(picked.assets[0].uri);
-      setUploadState("idle");
-      setErrorMsg(null);
+    setViewfinderOpen(true);
+  }, [cameraPermission, requestCameraPermission]);
+
+  const takePicture = useCallback(async () => {
+    if (!cameraRef.current || isCapturing) return;
+    setIsCapturing(true);
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.9,
+        skipProcessing: false,
+      });
+      if (photo?.uri) {
+        setCapturedUri(photo.uri);
+        setUploadState("idle");
+        setErrorMsg(null);
+        setViewfinderOpen(false);
+      }
+    } catch (err) {
+      Alert.alert("Capture failed", err instanceof Error ? err.message : "Could not take photo. Please try again.");
+    } finally {
+      setIsCapturing(false);
     }
+  }, [isCapturing]);
+
+  const toggleFacing = useCallback(() => {
+    setFacing((prev) => (prev === "back" ? "front" : "back"));
+  }, []);
+
+  const cycleFlash = useCallback(() => {
+    setFlash((prev) => (prev === "off" ? "on" : prev === "on" ? "auto" : "off"));
   }, []);
 
   const openGallery = useCallback(async () => {
@@ -414,6 +446,80 @@ export default function CameraScreen() {
       fontFamily: "Inter_500Medium",
       color: colors.mutedForeground,
     },
+    viewfinderContainer: {
+      flex: 1,
+      backgroundColor: "#000",
+    },
+    viewfinderCamera: {
+      flex: 1,
+    },
+    viewfinderTopBar: {
+      position: "absolute",
+      top: topInset + 12,
+      left: 0,
+      right: 0,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+    },
+    viewfinderIconBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: "rgba(0,0,0,0.45)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    viewfinderBottomBar: {
+      position: "absolute",
+      bottom: bottomInset + 24,
+      left: 0,
+      right: 0,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-around",
+      paddingHorizontal: 32,
+    },
+    shutterOuter: {
+      width: 78,
+      height: 78,
+      borderRadius: 39,
+      borderWidth: 4,
+      borderColor: "#fff",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    shutterInner: {
+      width: 62,
+      height: 62,
+      borderRadius: 31,
+      backgroundColor: "#fff",
+    },
+    shutterInnerDisabled: {
+      backgroundColor: "rgba(255,255,255,0.5)",
+    },
+    viewfinderSideBtn: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      backgroundColor: "rgba(0,0,0,0.45)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    permissionOverlay: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 16,
+      backgroundColor: "#000",
+      padding: 24,
+    },
+    permissionText: {
+      fontSize: 15,
+      fontFamily: "Inter_400Regular",
+      color: "#fff",
+      textAlign: "center",
+    },
   });
 
   return (
@@ -519,6 +625,80 @@ export default function CameraScreen() {
           </>
         )}
       </View>
+
+      <Modal
+        visible={viewfinderOpen}
+        animationType="slide"
+        onRequestClose={() => setViewfinderOpen(false)}
+        testID="camera-viewfinder-modal"
+      >
+        <View style={s.viewfinderContainer}>
+          {cameraPermission?.granted ? (
+            <>
+              <CameraView
+                ref={cameraRef}
+                style={s.viewfinderCamera}
+                facing={facing}
+                flash={flash}
+                testID="camera-viewfinder"
+              />
+              <View style={s.viewfinderTopBar}>
+                <TouchableOpacity
+                  style={s.viewfinderIconBtn}
+                  onPress={() => setViewfinderOpen(false)}
+                  testID="viewfinder-close"
+                >
+                  <Ionicons name="close" size={22} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={s.viewfinderIconBtn}
+                  onPress={cycleFlash}
+                  testID="viewfinder-flash"
+                >
+                  <Ionicons
+                    name={flash === "off" ? "flash-off" : flash === "on" ? "flash" : "flash-outline"}
+                    size={22}
+                    color="#fff"
+                  />
+                </TouchableOpacity>
+              </View>
+              <View style={s.viewfinderBottomBar}>
+                <View style={{ width: 52 }} />
+                <TouchableOpacity
+                  style={s.shutterOuter}
+                  onPress={takePicture}
+                  disabled={isCapturing}
+                  activeOpacity={0.8}
+                  testID="viewfinder-shutter"
+                >
+                  {isCapturing ? (
+                    <ActivityIndicator color="#000" />
+                  ) : (
+                    <View style={s.shutterInner} />
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={s.viewfinderSideBtn}
+                  onPress={toggleFacing}
+                  testID="viewfinder-flip"
+                >
+                  <Ionicons name="camera-reverse" size={26} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <View style={s.permissionOverlay}>
+              <Ionicons name="camera-outline" size={48} color="#fff" />
+              <Text style={s.permissionText}>
+                Camera access is required to take patient photos.
+              </Text>
+              <TouchableOpacity style={s.captureBtn} onPress={() => setViewfinderOpen(false)}>
+                <Text style={s.captureBtnText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </Modal>
 
       <Modal
         visible={showPatientPicker}

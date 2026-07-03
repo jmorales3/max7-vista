@@ -4,8 +4,73 @@ import { db, pool, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireRole, invalidateActiveCache } from "../middlewares/requireAuth";
 import { listGcsFiles } from "../lib/gcsStorage";
+import {
+  getTenantIdleTimeoutMinutes,
+  setTenantIdleTimeoutMinutes,
+  isValidIdleTimeoutMinutes,
+  MIN_IDLE_TIMEOUT_MINUTES,
+  MAX_IDLE_TIMEOUT_MINUTES,
+} from "../lib/tenantSettings";
+import { logAudit } from "../lib/audit";
+import { backfillImageHashes, verifyImageIntegrity, getIntegrityStatus } from "../lib/integrityCheck";
+import {
+  getSessionAlertState,
+  getSessionAlertThreshold,
+  setSessionAlertThreshold,
+  checkSessionGrowth,
+} from "../lib/sessionGrowthCheck";
 
 const router: IRouter = Router();
+
+router.get("/admin/tenant-settings", requireRole("admin", "superadmin"), async (req, res) => {
+  const tenantId = req.session.tenantId;
+  if (!tenantId) {
+    return res.status(400).json({ error: "No tenant associated with this session" });
+  }
+  const idleTimeoutMinutes = await getTenantIdleTimeoutMinutes(tenantId);
+  return res.json({
+    idleTimeoutMinutes,
+    minIdleTimeoutMinutes: MIN_IDLE_TIMEOUT_MINUTES,
+    maxIdleTimeoutMinutes: MAX_IDLE_TIMEOUT_MINUTES,
+  });
+});
+
+router.patch("/admin/tenant-settings", requireRole("admin", "superadmin"), async (req, res) => {
+  const tenantId = req.session.tenantId;
+  if (!tenantId) {
+    return res.status(400).json({ error: "No tenant associated with this session" });
+  }
+  const { idleTimeoutMinutes } = req.body as { idleTimeoutMinutes?: number };
+  if (!isValidIdleTimeoutMinutes(idleTimeoutMinutes)) {
+    return res.status(400).json({
+      error: `idleTimeoutMinutes must be a number between ${MIN_IDLE_TIMEOUT_MINUTES} and ${MAX_IDLE_TIMEOUT_MINUTES}`,
+    });
+  }
+  await setTenantIdleTimeoutMinutes(tenantId, idleTimeoutMinutes);
+  logAudit(req, "tenant_settings_update", "tenant", tenantId, { idleTimeoutMinutes });
+  return res.json({ idleTimeoutMinutes });
+});
+
+router.get("/admin/session-alert", requireRole("admin", "superadmin"), async (_req, res) => {
+  const state = await getSessionAlertState();
+  res.json(state);
+});
+
+router.post("/admin/session-alert/check", requireRole("admin", "superadmin"), async (req, res) => {
+  const state = await checkSessionGrowth();
+  logAudit(req, "session_alert_check", "system", null, { count: state.count, threshold: state.threshold });
+  res.json(state);
+});
+
+router.patch("/admin/session-alert", requireRole("admin", "superadmin"), async (req, res) => {
+  const { threshold } = req.body as { threshold?: number };
+  if (typeof threshold !== "number" || !Number.isFinite(threshold) || threshold <= 0) {
+    return res.status(400).json({ error: "threshold must be a positive number" });
+  }
+  await setSessionAlertThreshold(threshold);
+  logAudit(req, "session_alert_threshold_update", "system", null, { threshold });
+  return res.json({ threshold: await getSessionAlertThreshold() });
+});
 
 router.get("/admin/users", requireRole("admin", "superadmin"), async (_req, res) => {
   try {
@@ -308,6 +373,64 @@ router.post("/admin/bulk-reassign-images", requireRole("admin", "superadmin"), a
   try {
     const result = await pool.query(sql, [fromIds]);
     res.json({ ok: true, rowsUpdated: result.rowCount });
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+/**
+ * GET /admin/integrity/status
+ * Cheap summary of hash coverage — no file I/O. Safe to poll from the UI.
+ */
+router.get("/admin/integrity/status", requireRole("admin", "superadmin"), async (_req, res) => {
+  try {
+    const status = await getIntegrityStatus();
+    res.json(status);
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+/**
+ * POST /admin/integrity/backfill
+ * Computes and stores sha256 for every image row missing one. Read + hash
+ * + write per row, so this can take a while on large libraries — it runs
+ * synchronously and returns the full summary when done.
+ */
+router.post("/admin/integrity/backfill", requireRole("admin", "superadmin"), async (req, res) => {
+  try {
+    const result = await backfillImageHashes();
+    logAudit(req, "integrity_backfill", "image", null, {
+      scanned: result.scanned,
+      updated: result.updated,
+      missingFile: result.missingFile,
+      errorCount: result.errors.length,
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+/**
+ * POST /admin/integrity/verify
+ * Body (optional): { limit: number } — cap how many hashed images are
+ * re-checked, useful for a quick spot-check on very large libraries.
+ * Read-only: re-hashes each stored file and compares to the DB value,
+ * reporting mismatches (possible corruption) and missing files.
+ */
+router.post("/admin/integrity/verify", requireRole("admin", "superadmin"), async (req, res) => {
+  const { limit } = req.body as { limit?: number };
+  try {
+    const result = await verifyImageIntegrity(typeof limit === "number" && limit > 0 ? limit : undefined);
+    logAudit(req, "integrity_verify", "image", null, {
+      scanned: result.scanned,
+      ok: result.ok,
+      mismatches: result.mismatches.length,
+      missingFiles: result.missingFiles.length,
+      errors: result.errors.length,
+    });
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: String(err) });
   }

@@ -10,10 +10,12 @@ import {
   Platform,
   ScrollView,
   useColorScheme,
+  Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import { useColors } from "@/hooks/useColors";
 import { useServer } from "@/contexts/ServerContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -31,8 +33,32 @@ export default function ServerSetupScreen() {
   const [testing, setTesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scanHandled, setScanHandled] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
 
   const normalise = (raw: string) => raw.trim().replace(/\/+$/, "");
+
+  const openScanner = async () => {
+    if (!permission?.granted) {
+      const result = await requestPermission();
+      if (!result.granted) {
+        setError("Camera permission is needed to scan the QR code");
+        return;
+      }
+    }
+    setScanHandled(false);
+    setScannerOpen(true);
+  };
+
+  const handleBarcodeScanned = ({ data }: { data: string }) => {
+    if (scanHandled) return;
+    setScanHandled(true);
+    setScannerOpen(false);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setUrl(data.trim());
+    setError(null);
+  };
 
   const validate = (raw: string): string | null => {
     const u = normalise(raw);
@@ -216,6 +242,56 @@ export default function ServerSetupScreen() {
       color: colors.mutedForeground,
       marginTop: 6,
     },
+    scanBtn: {
+      height: 46,
+      borderRadius: colors.radius,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 14,
+      flexDirection: "row",
+      gap: 8,
+    },
+    scanBtnText: {
+      fontSize: 14,
+      fontFamily: "Inter_600SemiBold",
+      color: colors.primary,
+    },
+    scannerContainer: {
+      flex: 1,
+      backgroundColor: "#000",
+    },
+    scannerOverlay: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    scannerFrame: {
+      width: 240,
+      height: 240,
+      borderWidth: 3,
+      borderColor: "#fff",
+      borderRadius: 16,
+      backgroundColor: "transparent",
+    },
+    scannerHint: {
+      fontSize: 14,
+      fontFamily: "Inter_500Medium",
+      color: "#fff",
+      marginTop: 24,
+      textAlign: "center",
+      paddingHorizontal: 32,
+    },
+    scannerCloseBtn: {
+      position: "absolute",
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
   });
 
   return (
@@ -278,6 +354,16 @@ export default function ServerSetupScreen() {
             Include http:// and the port number
           </Text>
 
+          <TouchableOpacity
+            style={styles.scanBtn}
+            onPress={openScanner}
+            activeOpacity={0.8}
+            disabled={testing}
+          >
+            <Ionicons name="qr-code-outline" size={18} color={colors.primary} />
+            <Text style={styles.scanBtnText}>Scan QR Code</Text>
+          </TouchableOpacity>
+
           {error && (
             <View style={styles.errorBox}>
               <Ionicons name="alert-circle" size={18} color={colors.destructive} />
@@ -310,6 +396,35 @@ export default function ServerSetupScreen() {
           )}
         </View>
       </ScrollView>
+
+      <Modal
+        visible={scannerOpen}
+        animationType="slide"
+        onRequestClose={() => setScannerOpen(false)}
+      >
+        <View style={styles.scannerContainer}>
+          {permission?.granted && (
+            <CameraView
+              style={{ flex: 1 }}
+              facing="back"
+              barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+              onBarcodeScanned={scanHandled ? undefined : handleBarcodeScanned}
+            />
+          )}
+          <View style={[StyleSheet.absoluteFill, styles.scannerOverlay]} pointerEvents="none">
+            <View style={styles.scannerFrame} />
+            <Text style={styles.scannerHint}>
+              Point the camera at the QR code shown in the app's Settings page
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.scannerCloseBtn, { top: insets.top + 12, right: 16 }]}
+            onPress={() => setScannerOpen(false)}
+          >
+            <Ionicons name="close" size={22} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }

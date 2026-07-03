@@ -29,7 +29,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const MOBILE_IDLE_MS = 15 * 60 * 1000;
+const DEFAULT_IDLE_TIMEOUT_MINUTES = 30;
 // Window before the idle cutoff during which returning to the foreground
 // shows a countdown warning instead of logging the user out immediately.
 const IDLE_WARNING_MS = 60 * 1000;
@@ -45,6 +45,13 @@ function RootLayoutNav() {
   const bgTimestampRef = useRef<number | null>(null);
   const [idleSecondsLeft, setIdleSecondsLeft] = useState<number | null>(null);
   const idleIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Idle timeout is configurable per tenant (Settings > Session Timeout for
+  // admins on the web app); the mobile app mirrors whatever the server reports.
+  const mobileIdleMs = Math.max(
+    (user?.idleTimeoutMinutes ?? DEFAULT_IDLE_TIMEOUT_MINUTES) * 60 * 1000,
+    IDLE_WARNING_MS + 10_000
+  );
 
   const clearIdleWarning = useCallback(() => {
     if (idleIntervalRef.current) {
@@ -68,12 +75,12 @@ function RootLayoutNav() {
 
         if (!user) return;
 
-        if (elapsed >= MOBILE_IDLE_MS) {
+        if (elapsed >= mobileIdleMs) {
           void logout().finally(() => {
             router.replace("/login");
           });
-        } else if (elapsed >= MOBILE_IDLE_MS - IDLE_WARNING_MS) {
-          const remainingMs = MOBILE_IDLE_MS - elapsed;
+        } else if (elapsed >= mobileIdleMs - IDLE_WARNING_MS) {
+          const remainingMs = mobileIdleMs - elapsed;
           setIdleSecondsLeft(Math.ceil(remainingMs / 1000));
           const deadline = Date.now() + remainingMs;
           if (idleIntervalRef.current) clearInterval(idleIntervalRef.current);
@@ -92,7 +99,7 @@ function RootLayoutNav() {
       }
     });
     return () => sub.remove();
-  }, [user, logout, clearIdleWarning]);
+  }, [user, logout, clearIdleWarning, mobileIdleMs]);
 
   useEffect(() => {
     if (!user) clearIdleWarning();

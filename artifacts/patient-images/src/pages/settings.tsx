@@ -21,6 +21,7 @@ import {
   AlertCircle, Tag, Plus, X, ClipboardList, KeyRound,
   Download, Upload, ArrowRightLeft, ShieldCheck, RotateCcw,
   Search, ChevronLeft, ChevronRight, Filter, Clock, Trash2, Copy,
+  AlertTriangle,
 } from "lucide-react";
 import {
   Select,
@@ -33,6 +34,10 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
+import { getTenantSettings, updateTenantSettings } from "@/lib/auth";
+import { getApiUrl } from "@/lib/apiUrl";
+import { ServerAddressQr } from "@/components/server-address-qr";
+import { Wifi } from "lucide-react";
 
 interface BackupEntry {
   filename: string;
@@ -119,6 +124,56 @@ export default function Settings() {
   const [auditCleanupResult, setAuditCleanupResult] = useState<{ deleted: number; cutoffDate: string } | null>(null);
   const [auditExporting, setAuditExporting] = useState(false);
 
+  const [idleTimeoutMinutesInput, setIdleTimeoutMinutesInput] = useState<number | null>(null);
+
+  const { data: tenantSettingsData, isLoading: loadingTenantSettings } = useQuery({
+    queryKey: ["tenant-settings"],
+    queryFn: getTenantSettings,
+    enabled: isAdmin,
+  });
+
+  const { data: serverInfo } = useQuery<{
+    hostname: string;
+    addresses: string[];
+    primaryAddress: string | null;
+  }>({
+    queryKey: ["server-info"],
+    queryFn: async () => {
+      const res = await fetch(getApiUrl("/api/server-info"), { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load server info");
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const [selectedServerAddress, setSelectedServerAddress] = useState<string | null>(null);
+  const [addressCopied, setAddressCopied] = useState(false);
+
+  useEffect(() => {
+    if (serverInfo?.primaryAddress && !selectedServerAddress) {
+      setSelectedServerAddress(serverInfo.primaryAddress);
+    }
+  }, [serverInfo, selectedServerAddress]);
+
+  useEffect(() => {
+    if (tenantSettingsData?.idleTimeoutMinutes != null) {
+      setIdleTimeoutMinutesInput(tenantSettingsData.idleTimeoutMinutes);
+    }
+  }, [tenantSettingsData]);
+
+  const saveIdleTimeout = useMutation({
+    mutationFn: (minutes: number) => updateTenantSettings(minutes),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["tenant-settings"], (prev: typeof tenantSettingsData) =>
+        prev ? { ...prev, idleTimeoutMinutes: data.idleTimeoutMinutes } : prev
+      );
+      toast({ title: t("settings.idleTimeout.saved") });
+    },
+    onError: (err: Error) => {
+      toast({ title: t("settings.idleTimeout.saveFailed"), description: err.message, variant: "destructive" });
+    },
+  });
+
   const { data: retentionData, isLoading: loadingRetention } = useQuery<{ retentionYears: number }>({
     queryKey: ["audit-retention"],
     queryFn: async () => {
@@ -155,6 +210,36 @@ export default function Settings() {
     },
     onError: (e) => {
       toast({ variant: "destructive", title: t("settings.retention.saveFailed"), description: e instanceof Error ? e.message : String(e) });
+    },
+  });
+
+  const { data: sessionAlertData, isLoading: loadingSessionAlert } = useQuery<{
+    active: boolean;
+    count: number;
+    threshold: number;
+    detectedAt: string | null;
+  }>({
+    queryKey: ["session-alert"],
+    queryFn: async () => {
+      const res = await fetch(getApiUrl("/api/admin/session-alert"), { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch session alert status");
+      return res.json();
+    },
+    enabled: isAdmin,
+    refetchInterval: 5 * 60 * 1000,
+  });
+
+  const recheckSessionAlert = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(getApiUrl("/api/admin/session-alert/check"), { method: "POST", credentials: "include" });
+      if (!res.ok) throw new Error("Failed to re-check session growth");
+      return res.json();
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["session-alert"] });
+    },
+    onError: (e) => {
+      toast({ variant: "destructive", title: t("settings.sessionAlert.checkFailed"), description: e instanceof Error ? e.message : String(e) });
     },
   });
 
@@ -767,6 +852,70 @@ export default function Settings() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
+            <Wifi className="h-5 w-5" />
+            {t("settings.serverAddress")}
+          </CardTitle>
+          <CardDescription>{t("settings.serverAddressDesc")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {!serverInfo || serverInfo.addresses.length === 0 ? (
+            <p className="text-sm text-muted-foreground flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              {t("settings.serverAddressNone")}
+            </p>
+          ) : (
+            <div className="flex flex-col sm:flex-row items-start gap-6">
+              {selectedServerAddress && <ServerAddressQr value={selectedServerAddress} />}
+              <div className="flex-1 space-y-3 w-full">
+                <div className="flex gap-2">
+                  <Input
+                    readOnly
+                    value={selectedServerAddress ?? ""}
+                    className="font-mono"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={async () => {
+                      if (!selectedServerAddress) return;
+                      await navigator.clipboard.writeText(selectedServerAddress);
+                      setAddressCopied(true);
+                      setTimeout(() => setAddressCopied(false), 2000);
+                    }}
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    {addressCopied ? t("settings.serverAddressCopied") : t("settings.serverAddressCopy")}
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">{t("settings.serverAddressQrHint")}</p>
+                {serverInfo.addresses.length > 1 && (
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">{t("settings.serverAddressMultiple")}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {serverInfo.addresses.map((addr) => (
+                        <Button
+                          key={addr}
+                          type="button"
+                          size="sm"
+                          variant={addr === selectedServerAddress ? "default" : "outline"}
+                          className="font-mono text-xs"
+                          onClick={() => setSelectedServerAddress(addr)}
+                        >
+                          {addr}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
             <RefreshCw className="h-5 w-5" />
             {t("settings.dirIndexing")}
           </CardTitle>
@@ -952,6 +1101,57 @@ export default function Settings() {
         </Card>
       )}
 
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              {t("settings.idleTimeout.title")}
+            </CardTitle>
+            <CardDescription>{t("settings.idleTimeout.description")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {loadingTenantSettings ? (
+              <Skeleton className="h-10 w-40" />
+            ) : (
+              <div className="flex items-end gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="idle-timeout-minutes">{t("settings.idleTimeout.minutesLabel")}</Label>
+                  <Input
+                    id="idle-timeout-minutes"
+                    type="number"
+                    min={tenantSettingsData?.minIdleTimeoutMinutes ?? 5}
+                    max={tenantSettingsData?.maxIdleTimeoutMinutes ?? 240}
+                    value={idleTimeoutMinutesInput ?? ""}
+                    onChange={(e) => setIdleTimeoutMinutesInput(e.target.value === "" ? null : Number(e.target.value))}
+                    className="w-32"
+                  />
+                </div>
+                <Button
+                  onClick={() => idleTimeoutMinutesInput != null && saveIdleTimeout.mutate(idleTimeoutMinutesInput)}
+                  disabled={
+                    saveIdleTimeout.isPending ||
+                    idleTimeoutMinutesInput == null ||
+                    idleTimeoutMinutesInput === tenantSettingsData?.idleTimeoutMinutes
+                  }
+                >
+                  {saveIdleTimeout.isPending
+                    ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    : <Save className="mr-2 h-4 w-4" />}
+                  {t("common.save")}
+                </Button>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              {t("settings.idleTimeout.range", {
+                min: tenantSettingsData?.minIdleTimeoutMinutes ?? 5,
+                max: tenantSettingsData?.maxIdleTimeoutMinutes ?? 240,
+              })}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {user?.role === "superadmin" && (
         <Card>
           <CardHeader>
@@ -1127,6 +1327,54 @@ export default function Settings() {
                 )}
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {isAdmin && sessionAlertData?.active && (
+        <Card className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-400">
+              <AlertTriangle className="h-5 w-5" />
+              {t("settings.sessionAlert.title")}
+            </CardTitle>
+            <CardDescription className="text-amber-700 dark:text-amber-500">
+              {t("settings.sessionAlert.desc", { count: sessionAlertData.count, threshold: sessionAlertData.threshold })}
+            </CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => recheckSessionAlert.mutate()}
+              disabled={recheckSessionAlert.isPending}
+            >
+              {recheckSessionAlert.isPending
+                ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                : <RefreshCw className="mr-2 h-4 w-4" />}
+              {t("settings.sessionAlert.recheck")}
+            </Button>
+          </CardFooter>
+        </Card>
+      )}
+
+      {isAdmin && !loadingSessionAlert && !sessionAlertData?.active && (
+        <Card>
+          <CardContent className="pt-6 flex items-center justify-between gap-4">
+            <p className="text-sm text-muted-foreground">
+              {t("settings.sessionAlert.healthy", { count: sessionAlertData?.count ?? 0, threshold: sessionAlertData?.threshold ?? 0 })}
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => recheckSessionAlert.mutate()}
+              disabled={recheckSessionAlert.isPending}
+            >
+              {recheckSessionAlert.isPending
+                ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                : <RefreshCw className="mr-2 h-4 w-4" />}
+              {t("settings.sessionAlert.recheck")}
+            </Button>
           </CardContent>
         </Card>
       )}

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import Webcam from "react-webcam";
 import { useListPatients, getListPatientsQueryKey } from "@workspace/api-client-react";
 import { uploadPatientImage } from "@/lib/upload";
+import { enqueueUpload, processQueue } from "@/lib/uploadQueue";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +19,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Camera, Upload, X, Check, Loader2, Plus, Images, FileText } from "lucide-react";
+
+// A dropped Wi-Fi connection typically surfaces as a TypeError from fetch
+// ("Failed to fetch" / "NetworkError"), an AbortError from our request
+// timeouts, or navigator.onLine already being false. Anything else (e.g. a
+// 400 validation error) should still show a normal error toast.
+function isLikelyNetworkError(err: unknown): boolean {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return true;
+  if (err instanceof DOMException && err.name === "AbortError") return true;
+  if (err instanceof TypeError) return true;
+  const msg = err instanceof Error ? err.message : String(err);
+  return /network|fetch|timeout|failed to fetch/i.test(msg);
+}
 
 interface QueuedFile {
   id: string;
@@ -168,16 +181,17 @@ export default function Capture() {
     setUploadProgress({ done: 0, total: queue.length });
 
     let successCount = 0;
+    let queuedOfflineCount = 0;
     let lastId: number | null = null;
 
     for (let i = 0; i < queue.length; i++) {
       const item = queue[i];
       setUploadProgress({ done: i, total: queue.length });
-      try {
-        const combined = [seriesNotes.trim(), item.notes.trim()]
-          .filter(Boolean)
-          .join("\n\n");
+      const combined = [seriesNotes.trim(), item.notes.trim()]
+        .filter(Boolean)
+        .join("\n\n");
 
+      try {
         const result = await uploadPatientImage(
           item.file!,
           parseInt(patientId, 10),
@@ -187,6 +201,26 @@ export default function Capture() {
         successCount++;
         setUploadProgress({ done: successCount, total: queue.length });
       } catch (err) {
+        // A dropped Wi-Fi connection mid-upload should never lose the photo:
+        // persist it to the offline queue (IndexedDB) so it survives a page
+        // reload and automatically retries once connectivity returns.
+        if (isLikelyNetworkError(err)) {
+          try {
+            await enqueueUpload({
+              patientId: parseInt(patientId, 10),
+              blob: item.file!,
+              fileName: item.file!.name || "photo.jpg",
+              mimeType: item.file!.type || "image/jpeg",
+              notes: combined || undefined,
+              capturedAt: new Date().toISOString(),
+            });
+            queuedOfflineCount++;
+            continue;
+          } catch {
+            // If IndexedDB itself is unavailable, fall through to the normal
+            // error toast below rather than silently dropping the photo.
+          }
+        }
         toast({
           variant: "destructive",
           title: t("capture.uploadFailed"),
@@ -197,6 +231,14 @@ export default function Capture() {
 
     setIsUploading(false);
     setUploadProgress(null);
+
+    if (queuedOfflineCount > 0) {
+      toast({
+        title: t("uploadQueue.queuedTitle"),
+        description: t("uploadQueue.queuedDesc", { count: queuedOfflineCount }),
+      });
+      void processQueue();
+    }
 
     if (successCount > 0) {
       const queueLength = queue.length;
@@ -211,6 +253,9 @@ export default function Capture() {
         });
         setLocation(`/gallery?patientId=${patientId}`);
       }
+    } else if (queuedOfflineCount > 0) {
+      clearQueue();
+      setLocation(`/gallery?patientId=${patientId}`);
     }
   };
 

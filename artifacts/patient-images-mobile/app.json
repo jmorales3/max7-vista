@@ -50,6 +50,12 @@
           "photosPermission": "Allow Patient Images to access your photos for upload.",
           "cameraPermission": "Allow Patient Images to use your camera to capture patient images."
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Patient Images to use your camera to scan the clinic server's QR code."
+        }
       ]
     ],
     "experiments": {

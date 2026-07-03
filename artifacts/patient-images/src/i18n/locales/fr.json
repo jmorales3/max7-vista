@@ -85,7 +85,8 @@
     "tagManagement": "Gestion des Étiquettes",
     "auditLog": "Journal d'Audit",
     "clinicalTools": "Outils Cliniques",
-    "cephalometrics": "Céphalométrie"
+    "cephalometrics": "Céphalométrie",
+    "integrityCheck": "Vérification d'Intégrité"
   },
   "common": {
     "save": "Enregistrer",
@@ -480,6 +481,13 @@
     "rootDirectoryHint": "Les images seront sauvegardées dans des sous-dossiers organisés par ID patient et date :",
     "browseFolders": "Parcourir…",
     "saveSettings": "Enregistrer les Paramètres",
+    "serverAddress": "Adresse du Serveur de la Clinique",
+    "serverAddressDesc": "Communiquez cette adresse au personnel pour qu'il n'ait pas à la saisir dans l'application mobile — scannez le code QR ou copiez le lien.",
+    "serverAddressCopy": "Copier",
+    "serverAddressCopied": "Copié !",
+    "serverAddressNone": "Aucune adresse réseau locale détectée. Assurez-vous que cet appareil est connecté au réseau/Wi-Fi de la clinique.",
+    "serverAddressQrHint": "Scannez avec le bouton \"Scanner le code QR\" de l'écran de configuration du serveur de l'application mobile.",
+    "serverAddressMultiple": "Cet ordinateur a plusieurs adresses réseau. Si le scan ne fonctionne pas, essayez-en une autre :",
     "dirIndexing": "Indexation du Répertoire",
     "dirIndexingDesc": "Analysez le répertoire de stockage pour indexer les fichiers hérités ou récupérer les images désynchronisées.",
     "scanLegacy": "Analyser le Répertoire Hérité",
@@ -503,6 +511,14 @@
     "credentialsUpdated": "Identifiants mis à jour avec succès",
     "credentialsFailed": "Échec de la mise à jour des identifiants",
     "noChanges": "Rien à mettre à jour — saisissez un nouveau nom d'utilisateur, un nouveau mot de passe ou les deux",
+    "idleTimeout": {
+      "title": "Délai d'Inactivité de Session",
+      "description": "Déconnecte automatiquement les utilisateurs de ce cabinet après une période d'inactivité.",
+      "minutesLabel": "Minutes d'inactivité",
+      "range": "Doit être compris entre {{min}} et {{max}} minutes.",
+      "saved": "Délai d'inactivité mis à jour",
+      "saveFailed": "Échec de la mise à jour du délai d'inactivité"
+    },
     "backup": {
       "title": "Sauvegardes de la Base de Données",
       "desc": "Les sauvegardes quotidiennes automatiques protègent les données des patients contre la corruption ou une panne matérielle. Jusqu'à 7 copies sont conservées.",
@@ -563,6 +579,13 @@
       "cleanupNone": "Aucune entrée expirée à supprimer.",
       "cleanupResultNone": "Aucune entrée expirée trouvée — le journal est déjà dans la fenêtre de rétention.",
       "cleanupFailed": "Échec du nettoyage"
+    },
+    "sessionAlert": {
+      "title": "Alerte de croissance du stockage des sessions",
+      "desc": "Le magasin de sessions a atteint {{count}} lignes, dépassant le seuil configuré de {{threshold}}. Envisagez d'examiner les sessions obsolètes ou d'augmenter la fréquence de nettoyage.",
+      "healthy": "Magasin de sessions : {{count}} sur {{threshold}} seuil",
+      "recheck": "Revérifier",
+      "checkFailed": "Échec de la revérification de la croissance des sessions"
     },
     "auditLog": {
       "title": "Journal d'Audit",
@@ -955,6 +978,23 @@
     "totalEntries": "entrées",
     "filterPatient": "Patient"
   },
+  "uploadQueue": {
+    "pending": "{{count}} photo en attente d'envoi",
+    "pending_other": "{{count}} photos en attente d'envoi",
+    "detail": "L'envoi se fera automatiquement dès le retour de la connexion.",
+    "detailWithFailed": "{{pending}} en attente, {{failed}} échouées — appuyez sur réessayer.",
+    "retryNow": "Réessayer",
+    "discard": "Abandonner",
+    "queuedTitle": "Enregistré pour plus tard",
+    "queuedDesc": "{{count}} photo n'a pas pu atteindre le serveur et a été enregistrée sur cet appareil — elle sera envoyée automatiquement dès le retour de la connexion.",
+    "queuedDesc_other": "{{count}} photos n'ont pas pu atteindre le serveur et ont été enregistrées sur cet appareil — elles seront envoyées automatiquement dès le retour de la connexion."
+  },
+  "accessHistory": {
+    "title": "Historique d'accès",
+    "empty": "Aucun historique d'accès enregistré pour l'instant.",
+    "error": "Impossible de charger l'historique d'accès.",
+    "unknownUser": "Utilisateur inconnu"
+  },
   "ceph": {
     "title": "Céphalométrie",
     "subtitle": "Gérez les modèles d'analyse céphalométrique pour le tracé des points de repère et les mesures automatiques.",
@@ -1339,5 +1379,44 @@
     "downloading": "Téléchargement de la mise à jour… {{percent}}%",
     "downloaded": "La version {{version}} est prête à être installée",
     "restartNow": "Redémarrer et Installer"
+  },
+  "adminIntegrity": {
+    "title": "Intégrité des Images",
+    "description": "Vérifiez que les images stockées n'ont pas été corrompues ou perdues, et complétez les sommes de contrôle des anciens enregistrements.",
+    "statusTitle": "Couverture des Empreintes",
+    "statusDescription": "Combien d'images ont actuellement une somme de contrôle enregistrée.",
+    "totalImages": "Total des Images",
+    "withHash": "Avec Somme de Contrôle",
+    "missingHash": "Sans Somme de Contrôle",
+    "backfillTitle": "Compléter les Sommes de Contrôle",
+    "backfillDescription": "Calcule les sommes de contrôle pour les images qui n'en ont pas encore.",
+    "runBackfill": "Lancer le Remplissage",
+    "verifyTitle": "Vérifier l'Intégrité",
+    "verifyDescription": "Revérifie les fichiers stockés par rapport à leur somme de contrôle enregistrée pour détecter la corruption ou la perte.",
+    "runVerify": "Lancer la Vérification",
+    "scanned": "Analysées",
+    "updated": "Mises à jour",
+    "ok": "OK",
+    "mismatches": "Incohérences",
+    "missingFile": "Fichiers Manquants",
+    "errors": "Erreurs",
+    "backfillComplete": "Remplissage terminé",
+    "backfillSummary": "{{updated}} images mises à jour sur {{scanned}} analysées.",
+    "verifyClean": "Aucun problème détecté",
+    "verifyIssuesFound": "Problèmes d'intégrité détectés",
+    "verifySummary": "{{ok}} images sur {{scanned}} vérifiées avec succès.",
+    "issuesTitle": "Problèmes Détectés",
+    "issuesDescription": "Vérifiez ces images — elles doivent peut-être être re-téléchargées ou examinées.",
+    "status": "Statut",
+    "fileName": "Nom du Fichier",
+    "patientId": "ID du Patient",
+    "detail": "Détail",
+    "statusValue": {
+      "mismatch": "Incohérence",
+      "missing_file": "Fichier Manquant",
+      "error": "Erreur"
+    },
+    "statusLoadError": "Échec du chargement de l'état d'intégrité.",
+    "workingHint": "Cette opération lit chaque fichier image, ce qui peut prendre un moment pour les grandes bibliothèques…"
   }
 }

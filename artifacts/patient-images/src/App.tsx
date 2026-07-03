@@ -9,6 +9,7 @@ import PendingApprovalPage from "@/pages/pending-approval";
 import SuspendedPage from "@/pages/suspended";
 import ChangePasswordPage from "@/pages/change-password";
 import { IdleWarningDialog } from "@/components/IdleWarningDialog";
+import { UploadQueueBanner } from "@/components/upload-queue-banner";
 import { queryClient } from "@/lib/queryClient";
 import { Loader2 } from "lucide-react";
 
@@ -43,6 +44,7 @@ function AppInner() {
 
   return (
     <>
+      <UploadQueueBanner />
       <Router />
       <IdleWarningDialog />
     </>

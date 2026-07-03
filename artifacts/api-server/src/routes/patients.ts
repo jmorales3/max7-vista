@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, ilike, sql, and, inArray } from "drizzle-orm";
-import { db, patientsTable, imagesTable } from "@workspace/db";
+import { eq, ilike, sql, and, inArray, desc } from "drizzle-orm";
+import { db, patientsTable, imagesTable, auditLogTable } from "@workspace/db";
 import {
   ListPatientsQueryParams,
   CreatePatientBody,
@@ -137,6 +137,56 @@ router.get("/patients/:id", async (req, res): Promise<void> => {
     if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[patients] GET /patients/:id:", msg);
+    res.status(500).json({ error: msg });
+  }
+});
+
+// Compact access-history feed shown directly on the patient profile page —
+// deliberately available to any user who can view the patient (not just
+// admins), unlike the full /api/audit-logs admin viewer. Returns only the
+// small set of fields useful for "who's been looking at this chart"
+// transparency (timestamp, user, action) — not the full audit record.
+router.get("/patients/:id/access-history", async (req, res): Promise<void> => {
+  try {
+    const tenantId = tid(req);
+    const params = GetPatientParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: params.error.message });
+      return;
+    }
+
+    const accessibleIds = await getAccessiblePatientIds(req);
+    if (!canAccessPatient(accessibleIds, params.data.id)) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+
+    const limitRaw = Math.min(50, Math.max(1, parseInt(String(req.query.limit ?? "10"), 10)));
+
+    const rows = await db
+      .select({
+        id: auditLogTable.id,
+        action: auditLogTable.action,
+        username: auditLogTable.username,
+        createdAt: auditLogTable.createdAt,
+        entityType: auditLogTable.entityType,
+        entityId: auditLogTable.entityId,
+      })
+      .from(auditLogTable)
+      .where(
+        and(
+          eq(auditLogTable.tenantId, tenantId),
+          eq(auditLogTable.patientId, params.data.id),
+        ),
+      )
+      .orderBy(desc(auditLogTable.createdAt))
+      .limit(limitRaw);
+
+    res.json({ items: rows });
+  } catch (err: any) {
+    if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[patients] GET /patients/:id/access-history:", msg);
     res.status(500).json({ error: msg });
   }
 });

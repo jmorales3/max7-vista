@@ -17,6 +17,7 @@ import {
   Tags,
   ClipboardList,
   BrainCircuit,
+  ShieldAlert,
 } from "lucide-react";
 import {
   Sidebar,
@@ -141,6 +142,17 @@ export function AppSidebar() {
                     <Link href="/admin/audit-log">
                       <ClipboardList />
                       <span>{t("nav.auditLog")}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === "/admin/integrity"}
+                  >
+                    <Link href="/admin/integrity">
+                      <ShieldAlert />
+                      <span>{t("nav.integrityCheck")}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

@@ -8,6 +8,7 @@ export interface AuthUser {
   role: Role;
   tenantId?: number;
   forcePasswordChange?: boolean;
+  idleTimeoutMinutes?: number;
 }
 
 export class PendingApprovalError extends Error {
@@ -149,6 +150,34 @@ export async function deleteAdminUser(id: number): Promise<void> {
     const body = await res.json().catch(() => ({})) as { error?: string };
     throw new Error(body.error || "Failed to delete user");
   }
+}
+
+export interface TenantSettings {
+  idleTimeoutMinutes: number;
+  minIdleTimeoutMinutes: number;
+  maxIdleTimeoutMinutes: number;
+}
+
+export async function getTenantSettings(): Promise<TenantSettings> {
+  const res = await fetch(getApiUrl("/api/admin/tenant-settings"), {
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to fetch tenant settings");
+  return res.json() as Promise<TenantSettings>;
+}
+
+export async function updateTenantSettings(idleTimeoutMinutes: number): Promise<{ idleTimeoutMinutes: number }> {
+  const res = await fetch(getApiUrl("/api/admin/tenant-settings"), {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ idleTimeoutMinutes }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error || "Failed to update tenant settings");
+  }
+  return res.json() as Promise<{ idleTimeoutMinutes: number }>;
 }
 
 export async function getPatientAccess(userId: number): Promise<number[]> {

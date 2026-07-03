@@ -130,6 +130,11 @@ LAN_IP=$(node -e "
   }
 " 2>/dev/null)
 
+SCHEME="http"
+if [ "${ENABLE_HTTPS:-false}" = "true" ] || [ -n "${TLS_CERT_PATH:-}" ]; then
+  SCHEME="https"
+fi
+
 echo ""
 if [ "$USE_SQLITE" = "true" ]; then
   echo -e "${BOLD}Starting server (SQLite mode) on port ${PORT}${RESET}"
@@ -138,10 +143,13 @@ else
 fi
 if [ -n "$LAN_IP" ]; then
   echo -e "${GREEN}┌──────────────────────────────────────────────────┐${RESET}"
-  echo -e "${GREEN}│  Web browser : http://${LAN_IP}:${PORT}              │${RESET}"
-  echo -e "${GREEN}│  Mobile app  : http://${LAN_IP}:${PORT}              │${RESET}"
+  echo -e "${GREEN}│  Web browser : ${SCHEME}://${LAN_IP}:${PORT}              │${RESET}"
+  echo -e "${GREEN}│  Mobile app  : ${SCHEME}://${LAN_IP}:${PORT}              │${RESET}"
   echo -e "${GREEN}│  (enter the Mobile app address in Server Setup)  │${RESET}"
   echo -e "${GREEN}└──────────────────────────────────────────────────┘${RESET}"
+fi
+if [ "$SCHEME" = "https" ]; then
+  warn "HTTPS is enabled. If using an auto-generated certificate, browsers/apps will show a one-time trust warning — see SELF_HOSTING.md."
 fi
 echo ""
 
@@ -151,6 +159,13 @@ export SESSION_SECRET="${SESSION_SECRET:-$(node -e 'process.stdout.write(require
 if [ "$USE_SQLITE" = "true" ]; then
   export SELF_HOST_SQLITE=true
   export DATABASE_PATH="${DATABASE_PATH:-./max7-vista.db}"
+fi
+if [ -n "${ENABLE_HTTPS:-}" ]; then
+  export ENABLE_HTTPS="${ENABLE_HTTPS}"
+fi
+if [ -n "${TLS_CERT_PATH:-}" ]; then
+  export TLS_CERT_PATH="${TLS_CERT_PATH}"
+  export TLS_KEY_PATH="${TLS_KEY_PATH}"
 fi
 
 node --enable-source-maps artifacts/api-server/dist/index.mjs

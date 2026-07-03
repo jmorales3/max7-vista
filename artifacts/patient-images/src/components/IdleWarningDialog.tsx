@@ -13,13 +13,18 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIdleTimeout } from "@/hooks/useIdleTimeout";
 import { refreshSession } from "@/lib/auth";
 
-const IDLE_MS = 15 * 60 * 1000;
+const DEFAULT_IDLE_TIMEOUT_MINUTES = 30;
 const WARNING_MS = 2 * 60 * 1000;
 
 export function IdleWarningDialog() {
   const { t } = useTranslation();
-  const { logout } = useAuth();
-  const { showWarning, secondsLeft, reset } = useIdleTimeout(IDLE_MS, WARNING_MS);
+  const { logout, user } = useAuth();
+  // Idle timeout is configurable per tenant (Settings > Security for
+  // admins). The warning appears WARNING_MS before the session's actual
+  // rolling expiry so the countdown lines up with the server-side cutoff.
+  const idleTimeoutMinutes = user?.idleTimeoutMinutes ?? DEFAULT_IDLE_TIMEOUT_MINUTES;
+  const idleMs = Math.max(idleTimeoutMinutes * 60 * 1000 - WARNING_MS, 60 * 1000);
+  const { showWarning, secondsLeft, reset } = useIdleTimeout(idleMs, WARNING_MS);
 
   useEffect(() => {
     if (showWarning && secondsLeft <= 0) {

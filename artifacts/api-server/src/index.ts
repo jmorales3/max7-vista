@@ -4,10 +4,13 @@ import { getStorageDirectory, getSetting } from "./lib/storage";
 import { scanDirectory } from "./lib/scanDirectory";
 import { scheduleAutoBackup } from "./lib/backup";
 import { scheduleAuditCleanup } from "./lib/auditCleanup";
+import { scheduleSessionGrowthCheck } from "./lib/sessionGrowthCheck";
+import { getTlsCredentials } from "./lib/tls";
 import bcrypt from "bcryptjs";
 import path from "path";
 import fs from "fs";
 import os from "os";
+import https from "https";
 
 const rawPort = process.env["PORT"];
 
@@ -1512,9 +1515,12 @@ async function start() {
     }
   }
 
+  const tls = await getTlsCredentials();
+  const scheme = tls ? "https" : "http";
+
   await new Promise<void>((resolve) => {
-    app.listen(port, "0.0.0.0", () => {
-      logger.info({ port }, "Server listening");
+    const onListening = () => {
+      logger.info({ port, scheme }, "Server listening");
 
       // Print LAN addresses so clinic staff know what URL to use on phones/tablets
       const nets = os.networkInterfaces();
@@ -1522,7 +1528,7 @@ async function start() {
       for (const ifaces of Object.values(nets)) {
         for (const iface of ifaces ?? []) {
           if (iface.family === "IPv4" && !iface.internal) {
-            lanAddresses.push(`http://${iface.address}:${port}`);
+            lanAddresses.push(`${scheme}://${iface.address}:${port}`);
           }
         }
       }
@@ -1532,9 +1538,20 @@ async function start() {
           "LAN access — enter one of these addresses in the mobile app Server Setup",
         );
       }
+      if (tls?.selfSigned) {
+        logger.info(
+          "HTTPS is using a self-signed certificate — browsers and the mobile app will show a one-time trust warning on first connect. See SELF_HOSTING.md for details.",
+        );
+      }
 
       resolve();
-    });
+    };
+
+    if (tls) {
+      https.createServer({ cert: tls.cert, key: tls.key }, app).listen(port, "0.0.0.0", onListening);
+    } else {
+      app.listen(port, "0.0.0.0", onListening);
+    }
   });
 
   // PostgreSQL init + all post-start tasks run after port is open.
@@ -1548,6 +1565,7 @@ async function start() {
     }
 
     scheduleAuditCleanup(logger);
+    scheduleSessionGrowthCheck();
 
     if (IS_SQLITE) {
       try {

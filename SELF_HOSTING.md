@@ -132,7 +132,48 @@ PORT=8080
 # CORS: comma-separated allowed origins for cross-origin requests
 # Leave empty in SQLite/self-host mode (all origins are allowed automatically)
 CORS_ALLOWED_ORIGINS=
+
+# HTTPS (recommended): see "Enabling HTTPS" below
+ENABLE_HTTPS=false
+TLS_CERT_PATH=
+TLS_KEY_PATH=
 ```
+
+---
+
+## Enabling HTTPS
+
+By default the self-hosted server speaks plain HTTP. That's fine for quick testing, but patient images and login credentials would otherwise cross your clinic Wi-Fi in cleartext — anyone on the same network could intercept them. **We recommend enabling HTTPS for any real clinic use.**
+
+There are two ways to do it:
+
+### Option A — Automatic self-signed certificate (easiest, no IT department needed)
+
+Set one environment variable before starting the server:
+
+```env
+ENABLE_HTTPS=true
+```
+
+On first start, the server generates its own certificate covering `localhost` and all of the machine's current LAN IP addresses, and caches it (in `.tls-cert/` in the repo root, or inside the Electron app's user data folder) so it's reused on every future restart. `./scripts/start-server.sh` and `start-server.bat` both pick this up automatically.
+
+Because this certificate isn't issued by a public certificate authority, browsers and the mobile app will show a one-time **"connection is not private" / "certificate not trusted"** warning the first time each device connects — this is expected. Click through it (e.g. "Advanced → Proceed") to continue; the connection is still fully encrypted, it's just not vouched for by a public CA.
+
+### Option B — Your own certificate (if your clinic's IT already issues certs)
+
+If you have a certificate from your organization's internal CA (or a real one for a LAN hostname), point the server at it instead:
+
+```env
+TLS_CERT_PATH=/path/to/fullchain.pem
+TLS_KEY_PATH=/path/to/privkey.pem
+```
+
+When both are set, they take priority over `ENABLE_HTTPS` — no self-signed cert is generated, and connecting devices that already trust your CA won't see any warning.
+
+### Notes
+
+- Once HTTPS is enabled, use `https://` (not `http://`) in the browser and in the mobile app's Server Setup screen.
+- Cloud deployments on Replit already run over HTTPS end-to-end via Replit's proxy — these settings only apply to the self-hosted / Electron / LAN server.
 
 ---
 
@@ -176,56 +217,59 @@ Other devices on the same LAN can connect to the Electron server:
 
 ## Keeping the Server Running
 
-For unattended operation, register the server as an OS service:
+If the clinic computer restarts (power outage, Windows update, etc.), the
+server needs to come back up on its own — otherwise staff show up to a
+disconnected app. Use the one-command setup scripts below to register the
+server as an OS service that starts automatically at boot and restarts
+itself if it ever crashes.
 
 ### Linux (systemd)
 
-```ini
-# /etc/systemd/system/max7vista.service
-[Unit]
-Description=Max7 Vista Server
-After=network.target
-
-[Service]
-WorkingDirectory=/path/to/max7-vista
-ExecStart=/path/to/max7-vista/scripts/start-server.sh
-Restart=on-failure
-Environment=PORT=8080
-# Add DATABASE_URL here for PostgreSQL mode; omit for SQLite mode
-
-[Install]
-WantedBy=multi-user.target
-```
-
 ```bash
-sudo systemctl enable --now max7vista
+sudo ./scripts/setup-service-linux.sh
 ```
+
+This generates `/etc/systemd/system/max7vista.service`, enables it, and
+starts it immediately. The service restarts automatically on crash
+(`Restart=on-failure`) and on every reboot.
+
+- Check status: `systemctl status max7vista`
+- View logs: `journalctl -u max7vista -f`
+- Uninstall: `sudo ./scripts/uninstall-service-linux.sh`
 
 ### macOS (launchd)
 
-Create `~/Library/LaunchAgents/com.max7vista.server.plist` and add:
-```xml
-<plist version="1.0">
-<dict>
-  <key>Label</key><string>com.max7vista.server</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>/path/to/max7-vista/scripts/start-server.sh</string>
-  </array>
-  <key>WorkingDirectory</key><string>/path/to/max7-vista</string>
-  <key>RunAtLoad</key><true/>
-  <key>KeepAlive</key><true/>
-</dict>
-</plist>
-```
-
 ```bash
-launchctl load ~/Library/LaunchAgents/com.max7vista.server.plist
+./scripts/setup-service-macos.sh
 ```
 
-### Windows (Task Scheduler)
+This installs `~/Library/LaunchAgents/com.max7vista.server.plist` with
+`RunAtLoad` + `KeepAlive`, so the server starts at login and restarts itself
+if it stops unexpectedly.
 
-Use Task Scheduler to run `start-server.bat` at system startup with "Run whether user is logged on or not" checked.
+- View logs: `tail -f max7vista-server.log`
+- Uninstall: `./scripts/uninstall-service-macos.sh`
+
+### Windows (Scheduled Task)
+
+Right-click **`scripts\setup-service-windows.bat`** and choose **"Run as
+administrator"**. This registers a Scheduled Task that runs at system
+startup (`/SC ONSTART`) under the SYSTEM account, so the server comes back
+up even before anyone logs in — no need to leave a Command Prompt window
+open.
+
+- Node.js/pnpm must be installed system-wide (the default installer option)
+  so the SYSTEM account can find them on `PATH`.
+- Check status: `schtasks /Query /TN "Max7VistaServer"`
+- Uninstall: right-click `scripts\uninstall-service-windows.bat` → **Run as
+  administrator**
+
+### Manual alternative
+
+If you'd rather configure the service by hand (e.g. to customize the unit
+file), the setup scripts above generate standard systemd unit / launchd
+plist / Scheduled Task definitions — open them to see (and adapt) the exact
+configuration they apply.
 
 ---
 

@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import { db, usersTable, tenantsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logAudit } from "../lib/audit";
+import { getTenantIdleTimeoutMinutes } from "../lib/tenantSettings";
 
 function buildMobileSessionCookie(sessionId: string, secret: string): string {
   const signature = crypto
@@ -134,6 +135,11 @@ router.post("/auth/login", async (req, res) => {
     req.session.role = user.role;
     req.session.tenantId = user.tenantId ?? undefined;
 
+    // Idle-timeout duration is configurable per tenant (see admin tenant
+    // settings); apply it to this session's rolling cookie expiry.
+    const idleTimeoutMinutes = await getTenantIdleTimeoutMinutes(user.tenantId);
+    req.session.cookie.maxAge = idleTimeoutMinutes * 60 * 1000;
+
     await new Promise<void>((resolve, reject) => {
       req.session.save((err) => (err ? reject(err) : resolve()));
     });
@@ -147,6 +153,7 @@ router.post("/auth/login", async (req, res) => {
       tenantId: user.tenantId,
       forcePasswordChange: user.forcePasswordChange,
       authToken: req.sessionID,
+      idleTimeoutMinutes,
     });
   } catch (err) {
     return res.status(500).json({ error: "Internal server error" });
@@ -170,12 +177,14 @@ router.get("/auth/session", async (req, res) => {
     .from(usersTable)
     .where(eq(usersTable.id, req.session.userId))
     .limit(1);
+  const idleTimeoutMinutes = await getTenantIdleTimeoutMinutes(req.session.tenantId);
   return res.json({
     id: req.session.userId,
     username: req.session.username,
     role: req.session.role,
     tenantId: req.session.tenantId,
     forcePasswordChange: user?.forcePasswordChange ?? false,
+    idleTimeoutMinutes,
   });
 });
 
@@ -225,12 +234,16 @@ router.post("/auth/change-password", async (req, res) => {
 // Touches the session so its rolling expiry is extended without requiring a
 // full data request. Mobile clients call this periodically while the app is
 // in the foreground so an idle-but-open session doesn't silently expire.
-router.post("/auth/refresh", (req, res) => {
+router.post("/auth/refresh", async (req, res) => {
   if (!req.session.userId) {
     res.status(401).json({ error: "Not authenticated" });
     return;
   }
 
+  // Re-read the tenant's idle-timeout setting on every refresh so an admin
+  // change takes effect for already-open sessions without requiring re-login.
+  const idleTimeoutMinutes = await getTenantIdleTimeoutMinutes(req.session.tenantId);
+  req.session.cookie.maxAge = idleTimeoutMinutes * 60 * 1000;
   req.session.touch();
   req.session.save((err) => {
     if (err) {
@@ -242,6 +255,7 @@ router.post("/auth/refresh", (req, res) => {
       username: req.session.username,
       role: req.session.role,
       tenantId: req.session.tenantId,
+      idleTimeoutMinutes,
     });
   });
 });

@@ -133,6 +133,10 @@ if exist "artifacts\patient-images\dist\public" (
 REM ── 8. Detect LAN IP ───────────────────────────
 for /f "tokens=*" %%i in ('node -e "var os=require('os');var nets=os.networkInterfaces();var names=Object.keys(nets);for(var i=0;i<names.length;i++){var ifaces=nets[names[i]]||[];for(var j=0;j<ifaces.length;j++){if(ifaces[j].family==='IPv4'&&!ifaces[j].internal){process.stdout.write(ifaces[j].address);process.exit(0)}}}"') do set LAN_IP=%%i
 
+set SCHEME=http
+if "%ENABLE_HTTPS%"=="true" set SCHEME=https
+if defined TLS_CERT_PATH set SCHEME=https
+
 echo.
 if "%USE_SQLITE%"=="true" (
     echo [max7] Starting server ^(SQLite mode^) on port %PORT%
@@ -142,11 +146,14 @@ if "%USE_SQLITE%"=="true" (
 if defined LAN_IP (
     echo.
     echo  +--------------------------------------------------+
-    echo  ^|  Web browser : http://%LAN_IP%:%PORT%
-    echo  ^|  Mobile app  : http://%LAN_IP%:%PORT%
+    echo  ^|  Web browser : %SCHEME%://%LAN_IP%:%PORT%
+    echo  ^|  Mobile app  : %SCHEME%://%LAN_IP%:%PORT%
     echo  ^|  ^(enter the Mobile app address in Server Setup^)
     echo  +--------------------------------------------------+
     echo.
+)
+if "%SCHEME%"=="https" (
+    echo [WARN] HTTPS is enabled. If using an auto-generated certificate, browsers/apps will show a one-time trust warning -- see SELF_HOSTING.md.
 )
 
 REM ── 9. Start ────────────────────────────────────
