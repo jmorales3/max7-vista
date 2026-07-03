@@ -4,8 +4,10 @@
   "private": true,
   "main": "dist/main.js",
   "scripts": {
+    "prebuild": "node ensure-secrets-stub.mjs",
     "build": "tsc -p tsconfig.json && node -e \"require('fs').copyFileSync('src/splash.html','dist/splash.html')\"",
     "start": "electron .",
+    "predev": "node ensure-secrets-stub.mjs",
     "dev": "tsc -p tsconfig.json && electron .",
     "build:full": "node build-full.mjs",
     "package": "pnpm run build:full && electron-builder --dir",

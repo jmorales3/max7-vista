@@ -175,14 +175,26 @@ function stopApiServer(): void {
   // Server runs in-process; it stops automatically when Electron exits.
 }
 
-async function checkLicenseStatus(): Promise<{ state: string; daysLeft: number | null } | null> {
+/**
+ * Fails CLOSED: any network error, non-2xx response, or malformed payload
+ * is reported as state "check_failed", which the caller must treat as
+ * blocking (show the license window) rather than opening the main app.
+ * A license gate that fails open on error would let expired/tampered
+ * installs bypass enforcement whenever the status check errors.
+ */
+async function checkLicenseStatus(): Promise<{ state: string; daysLeft: number | null }> {
   try {
     const res = await fetch(`http://127.0.0.1:${API_PORT}/api/license/status`);
-    if (res.ok) return res.json() as Promise<{ state: string; daysLeft: number | null }>;
+    if (res.ok) {
+      const data = (await res.json()) as { state?: unknown; daysLeft?: number | null };
+      if (data && typeof data.state === "string") {
+        return { state: data.state, daysLeft: data.daysLeft ?? null };
+      }
+    }
   } catch {
-    // non-critical
+    // fall through to fail-closed result below
   }
-  return null;
+  return { state: "check_failed", daysLeft: null };
 }
 
 // ─── Splash Window ───────────────────────────────────────────────────────────
@@ -310,7 +322,7 @@ function createLicenseWindow(): void {
     ? path.join(__dirname, "../src/license.html")
     : path.join(__dirname, "license.html");
 
-  licenseWindow.loadFile(licensePath).catch((err) => {
+  licenseWindow.loadFile(licensePath, { query: { port: String(API_PORT) } }).catch((err) => {
     console.error("[license] Failed to load license screen:", err);
   });
 
@@ -431,11 +443,12 @@ app.whenReady().then(async () => {
   await startApiServer();
 
   // ── License gate (desktop-only) ──────────────────────────────────────────
+  // Fail CLOSED: only "trial" and "active" are known-good states that open
+  // the main app directly. Anything else — expired, tampered, an unknown
+  // state, or a failed status check — must show the blocking license window.
   const licenseStatus = await checkLicenseStatus();
-  const needsLicenseScreen =
-    licenseStatus?.state === "trial_expired" ||
-    licenseStatus?.state === "expired" ||
-    licenseStatus?.state === "tampered";
+  const OPEN_STATES = new Set(["trial", "active"]);
+  const needsLicenseScreen = !OPEN_STATES.has(licenseStatus.state);
 
   if (needsLicenseScreen) {
     // Show blocking activation window; app opens only after user activates or

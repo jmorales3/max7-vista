@@ -160,7 +160,7 @@
   </div>
 
   <script>
-    const API_PORT = 8080;
+    const API_PORT = new URLSearchParams(window.location.search).get('port') || 8080;
 
     async function loadStatus() {
       try {
@@ -211,6 +211,14 @@
         desc.textContent = `You have ${status.daysLeft} day${status.daysLeft === 1 ? '' : 's'} remaining in your trial. Enter your license code below or close this window to continue.`;
         // For trial, add a "skip" button to just open the app
         addSkipButton();
+      } else {
+        // Unknown/failed status check ("check_failed" or anything unexpected).
+        // Fail closed: show a blocking, retryable error instead of silently
+        // treating it as a good state.
+        badge.textContent = 'Unable to Verify';
+        badge.className = 'status-badge badge-expired';
+        title.textContent = 'Unable to verify license status';
+        desc.textContent = 'We could not confirm your license status. Please enter your activation code below, or restart the application and try again.';
       }
     }
 

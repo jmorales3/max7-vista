@@ -83,7 +83,7 @@ router.post("/license/activate", (req, res) => {
     const { machineId, deviceMismatch } = getMachineId(USER_DATA_DIR);
     if (deviceMismatch) {
       return res.status(400).json({
-        error: "This license identity is registered to another device and cannot be activated here.",
+        error: "This code is registered to another device",
       });
     }
 
