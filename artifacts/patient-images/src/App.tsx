@@ -7,6 +7,7 @@ import Router from "./router";
 import LoginPage from "@/pages/login";
 import PendingApprovalPage from "@/pages/pending-approval";
 import SuspendedPage from "@/pages/suspended";
+import ChangePasswordPage from "@/pages/change-password";
 import { IdleWarningDialog } from "@/components/IdleWarningDialog";
 import { queryClient } from "@/lib/queryClient";
 import { Loader2 } from "lucide-react";
@@ -34,6 +35,10 @@ function AppInner() {
 
   if (!user) {
     return <LoginPage />;
+  }
+
+  if (user.forcePasswordChange) {
+    return <ChangePasswordPage />;
   }
 
   return (

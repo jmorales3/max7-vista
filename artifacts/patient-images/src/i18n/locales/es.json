@@ -1092,6 +1092,7 @@
       "computeFailed": "Error al calcular las mediciones",
       "saveProgress": "Guardar Progreso",
       "progressSaved": "Progreso guardado",
+      "unsavedConfirm": "Tiene puntos de referencia sin guardar. ¿Salir sin guardar?",
       "done": "Ver Resultados",
       "noResults": "Aún no se calcularon mediciones",
       "measurement": "Medición",

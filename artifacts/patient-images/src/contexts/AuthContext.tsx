@@ -16,6 +16,7 @@ interface AuthContextValue {
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   forceLogout: () => void;
+  clearForcePasswordChange: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -81,8 +82,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSuspended(false);
   }
 
+  function clearForcePasswordChange() {
+    setUser((prev) => (prev ? { ...prev, forcePasswordChange: false } : prev));
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, pendingApproval, suspended, login, logout, forceLogout }}>
+    <AuthContext.Provider
+      value={{ user, loading, pendingApproval, suspended, login, logout, forceLogout, clearForcePasswordChange }}
+    >
       {children}
     </AuthContext.Provider>
   );

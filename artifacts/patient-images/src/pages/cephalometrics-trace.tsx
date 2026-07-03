@@ -290,6 +290,7 @@ export default function CephalometricsTrace() {
   const [mmInput, setMmInput] = useState("");
   const [pxPerMm, setPxPerMm] = useState<number | null>(null);
   const [placed, setPlaced] = useState<PlacedPoint[]>([]);
+  const savedPlacedRef = useRef<string>("[]");
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragStartMouse, setDragStartMouse] = useState<{ mx: number; my: number; ox: number; oy: number } | null>(null);
   const [results, setResults] = useState<MeasurementResult[]>([]);
@@ -350,7 +351,28 @@ export default function CephalometricsTrace() {
           points: points.map((p) => ({ landmarkLabel: p.label, x: p.x, y: p.y })),
         }),
       }),
+    onSuccess: (_data, points) => {
+      savedPlacedRef.current = JSON.stringify(points);
+    },
   });
+
+  const hasUnsavedWork = step === "landmarks" && JSON.stringify(placed) !== savedPlacedRef.current;
+
+  useEffect(() => {
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      if (!hasUnsavedWork) return;
+      e.preventDefault();
+      e.returnValue = "";
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedWork]);
+
+  function confirmLeaveIfDirty(e: React.MouseEvent) {
+    if (hasUnsavedWork && !window.confirm(t("ceph.trace.unsavedConfirm"))) {
+      e.preventDefault();
+    }
+  }
 
   const computeMutation = useMutation({
     mutationFn: () =>
@@ -629,7 +651,7 @@ export default function CephalometricsTrace() {
           className="h-8 w-8 shrink-0"
           asChild
         >
-          <Link href={patientId ? `/patients/${patientId}` : "/patients"}>
+          <Link href={patientId ? `/patients/${patientId}` : "/patients"} onClick={confirmLeaveIfDirty}>
             <ChevronLeft className="h-4 w-4" />
           </Link>
         </Button>
@@ -1081,7 +1103,7 @@ export default function CephalometricsTrace() {
               variant="outline"
               asChild
             >
-              <Link href={patientId ? `/patients/${patientId}` : "/patients"}>
+              <Link href={patientId ? `/patients/${patientId}` : "/patients"} onClick={confirmLeaveIfDirty}>
                 {t("common.cancel")}
               </Link>
             </Button>

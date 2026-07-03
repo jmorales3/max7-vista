@@ -145,6 +145,7 @@ router.post("/auth/login", async (req, res) => {
       username: user.username,
       role: user.role,
       tenantId: user.tenantId,
+      forcePasswordChange: user.forcePasswordChange,
       authToken: req.sessionID,
     });
   } catch (err) {
@@ -160,16 +161,65 @@ router.post("/auth/logout", async (req, res) => {
   });
 });
 
-router.get("/auth/session", (req, res) => {
+router.get("/auth/session", async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: "Not authenticated" });
   }
+  const [user] = await db
+    .select({ forcePasswordChange: usersTable.forcePasswordChange })
+    .from(usersTable)
+    .where(eq(usersTable.id, req.session.userId))
+    .limit(1);
   return res.json({
     id: req.session.userId,
     username: req.session.username,
     role: req.session.role,
     tenantId: req.session.tenantId,
+    forcePasswordChange: user?.forcePasswordChange ?? false,
   });
+});
+
+router.post("/auth/change-password", async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  const { currentPassword, newPassword } = req.body as { currentPassword?: string; newPassword?: string };
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: "Current and new password are required" });
+  }
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: "New password must be at least 6 characters" });
+  }
+
+  try {
+    const [user] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, req.session.userId))
+      .limit(1);
+
+    if (!user) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) {
+      return res.status(401).json({ error: "Current password is incorrect" });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await db
+      .update(usersTable)
+      .set({ passwordHash, forcePasswordChange: false })
+      .where(eq(usersTable.id, user.id));
+
+    logAudit(req, "password_change", "user", user.id);
+
+    return res.json({ ok: true });
+  } catch {
+    return res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 // Touches the session so its rolling expiry is extended without requiring a

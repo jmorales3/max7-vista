@@ -7,6 +7,8 @@ description: Confirmed tooling limitation — main agent cannot mark other PENDI
 
 There is no main-agent-callable function to transition an arbitrary *other* project task (one not bound to this session) out of `PENDING`, even after confirming via code inspection that the feature is fully implemented.
 
+`mark_task_complete` can also fail with "cannot report done from state MERGED" — this happens when the session's own bound task was already completed/merged earlier (e.g. in a prior turn of a long session), but work continued afterward anyway. In that case the tool call is a dead end for *this* session too; there is no retry or alternate call that reopens a MERGED task.
+
 **Why:** Verified via repeated failed calls across multiple sessions/tasks. This is a deliberate boundary in the task-tracking tool surface, not a bug to work around.
 
-**How to apply:** When auditing project tasks against actual code state and finding tasks that are already implemented but still show PENDING/"Active", do not attempt to mark them complete yourself. Tell the user precisely which tasks are confirmed done in code and that they need to manually mark/dismiss them in the task list UI.
+**How to apply:** When auditing project tasks against actual code state and finding tasks that are already implemented but still show PENDING/"Active", do not attempt to mark them complete yourself. Tell the user precisely which tasks are confirmed done in code and that they need to manually mark/dismiss them in the task list UI. If `mark_task_complete` fails with "cannot report done from state MERGED", stop calling it (do not retry) — just summarize finished work directly to the user; do not assume uncommitted local changes will be auto-committed, since the commit hook is tied to that same completion event.

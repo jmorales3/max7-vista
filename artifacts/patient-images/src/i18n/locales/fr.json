@@ -1092,6 +1092,7 @@
       "computeFailed": "Échec du calcul des mesures",
       "saveProgress": "Sauvegarder la Progression",
       "progressSaved": "Progression sauvegardée",
+      "unsavedConfirm": "Vous avez des points de repère non enregistrés. Quitter sans enregistrer ?",
       "done": "Voir les Résultats",
       "noResults": "Aucune mesure calculée pour l'instant",
       "measurement": "Mesure",

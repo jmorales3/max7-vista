@@ -1092,6 +1092,7 @@
       "computeFailed": "Failed to compute measurements",
       "saveProgress": "Save Progress",
       "progressSaved": "Progress saved",
+      "unsavedConfirm": "You have unsaved landmark points. Leave without saving?",
       "done": "View Results",
       "noResults": "No measurements computed yet",
       "measurement": "Measurement",

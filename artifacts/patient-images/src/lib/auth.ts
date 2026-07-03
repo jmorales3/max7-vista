@@ -7,6 +7,7 @@ export interface AuthUser {
   username: string;
   role: Role;
   tenantId?: number;
+  forcePasswordChange?: boolean;
 }
 
 export class PendingApprovalError extends Error {
@@ -72,6 +73,19 @@ export async function refreshSession(): Promise<boolean> {
     credentials: "include",
   });
   return res.ok;
+}
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  const res = await fetch(getApiUrl("/api/auth/change-password"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error || "Failed to change password");
+  }
 }
 
 export interface AdminUser {

@@ -119,6 +119,7 @@ router.post("/admin/users", requireRole("admin", "superadmin"), async (req, res)
         passwordHash,
         role: assignedRole,
         isActive: true,
+        forcePasswordChange: true,
         tenantId: resolvedTenantId,
       })
       .returning({
