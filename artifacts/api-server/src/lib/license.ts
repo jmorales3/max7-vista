@@ -21,9 +21,22 @@ export interface LicenseStatus {
 }
 
 export interface LicensePayload {
-  mid: string;
+  machineId: string;
   plan: "6mo" | "1yr" | "lifetime";
-  exp: string | null;
+}
+
+/**
+ * Expiry is always computed server-side at activation time, never trusted
+ * from the license code itself. This ensures a 6mo/1yr term always runs
+ * from the moment the customer actually activates, regardless of how long
+ * the code sat unused after being issued.
+ */
+export function computeExpiryFromNow(plan: LicensePayload["plan"]): string | null {
+  if (plan === "lifetime") return null;
+  const months = plan === "1yr" ? 12 : 6;
+  const d = new Date();
+  d.setMonth(d.getMonth() + months);
+  return d.toISOString();
 }
 
 export interface LicenseRecord {
@@ -62,23 +75,36 @@ export function computeMachineId(): string {
   return crypto.createHash("sha256").update(raw).digest("hex").slice(0, 32);
 }
 
-export function getMachineId(userDataDir: string): string {
+export interface MachineIdentity {
+  machineId: string;
+  /**
+   * True when the stored machine.id/machine.id.sig files are validly
+   * signed but no longer match this host's live hardware fingerprint —
+   * i.e. the files were copied over from a different, already-licensed
+   * machine. Callers must treat this as an invalid/tampered device and
+   * must NOT accept a license activation against it.
+   */
+  deviceMismatch: boolean;
+}
+
+export function getMachineId(userDataDir: string): MachineIdentity {
   const idFile = path.join(userDataDir, "machine.id");
   const sigFile = path.join(userDataDir, "machine.id.sig");
+  const currentFingerprint = computeMachineId();
 
   if (fs.existsSync(idFile) && fs.existsSync(sigFile)) {
     const stored = fs.readFileSync(idFile, "utf-8").trim();
     const sig = fs.readFileSync(sigFile, "utf-8").trim();
-    if (sig === signHmac(stored) && /^[0-9a-f]{32}$/.test(stored)) {
-      return stored;
+    const sigValid = sig === signHmac(stored) && /^[0-9a-f]{32}$/.test(stored);
+    if (sigValid) {
+      return { machineId: stored, deviceMismatch: stored !== currentFingerprint };
     }
   }
 
-  const id = computeMachineId();
   fs.mkdirSync(userDataDir, { recursive: true });
-  fs.writeFileSync(idFile, id, "utf-8");
-  fs.writeFileSync(sigFile, signHmac(id), "utf-8");
-  return id;
+  fs.writeFileSync(idFile, currentFingerprint, "utf-8");
+  fs.writeFileSync(sigFile, signHmac(currentFingerprint), "utf-8");
+  return { machineId: currentFingerprint, deviceMismatch: false };
 }
 
 // ── Secondary Tamper File (.lic) ───────────────────────────────────────────────
@@ -197,9 +223,10 @@ export function computeStatus(
   rec: LicenseRecord,
   machineId: string,
   licFileValid = true,
+  deviceMismatch = false,
 ): LicenseStatus {
   const expectedHash = computeRecordHash(rec);
-  if (rec.record_hash !== expectedHash || !licFileValid) {
+  if (rec.record_hash !== expectedHash || !licFileValid || deviceMismatch) {
     return {
       state: "tampered",
       daysLeft: null,

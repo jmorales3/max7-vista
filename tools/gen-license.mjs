@@ -6,11 +6,15 @@
  *   node tools/gen-license.mjs \
  *     --machineId <machineId> \
  *     --plan 6mo|1yr|lifetime \
- *     --secret <hmacSecret> \
- *     [--exp 2026-12-31]
+ *     --secret <hmacSecret>
  *
  * The machine ID is shown in the desktop app under Settings > License.
  * --secret must match the LICENSE_HMAC_SECRET baked into the build.
+ *
+ * NOTE: the license code only carries the machine ID and plan. The actual
+ * expiry date for 6mo/1yr plans is computed by the server at the moment
+ * the customer activates the code (now + 6/12 months) — never baked into
+ * the code itself — so a term always runs from activation, not issuance.
  */
 
 import crypto from "crypto";
@@ -24,7 +28,6 @@ try {
       machineId: { type: "string" },
       plan:      { type: "string" },
       secret:    { type: "string" },
-      exp:       { type: "string" },
       help:      { type: "boolean", short: "h" },
     },
   });
@@ -37,14 +40,16 @@ const { values } = parsed;
 
 if (values.help || !values.machineId || !values.plan || !values.secret) {
   console.log(`
-Usage: node tools/gen-license.mjs --machineId <machineId> --plan <plan> --secret <hmacSecret> [--exp YYYY-MM-DD]
+Usage: node tools/gen-license.mjs --machineId <machineId> --plan <plan> --secret <hmacSecret>
 
 Options:
   --machineId <id>     32-char hex machine ID shown in Settings > License
   --plan      <plan>   One of: 6mo, 1yr, lifetime
   --secret    <key>    LICENSE_HMAC_SECRET matching the target build
-  --exp       <date>   Override expiry date (ISO format). Auto-calculated if omitted.
   -h, --help           Show this message
+
+Note: expiry for 6mo/1yr plans is computed by the server at activation
+time, not by this tool — the code only encodes machineId + plan.
 `);
   process.exit(values.help ? 0 : 1);
 }
@@ -62,24 +67,7 @@ if (!/^[0-9a-f]{32}$/.test(values.machineId)) {
   process.exit(1);
 }
 
-let exp = null;
-if (values.plan !== "lifetime") {
-  if (values.exp) {
-    const d = new Date(values.exp);
-    if (isNaN(d.getTime())) {
-      console.error(`Invalid --exp date: "${values.exp}". Use ISO format, e.g. 2026-12-31.`);
-      process.exit(1);
-    }
-    exp = d.toISOString();
-  } else {
-    const months = values.plan === "1yr" ? 12 : 6;
-    const d = new Date();
-    d.setMonth(d.getMonth() + months);
-    exp = d.toISOString();
-  }
-}
-
-const payload = { mid: values.machineId, plan: values.plan, exp };
+const payload = { machineId: values.machineId, plan: values.plan };
 const b64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
 const sig = crypto.createHmac("sha256", SECRET).update(b64).digest("hex");
 const code = `MAX7-${b64}.${sig}`;
@@ -89,7 +77,7 @@ console.log(" Max7 Vista — License Code");
 console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 console.log(` Machine ID : ${values.machineId}`);
 console.log(` Plan       : ${values.plan}`);
-console.log(` Expires    : ${exp ?? "Never (Lifetime)"}`);
+console.log(` Expires    : ${values.plan === "lifetime" ? "Never (Lifetime)" : "Computed at activation (" + (values.plan === "1yr" ? "12" : "6") + " months from first use)"}`);
 console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 console.log(code);
 console.log("\n");
