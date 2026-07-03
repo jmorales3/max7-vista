@@ -1852,4 +1852,36 @@ Automated Playwright-driven drag simulations that jump directly from source to t
 
 ---
 
+## FEAT-022 — Three-Tier Role Permission Matrix (User / Doctor / Superadministrator)
+
+**Status:** ✅ Confirmed working in Vista
+**Date:** 2026-07-03
+**Vista files:**
+- `lib/db/src/schema/users.ts`, `lib/db/src/schema-sqlite/users.ts` — role enum/column (`user`, `admin`, `superadmin`; `admin` is displayed as "Doctor" and `superadmin` as "Superadministrator" in the UI)
+- `artifacts/api-server/src/middleware/*` (role-check middleware) and route handlers across patients, images, ceph tracings, templates, presentations, documents, users, audit-log, migration, patient-retention, per-patient-access
+- `artifacts/patient-images/src/i18n/locales/{en,es,fr,pt}.json` — `manual.roles`, `manual.tenants`, and related manual body copy
+- `artifacts/api-server/src/routes/chat.ts` — chatbot `SYSTEM_PROMPT`
+
+### What it does
+Redesigned the previous two-tier (Admin / Super Admin) permission model into three tiers with narrower, more clinically-appropriate scopes:
+
+- **User** — can view, capture, and edit/delete only their *own* uploaded images. Can create (but not edit or delete) cephalometric tracings. Cannot manage other users' data, templates, or system settings. Can be optionally restricted (by a Superadministrator) to a specific subset of patients; unrestricted by default.
+- **Doctor** (internal role value stays `admin` — only the display label changed) — manages clinical data within their own organization/tenant: patients, all patients' images, ceph templates (create/edit/copy), presentations, documents. Can export patient images and can configure/purge patient data retention policy and legal holds. Always has unrestricted patient access (cannot be scoped down).
+- **Superadministrator** (internal role value stays `superadmin`) — full system access across *all* tenants: user management, cross-tenant tenant management, the Audit Log (now Superadministrator-exclusive, previously any admin could view it), per-patient access control assignment for Users, LAN↔Web migration, and all Doctor-level permissions.
+
+Key behavior changes from the prior model:
+1. Audit Log access narrowed from "any admin" to Superadministrator-only.
+2. Per-patient access restriction (assigning a User to a limited patient list) is now a Superadministrator-only action; Doctors cannot restrict Users.
+3. Patient Data Retention & Legal Hold management (configure retention period, purge eligible records, place/release legal holds) is available to both Doctor and Superadministrator (previously "admin" generically).
+4. Regular Users' cephalometric tracing rights were narrowed to create-only — they can no longer edit or delete a tracing once saved, only Doctors/Superadministrators can.
+5. Template creation/editing (Cephalometrics module) is Doctor/Superadministrator-only; Users have read-only template access.
+6. The "Accounting of Disclosures" HIPAA report generation remains open to any authenticated user (unchanged) — it is scoped to what that user is already permitted to see.
+
+### Notes for Max7 agent
+- If Max7 currently has a flat Admin/Super Admin split, consider whether a Doctor-equivalent mid-tier (organization-scoped clinical management without cross-tenant/user-management powers) fits Max7's own user base before porting this 1:1 — Vista's redesign was driven by a clinical-practice access model (doctors vs. front-desk/assistant users vs. system operators) that may or may not map to Max7's domain.
+- The internal DB enum values were kept as `user`/`admin`/`superadmin` and only the *display* labels changed to User/Doctor/Superadministrator — this avoided a data migration. Consider the same trick in Max7 to minimize migration risk if only terminology (not actual scope) needs to change.
+- All UI-facing role name strings live in the i18n locale files, not hardcoded in components — grep for the old role-name strings across every locale file (not just the primary language) when doing this kind of rename, since per-locale manual/chatbot copy can drift out of sync with the structural i18n keys.
+
+---
+
 <!-- Add new entries below as features are confirmed in Vista -->
