@@ -6,6 +6,7 @@ import multer from "multer";
 import { db, documentsTable, patientsTable } from "@workspace/db";
 import { uploadToGcs, streamFile, deleteFile, getSignedDownloadUrl } from "../lib/gcsStorage";
 import { getAccessiblePatientIds, canAccessPatient } from "../lib/patientAccess";
+import { requireRole } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
@@ -79,7 +80,7 @@ router.get("/documents", async (req, res) => {
 });
 
 // POST /api/documents  (multipart: file, patientId, notes?)
-router.post("/documents", upload.single("file"), async (req, res) => {
+router.post("/documents", requireRole("admin", "superadmin"), upload.single("file"), async (req, res) => {
   if (!req.file) {
     res.status(400).json({ error: "No file uploaded" });
     return;
@@ -213,7 +214,7 @@ router.get("/documents/:id/file", async (req, res) => {
 });
 
 // PATCH /api/documents/:id
-router.patch("/documents/:id", async (req, res) => {
+router.patch("/documents/:id", requireRole("admin", "superadmin"), async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!id || isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -259,7 +260,7 @@ router.patch("/documents/:id", async (req, res) => {
 });
 
 // DELETE /api/documents/:id
-router.delete("/documents/:id", async (req, res) => {
+router.delete("/documents/:id", requireRole("admin", "superadmin"), async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!id || isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });

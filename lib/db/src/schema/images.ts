@@ -16,6 +16,7 @@ export const imagesTable = pgTable("images", {
   mediaType: varchar("media_type", { length: 10 }).notNull().default("image"),
   sha256: text("sha256"),
   sortOrder: integer("sort_order"),
+  uploadedBy: integer("uploaded_by"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

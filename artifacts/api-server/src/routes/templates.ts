@@ -4,6 +4,7 @@ import { db, templatesTable, templateDocumentsTable, patientsTable } from "@work
 import type { TemplateFrame, DocumentFrame } from "@workspace/db";
 import { logAudit } from "../lib/audit";
 import { getAccessiblePatientIds, canAccessPatient } from "../lib/patientAccess";
+import { requireRole } from "../middlewares/requireAuth";
 import {
   ListTemplatesQueryParams,
   CreateTemplateBody,
@@ -47,7 +48,7 @@ router.get("/templates", async (req, res): Promise<void> => {
   }
 });
 
-router.post("/templates", async (req, res): Promise<void> => {
+router.post("/templates", requireRole("admin", "superadmin"), async (req, res): Promise<void> => {
   try {
     const tenantId = tid(req);
     const body = CreateTemplateBody.safeParse(req.body);
@@ -100,7 +101,7 @@ router.get("/templates/:id", async (req, res): Promise<void> => {
   }
 });
 
-router.put("/templates/:id", async (req, res): Promise<void> => {
+router.put("/templates/:id", requireRole("admin", "superadmin"), async (req, res): Promise<void> => {
   try {
     const tenantId = tid(req);
     const params = UpdateTemplateParams.safeParse(req.params);
@@ -138,7 +139,7 @@ router.put("/templates/:id", async (req, res): Promise<void> => {
   }
 });
 
-router.delete("/templates/:id", async (req, res): Promise<void> => {
+router.delete("/templates/:id", requireRole("admin", "superadmin"), async (req, res): Promise<void> => {
   try {
     const tenantId = tid(req);
     const params = DeleteTemplateParams.safeParse(req.params);
@@ -205,7 +206,7 @@ router.get("/template-documents", async (req, res): Promise<void> => {
   }
 });
 
-router.post("/template-documents", async (req, res): Promise<void> => {
+router.post("/template-documents", requireRole("admin", "superadmin"), async (req, res): Promise<void> => {
   try {
     const tenantId = tid(req);
     const body = CreateTemplateDocumentBody.safeParse(req.body);
@@ -290,7 +291,7 @@ router.get("/template-documents/:id", async (req, res): Promise<void> => {
   }
 });
 
-router.put("/template-documents/:id", async (req, res): Promise<void> => {
+router.put("/template-documents/:id", requireRole("admin", "superadmin"), async (req, res): Promise<void> => {
   try {
     const tenantId = tid(req);
     const params = UpdateTemplateDocumentParams.safeParse(req.params);
@@ -369,7 +370,7 @@ router.put("/template-documents/:id", async (req, res): Promise<void> => {
   }
 });
 
-router.delete("/template-documents/:id", async (req, res): Promise<void> => {
+router.delete("/template-documents/:id", requireRole("admin", "superadmin"), async (req, res): Promise<void> => {
   try {
     const tenantId = tid(req);
     const params = DeleteTemplateDocumentParams.safeParse(req.params);

@@ -41,6 +41,7 @@ function NotAuthorized() {
 function Router() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin" || user?.role === "superadmin";
+  const isSuperAdmin = user?.role === "superadmin";
 
   return (
     <AppLayout>
@@ -58,10 +59,10 @@ function Router() {
         <Route path="/presentations" component={Presentations} />
         <Route path="/settings" component={Settings} />
         <Route path="/manual" component={Manual} />
-        <Route path="/admin/users" component={isAdmin ? AdminUsers : NotAuthorized} />
+        <Route path="/admin/users" component={isSuperAdmin ? AdminUsers : NotAuthorized} />
         <Route path="/admin/tags" component={isAdmin ? AdminTags : NotAuthorized} />
-        <Route path="/admin/audit-log" component={isAdmin ? AdminAuditLog : NotAuthorized} />
-        <Route path="/admin/integrity" component={isAdmin ? AdminIntegrity : NotAuthorized} />
+        <Route path="/admin/audit-log" component={isSuperAdmin ? AdminAuditLog : NotAuthorized} />
+        <Route path="/admin/integrity" component={isSuperAdmin ? AdminIntegrity : NotAuthorized} />
         <Route path="/import" component={BulkImport} />
         <Route path="/templates" component={Templates} />
         <Route path="/templates/:id" component={TemplateDesigner} />

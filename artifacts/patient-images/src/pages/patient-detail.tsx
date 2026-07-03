@@ -110,6 +110,7 @@ export default function PatientDetail() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin" || user?.role === "superadmin";
+  const isSuperAdmin = user?.role === "superadmin";
   const [, params] = useRoute("/patients/:id");
   const id = parseInt(params?.id || "0", 10);
   const [, setLocation] = useLocation();
@@ -474,12 +475,16 @@ export default function PatientDetail() {
                   </DropdownMenuItem>
                 </>
               )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setDisclosureReportOpen(true)}>
-                <FileDown className="mr-2 h-4 w-4" />
-                {t("patients.generateDisclosureReport")}
-              </DropdownMenuItem>
-              {isAdmin && (
+              {isSuperAdmin && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setDisclosureReportOpen(true)}>
+                    <FileDown className="mr-2 h-4 w-4" />
+                    {t("patients.generateDisclosureReport")}
+                  </DropdownMenuItem>
+                </>
+              )}
+              {isSuperAdmin && (
                 <DropdownMenuItem
                   onClick={() => {
                     if (patient.legalHold) {

@@ -557,6 +557,7 @@ router.post("/ceph/tracings", async (req, res): Promise<void> => {
 // PATCH /api/ceph/tracings/:id — update tracing metadata
 router.patch("/ceph/tracings/:id", async (req, res): Promise<void> => {
   try {
+    if (!isAdmin(req)) { res.status(403).json({ error: "You cannot modify an existing tracing" }); return; }
     const tenantId = tid(req);
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
@@ -578,6 +579,7 @@ router.patch("/ceph/tracings/:id", async (req, res): Promise<void> => {
 // DELETE /api/ceph/tracings/:id
 router.delete("/ceph/tracings/:id", async (req, res): Promise<void> => {
   try {
+    if (!isAdmin(req)) { res.status(403).json({ error: "You cannot delete an existing tracing" }); return; }
     const tenantId = tid(req);
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
@@ -595,6 +597,7 @@ router.delete("/ceph/tracings/:id", async (req, res): Promise<void> => {
 // PUT /api/ceph/tracings/:id/points — replace all points for a tracing (upsert)
 router.put("/ceph/tracings/:id/points", async (req, res): Promise<void> => {
   try {
+    if (!isAdmin(req)) { res.status(403).json({ error: "You cannot modify an existing tracing" }); return; }
     const tenantId = tid(req);
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
@@ -621,6 +624,7 @@ router.put("/ceph/tracings/:id/points", async (req, res): Promise<void> => {
 // POST /api/ceph/tracings/:id/compute — compute all measurements from stored points
 router.post("/ceph/tracings/:id/compute", async (req, res): Promise<void> => {
   try {
+    if (!isAdmin(req)) { res.status(403).json({ error: "You cannot modify an existing tracing" }); return; }
     const tenantId = tid(req);
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }

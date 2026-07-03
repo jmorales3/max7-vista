@@ -118,7 +118,7 @@ async function handleAuditLog(req: any, res: any): Promise<void> {
 
 // ── CSV Export ───────────────────────────────────────────────────────────────
 
-router.get("/audit-logs/export", requireRole("admin", "superadmin"), async (req, res): Promise<void> => {
+router.get("/audit-logs/export", requireRole("superadmin"), async (req, res): Promise<void> => {
   try {
     const tenantId = req.session?.tenantId as number | undefined;
 
@@ -237,7 +237,7 @@ const DISCLOSURE_ACTIONS = [
   "document_download",
 ];
 
-router.get("/patients/:id/disclosure-report", requireRole("admin", "superadmin"), async (req, res): Promise<void> => {
+router.get("/patients/:id/disclosure-report", requireRole("superadmin"), async (req, res): Promise<void> => {
   try {
     const tenantId = req.session?.tenantId as number | undefined;
     const patientId = parseInt(req.params.id, 10);
@@ -337,14 +337,14 @@ router.get("/patients/:id/disclosure-report", requireRole("admin", "superadmin")
 });
 
 // Primary endpoint (plural) per HIPAA spec
-router.get("/audit-logs", requireRole("admin", "superadmin"), handleAuditLog);
+router.get("/audit-logs", requireRole("superadmin"), handleAuditLog);
 
 // Backward-compat alias
-router.get("/audit-log", requireRole("admin", "superadmin"), handleAuditLog);
+router.get("/audit-log", requireRole("superadmin"), handleAuditLog);
 
 // ── Retention policy ─────────────────────────────────────────────────────────
 
-router.get("/audit-logs/retention", requireRole("admin", "superadmin"), async (_req, res): Promise<void> => {
+router.get("/audit-logs/retention", requireRole("superadmin"), async (_req, res): Promise<void> => {
   try {
     const retentionYears = await getAuditRetentionYears();
     res.json({ retentionYears });
@@ -354,7 +354,7 @@ router.get("/audit-logs/retention", requireRole("admin", "superadmin"), async (_
   }
 });
 
-router.put("/audit-logs/retention", requireRole("admin", "superadmin"), async (req, res): Promise<void> => {
+router.put("/audit-logs/retention", requireRole("superadmin"), async (req, res): Promise<void> => {
   try {
     const years = parseInt(String(req.body?.retentionYears), 10);
     if (!Number.isFinite(years) || years < 1 || years > 99) {
@@ -369,7 +369,7 @@ router.put("/audit-logs/retention", requireRole("admin", "superadmin"), async (r
   }
 });
 
-router.post("/audit-logs/cleanup", requireRole("admin", "superadmin"), async (_req, res): Promise<void> => {
+router.post("/audit-logs/cleanup", requireRole("superadmin"), async (_req, res): Promise<void> => {
   try {
     const result = await performAuditCleanup();
     res.json(result);

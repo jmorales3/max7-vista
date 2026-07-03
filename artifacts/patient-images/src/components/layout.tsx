@@ -44,6 +44,7 @@ export function AppSidebar() {
   const { user, logout } = useAuth();
 
   const isAdmin = user?.role === "admin" || user?.role === "superadmin";
+  const isSuperAdmin = user?.role === "superadmin";
 
   const navItems = [
     { title: t("nav.patients"), url: "/patients", icon: Users },
@@ -107,55 +108,63 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {isAdmin && (
+        {(isAdmin || isSuperAdmin) && (
           <SidebarGroup>
             <SidebarGroupLabel>{t("nav.administration")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location === "/admin/users"}
-                  >
-                    <Link href="/admin/users">
-                      <ShieldCheck />
-                      <span>{t("nav.userManagement")}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location === "/admin/tags"}
-                  >
-                    <Link href="/admin/tags">
-                      <Tags />
-                      <span>{t("nav.tagManagement")}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location === "/admin/audit-log"}
-                  >
-                    <Link href="/admin/audit-log">
-                      <ClipboardList />
-                      <span>{t("nav.auditLog")}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location === "/admin/integrity"}
-                  >
-                    <Link href="/admin/integrity">
-                      <ShieldAlert />
-                      <span>{t("nav.integrityCheck")}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                {isSuperAdmin && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/admin/users"}
+                    >
+                      <Link href="/admin/users">
+                        <ShieldCheck />
+                        <span>{t("nav.userManagement")}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+                {isAdmin && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/admin/tags"}
+                    >
+                      <Link href="/admin/tags">
+                        <Tags />
+                        <span>{t("nav.tagManagement")}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+                {isSuperAdmin && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/admin/audit-log"}
+                    >
+                      <Link href="/admin/audit-log">
+                        <ClipboardList />
+                        <span>{t("nav.auditLog")}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+                {isSuperAdmin && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location === "/admin/integrity"}
+                    >
+                      <Link href="/admin/integrity">
+                        <ShieldAlert />
+                        <span>{t("nav.integrityCheck")}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -168,8 +177,12 @@ export function AppSidebar() {
               <span className="text-xs font-medium text-sidebar-foreground truncate">
                 {user.username}
               </span>
-              <span className="text-[10px] text-sidebar-foreground/50 truncate capitalize">
-                {user.role}
+              <span className="text-[10px] text-sidebar-foreground/50 truncate">
+                {user.role === "superadmin"
+                  ? t("admin.roleSuperAdmin")
+                  : user.role === "admin"
+                    ? t("admin.roleAdmin")
+                    : t("admin.roleUser")}
               </span>
             </div>
             <Button

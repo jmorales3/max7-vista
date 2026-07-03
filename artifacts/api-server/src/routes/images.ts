@@ -74,6 +74,19 @@ function tid(req: any): number {
   return t;
 }
 
+// Doctor (admin) and Superadministrator can edit/delete any image; the
+// restricted "user" role may only edit/delete images they uploaded themselves.
+function isPrivilegedRole(req: any): boolean {
+  const role = req.session?.role;
+  return role === "admin" || role === "superadmin";
+}
+
+function ownsImage(req: any, uploadedBy: number | null): boolean {
+  if (isPrivilegedRole(req)) return true;
+  const userId = req.session?.userId as number | undefined;
+  return uploadedBy != null && userId != null && uploadedBy === userId;
+}
+
 router.get("/images/stats", async (req, res): Promise<void> => {
   try {
     const tenantId = tid(req);
@@ -304,6 +317,7 @@ router.post("/images/register", async (req, res): Promise<void> => {
       capturedAt,
       isUnassigned: patientId === null,
       sha256,
+      uploadedBy: req.session?.userId ?? null,
     })
     .returning();
 
@@ -392,6 +406,7 @@ router.post("/images/upload", async (req, res): Promise<void> => {
       capturedAt,
       isUnassigned: patientId === null,
       sha256,
+      uploadedBy: req.session?.userId ?? null,
     })
     .returning();
 
@@ -469,6 +484,7 @@ router.post("/images", upload.single("file"), async (req, res): Promise<void> =>
       capturedAt: capturedAt,
       isUnassigned: patientId === null,
       sha256: sha256Multipart,
+      uploadedBy: req.session?.userId ?? null,
     })
     .returning();
 
@@ -510,6 +526,9 @@ router.put("/images/:id/file", upload.single("file"), async (req, res): Promise<
     const putAccessibleIds = await getAccessiblePatientIds(req);
     if (!canAccessPatient(putAccessibleIds, existingImage.patientId)) {
       res.status(403).json({ error: "Access denied" }); return;
+    }
+    if (!ownsImage(req, existingImage.uploadedBy)) {
+      res.status(403).json({ error: "You can only replace images you uploaded" }); return;
     }
 
     const ext = path.extname(req.file.originalname) || ".jpg";
@@ -775,7 +794,7 @@ router.patch("/images/:id", async (req, res): Promise<void> => {
     if (parsed.data.annotation !== undefined) updateData.annotation = parsed.data.annotation;
     // Only update images that belong to this tenant (via patient join)
     const [existingCheck] = await db
-      .select({ id: imagesTable.id, patientId: imagesTable.patientId })
+      .select({ id: imagesTable.id, patientId: imagesTable.patientId, uploadedBy: imagesTable.uploadedBy })
       .from(imagesTable)
       .innerJoin(patientsTable, and(eq(patientsTable.id, imagesTable.patientId), eq(patientsTable.tenantId, tenantId)))
       .where(eq(imagesTable.id, params.data.id));
@@ -784,6 +803,10 @@ router.patch("/images/:id", async (req, res): Promise<void> => {
     const accessibleIds = await getAccessiblePatientIds(req);
     if (!canAccessPatient(accessibleIds, existingCheck.patientId)) {
       res.status(403).json({ error: "Access denied" });
+      return;
+    }
+    if (!ownsImage(req, existingCheck.uploadedBy)) {
+      res.status(403).json({ error: "You can only edit images you uploaded" });
       return;
     }
 
@@ -839,7 +862,7 @@ router.delete("/images/:id", async (req, res): Promise<void> => {
 
     // Verify tenant owns this image before deleting
     const [check] = await db
-      .select({ id: imagesTable.id, patientId: imagesTable.patientId })
+      .select({ id: imagesTable.id, patientId: imagesTable.patientId, uploadedBy: imagesTable.uploadedBy })
       .from(imagesTable)
       .innerJoin(patientsTable, and(eq(patientsTable.id, imagesTable.patientId), eq(patientsTable.tenantId, tenantId)))
       .where(eq(imagesTable.id, params.data.id));
@@ -848,6 +871,10 @@ router.delete("/images/:id", async (req, res): Promise<void> => {
     const accessibleIds = await getAccessiblePatientIds(req);
     if (!canAccessPatient(accessibleIds, check.patientId)) {
       res.status(403).json({ error: "Access denied" });
+      return;
+    }
+    if (!ownsImage(req, check.uploadedBy)) {
+      res.status(403).json({ error: "You can only delete images you uploaded" });
       return;
     }
 

@@ -116,6 +116,7 @@ export default function Settings() {
     create: t("settings.auditLog.labelCreated"),
   };
   const isAdmin = user?.role === "superadmin" || user?.role === "admin";
+  const isSuperAdmin = user?.role === "superadmin";
   const [storageDirectory, setStorageDirectory] = useState("");
   const [newTagName, setNewTagName] = useState("");
 
@@ -203,7 +204,7 @@ export default function Settings() {
       if (!res.ok) throw new Error("Failed to fetch retention policy");
       return res.json();
     },
-    enabled: isAdmin,
+    enabled: isSuperAdmin,
   });
   const [patientRetentionYearsInput, setPatientRetentionYearsInput] = useState<number | null>(null);
   useEffect(() => {
@@ -246,7 +247,7 @@ export default function Settings() {
       if (!res.ok) throw new Error("Failed to fetch retention-eligible patients");
       return res.json();
     },
-    enabled: isAdmin,
+    enabled: isSuperAdmin,
   });
 
   const purgePatient = useMutation({
@@ -270,7 +271,7 @@ export default function Settings() {
   const { data: tenantSettingsData, isLoading: loadingTenantSettings } = useQuery({
     queryKey: ["tenant-settings"],
     queryFn: getTenantSettings,
-    enabled: isAdmin,
+    enabled: isSuperAdmin,
   });
 
   const { data: serverInfo } = useQuery<{
@@ -322,7 +323,7 @@ export default function Settings() {
       if (!res.ok) throw new Error("Failed to fetch retention policy");
       return res.json();
     },
-    enabled: isAdmin,
+    enabled: isSuperAdmin,
   });
 
   useEffect(() => {
@@ -366,7 +367,7 @@ export default function Settings() {
       if (!res.ok) throw new Error("Failed to fetch session alert status");
       return res.json();
     },
-    enabled: isAdmin,
+    enabled: isSuperAdmin,
     refetchInterval: 5 * 60 * 1000,
   });
 
@@ -527,7 +528,7 @@ export default function Settings() {
       if (!res.ok) throw new Error("Failed to fetch audit log");
       return res.json();
     },
-    enabled: isAdmin,
+    enabled: isSuperAdmin,
   });
 
   const auditLogs = auditData?.items ?? [];
@@ -1380,7 +1381,7 @@ export default function Settings() {
         </Card>
       )}
 
-      {isAdmin && (
+      {isSuperAdmin && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -1533,7 +1534,7 @@ export default function Settings() {
         </Card>
       )}
 
-      {isAdmin && (
+      {isSuperAdmin && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -1610,7 +1611,7 @@ export default function Settings() {
         </Card>
       )}
 
-      {isAdmin && (
+      {isSuperAdmin && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -1700,7 +1701,7 @@ export default function Settings() {
         </Card>
       )}
 
-      {isAdmin && sessionAlertData?.active && (
+      {isSuperAdmin && sessionAlertData?.active && (
         <Card className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-400">
@@ -1727,7 +1728,7 @@ export default function Settings() {
         </Card>
       )}
 
-      {isAdmin && !loadingSessionAlert && !sessionAlertData?.active && (
+      {isSuperAdmin && !loadingSessionAlert && !sessionAlertData?.active && (
         <Card>
           <CardContent className="pt-6 flex items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
@@ -1748,7 +1749,7 @@ export default function Settings() {
         </Card>
       )}
 
-      {isAdmin && (
+      {isSuperAdmin && (
         <Card>
           <CardHeader>
             <div className="flex items-start justify-between gap-4">

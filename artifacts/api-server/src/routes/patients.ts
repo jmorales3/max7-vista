@@ -11,6 +11,7 @@ import {
 } from "@workspace/api-zod";
 import { logAudit } from "../lib/audit";
 import { getAccessiblePatientIds, canAccessPatient } from "../lib/patientAccess";
+import { requireRole } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
@@ -196,7 +197,7 @@ router.get("/patients/:id/access-history", async (req, res): Promise<void> => {
   }
 });
 
-router.patch("/patients/:id", async (req, res): Promise<void> => {
+router.patch("/patients/:id", requireRole("admin", "superadmin"), async (req, res): Promise<void> => {
   try {
     const tenantId = tid(req);
     const params = UpdatePatientParams.safeParse(req.params);
@@ -254,7 +255,7 @@ router.patch("/patients/:id", async (req, res): Promise<void> => {
   }
 });
 
-router.delete("/patients/:id", async (req, res): Promise<void> => {
+router.delete("/patients/:id", requireRole("admin", "superadmin"), async (req, res): Promise<void> => {
   try {
     const tenantId = tid(req);
     const params = DeletePatientParams.safeParse(req.params);

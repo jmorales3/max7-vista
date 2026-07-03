@@ -9,6 +9,7 @@ import {
   CreatePresentationBody,
   ListPresentationsQueryParams,
 } from "@workspace/api-zod";
+import { requireRole } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
@@ -50,7 +51,7 @@ router.get("/presentations", async (req, res): Promise<void> => {
   }
 });
 
-router.post("/presentations", async (req, res): Promise<void> => {
+router.post("/presentations", requireRole("admin", "superadmin"), async (req, res): Promise<void> => {
   try {
     const tenantId = tid(req);
     const body = CreatePresentationBody.safeParse(req.body);
@@ -118,7 +119,7 @@ router.get("/presentations/:id", async (req, res): Promise<void> => {
   }
 });
 
-router.put("/presentations/:id", async (req, res): Promise<void> => {
+router.put("/presentations/:id", requireRole("admin", "superadmin"), async (req, res): Promise<void> => {
   try {
     const tenantId = tid(req);
     const params = UpdatePresentationParams.safeParse(req.params);
@@ -170,7 +171,7 @@ router.put("/presentations/:id", async (req, res): Promise<void> => {
   }
 });
 
-router.delete("/presentations/:id", async (req, res): Promise<void> => {
+router.delete("/presentations/:id", requireRole("admin", "superadmin"), async (req, res): Promise<void> => {
   try {
     const tenantId = tid(req);
     const params = DeletePresentationParams.safeParse(req.params);

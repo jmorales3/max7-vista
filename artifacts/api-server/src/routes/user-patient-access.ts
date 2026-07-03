@@ -17,7 +17,7 @@ function tid(req: any): number {
 // user list show restriction status at a glance without N+1 requests.
 router.get(
   "/users/patient-access-summary",
-  requireRole("admin", "superadmin"),
+  requireRole("superadmin"),
   async (req, res) => {
     const tenantId = tid(req);
 
@@ -39,7 +39,7 @@ router.get(
 // Returns { patientIds: number[] } — empty array means unrestricted
 router.get(
   "/users/:id/patient-access",
-  requireRole("admin", "superadmin"),
+  requireRole("superadmin"),
   async (req, res) => {
     const userId = parseInt(req.params.id, 10);
     if (isNaN(userId)) { res.status(400).json({ error: "Invalid user id" }); return; }
@@ -63,7 +63,7 @@ router.get(
 // Atomically replaces the full set. Send { patientIds: [] } to remove all restrictions.
 router.put(
   "/users/:id/patient-access",
-  requireRole("admin", "superadmin"),
+  requireRole("superadmin"),
   async (req, res) => {
     const userId = parseInt(req.params.id, 10);
     if (isNaN(userId)) { res.status(400).json({ error: "Invalid user id" }); return; }
