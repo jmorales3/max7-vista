@@ -153,11 +153,11 @@ export default function PatientDetail() {
       queryClient.invalidateQueries({ queryKey: getGetPatientQueryKey(id) });
       setLegalHoldDialogOpen(false);
       setLegalHoldReason("");
-      toast({ title: legalHold ? "Legal hold placed" : "Legal hold released" });
+      toast({ title: legalHold ? t("patients.legalHoldPlaced") : t("patients.legalHoldReleased") });
     } catch (err) {
       toast({
         variant: "destructive",
-        title: "Failed to update legal hold",
+        title: t("patients.legalHoldUpdateFailed"),
         description: err instanceof Error ? err.message : String(err),
       });
     } finally {
@@ -187,11 +187,11 @@ export default function PatientDetail() {
       a.click();
       URL.revokeObjectURL(url);
       setDisclosureReportOpen(false);
-      toast({ title: "Disclosure report generated" });
+      toast({ title: t("patients.disclosureGenerated") });
     } catch (err) {
       toast({
         variant: "destructive",
-        title: "Failed to generate disclosure report",
+        title: t("patients.disclosureFailed"),
         description: err instanceof Error ? err.message : String(err),
       });
     } finally {
@@ -415,7 +415,7 @@ export default function PatientDetail() {
             {patient.legalHold && (
               <Badge variant="destructive" className="flex items-center gap-1">
                 <ShieldAlert className="h-3.5 w-3.5" />
-                Legal Hold
+                {t("patients.legalHoldBadge")}
               </Badge>
             )}
           </div>
@@ -477,7 +477,7 @@ export default function PatientDetail() {
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setDisclosureReportOpen(true)}>
                 <FileDown className="mr-2 h-4 w-4" />
-                Generate Disclosure Report
+                {t("patients.generateDisclosureReport")}
               </DropdownMenuItem>
               {isAdmin && (
                 <DropdownMenuItem
@@ -491,7 +491,7 @@ export default function PatientDetail() {
                   }}
                 >
                   <Scale className="mr-2 h-4 w-4" />
-                  {patient.legalHold ? "Release Legal Hold" : "Place Legal Hold"}
+                  {patient.legalHold ? t("patients.releaseLegalHold") : t("patients.placeLegalHold")}
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
@@ -1014,18 +1014,18 @@ export default function PatientDetail() {
       <Dialog open={legalHoldDialogOpen} onOpenChange={setLegalHoldDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Place Legal Hold</DialogTitle>
+            <DialogTitle>{t("patients.placeLegalHoldTitle")}</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Placing a legal hold prevents this patient's record from being purged by the data retention policy, even after the retention period expires. Provide a reason for the audit record.
+            {t("patients.placeLegalHoldDesc")}
           </p>
           <div className="space-y-2">
-            <Label htmlFor="legalHoldReason">Reason</Label>
+            <Label htmlFor="legalHoldReason">{t("patients.legalHoldReason")}</Label>
             <Textarea
               id="legalHoldReason"
               value={legalHoldReason}
               onChange={(e) => setLegalHoldReason(e.target.value)}
-              placeholder="e.g. Pending litigation, subpoena, insurance dispute"
+              placeholder={t("patients.legalHoldReasonPlaceholder")}
               rows={3}
             />
           </div>
@@ -1035,7 +1035,7 @@ export default function PatientDetail() {
               onClick={() => setLegalHold(true, legalHoldReason.trim())}
               disabled={!legalHoldReason.trim() || legalHoldSaving}
             >
-              Place Hold
+              {t("patients.placeHold")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1044,18 +1044,18 @@ export default function PatientDetail() {
       <Dialog open={disclosureReportOpen} onOpenChange={setDisclosureReportOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Generate Disclosure Report</DialogTitle>
+            <DialogTitle>{t("patients.disclosureReportTitle")}</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Produces an accounting of disclosures for this patient's record, listing who accessed or exported their data and when. Leave dates blank to include the full history.
+            {t("patients.disclosureReportDesc")}
           </p>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="disclosureFrom">From</Label>
+              <Label htmlFor="disclosureFrom">{t("patients.disclosureFrom")}</Label>
               <Input id="disclosureFrom" type="date" value={disclosureFrom} onChange={(e) => setDisclosureFrom(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="disclosureTo">To</Label>
+              <Label htmlFor="disclosureTo">{t("patients.disclosureTo")}</Label>
               <Input id="disclosureTo" type="date" value={disclosureTo} onChange={(e) => setDisclosureTo(e.target.value)} />
             </div>
           </div>

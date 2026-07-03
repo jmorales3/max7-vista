@@ -189,7 +189,25 @@
     "exportNoImages": "Nenhuma imagem disponível para este paciente.",
     "exportSuccess": "Exportação concluída",
     "exportError": "Falha na exportação",
-    "exportPreparing": "Preparando…"
+    "exportPreparing": "Preparando…",
+    "legalHoldBadge": "Retenção Legal",
+    "placeLegalHold": "Aplicar Retenção Legal",
+    "releaseLegalHold": "Liberar Retenção Legal",
+    "placeLegalHoldTitle": "Aplicar Retenção Legal",
+    "placeLegalHoldDesc": "Aplicar uma retenção legal impede que o registro deste paciente seja excluído pela política de retenção de dados, mesmo após o período de retenção expirar. Forneça um motivo para o registro de auditoria.",
+    "legalHoldReason": "Motivo",
+    "legalHoldReasonPlaceholder": "ex. Litígio pendente, intimação judicial, disputa de seguro",
+    "placeHold": "Aplicar Retenção",
+    "legalHoldPlaced": "Retenção legal aplicada",
+    "legalHoldReleased": "Retenção legal liberada",
+    "legalHoldUpdateFailed": "Falha ao atualizar a retenção legal",
+    "generateDisclosureReport": "Gerar Relatório de Divulgações",
+    "disclosureReportTitle": "Gerar Relatório de Divulgações",
+    "disclosureReportDesc": "Gera um registro de divulgações do prontuário deste paciente, mostrando quem acessou ou exportou seus dados e quando. Deixe as datas em branco para incluir todo o histórico.",
+    "disclosureFrom": "De",
+    "disclosureTo": "Até",
+    "disclosureGenerated": "Relatório de divulgações gerado",
+    "disclosureFailed": "Falha ao gerar o relatório de divulgações"
   },
   "capture": {
     "title": "Capturar Imagem",
@@ -617,6 +635,51 @@
       "labelDeleted": "Excluído",
       "labelReplaced": "Arquivo Substituído",
       "labelCreated": "Criado"
+    },
+    "mfa": {
+      "title": "Autenticação de Dois Fatores",
+      "desc": "Exige um código de verificação de um aplicativo autenticador além da sua senha ao fazer login.",
+      "enabledTitle": "A autenticação de dois fatores está ativada",
+      "enabledDesc": "Sua conta está protegida com um aplicativo autenticador.",
+      "disable": "Desativar",
+      "disabledTitle": "A autenticação de dois fatores não está ativada",
+      "disabledDesc": "Configure-a para adicionar uma camada extra de segurança à sua conta.",
+      "setUp": "Configurar",
+      "setupTitle": "Configurar Autenticação de Dois Fatores",
+      "setupDescBackupCodes": "Guarde estes códigos de backup em um local seguro. Cada um pode ser usado uma vez se você perder o acesso ao seu aplicativo autenticador.",
+      "setupDescQr": "Escaneie este código QR com um aplicativo autenticador (Google Authenticator, Authy, etc.), depois digite o código de 6 dígitos gerado.",
+      "copyCodes": "Copiar Códigos",
+      "done": "Concluído",
+      "cantScan": "Não consegue escanear? Digite esta chave manualmente:",
+      "verificationCode": "Código de Verificação",
+      "verifyAndEnable": "Verificar e Ativar",
+      "disableTitle": "Desativar Autenticação de Dois Fatores",
+      "disableDesc": "Digite sua senha para confirmar.",
+      "password": "Senha",
+      "startFailed": "Falha ao iniciar a configuração de MFA",
+      "invalidCode": "Código inválido",
+      "enabled": "Autenticação de dois fatores ativada",
+      "disableFailed": "Falha ao desativar MFA",
+      "disabled": "Autenticação de dois fatores desativada",
+      "codesCopied": "Códigos de backup copiados"
+    },
+    "patientRetention": {
+      "title": "Retenção de Dados de Pacientes",
+      "desc": "Configure por quanto tempo os registros de pacientes são mantidos antes de se tornarem elegíveis para exclusão, e revise os registros pendentes de expurgo. Pacientes sob retenção legal são sempre excluídos.",
+      "keepFor": "Manter registros de pacientes por",
+      "year": "{{count}} ano",
+      "years": "{{count}} anos",
+      "hint": "Registros mais antigos que este período tornam-se elegíveis para exclusão. Nenhum paciente é excluído automaticamente — revise a lista abaixo.",
+      "savePolicy": "Salvar Política",
+      "eligibleTitle": "Elegíveis para Exclusão",
+      "eligibleEmpty": "Nenhum registro de paciente está atualmente elegível para exclusão.",
+      "createdOn": "Criado em {{date}} · {{count}} imagem(ns)",
+      "purge": "Expurgar",
+      "purgeConfirm": "Excluir permanentemente {{name}} e todas as imagens associadas? Esta ação não pode ser desfeita.",
+      "saved": "Política de retenção de pacientes salva",
+      "saveFailed": "Falha ao salvar a política de retenção",
+      "purged": "Registro de paciente expurgado",
+      "purgeFailed": "Falha ao expurgar o paciente"
     }
   },
   "manual": {
@@ -643,7 +706,10 @@
       "auditLog": "Registro de Auditoria",
       "sessionTimeout": "Tempo Limite de Inatividade",
       "patientAccess": "Acesso por Paciente",
-      "cephalometrics": "Análise Cefalométrica"
+      "cephalometrics": "Análise Cefalométrica",
+      "mfa": "Autenticação de Dois Fatores",
+      "patientRetention": "Retenção de Dados e Retenção Legal",
+      "disclosures": "Registro de Divulgações"
     },
     "overview": {
       "heading": "O que é o Max7 Vista?",
@@ -720,6 +786,18 @@
     "patientAccess": {
       "heading": "Controle de Acesso por Paciente",
       "body": "Administradores podem restringir usuários regulares a um conjunto específico de pacientes. Em Administração → Gestão de Usuários, clique no botão 'Acesso' ao lado de qualquer usuário com função 'Usuário'. Um diálogo lista todos os pacientes — marque os que esse usuário deve ver. Deixar todas as caixas desmarcadas concede acesso a todos os pacientes (sem restrição). Administradores e Super Administradores sempre têm acesso irrestrito. A restrição se aplica à lista de pacientes, detalhes, galeria, captura, documentos e todas as visualizações específicas do paciente. As alterações têm efeito imediato."
+    },
+    "mfa": {
+      "heading": "Autenticação de Dois Fatores",
+      "body": "Para maior segurança da conta, o Max7 Vista oferece suporte à autenticação de dois fatores (2FA) baseada em TOTP. Em Configurações, clique em 'Configurar' abaixo de Autenticação de Dois Fatores para iniciar a inscrição: escaneie o código QR exibido com um aplicativo autenticador (Google Authenticator, Authy ou similar), ou insira a chave secreta manualmente se não conseguir escanear. Digite o código de 6 dígitos gerado pelo aplicativo para confirmar a configuração. Em seguida, será exibido um conjunto de códigos de backup de uso único — guarde-os em local seguro, pois cada um pode ser usado uma vez para fazer login caso você perca o acesso ao seu aplicativo autenticador. Uma vez ativada, cada login exige sua senha seguida de um código de verificação (ou um código de backup) antes de conceder acesso. Para desativar a 2FA, clique em 'Desativar' em Configurações e confirme com sua senha atual. A autenticação de dois fatores é atualmente opcional por usuário; ainda não há uma política obrigatória em nível de organização."
+    },
+    "patientRetention": {
+      "heading": "Retenção de Dados de Pacientes e Retenção Legal",
+      "body": "Administradores podem configurar por quanto tempo os registros de pacientes são mantidos antes de se tornarem elegíveis para exclusão, separadamente da política de retenção do registro de auditoria. Em Configurações → Retenção de Dados de Pacientes, escolha um período de retenção em anos e clique em 'Salvar Política'. Registros mais antigos que esse período aparecem na lista 'Elegíveis para Exclusão' abaixo — a exclusão nunca é automática; um administrador deve revisar a lista e clicar em 'Expurgar' em cada registro para removê-lo permanentemente junto com suas imagens. Para impedir que o registro de um paciente específico apareça nessa lista — por exemplo durante um litígio, uma intimação judicial ou uma disputa de seguro — abra a página de detalhes do paciente, clique no menu ⋮ (Mais) e escolha 'Aplicar Retenção Legal'. É necessário informar um motivo, que fica registrado para a auditoria. Um paciente sob retenção legal exibe um selo 'Retenção Legal' ao lado do nome e fica excluído da exclusão independentemente da idade do registro, até que um administrador libere a retenção pelo mesmo menu."
+    },
+    "disclosures": {
+      "heading": "Registro de Divulgações",
+      "body": "Qualquer usuário pode gerar um relatório de divulgações HIPAA para um paciente diretamente na página de detalhes desse paciente. Clique no menu ⋮ (Mais) e escolha 'Gerar Relatório de Divulgações'. O relatório compila quem acessou ou exportou o registro desse paciente e quando, usando o mesmo registro de auditoria utilizado no restante do sistema. Opcionalmente, defina uma data 'De' e/ou 'Até' para limitar o relatório a um intervalo de datas específico — deixe ambas em branco para incluir todo o histórico. Escolha 'JSON' ou 'CSV' para baixar o relatório no formato desejado, pronto para ser entregue em uma solicitação de conformidade."
     },
     "cephalometrics": {
       "heading": "Análise Cefalométrica",

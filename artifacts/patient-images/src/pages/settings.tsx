@@ -157,7 +157,7 @@ export default function Settings() {
       setMfaSetupToken("");
     },
     onError: (e) => {
-      toast({ variant: "destructive", title: "Failed to start MFA setup", description: e instanceof Error ? e.message : String(e) });
+      toast({ variant: "destructive", title: t("settings.mfa.startFailed"), description: e instanceof Error ? e.message : String(e) });
     },
   });
 
@@ -166,10 +166,10 @@ export default function Settings() {
     onSuccess: (data) => {
       setMfaBackupCodes(data.backupCodes);
       void queryClient.invalidateQueries({ queryKey: ["mfa-status"] });
-      toast({ title: "Two-factor authentication enabled" });
+      toast({ title: t("settings.mfa.enabled") });
     },
     onError: (e) => {
-      toast({ variant: "destructive", title: "Invalid code", description: e instanceof Error ? e.message : String(e) });
+      toast({ variant: "destructive", title: t("settings.mfa.invalidCode"), description: e instanceof Error ? e.message : String(e) });
     },
   });
 
@@ -179,10 +179,10 @@ export default function Settings() {
       setMfaDisableOpen(false);
       setMfaDisablePassword("");
       void queryClient.invalidateQueries({ queryKey: ["mfa-status"] });
-      toast({ title: "Two-factor authentication disabled" });
+      toast({ title: t("settings.mfa.disabled") });
     },
     onError: (e) => {
-      toast({ variant: "destructive", title: "Failed to disable MFA", description: e instanceof Error ? e.message : String(e) });
+      toast({ variant: "destructive", title: t("settings.mfa.disableFailed"), description: e instanceof Error ? e.message : String(e) });
     },
   });
 
@@ -227,11 +227,11 @@ export default function Settings() {
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Patient retention policy saved" });
+      toast({ title: t("settings.patientRetention.saved") });
       void queryClient.invalidateQueries({ queryKey: retentionQueryKey });
     },
     onError: (e) => {
-      toast({ variant: "destructive", title: "Failed to save retention policy", description: e instanceof Error ? e.message : String(e) });
+      toast({ variant: "destructive", title: t("settings.patientRetention.saveFailed"), description: e instanceof Error ? e.message : String(e) });
     },
   });
 
@@ -259,11 +259,11 @@ export default function Settings() {
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Patient record purged" });
+      toast({ title: t("settings.patientRetention.purged") });
       void queryClient.invalidateQueries({ queryKey: eligibleQueryKey });
     },
     onError: (e) => {
-      toast({ variant: "destructive", title: "Failed to purge patient", description: e instanceof Error ? e.message : String(e) });
+      toast({ variant: "destructive", title: t("settings.patientRetention.purgeFailed"), description: e instanceof Error ? e.message : String(e) });
     },
   });
 
@@ -886,10 +886,10 @@ export default function Settings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Smartphone className="h-5 w-5" />
-            Two-Factor Authentication
+            {t("settings.mfa.title")}
           </CardTitle>
           <CardDescription>
-            Require a verification code from an authenticator app in addition to your password when signing in.
+            {t("settings.mfa.desc")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -900,23 +900,23 @@ export default function Settings() {
               <div className="flex items-center gap-3">
                 <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
                 <div>
-                  <p className="font-medium">Two-factor authentication is enabled</p>
-                  <p className="text-sm text-muted-foreground">Your account is protected with an authenticator app.</p>
+                  <p className="font-medium">{t("settings.mfa.enabledTitle")}</p>
+                  <p className="text-sm text-muted-foreground">{t("settings.mfa.enabledDesc")}</p>
                 </div>
               </div>
               <Button variant="outline" onClick={() => setMfaDisableOpen(true)}>
-                Disable
+                {t("settings.mfa.disable")}
               </Button>
             </div>
           ) : (
             <div className="flex items-center justify-between gap-4 rounded-lg border p-4">
               <div>
-                <p className="font-medium">Two-factor authentication is not enabled</p>
-                <p className="text-sm text-muted-foreground">Set it up to add an extra layer of security to your account.</p>
+                <p className="font-medium">{t("settings.mfa.disabledTitle")}</p>
+                <p className="text-sm text-muted-foreground">{t("settings.mfa.disabledDesc")}</p>
               </div>
               <Button onClick={() => beginMfaSetup.mutate()} disabled={beginMfaSetup.isPending}>
                 {beginMfaSetup.isPending && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                Set Up
+                {t("settings.mfa.setUp")}
               </Button>
             </div>
           )}
@@ -926,11 +926,11 @@ export default function Settings() {
       <Dialog open={mfaSetupOpen} onOpenChange={(open) => { if (!open) closeMfaSetupDialog(); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Set Up Two-Factor Authentication</DialogTitle>
+            <DialogTitle>{t("settings.mfa.setupTitle")}</DialogTitle>
             <DialogDescription>
               {mfaBackupCodes
-                ? "Save these backup codes somewhere safe. Each can be used once if you lose access to your authenticator app."
-                : "Scan this QR code with an authenticator app (Google Authenticator, Authy, etc.), then enter the 6-digit code it generates."}
+                ? t("settings.mfa.setupDescBackupCodes")
+                : t("settings.mfa.setupDescQr")}
             </DialogDescription>
           </DialogHeader>
 
@@ -946,14 +946,14 @@ export default function Settings() {
                 className="w-full"
                 onClick={() => {
                   navigator.clipboard.writeText(mfaBackupCodes.join("\n"));
-                  toast({ title: "Backup codes copied" });
+                  toast({ title: t("settings.mfa.codesCopied") });
                 }}
               >
                 <Copy className="mr-2 h-4 w-4" />
-                Copy Codes
+                {t("settings.mfa.copyCodes")}
               </Button>
               <Button className="w-full" onClick={closeMfaSetupDialog}>
-                Done
+                {t("settings.mfa.done")}
               </Button>
             </div>
           ) : mfaSetupInfo ? (
@@ -962,11 +962,11 @@ export default function Settings() {
                 <img src={mfaSetupInfo.qrCodeDataUrl} alt="MFA QR code" className="h-48 w-48 rounded border" />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Can't scan? Enter this key manually:</Label>
+                <Label className="text-xs text-muted-foreground">{t("settings.mfa.cantScan")}</Label>
                 <div className="font-mono text-xs break-all rounded border px-2 py-1.5 bg-muted">{mfaSetupInfo.secret}</div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="mfaSetupToken">Verification Code</Label>
+                <Label htmlFor="mfaSetupToken">{t("settings.mfa.verificationCode")}</Label>
                 <Input
                   id="mfaSetupToken"
                   value={mfaSetupToken}
@@ -976,13 +976,13 @@ export default function Settings() {
                 />
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={closeMfaSetupDialog}>Cancel</Button>
+                <Button variant="outline" onClick={closeMfaSetupDialog}>{t("common.cancel")}</Button>
                 <Button
                   onClick={() => confirmMfaSetup.mutate()}
                   disabled={!mfaSetupToken || confirmMfaSetup.isPending}
                 >
                   {confirmMfaSetup.isPending && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                  Verify &amp; Enable
+                  {t("settings.mfa.verifyAndEnable")}
                 </Button>
               </DialogFooter>
             </div>
@@ -993,11 +993,11 @@ export default function Settings() {
       <Dialog open={mfaDisableOpen} onOpenChange={setMfaDisableOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Disable Two-Factor Authentication</DialogTitle>
-            <DialogDescription>Enter your password to confirm.</DialogDescription>
+            <DialogTitle>{t("settings.mfa.disableTitle")}</DialogTitle>
+            <DialogDescription>{t("settings.mfa.disableDesc")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="mfaDisablePassword">Password</Label>
+            <Label htmlFor="mfaDisablePassword">{t("settings.mfa.password")}</Label>
             <Input
               id="mfaDisablePassword"
               type="password"
@@ -1007,14 +1007,14 @@ export default function Settings() {
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setMfaDisableOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setMfaDisableOpen(false)}>{t("common.cancel")}</Button>
             <Button
               variant="destructive"
               onClick={() => disableMfaMutation.mutate()}
               disabled={!mfaDisablePassword || disableMfaMutation.isPending}
             >
               {disableMfaMutation.isPending && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-              Disable
+              {t("settings.mfa.disable")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1615,16 +1615,16 @@ export default function Settings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Archive className="h-5 w-5" />
-              Patient Data Retention
+              {t("settings.patientRetention.title")}
             </CardTitle>
             <CardDescription>
-              Configure how long patient records are kept before they become eligible for deletion, and review records due for purge. Patients under legal hold are always excluded.
+              {t("settings.patientRetention.desc")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <div className="flex-1 space-y-1">
-                <Label htmlFor="patientRetentionYears">Keep patient records for</Label>
+                <Label htmlFor="patientRetentionYears">{t("settings.patientRetention.keepFor")}</Label>
                 {loadingPatientRetention ? (
                   <Skeleton className="h-10 w-40" />
                 ) : (
@@ -1637,13 +1637,15 @@ export default function Settings() {
                     </SelectTrigger>
                     <SelectContent>
                       {[1, 2, 3, 5, 6, 7, 10, 15, 20, 25, 30, 50].map((y) => (
-                        <SelectItem key={y} value={String(y)}>{y} {y === 1 ? "year" : "years"}</SelectItem>
+                        <SelectItem key={y} value={String(y)}>
+                          {y === 1 ? t("settings.patientRetention.year", { count: y }) : t("settings.patientRetention.years", { count: y })}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  Records older than this become eligible for deletion. No patient is deleted automatically — review the list below.
+                  {t("settings.patientRetention.hint")}
                 </p>
               </div>
               <Button
@@ -1653,19 +1655,19 @@ export default function Settings() {
                 {savePatientRetention.isPending
                   ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                   : <Save className="mr-2 h-4 w-4" />}
-                Save Policy
+                {t("settings.patientRetention.savePolicy")}
               </Button>
             </div>
 
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-amber-500" />
-                Eligible for Deletion
+                {t("settings.patientRetention.eligibleTitle")}
               </Label>
               {loadingRetentionEligible ? (
                 <Skeleton className="h-16 w-full" />
               ) : !retentionEligible?.patients.length ? (
-                <p className="text-sm text-muted-foreground">No patient records are currently eligible for deletion.</p>
+                <p className="text-sm text-muted-foreground">{t("settings.patientRetention.eligibleEmpty")}</p>
               ) : (
                 <div className="rounded-lg border divide-y">
                   {retentionEligible.patients.map((p) => (
@@ -1673,21 +1675,21 @@ export default function Settings() {
                       <div>
                         <p className="font-medium text-sm">{p.name} <span className="text-muted-foreground font-normal">({p.patientCode})</span></p>
                         <p className="text-xs text-muted-foreground">
-                          Created {format(new Date(p.createdAt), "MMM d, yyyy")} &middot; {p.imageCount} image{p.imageCount === 1 ? "" : "s"}
+                          {t("settings.patientRetention.createdOn", { date: format(new Date(p.createdAt), "MMM d, yyyy"), count: p.imageCount })}
                         </p>
                       </div>
                       <Button
                         size="sm"
                         variant="destructive"
                         onClick={() => {
-                          if (confirm(`Permanently delete ${p.name} and all associated images? This cannot be undone.`)) {
+                          if (confirm(t("settings.patientRetention.purgeConfirm", { name: p.name }))) {
                             purgePatient.mutate(p.id);
                           }
                         }}
                         disabled={purgePatient.isPending}
                       >
                         <Trash2 className="mr-2 h-3.5 w-3.5" />
-                        Purge
+                        {t("settings.patientRetention.purge")}
                       </Button>
                     </div>
                   ))}

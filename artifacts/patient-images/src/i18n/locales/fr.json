@@ -189,7 +189,25 @@
     "exportNoImages": "Aucune image disponible pour ce patient.",
     "exportSuccess": "Exportation terminée",
     "exportError": "Échec de l'exportation",
-    "exportPreparing": "Préparation…"
+    "exportPreparing": "Préparation…",
+    "legalHoldBadge": "Blocage Légal",
+    "placeLegalHold": "Appliquer un Blocage Légal",
+    "releaseLegalHold": "Lever le Blocage Légal",
+    "placeLegalHoldTitle": "Appliquer un Blocage Légal",
+    "placeLegalHoldDesc": "Appliquer un blocage légal empêche la suppression du dossier de ce patient par la politique de conservation des données, même après l'expiration de la période de conservation. Indiquez un motif pour le registre d'audit.",
+    "legalHoldReason": "Motif",
+    "legalHoldReasonPlaceholder": "ex. Litige en cours, assignation, litige d'assurance",
+    "placeHold": "Appliquer le Blocage",
+    "legalHoldPlaced": "Blocage légal appliqué",
+    "legalHoldReleased": "Blocage légal levé",
+    "legalHoldUpdateFailed": "Échec de la mise à jour du blocage légal",
+    "generateDisclosureReport": "Générer un Rapport de Divulgation",
+    "disclosureReportTitle": "Générer un Rapport de Divulgation",
+    "disclosureReportDesc": "Génère un état des divulgations pour le dossier de ce patient, indiquant qui a consulté ou exporté ses données et quand. Laissez les dates vides pour inclure tout l'historique.",
+    "disclosureFrom": "Du",
+    "disclosureTo": "Au",
+    "disclosureGenerated": "Rapport de divulgation généré",
+    "disclosureFailed": "Échec de la génération du rapport de divulgation"
   },
   "capture": {
     "title": "Capturer une Image",
@@ -617,6 +635,51 @@
       "labelDeleted": "Supprimé",
       "labelReplaced": "Fichier Remplacé",
       "labelCreated": "Créé"
+    },
+    "mfa": {
+      "title": "Authentification à Deux Facteurs",
+      "desc": "Exige un code de vérification d'une application d'authentification en plus de votre mot de passe lors de la connexion.",
+      "enabledTitle": "L'authentification à deux facteurs est activée",
+      "enabledDesc": "Votre compte est protégé par une application d'authentification.",
+      "disable": "Désactiver",
+      "disabledTitle": "L'authentification à deux facteurs n'est pas activée",
+      "disabledDesc": "Configurez-la pour ajouter une couche de sécurité supplémentaire à votre compte.",
+      "setUp": "Configurer",
+      "setupTitle": "Configurer l'Authentification à Deux Facteurs",
+      "setupDescBackupCodes": "Enregistrez ces codes de secours en lieu sûr. Chacun peut être utilisé une fois si vous perdez l'accès à votre application d'authentification.",
+      "setupDescQr": "Scannez ce code QR avec une application d'authentification (Google Authenticator, Authy, etc.), puis saisissez le code à 6 chiffres généré.",
+      "copyCodes": "Copier les Codes",
+      "done": "Terminé",
+      "cantScan": "Impossible de scanner ? Saisissez cette clé manuellement :",
+      "verificationCode": "Code de Vérification",
+      "verifyAndEnable": "Vérifier et Activer",
+      "disableTitle": "Désactiver l'Authentification à Deux Facteurs",
+      "disableDesc": "Saisissez votre mot de passe pour confirmer.",
+      "password": "Mot de Passe",
+      "startFailed": "Échec du démarrage de la configuration MFA",
+      "invalidCode": "Code invalide",
+      "enabled": "Authentification à deux facteurs activée",
+      "disableFailed": "Échec de la désactivation de MFA",
+      "disabled": "Authentification à deux facteurs désactivée",
+      "codesCopied": "Codes de secours copiés"
+    },
+    "patientRetention": {
+      "title": "Conservation des Données Patients",
+      "desc": "Configurez la durée de conservation des dossiers patients avant qu'ils ne deviennent éligibles à la suppression, et examinez les dossiers à purger. Les patients sous blocage légal sont toujours exclus.",
+      "keepFor": "Conserver les dossiers patients pendant",
+      "year": "{{count}} an",
+      "years": "{{count}} ans",
+      "hint": "Les dossiers plus anciens que cette période deviennent éligibles à la suppression. Aucun patient n'est supprimé automatiquement — vérifiez la liste ci-dessous.",
+      "savePolicy": "Enregistrer la Politique",
+      "eligibleTitle": "Éligibles à la Suppression",
+      "eligibleEmpty": "Aucun dossier patient n'est actuellement éligible à la suppression.",
+      "createdOn": "Créé le {{date}} · {{count}} image(s)",
+      "purge": "Purger",
+      "purgeConfirm": "Supprimer définitivement {{name}} et toutes les images associées ? Cette action est irréversible.",
+      "saved": "Politique de conservation des patients enregistrée",
+      "saveFailed": "Échec de l'enregistrement de la politique de conservation",
+      "purged": "Dossier patient purgé",
+      "purgeFailed": "Échec de la purge du patient"
     }
   },
   "manual": {
@@ -643,7 +706,10 @@
       "auditLog": "Journal d'Audit",
       "sessionTimeout": "Délai d'Inactivité",
       "patientAccess": "Accès par Patient",
-      "cephalometrics": "Analyse Céphalométrique"
+      "cephalometrics": "Analyse Céphalométrique",
+      "mfa": "Authentification à Deux Facteurs",
+      "patientRetention": "Conservation des Données et Blocage Légal",
+      "disclosures": "Registre des Divulgations"
     },
     "overview": {
       "heading": "Qu'est-ce que Max7 Vista ?",
@@ -720,6 +786,18 @@
     "patientAccess": {
       "heading": "Contrôle d'Accès par Patient",
       "body": "Les administrateurs peuvent restreindre les utilisateurs ordinaires à un ensemble spécifique de patients. Dans Administration → Gestion des Utilisateurs, cliquez sur le bouton 'Accès' à côté de tout utilisateur avec le rôle 'Utilisateur'. Un dialogue liste tous les patients — cochez ceux que cet utilisateur doit voir. Laisser toutes les cases décochées accorde l'accès à tous les patients (sans restriction). Les administrateurs et super administrateurs sont toujours sans restriction. La restriction s'applique à la liste des patients, à la vue détaillée, à la galerie, à la capture, aux documents et à toutes les vues spécifiques aux patients. Les modifications prennent effet immédiatement."
+    },
+    "mfa": {
+      "heading": "Authentification à Deux Facteurs",
+      "body": "Pour renforcer la sécurité du compte, Max7 Vista prend en charge l'authentification à deux facteurs (2FA) basée sur TOTP. Dans Paramètres, cliquez sur 'Configurer' sous Authentification à Deux Facteurs pour commencer l'inscription : scannez le code QR affiché avec une application d'authentification (Google Authenticator, Authy ou similaire), ou saisissez la clé secrète manuellement si vous ne pouvez pas scanner. Saisissez le code à 6 chiffres généré par l'application pour confirmer la configuration. Un ensemble de codes de secours à usage unique vous sera alors présenté — enregistrez-les en lieu sûr, car chacun peut être utilisé une fois pour vous connecter si vous perdez l'accès à votre application d'authentification. Une fois activée, chaque connexion nécessite votre mot de passe suivi d'un code de vérification (ou d'un code de secours) avant d'accorder l'accès. Pour désactiver la 2FA, cliquez sur 'Désactiver' dans Paramètres et confirmez avec votre mot de passe actuel. L'authentification à deux facteurs est actuellement facultative par utilisateur ; il n'existe pas encore de politique obligatoire au niveau de l'organisation."
+    },
+    "patientRetention": {
+      "heading": "Conservation des Données Patients et Blocage Légal",
+      "body": "Les administrateurs peuvent configurer la durée de conservation des dossiers patients avant qu'ils ne deviennent éligibles à la suppression, indépendamment de la politique de conservation du journal d'audit. Dans Paramètres → Conservation des Données Patients, choisissez une période de conservation en années et cliquez sur 'Enregistrer la Politique'. Les dossiers plus anciens que cette période apparaissent dans la liste 'Éligibles à la Suppression' ci-dessous — la suppression n'est jamais automatique ; un administrateur doit examiner la liste et cliquer sur 'Purger' pour chaque dossier afin de le supprimer définitivement avec ses images. Pour empêcher qu'un dossier patient spécifique n'apparaisse jamais dans cette liste — par exemple lors d'un litige, d'une assignation ou d'un litige d'assurance — ouvrez la page de détail du patient, cliquez sur le menu ⋮ (Plus) et choisissez 'Appliquer un Blocage Légal'. Un motif est requis et est consigné pour le registre d'audit. Un patient sous blocage légal affiche un badge 'Blocage Légal' à côté de son nom et est exclu de la suppression quel que soit son ancienneté, jusqu'à ce qu'un administrateur lève le blocage depuis le même menu."
+    },
+    "disclosures": {
+      "heading": "Registre des Divulgations",
+      "body": "Tout utilisateur peut générer un rapport de divulgation HIPAA pour un patient directement depuis la page de détail de ce patient. Cliquez sur le menu ⋮ (Plus) et choisissez 'Générer un Rapport de Divulgation'. Le rapport compile qui a consulté ou exporté le dossier de ce patient et quand, en s'appuyant sur le même journal d'audit utilisé ailleurs dans le système. Définissez éventuellement une date 'Du' et/ou 'Au' pour limiter le rapport à une plage de dates spécifique — laissez les deux vides pour inclure tout l'historique. Choisissez 'JSON' ou 'CSV' pour télécharger le rapport dans le format souhaité, prêt à être remis pour une demande de conformité."
     },
     "cephalometrics": {
       "heading": "Analyse Céphalométrique",

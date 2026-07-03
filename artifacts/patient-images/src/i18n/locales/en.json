@@ -189,7 +189,25 @@
     "exportNoImages": "No images available for this patient.",
     "exportSuccess": "Export complete",
     "exportError": "Export failed",
-    "exportPreparing": "Preparing…"
+    "exportPreparing": "Preparing…",
+    "legalHoldBadge": "Legal Hold",
+    "placeLegalHold": "Place Legal Hold",
+    "releaseLegalHold": "Release Legal Hold",
+    "placeLegalHoldTitle": "Place Legal Hold",
+    "placeLegalHoldDesc": "Placing a legal hold prevents this patient's record from being purged by the data retention policy, even after the retention period expires. Provide a reason for the audit record.",
+    "legalHoldReason": "Reason",
+    "legalHoldReasonPlaceholder": "e.g. Pending litigation, subpoena, insurance dispute",
+    "placeHold": "Place Hold",
+    "legalHoldPlaced": "Legal hold placed",
+    "legalHoldReleased": "Legal hold released",
+    "legalHoldUpdateFailed": "Failed to update legal hold",
+    "generateDisclosureReport": "Generate Disclosure Report",
+    "disclosureReportTitle": "Generate Disclosure Report",
+    "disclosureReportDesc": "Produces an accounting of disclosures for this patient's record, listing who accessed or exported their data and when. Leave dates blank to include the full history.",
+    "disclosureFrom": "From",
+    "disclosureTo": "To",
+    "disclosureGenerated": "Disclosure report generated",
+    "disclosureFailed": "Failed to generate disclosure report"
   },
   "capture": {
     "title": "Capture Image",
@@ -617,6 +635,51 @@
       "labelDeleted": "Deleted",
       "labelReplaced": "Replaced File",
       "labelCreated": "Created"
+    },
+    "mfa": {
+      "title": "Two-Factor Authentication",
+      "desc": "Require a verification code from an authenticator app in addition to your password when signing in.",
+      "enabledTitle": "Two-factor authentication is enabled",
+      "enabledDesc": "Your account is protected with an authenticator app.",
+      "disable": "Disable",
+      "disabledTitle": "Two-factor authentication is not enabled",
+      "disabledDesc": "Set it up to add an extra layer of security to your account.",
+      "setUp": "Set Up",
+      "setupTitle": "Set Up Two-Factor Authentication",
+      "setupDescBackupCodes": "Save these backup codes somewhere safe. Each can be used once if you lose access to your authenticator app.",
+      "setupDescQr": "Scan this QR code with an authenticator app (Google Authenticator, Authy, etc.), then enter the 6-digit code it generates.",
+      "copyCodes": "Copy Codes",
+      "done": "Done",
+      "cantScan": "Can't scan? Enter this key manually:",
+      "verificationCode": "Verification Code",
+      "verifyAndEnable": "Verify & Enable",
+      "disableTitle": "Disable Two-Factor Authentication",
+      "disableDesc": "Enter your password to confirm.",
+      "password": "Password",
+      "startFailed": "Failed to start MFA setup",
+      "invalidCode": "Invalid code",
+      "enabled": "Two-factor authentication enabled",
+      "disableFailed": "Failed to disable MFA",
+      "disabled": "Two-factor authentication disabled",
+      "codesCopied": "Backup codes copied"
+    },
+    "patientRetention": {
+      "title": "Patient Data Retention",
+      "desc": "Configure how long patient records are kept before they become eligible for deletion, and review records due for purge. Patients under legal hold are always excluded.",
+      "keepFor": "Keep patient records for",
+      "year": "{{count}} year",
+      "years": "{{count}} years",
+      "hint": "Records older than this become eligible for deletion. No patient is deleted automatically — review the list below.",
+      "savePolicy": "Save Policy",
+      "eligibleTitle": "Eligible for Deletion",
+      "eligibleEmpty": "No patient records are currently eligible for deletion.",
+      "createdOn": "Created {{date}} · {{count}} image(s)",
+      "purge": "Purge",
+      "purgeConfirm": "Permanently delete {{name}} and all associated images? This cannot be undone.",
+      "saved": "Patient retention policy saved",
+      "saveFailed": "Failed to save retention policy",
+      "purged": "Patient record purged",
+      "purgeFailed": "Failed to purge patient"
     }
   },
   "manual": {
@@ -643,7 +706,10 @@
       "auditLog": "Audit Log",
       "sessionTimeout": "Session Idle Timeout",
       "patientAccess": "Per-Patient Access",
-      "cephalometrics": "Cephalometric Analysis"
+      "cephalometrics": "Cephalometric Analysis",
+      "mfa": "Two-Factor Authentication",
+      "patientRetention": "Patient Data Retention & Legal Hold",
+      "disclosures": "Accounting of Disclosures"
     },
     "overview": {
       "heading": "What is Max7 Vista?",
@@ -720,6 +786,18 @@
     "patientAccess": {
       "heading": "Per-Patient Access Control",
       "body": "Admins can restrict regular users to a specific set of patients. In Administration → User Management, click the 'Access' button next to any user with the 'User' role. A dialog lists all patients — tick the ones this user should see. Leaving all boxes unchecked grants that user access to all patients (unrestricted). Admins and Super Admins are always unrestricted and cannot be restricted. The access restriction applies to the patient list, patient detail page, image gallery, capture, documents, and every other patient-specific view. Restrictions take effect immediately without requiring a logout."
+    },
+    "mfa": {
+      "heading": "Two-Factor Authentication",
+      "body": "For added account security, Max7 Vista supports TOTP-based two-factor authentication (2FA). In Settings, click 'Set Up' under Two-Factor Authentication to begin enrollment: scan the displayed QR code with an authenticator app (Google Authenticator, Authy, or similar), or enter the secret key manually if you can't scan. Enter the 6-digit code the app generates to confirm setup. You will then be shown a set of one-time backup codes — save these somewhere safe, as each can be used once to sign in if you lose access to your authenticator app. Once enabled, every login requires your password followed by a verification code (or a backup code) before access is granted. To turn 2FA off, click 'Disable' in Settings and confirm with your current password. Two-factor authentication is currently opt-in per user; there is no organization-wide policy to require it yet."
+    },
+    "patientRetention": {
+      "heading": "Patient Data Retention & Legal Hold",
+      "body": "Admins can configure how long patient records are kept before becoming eligible for deletion, separate from the audit log retention policy. In Settings → Patient Data Retention, choose a retention period in years and click 'Save Policy'. Records older than that period appear in the 'Eligible for Deletion' list below — deletion is never automatic; an admin must review the list and click 'Purge' on each record to permanently remove it and its images. To prevent a specific patient's record from ever appearing in that list — for example during litigation, a subpoena, or an insurance dispute — open the patient's detail page, click the ⋮ (More) menu, and choose 'Place Legal Hold'. A reason is required and is recorded for the audit trail. A patient under legal hold shows a 'Legal Hold' badge next to their name and is excluded from deletion regardless of age, until an admin releases the hold from the same menu."
+    },
+    "disclosures": {
+      "heading": "Accounting of Disclosures",
+      "body": "Any user can generate a HIPAA accounting-of-disclosures report for a patient directly from that patient's detail page. Click the ⋮ (More) menu and choose 'Generate Disclosure Report'. The report compiles who accessed or exported that patient's record and when, drawing on the same audit log used elsewhere in the system. Optionally set a From and/or To date to limit the report to a specific date range — leave both blank to include the full history. Choose 'JSON' or 'CSV' to download the report in your preferred format, ready to hand over for a compliance request."
     },
     "cephalometrics": {
       "heading": "Cephalometric Analysis",

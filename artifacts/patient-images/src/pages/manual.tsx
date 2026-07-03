@@ -24,6 +24,9 @@ type SectionKey =
   | "templates"
   | "auditLog"
   | "sessionTimeout"
+  | "mfa"
+  | "patientRetention"
+  | "disclosures"
   | "cephalometrics";
 
 const SECTIONS: SectionKey[] = [
@@ -45,6 +48,9 @@ const SECTIONS: SectionKey[] = [
   "templates",
   "auditLog",
   "sessionTimeout",
+  "mfa",
+  "patientRetention",
+  "disclosures",
   "cephalometrics",
 ];
 
