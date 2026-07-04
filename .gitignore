@@ -56,5 +56,9 @@ artifacts/api-server/uploads/
 attached_assets/
 artifacts/electron-app/release/
 
+# Project zip exports — never commit to git (see scripts/git-hooks/pre-commit)
+/*.zip
+exports/*.zip
+
 # Auto-generated self-signed TLS certs for self-hosted HTTPS (see SELF_HOSTING.md)
 .tls-cert/
