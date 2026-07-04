@@ -1,0 +1,12 @@
+---
+name: esbuild format/outExtension must match package.json type + start script
+description: A merge/rebase conflict silently flipped esbuild's output format and file extension, breaking the production start command.
+---
+
+`artifacts/api-server` has `"type": "module"` in package.json and a `start` script of `node ./dist/index.mjs`. Its `build.mjs` esbuild config must produce ESM output named `.mjs` to match: `format: "esm"` + `outExtension: { ".js": ".mjs" }`.
+
+A rebase conflict resolution flipped both settings (`format: "cjs"` + `outExtension: { ".js": ".js" }`) without touching package.json or the start script. The build still succeeded (esbuild happily bundles as cjs), so there was no build-time error — only a runtime `Cannot find module '.../dist/index.mjs'` when starting the server, since the build now emitted `index.js` instead.
+
+**Why:** esbuild's `format` and `outExtension` are independent knobs from the consuming package.json/start script; nothing type-checks that they agree, so a bad merge can silently desync them and the failure only surfaces at process start, not at build time.
+
+**How to apply:** if a Node service with `"type": "module"` fails to start with "Cannot find module '.../index.mjs'" (or similar) right after a merge/rebase touched its build config, check `ls dist/` for the actual emitted filename/extension vs what the `start` script invokes, and check `format`/`outExtension` in the bundler config for a mismatch — don't assume it's related to whatever unrelated change (e.g. secret rotation) you were doing at the time.

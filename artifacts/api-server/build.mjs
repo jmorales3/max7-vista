@@ -20,9 +20,9 @@ async function buildAll() {
     entryPoints: [path.resolve(artifactDir, "src/index.ts")],
     platform: "node",
     bundle: true,
-    format: "cjs",
+    format: "esm",
     outdir: distDir,
-    outExtension: { ".js": ".js" },
+    outExtension: { ".js": ".mjs" },
     logLevel: "info",
     alias: IS_ELECTRON_BUILD
       ? {
