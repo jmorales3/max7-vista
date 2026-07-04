@@ -159,8 +159,10 @@ router.get("/images", async (req, res): Promise<void> => {
     if (params.dateTo) conditions.push(lte(imagesTable.capturedAt, new Date(params.dateTo)));
     if (accessibleIds !== null) conditions.push(inArray(imagesTable.patientId, accessibleIds));
 
+    const wantOnlyTagged = params.onlyTagged === true;
+    let tagIdList: number[] = [];
     if (params.tagIds) {
-      const tagIdList = params.tagIds
+      tagIdList = params.tagIds
         .split(",")
         .map((s) => parseInt(s.trim(), 10))
         .filter((n) => !isNaN(n));
@@ -168,12 +170,34 @@ router.get("/images", async (req, res): Promise<void> => {
         res.json([]);
         return;
       }
+    }
+
+    // Tags live on the patient, not the individual image. When a specific
+    // set of tags is requested, or when no tag filter is given but the
+    // caller only wants tagged content (e.g. the gallery's "Show All" view,
+    // which must not dump every image of every patient), restrict to
+    // patients that carry at least one (matching) tag and remember each
+    // patient's alphabetically-first tag name so results can be sorted by it.
+    let patientTagNames: Map<number, string> | null = null;
+    if (tagIdList.length > 0 || wantOnlyTagged) {
+      const tagJoinCond = and(
+        eq(tagsTable.id, patientTagsTable.tagId),
+        eq(tagsTable.tenantId, tenantId),
+        tagIdList.length > 0 ? inArray(patientTagsTable.tagId, tagIdList) : undefined,
+      );
       const taggedPatientRows = await db
-        .selectDistinct({ patientId: patientTagsTable.patientId })
+        .select({ patientId: patientTagsTable.patientId, tagName: tagsTable.name })
         .from(patientTagsTable)
-        .innerJoin(tagsTable, and(eq(tagsTable.id, patientTagsTable.tagId), eq(tagsTable.tenantId, tenantId)))
-        .where(inArray(patientTagsTable.tagId, tagIdList));
-      const taggedPatientIds = taggedPatientRows.map((r) => r.patientId);
+        .innerJoin(tagsTable, tagJoinCond);
+
+      patientTagNames = new Map();
+      for (const row of taggedPatientRows) {
+        const existing = patientTagNames.get(row.patientId);
+        if (!existing || row.tagName.localeCompare(existing) < 0) {
+          patientTagNames.set(row.patientId, row.tagName);
+        }
+      }
+      const taggedPatientIds = [...patientTagNames.keys()];
       if (taggedPatientIds.length === 0) {
         res.json([]);
         return;
@@ -199,6 +223,17 @@ router.get("/images", async (req, res): Promise<void> => {
       .innerJoin(patientsTable, eq(patientsTable.id, imagesTable.patientId))
       .where(and(...conditions))
       .orderBy(sql`${imagesTable.sortOrder} is null`, imagesTable.sortOrder, imagesTable.capturedAt);
+
+    if (patientTagNames) {
+      const tagMap = patientTagNames;
+      rows.sort((a, b) => {
+        const tagA = (a.patientId != null ? tagMap.get(a.patientId) : undefined) ?? "";
+        const tagB = (b.patientId != null ? tagMap.get(b.patientId) : undefined) ?? "";
+        const cmp = tagA.localeCompare(tagB);
+        if (cmp !== 0) return cmp;
+        return new Date(b.capturedAt as any).getTime() - new Date(a.capturedAt as any).getTime();
+      });
+    }
 
     res.json(rows.map(buildImageRow));
   } catch (err: any) {

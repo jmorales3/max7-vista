@@ -316,7 +316,8 @@ export const ListImagesQueryParams = zod.object({
   "patientId": zod.coerce.number().optional(),
   "dateFrom": zod.coerce.string().optional(),
   "dateTo": zod.coerce.string().optional(),
-  "tagIds": zod.coerce.string().optional().describe('Comma-separated tag IDs. When present, only images whose patient has at least one of these tags are returned.')
+  "tagIds": zod.coerce.string().optional().describe('Comma-separated tag IDs. When present, only images whose patient has at least one of these tags are returned.'),
+  "onlyTagged": zod.coerce.boolean().optional().describe('When true and tagIds is not set, only images whose patient has at least one tag are returned (sorted by tag name). Prevents dumping every image of every patient when no specific tag filter is chosen.')
 })
 
 export const ListImagesResponseItem = zod.object({

@@ -305,6 +305,7 @@
     "noImages": "No images found",
     "noImagesPatient": "This patient doesn't have any images yet.",
     "noImagesEmpty": "Your gallery is empty. Start by capturing some photos.",
+    "noImagesNoTags": "No tagged images yet. Add a tag to a patient to see their photos here, or select a specific tag above to browse.",
     "captureImage": "Capture Image",
     "columns": "{{count}} column",
     "columns_plural": "{{count}} columns",

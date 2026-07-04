@@ -125,15 +125,31 @@ export default function Gallery() {
   const tagIdsParam = selectedTagIds.size > 0
     ? [...selectedTagIds].join(",")
     : undefined;
+  // "Show All" doesn't mean "every image of every patient" (which could be
+  // thousands and isn't practically browsable) — it means every tagged
+  // image, sorted by tag name. Only images with no tag filter at all skip
+  // this restriction when there are no tags in the system yet.
+  const onlyTaggedParam = tagIdsParam === undefined && allTags.length > 0
+    ? true
+    : undefined;
 
   const { data: allImages, isLoading: imagesLoading } = useListImages(
-    { tagIds: tagIdsParam },
-    { query: { queryKey: getListImagesQueryKey({ tagIds: tagIdsParam }) } }
+    { tagIds: tagIdsParam, onlyTagged: onlyTaggedParam },
+    { query: { queryKey: getListImagesQueryKey({ tagIds: tagIdsParam, onlyTagged: onlyTaggedParam }) } }
   );
 
   const filteredLibraryAssets = selectedTagIds.size > 0
     ? libraryAssets.filter((a) => a.tags.some((tag) => selectedTagIds.has(tag.id)))
-    : libraryAssets;
+    // Mirror the patient-image "Show All" behavior: once tags exist, only
+    // surface tagged assets rather than every asset in the library.
+    : onlyTaggedParam
+      ? libraryAssets.filter((a) => a.tags.length > 0)
+      : libraryAssets;
+
+  function primaryTagName(tags: LibraryTag[]): string {
+    if (tags.length === 0) return "";
+    return [...tags].map((t) => t.name).sort((a, b) => a.localeCompare(b))[0];
+  }
 
   const items: GalleryItem[] = useMemo(() => {
     const patientItems: GalleryItem[] = (allImages ?? []).map((img) => ({
@@ -158,10 +174,23 @@ export default function Gallery() {
       title: asset.title,
       tags: asset.tags,
     }));
-    return [...patientItems, ...libraryItems].sort(
+    const combined = [...patientItems, ...libraryItems];
+    if (onlyTaggedParam) {
+      // Backend already sorts patient images by their patient's tag name;
+      // apply the same rule to library items so the merged list reads as
+      // one tag-sorted feed instead of two independently-sorted halves.
+      return combined.sort((a, b) => {
+        const tagA = a.kind === "library" ? primaryTagName(a.tags) : "";
+        const tagB = b.kind === "library" ? primaryTagName(b.tags) : "";
+        const cmp = tagA.localeCompare(tagB);
+        if (cmp !== 0) return cmp;
+        return new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime();
+      });
+    }
+    return combined.sort(
       (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
     );
-  }, [allImages, filteredLibraryAssets]);
+  }, [allImages, filteredLibraryAssets, onlyTaggedParam]);
 
   const isLoading = imagesLoading || libraryLoading;
 
@@ -401,7 +430,9 @@ export default function Gallery() {
           <p className="text-muted-foreground max-w-sm mt-2 mb-6">
             {selectedTagIds.size > 0
               ? t("gallery.noImagesTags")
-              : t("gallery.noImagesEmpty")}
+              : onlyTaggedParam
+                ? t("gallery.noImagesNoTags")
+                : t("gallery.noImagesEmpty")}
           </p>
           <Button asChild>
             <Link href="/capture">
