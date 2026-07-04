@@ -18,3 +18,4 @@
 - [git-filter-repo history rewrite gotchas](git-filter-repo-rewrite.md) — stray .keep/.lock/tmp files from prior crashed attempts block fast-import; GitHub also rejects blobs >2GB and workflow-file pushes without a `workflow`-scoped PAT.
 - [Main agent git commits are not continuous](main-agent-commit-timing.md) — edits stay uncommitted for the whole session; you cannot tag/push a release against your own uncommitted changes mid-session.
 - [esbuild format/outExtension must match package.json type](esbuild-format-extension-mismatch.md) — a rebase flipped esm→cjs + .mjs→.js in build.mjs, breaking `node dist/index.mjs` start script; format and outExtension must stay in sync with the start script's expected filename.
+- [Git hooksPath large-file guard](git-hooksPath-large-file-guard.md) — pre-commit hook blocks >8MB files; core.hooksPath is unset on fresh clones, so post-merge.sh must re-apply it every merge.

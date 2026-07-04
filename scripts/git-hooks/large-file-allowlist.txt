@@ -1,0 +1,6 @@
+# Paths (or shell globs) that are allowed to exceed the pre-commit size
+# threshold in scripts/git-hooks/pre-commit. One pattern per line.
+# Lines starting with # are comments; blank lines are ignored.
+#
+# Prefer Git LFS (git lfs track "<path>") over adding entries here — LFS
+# keeps history small even for allowlisted files, while this file does not.

@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# Installed via `core.hooksPath` (see scripts/setup-git-hooks.sh).
+#
+# Rejects commits that add/modify a file larger than $MAX_FILE_SIZE_BYTES,
+# unless the path is explicitly allowlisted (see scripts/git-hooks/large-file-allowlist.txt)
+# or the file is already tracked via Git LFS (see .gitattributes).
+#
+# This exists because large build artifacts (Electron installers, uploaded
+# patient images, pasted screenshots, project zip exports) have repeatedly
+# ended up committed into git history, requiring multi-hour history rewrites
+# to strip out. See .agents/memory/git-filter-repo-rewrite.md.
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+MAX_FILE_SIZE_BYTES=$((8 * 1024 * 1024)) # 8 MiB
+ALLOWLIST_FILE="$REPO_ROOT/scripts/git-hooks/large-file-allowlist.txt"
+
+is_allowlisted() {
+  local path="$1"
+  [ -f "$ALLOWLIST_FILE" ] || return 1
+  while IFS= read -r pattern; do
+    case "$pattern" in
+      ""|\#*) continue ;;
+    esac
+    case "$path" in
+      $pattern) return 0 ;;
+    esac
+  done < "$ALLOWLIST_FILE"
+  return 1
+}
+
+is_lfs_tracked() {
+  local path="$1"
+  command -v git-lfs >/dev/null 2>&1 || return 1
+  git check-attr filter -- "$path" 2>/dev/null | grep -q "filter: lfs"
+}
+
+violations=0
+
+# Iterate over staged blobs (index content), not working-tree files, so a
+# file that was staged large and then edited/shrunk locally before commit
+# is still caught — and so we never depend on the working tree matching
+# what's actually about to be committed.
+while IFS= read -r -d '' entry; do
+  # entry format (from `git diff --cached -z --raw`): "<meta>\0<path>\0"
+  # meta looks like ":100644 100644 <old-sha> <new-sha> A"
+  meta="$entry"
+  IFS= read -r -d '' path || break
+
+  new_blob_sha=$(printf '%s' "$meta" | awk '{print $4}')
+  [ -n "$new_blob_sha" ] || continue
+  [ "$new_blob_sha" != "0000000000000000000000000000000000000000" ] || continue
+
+  size=$(git cat-file -s "$new_blob_sha" 2>/dev/null || echo 0)
+
+  if [ "$size" -le "$MAX_FILE_SIZE_BYTES" ]; then
+    continue
+  fi
+
+  if is_allowlisted "$path" || is_lfs_tracked "$path"; then
+    continue
+  fi
+
+  human_size=$(awk -v s="$size" 'BEGIN { printf "%.1f MB", s / 1024 / 1024 }')
+  echo "error: refusing to commit '$path' ($human_size) — exceeds the $((MAX_FILE_SIZE_BYTES / 1024 / 1024))MB limit." >&2
+  violations=1
+done < <(git diff --cached --diff-filter=ACM -z --raw)
+
+if [ "$violations" -ne 0 ]; then
+  cat >&2 <<'EOF'
+
+Commit blocked: one or more staged files exceed the size threshold.
+
+Options:
+  - Don't commit the file. Build artifacts, uploads, and pasted screenshots
+    belong in .gitignore, not git history.
+  - If the file genuinely needs to be tracked, add it to Git LFS:
+      git lfs track "<path>"
+      git add .gitattributes "<path>"
+  - If it's a rare, justified exception, add its path (or a glob) to
+    scripts/git-hooks/large-file-allowlist.txt.
+
+EOF
+  exit 1
+fi
+
+exit 0
