@@ -299,7 +299,7 @@
   },
   "gallery": {
     "title": "Gallery",
-    "subtitle": "Browse all clinical images across patients.",
+    "subtitle": "Browse all clinical images across patients, organized by one or several tags.",
     "allPatients": "All Patients",
     "unassigned": "Unassigned Images",
     "noImages": "No images found",

@@ -299,7 +299,7 @@
   },
   "gallery": {
     "title": "Galerie",
-    "subtitle": "Parcourez toutes les images cliniques des patients.",
+    "subtitle": "Parcourez toutes les images cliniques des patients, organisées par une ou plusieurs étiquettes.",
     "allPatients": "Tous les Patients",
     "unassigned": "Images Non Assignées",
     "noImages": "Aucune image trouvée",
