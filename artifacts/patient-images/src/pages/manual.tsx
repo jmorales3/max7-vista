@@ -1,8 +1,7 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BookOpen, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 type SectionKey =
@@ -57,21 +56,6 @@ const SECTIONS: SectionKey[] = [
 export default function Manual() {
   const { t } = useTranslation();
   const [active, setActive] = useState<SectionKey>("overview");
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-
-  const handleSelect = (key: SectionKey) => {
-    setActive(key);
-    const viewport = scrollAreaRef.current?.querySelector<HTMLElement>(
-      "[data-radix-scroll-area-viewport]"
-    );
-    const el = document.getElementById(`manual-section-${key}`);
-    if (viewport && el) {
-      const viewportRect = viewport.getBoundingClientRect();
-      const elRect = el.getBoundingClientRect();
-      const offset = elRect.top - viewportRect.top + viewport.scrollTop;
-      viewport.scrollTo({ top: offset, behavior: "smooth" });
-    }
-  };
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -97,7 +81,7 @@ export default function Manual() {
               {SECTIONS.map((key) => (
                 <button
                   key={key}
-                  onClick={() => handleSelect(key)}
+                  onClick={() => setActive(key)}
                   className={cn(
                     "w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors text-left",
                     active === key
@@ -113,31 +97,18 @@ export default function Manual() {
           </CardContent>
         </Card>
 
-        <Card className="flex-1">
-          <ScrollArea className="h-[calc(100vh-280px)]" ref={scrollAreaRef}>
-            <div className="p-6 space-y-8">
-              {SECTIONS.map((key) => (
-                <section
-                  key={key}
-                  id={`manual-section-${key}`}
-                  className={cn(
-                    "scroll-mt-6 transition-opacity",
-                    active !== key && "opacity-40 pointer-events-none select-none"
-                  )}
-                >
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="h-1 w-4 rounded-full bg-primary" />
-                    <h2 className="text-xl font-semibold">
-                      {t(`manual.${key}.heading`)}
-                    </h2>
-                  </div>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {t(`manual.${key}.body`)}
-                  </p>
-                </section>
-              ))}
+        <Card className="flex-1 h-fit">
+          <CardContent className="p-6 space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="h-1 w-4 rounded-full bg-primary" />
+              <h2 className="text-xl font-semibold">
+                {t(`manual.${active}.heading`)}
+              </h2>
             </div>
-          </ScrollArea>
+            <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
+              {t(`manual.${active}.body`)}
+            </p>
+          </CardContent>
         </Card>
       </div>
     </div>
