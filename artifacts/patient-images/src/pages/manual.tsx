@@ -58,6 +58,12 @@ export default function Manual() {
   const { t } = useTranslation();
   const [active, setActive] = useState<SectionKey>("overview");
 
+  const handleSelect = (key: SectionKey) => {
+    setActive(key);
+    const el = document.getElementById(`manual-section-${key}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
@@ -82,7 +88,7 @@ export default function Manual() {
               {SECTIONS.map((key) => (
                 <button
                   key={key}
-                  onClick={() => setActive(key)}
+                  onClick={() => handleSelect(key)}
                   className={cn(
                     "w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors text-left",
                     active === key
@@ -104,7 +110,7 @@ export default function Manual() {
               {SECTIONS.map((key) => (
                 <section
                   key={key}
-                  id={key}
+                  id={`manual-section-${key}`}
                   className={cn(
                     "scroll-mt-6 transition-opacity",
                     active !== key && "opacity-40 pointer-events-none select-none"
