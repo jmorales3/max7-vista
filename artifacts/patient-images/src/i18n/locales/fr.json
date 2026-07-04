@@ -729,7 +729,7 @@
     },
     "gallery": {
       "heading": "Galerie et Vues en Grille",
-      "body": "La Galerie affiche toutes les images et les ressources de la bibliothèque, filtrables par étiquettes grâce à la barre d'étiquettes. Pour voir les images d'un patient spécifique, rendez-vous dans la section de ce patient. Utilisez le sélecteur de grille pour afficher 1, 2, 4 ou 8 images par ligne. Cliquez sur n'importe quelle image pour l'ouvrir dans l'éditeur."
+      "body": "La Galerie affiche toutes les images et les ressources de la bibliothèque, filtrables par étiquettes grâce à la barre d'étiquettes. Pour voir les images d'un patient spécifique, rendez-vous dans la section de ce patient. Utilisez le sélecteur de grille pour afficher 1, 2, 4 ou 8 images par ligne. Cliquez sur n'importe quelle image pour l'ouvrir dans l'éditeur. Cliquez sur « Sélectionner » pour passer en mode de sélection multiple et choisir une ou plusieurs images à ajouter à une présentation : après la sélection, cliquez sur « Ajouter à la présentation » pour choisir la destination — une présentation existante spécifique à un patient, une présentation existante inter-patients issue du hub Présentations, ou la création d'une nouvelle présentation de l'un ou l'autre type sur place."
     },
     "editor": {
       "heading": "Édition d'Images",
@@ -757,7 +757,7 @@
     },
     "presentations": {
       "heading": "Présentations",
-      "body": "Créez des présentations de diapositives cliniques à partir d'images de patients. Ouvrez Présentations dans la barre latérale pour afficher ou créer des présentations. Chaque présentation contient une ou plusieurs diapositives, chacune liée à une image de patient avec ses annotations et une légende facultative. Utilisez l'éditeur de diapositives pour organiser le contenu, puis entrez en mode Présentation plein écran pour afficher les diapositives à un patient ou un collègue. Les présentations peuvent être spécifiques à un patient (créées depuis son profil) ou inter-patients (accessibles depuis le hub Présentations)."
+      "body": "Créez des présentations de diapositives cliniques à partir d'images de patients. Ouvrez Présentations dans la barre latérale pour afficher ou créer des présentations. Chaque présentation contient une ou plusieurs diapositives, chacune liée à une image de patient avec ses annotations et une légende facultative. Utilisez l'éditeur de diapositives pour organiser le contenu, puis entrez en mode Présentation plein écran pour afficher les diapositives à un patient ou un collègue. Les présentations peuvent être spécifiques à un patient (créées depuis son profil) ou inter-patients / multi-patients (créées et gérées depuis le hub Présentations, combinant des images de différents patients en une seule collection de cas). Lors de l'ajout d'images depuis la Galerie ou la Bibliothèque d'Images, les présentations existantes spécifiques à un patient et les présentations existantes inter-patients sont toutes deux proposées comme destination, en plus de la possibilité de créer une nouvelle présentation de l'un ou l'autre type."
     },
     "migration": {
       "heading": "Migration (LAN ↔ Web)",

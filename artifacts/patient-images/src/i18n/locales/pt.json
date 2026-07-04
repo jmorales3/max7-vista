@@ -729,7 +729,7 @@
     },
     "gallery": {
       "heading": "Galeria e Visualizações em Grade",
-      "body": "A Galeria mostra todas as imagens e os ativos da biblioteca, filtráveis por tags usando a barra de tags. Para ver as imagens de um paciente específico, acesse a seção desse paciente. Use o seletor de grade para exibir 1, 2, 4 ou 8 imagens por linha. Clique em qualquer imagem para abri-la no editor."
+      "body": "A Galeria mostra todas as imagens e os ativos da biblioteca, filtráveis por tags usando a barra de tags. Para ver as imagens de um paciente específico, acesse a seção desse paciente. Use o seletor de grade para exibir 1, 2, 4 ou 8 imagens por linha. Clique em qualquer imagem para abri-la no editor. Clique em 'Selecionar' para entrar no modo de seleção múltipla e escolher uma ou mais imagens para adicionar a uma apresentação: após selecionar, clique em 'Adicionar à Apresentação' para escolher o destino — uma apresentação existente específica de um paciente, uma apresentação existente entre pacientes do hub de Apresentações, ou criar uma nova de qualquer um dos dois tipos na hora."
     },
     "editor": {
       "heading": "Edição de Imagens",
@@ -757,7 +757,7 @@
     },
     "presentations": {
       "heading": "Apresentações",
-      "body": "Crie apresentações clínicas de slides a partir de imagens de pacientes. Abra Apresentações na barra lateral para visualizar ou criar apresentações. Cada apresentação contém um ou mais slides, cada um vinculado a uma imagem do paciente com suas anotações e uma legenda opcional. Use o editor de slides para organizar o conteúdo e entre no modo Apresentação em tela cheia para exibir os slides a um paciente ou colega. As apresentações podem ser específicas de um paciente (criadas a partir do perfil) ou entre pacientes (acessíveis pelo hub de Apresentações)."
+      "body": "Crie apresentações clínicas de slides a partir de imagens de pacientes. Abra Apresentações na barra lateral para visualizar ou criar apresentações. Cada apresentação contém um ou mais slides, cada um vinculado a uma imagem do paciente com suas anotações e uma legenda opcional. Use o editor de slides para organizar o conteúdo e entre no modo Apresentação em tela cheia para exibir os slides a um paciente ou colega. As apresentações podem ser específicas de um paciente (criadas a partir do perfil) ou entre pacientes / multi-paciente (criadas e gerenciadas a partir do hub de Apresentações, combinando imagens de diferentes pacientes em uma única coleção de caso). Ao adicionar imagens da Galeria ou da Biblioteca de Imagens, tanto as apresentações existentes específicas de um paciente quanto as apresentações existentes entre pacientes são oferecidas como destino, além da opção de criar uma nova apresentação de qualquer um dos dois tipos."
     },
     "migration": {
       "heading": "Migração (LAN ↔ Web)",

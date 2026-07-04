@@ -1201,14 +1201,19 @@ async function seedPostgres(pool: import("pg").Pool) {
     const codeToId = new Map(patRows.map(r => [r.patient_code, r.id]));
 
     if (needsReseed) {
-      // Delete all images for seeded patients so fresh correct paths are inserted below
-      const seededPatientIds = seedCodes
-        .map(c => codeToId.get(c))
-        .filter((id): id is number => id !== undefined);
-      if (seededPatientIds.length > 0) {
+      // Delete only the specific seed-managed image rows so they can be re-inserted
+      // with fresh/corrected data. IMPORTANT: this must never delete by patient_id
+      // alone — a real patient can accumulate genuine user-uploaded images (e.g. via
+      // the app's capture/upload flow) in addition to the seed set, and those must
+      // never be wiped out just because the patient happens to share a seeded code.
+      // We only ever delete rows whose (patient_id, file_path) exactly matches one of
+      // this tenant's seed entries.
+      for (const [patCode, filePath] of imageSeeds) {
+        const patientId = codeToId.get(patCode);
+        if (!patientId) continue;
         await pool.query(
-          `DELETE FROM images WHERE patient_id = ANY($1::int[])`,
-          [seededPatientIds]
+          `DELETE FROM images WHERE patient_id = $1 AND file_path = $2`,
+          [patientId, filePath]
         );
       }
 

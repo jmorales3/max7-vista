@@ -729,7 +729,7 @@
     },
     "gallery": {
       "heading": "Galería y Vistas de Cuadrícula",
-      "body": "La Galería muestra todas las imágenes y los recursos de la biblioteca, filtrables por etiquetas mediante la barra de etiquetas. Para ver las imágenes de un paciente específico, vaya a la sección de ese paciente. Use el selector de cuadrícula para mostrar 1, 2, 4 u 8 imágenes por fila. Haga clic en cualquier imagen para abrirla en el editor."
+      "body": "La Galería muestra todas las imágenes y los recursos de la biblioteca, filtrables por etiquetas mediante la barra de etiquetas. Para ver las imágenes de un paciente específico, vaya a la sección de ese paciente. Use el selector de cuadrícula para mostrar 1, 2, 4 u 8 imágenes por fila. Haga clic en cualquier imagen para abrirla en el editor. Haga clic en 'Seleccionar' para entrar en modo de selección múltiple y elegir una o más imágenes para añadir a una presentación: tras seleccionar, haga clic en 'Añadir a Presentación' para elegir el destino — una presentación existente de un paciente específico, una presentación existente de varios pacientes del hub de Presentaciones, o crear una nueva de cualquiera de los dos tipos al momento."
     },
     "editor": {
       "heading": "Edición de Imágenes",
@@ -757,7 +757,7 @@
     },
     "presentations": {
       "heading": "Presentaciones",
-      "body": "Cree presentaciones clínicas de diapositivas a partir de imágenes de pacientes. Abra Presentaciones en la barra lateral para ver o crear presentaciones. Cada presentación contiene una o más diapositivas, cada una vinculada a una imagen del paciente con sus anotaciones y un pie de foto opcional. Use el editor de diapositivas para organizar el contenido y luego entre en el modo Presentación a pantalla completa para mostrar las diapositivas a un paciente o colega. Las presentaciones pueden ser específicas de un paciente (creadas desde su perfil) o de varios pacientes (accesibles desde el hub de Presentaciones)."
+      "body": "Cree presentaciones clínicas de diapositivas a partir de imágenes de pacientes. Abra Presentaciones en la barra lateral para ver o crear presentaciones. Cada presentación contiene una o más diapositivas, cada una vinculada a una imagen del paciente con sus anotaciones y un pie de foto opcional. Use el editor de diapositivas para organizar el contenido y luego entre en el modo Presentación a pantalla completa para mostrar las diapositivas a un paciente o colega. Las presentaciones pueden ser específicas de un paciente (creadas desde su perfil) o de varios pacientes / entre pacientes (creadas y gestionadas desde el hub de Presentaciones, combinando imágenes de distintos pacientes en una sola colección de caso). Al añadir imágenes desde la Galería o la Biblioteca de Imágenes, se ofrecen como destino tanto las presentaciones existentes de un paciente específico como las presentaciones existentes de varios pacientes, además de la opción de crear una nueva presentación de cualquiera de los dos tipos."
     },
     "migration": {
       "heading": "Migración (LAN ↔ Web)",

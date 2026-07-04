@@ -729,7 +729,7 @@
     },
     "gallery": {
       "heading": "Gallery & Grid Views",
-      "body": "The Gallery shows all images and library assets, filterable by tags using the tag bar. To view a single patient's images, go to that patient's own section instead. Use the grid selector to display 1, 2, 4, or 8 images per row. Click any image to open it in the editor."
+      "body": "The Gallery shows all images and library assets, filterable by tags using the tag bar. To view a single patient's images, go to that patient's own section instead. Use the grid selector to display 1, 2, 4, or 8 images per row. Click any image to open it in the editor. Click 'Select' to switch into multi-select mode and choose one or more images to add to a presentation: after selecting, click 'Add to Presentation' to choose the destination — an existing patient-specific presentation, an existing multi-patient presentation from the Presentations hub, or create a new one of either type on the spot."
     },
     "editor": {
       "heading": "Image Editing",
@@ -757,7 +757,7 @@
     },
     "presentations": {
       "heading": "Presentations",
-      "body": "Build clinical slide presentations from patient images. Open Presentations in the sidebar to view or create presentations. Each presentation contains one or more slides, each linked to a patient image with its annotations and an optional caption. Use the slide editor to arrange content, then enter full-screen Presentation mode to display slides to a patient or colleague. Presentations can be patient-specific (created from a patient profile) or cross-patient (accessible from the Presentations hub)."
+      "body": "Build clinical slide presentations from patient images. Open Presentations in the sidebar to view or create presentations. Each presentation contains one or more slides, each linked to a patient image with its annotations and an optional caption. Use the slide editor to arrange content, then enter full-screen Presentation mode to display slides to a patient or colleague. Presentations can be patient-specific (created from a patient profile) or multi-patient / cross-patient (created and managed from the Presentations hub, combining images from different patients into a single case collection). When adding images from the Gallery or Image Library, both existing patient-specific presentations and existing multi-patient presentations are offered as destinations, alongside the option to create a new presentation of either type."
     },
     "migration": {
       "heading": "Migration (LAN ↔ Web)",
