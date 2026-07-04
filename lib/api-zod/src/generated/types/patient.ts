@@ -5,6 +5,7 @@
  * Patient Image Management API
  * OpenAPI spec version: 0.1.0
  */
+import type { PatientTagsItem } from './patientTagsItem';
 
 export interface Patient {
   id: number;
@@ -21,4 +22,5 @@ export interface Patient {
   legalHoldReason?: string | null;
   /** @nullable */
   legalHoldSetAt?: string | null;
+  tags?: PatientTagsItem[];
 }

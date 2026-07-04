@@ -295,7 +295,20 @@
     "deleteDesc": "Tem certeza de que deseja excluir \"{{title}}\"? Esta ação não pode ser desfeita.",
     "addToPresentation": "Adicionar à Apresentação",
     "exportPdf": "Exportar como PDF",
-    "exportPptx": "Exportar como PowerPoint"
+    "exportPptx": "Exportar como PowerPoint",
+    "wizardTagsTitle": "Filtrar por tags",
+    "wizardTagsDesc": "Escolha uma ou mais tags para restringir quais pacientes incluir, ou continue para ver todos.",
+    "wizardNoTags": "Ainda não foram criadas tags.",
+    "wizardTagsNoneHint": "Nenhuma tag selecionada — todos os pacientes serão exibidos.",
+    "wizardTagsSelectedHint": "{{count}} tag(s) selecionada(s)",
+    "wizardContinue": "Continuar",
+    "wizardPatientsTitle": "Selecionar pacientes",
+    "wizardPatientsDesc": "Escolha de quais pacientes incluir imagens nesta apresentação.",
+    "wizardPatientsSelectedHint": "{{count}} paciente(s) selecionado(s)",
+    "wizardNoPatients": "Nenhum paciente corresponde às tags selecionadas.",
+    "wizardBackToTags": "Voltar às tags",
+    "wizardImageCount": "{{count}} imagem(ns)",
+    "wizardOpenBuilder": "Abrir Editor"
   },
   "gallery": {
     "title": "Galeria",

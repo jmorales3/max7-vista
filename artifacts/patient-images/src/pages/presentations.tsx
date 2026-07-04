@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   useListPresentations, getListPresentationsQueryKey,
   useListImages, getListImagesQueryKey,
   useListPatients, getListPatientsQueryKey,
+  useListTags, getListTagsQueryKey,
   useCreatePresentation, useUpdatePresentation, useDeletePresentation,
   Presentation as ApiPresentation,
 } from "@workspace/api-client-react";
@@ -21,12 +22,17 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { PlusCircle, Play, Pencil, Trash2, Images, ArrowLeft, Download, Loader2, FileText, Presentation as PresentationIcon, ChevronDown } from "lucide-react";
+import {
+  PlusCircle, Play, Pencil, Trash2, Images, ArrowLeft, Download, Loader2,
+  FileText, Presentation as PresentationIcon, ChevronDown, ChevronRight,
+  Tags as TagsIcon, Check, ImageIcon, Users,
+} from "lucide-react";
 import { format } from "date-fns";
 import { PresentationBuilder, type Slide, type PickerImage } from "@/components/PresentationBuilder";
 import { exportPresentationToPdf, exportPresentationToPptx } from "@/lib/presentationExport";
+import { cn } from "@/lib/utils";
 
-type Mode = "list" | "builder";
+type Mode = "list" | "select-tags" | "select-patients" | "builder";
 
 export default function Presentations() {
   const { t } = useTranslation();
@@ -38,6 +44,8 @@ export default function Presentations() {
   const [deleteTarget, setDeleteTarget] = useState<ApiPresentation | null>(null);
   const [openViewer, setOpenViewer] = useState<ApiPresentation | null>(null);
   const [exportingId, setExportingId] = useState<number | null>(null);
+  const [wizardTagIds, setWizardTagIds] = useState<Set<number>>(new Set());
+  const [wizardPatientIds, setWizardPatientIds] = useState<Set<number>>(new Set());
   const viewerAnchorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -75,6 +83,9 @@ export default function Presentations() {
     {},
     { query: { queryKey: getListPatientsQueryKey({}) } }
   );
+  const { data: tags = [], isLoading: tagsLoading } = useListTags({
+    query: { queryKey: getListTagsQueryKey(), enabled: mode === "select-tags" },
+  });
 
   const patientMap = new Map((patients as any[]).map((p: any) => [p.id, p.name as string]));
 
@@ -86,7 +97,45 @@ export default function Presentations() {
       patientName: img.patientId ? patientMap.get(img.patientId) ?? t("common.unknown") : t("gallery.unassigned"),
     }));
 
+  const wizardMatchingPatients = useMemo(() => {
+    const list = patients as any[];
+    if (wizardTagIds.size === 0) return list;
+    return list.filter((p) => (p.tags ?? []).some((tag: any) => wizardTagIds.has(tag.id)));
+  }, [patients, wizardTagIds]);
+
+  const wizardPickerImages: PickerImage[] = pickerImages.filter(
+    (img) => img.patientId != null && wizardPatientIds.has(img.patientId),
+  );
+
   const crossPatient = presentations.filter((p) => p.patientId === null || p.patientId === undefined);
+
+  function startNewPresentationWizard() {
+    setWizardTagIds(new Set());
+    setWizardPatientIds(new Set());
+    setMode("select-tags");
+  }
+
+  function toggleWizardTag(id: number) {
+    setWizardTagIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleWizardPatient(id: number) {
+    setWizardPatientIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function confirmWizardPatients() {
+    setEditingPresentation(null);
+    setIsSaved(false);
+    setMode("builder");
+  }
 
   const createPresentation = useCreatePresentation({
     mutation: {
@@ -144,11 +193,158 @@ export default function Presentations() {
     setIsSaved(false);
   }
 
+  /* ─── Wizard: tag selection ─────────────────────────────── */
+  if (mode === "select-tags") {
+    return (
+      <div className="max-w-3xl mx-auto space-y-6">
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="icon" className="h-8 w-8 shrink-0" onClick={backToList}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-primary">{t("presentation.wizardTagsTitle")}</h1>
+            <p className="text-sm text-muted-foreground">{t("presentation.wizardTagsDesc")}</p>
+          </div>
+        </div>
+
+        <Card>
+          <CardContent className="pt-6">
+            {tagsLoading ? (
+              <div className="flex flex-wrap gap-2">
+                {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-8 w-24 rounded-full" />)}
+              </div>
+            ) : tags.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">{t("presentation.wizardNoTags")}</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {tags.map((tag: any) => {
+                  const active = wizardTagIds.has(tag.id);
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => toggleWizardTag(tag.id)}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                        active
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background hover:bg-muted border-input"
+                      )}
+                    >
+                      {active && <Check className="h-3.5 w-3.5" />}
+                      {tag.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {wizardTagIds.size === 0
+              ? t("presentation.wizardTagsNoneHint")
+              : t("presentation.wizardTagsSelectedHint", { count: wizardTagIds.size })}
+          </p>
+          <Button onClick={() => setMode("select-patients")} className="gap-2">
+            {t("presentation.wizardContinue")}
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ─── Wizard: patient selection ─────────────────────────── */
+  if (mode === "select-patients") {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="icon" className="h-8 w-8 shrink-0" onClick={() => setMode("select-tags")}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-primary">{t("presentation.wizardPatientsTitle")}</h1>
+            <p className="text-sm text-muted-foreground">
+              {wizardPatientIds.size === 0
+                ? t("presentation.wizardPatientsDesc")
+                : t("presentation.wizardPatientsSelectedHint", { count: wizardPatientIds.size })}
+            </p>
+          </div>
+        </div>
+
+        {patientsLoading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
+          </div>
+        ) : wizardMatchingPatients.length === 0 ? (
+          <div className="border-2 border-dashed rounded-xl p-16 text-center text-muted-foreground">
+            <Users className="h-12 w-12 mx-auto mb-4 opacity-40" />
+            <p className="font-medium">{t("presentation.wizardNoPatients")}</p>
+            <Button variant="outline" className="mt-4" onClick={() => setMode("select-tags")}>
+              {t("presentation.wizardBackToTags")}
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {wizardMatchingPatients.map((p: any) => {
+              const selected = wizardPatientIds.has(p.id);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => toggleWizardPatient(p.id)}
+                  className={cn(
+                    "relative flex flex-col items-center gap-2 rounded-xl border p-4 text-center transition-colors",
+                    selected ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-input hover:bg-muted"
+                  )}
+                >
+                  <div className={cn(
+                    "absolute top-2 right-2 h-5 w-5 rounded-full border flex items-center justify-center",
+                    selected ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground/40"
+                  )}>
+                    {selected && <Check className="h-3.5 w-3.5" />}
+                  </div>
+                  {p.profileImageId ? (
+                    <img src={`/api/images/${p.profileImageId}/file`} className="h-14 w-14 rounded-full object-cover" />
+                  ) : (
+                    <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center">
+                      <ImageIcon className="h-6 w-6 text-muted-foreground/50" />
+                    </div>
+                  )}
+                  <div className="min-w-0 w-full">
+                    <p className="font-medium truncate">{p.name}</p>
+                    <p className="text-xs text-muted-foreground">{t("presentation.wizardImageCount", { count: p.imageCount ?? 0 })}</p>
+                  </div>
+                  {(p.tags ?? []).length > 0 && (
+                    <div className="flex flex-wrap justify-center gap-1">
+                      {(p.tags as any[]).slice(0, 3).map((tag) => (
+                        <Badge key={tag.id} variant="secondary" className="text-[10px] px-1.5 py-0">{tag.name}</Badge>
+                      ))}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="flex justify-end">
+          <Button onClick={confirmWizardPatients} disabled={wizardPatientIds.size === 0} className="gap-2">
+            {t("presentation.wizardOpenBuilder")}
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   /* ─── Builder mode ──────────────────────────────────────── */
   if (mode === "builder") {
     return (
       <PresentationBuilder
-        images={pickerImages}
+        images={editingPresentation ? pickerImages : wizardPickerImages}
         initialSlides={(editingPresentation?.slides as Slide[] | undefined) ?? []}
         initialTitle={editingPresentation?.title ?? ""}
         isSaving={createPresentation.isPending || updatePresentation.isPending}
@@ -245,7 +441,7 @@ export default function Presentations() {
           <h1 className="text-3xl font-bold tracking-tight text-primary">{t("presentation.hubTitle")}</h1>
           <p className="text-muted-foreground">{t("presentation.hubSubtitle")}</p>
         </div>
-        <Button onClick={() => openBuilder()} className="gap-2">
+        <Button onClick={startNewPresentationWizard} className="gap-2">
           <PlusCircle className="h-4 w-4" />
           {t("presentation.newPresentation")}
         </Button>
@@ -260,7 +456,7 @@ export default function Presentations() {
           <Images className="h-12 w-12 mx-auto mb-4 opacity-40" />
           <p className="font-medium">{t("presentation.noPresentations")}</p>
           <p className="text-sm mt-1">{t("presentation.noPresentationsDesc")}</p>
-          <Button className="mt-6 gap-2" onClick={() => openBuilder()}>
+          <Button className="mt-6 gap-2" onClick={startNewPresentationWizard}>
             <PlusCircle className="h-4 w-4" />
             {t("presentation.newPresentation")}
           </Button>

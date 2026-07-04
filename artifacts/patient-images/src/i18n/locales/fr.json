@@ -295,7 +295,20 @@
     "deleteDesc": "Êtes-vous sûr de vouloir supprimer \"{{title}}\" ? Cette action est irréversible.",
     "addToPresentation": "Ajouter à la Présentation",
     "exportPdf": "Exporter en PDF",
-    "exportPptx": "Exporter en PowerPoint"
+    "exportPptx": "Exporter en PowerPoint",
+    "wizardTagsTitle": "Filtrer par étiquettes",
+    "wizardTagsDesc": "Choisissez une ou plusieurs étiquettes pour affiner les patients à inclure, ou continuez pour tous les voir.",
+    "wizardNoTags": "Aucune étiquette n'a encore été créée.",
+    "wizardTagsNoneHint": "Aucune étiquette sélectionnée — tous les patients seront affichés.",
+    "wizardTagsSelectedHint": "{{count}} étiquette(s) sélectionnée(s)",
+    "wizardContinue": "Continuer",
+    "wizardPatientsTitle": "Sélectionner les patients",
+    "wizardPatientsDesc": "Choisissez les patients dont les images seront incluses dans cette présentation.",
+    "wizardPatientsSelectedHint": "{{count}} patient(s) sélectionné(s)",
+    "wizardNoPatients": "Aucun patient ne correspond aux étiquettes sélectionnées.",
+    "wizardBackToTags": "Retour aux étiquettes",
+    "wizardImageCount": "{{count}} image(s)",
+    "wizardOpenBuilder": "Ouvrir l'éditeur"
   },
   "gallery": {
     "title": "Galerie",

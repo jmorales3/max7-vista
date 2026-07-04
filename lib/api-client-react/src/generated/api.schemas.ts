@@ -9,6 +9,11 @@ export interface HealthStatus {
   status: string;
 }
 
+export type PatientTagsItem = {
+  id: number;
+  name: string;
+};
+
 export interface Patient {
   id: number;
   name: string;
@@ -24,6 +29,7 @@ export interface Patient {
   legalHoldReason?: string | null;
   /** @nullable */
   legalHoldSetAt?: string | null;
+  tags?: PatientTagsItem[];
 }
 
 export interface ImageUploadInput {
@@ -155,6 +161,10 @@ export interface ScanResult {
 
 export type ListPatientsParams = {
 search?: string;
+/**
+ * Comma-separated tag IDs. When present, only patients with at least one of these tags are returned.
+ */
+tagIds?: string;
 };
 
 export type ListPresentationsParams = {

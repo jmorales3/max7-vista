@@ -295,7 +295,20 @@
     "deleteDesc": "Are you sure you want to delete \"{{title}}\"? This cannot be undone.",
     "addToPresentation": "Add to Presentation",
     "exportPdf": "Export as PDF",
-    "exportPptx": "Export as PowerPoint"
+    "exportPptx": "Export as PowerPoint",
+    "wizardTagsTitle": "Filter by tags",
+    "wizardTagsDesc": "Choose one or more tags to narrow down which patients to include, or continue to see everyone.",
+    "wizardNoTags": "No tags have been created yet.",
+    "wizardTagsNoneHint": "No tags selected — all patients will be shown.",
+    "wizardTagsSelectedHint": "{{count}} tag(s) selected",
+    "wizardContinue": "Continue",
+    "wizardPatientsTitle": "Select patients",
+    "wizardPatientsDesc": "Choose which patients' images to include in this presentation.",
+    "wizardPatientsSelectedHint": "{{count}} patient(s) selected",
+    "wizardNoPatients": "No patients match the selected tags.",
+    "wizardBackToTags": "Back to tags",
+    "wizardImageCount": "{{count}} image(s)",
+    "wizardOpenBuilder": "Open Builder"
   },
   "gallery": {
     "title": "Gallery",

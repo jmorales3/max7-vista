@@ -19,6 +19,7 @@ export * from './listPresentationsParams';
 export * from './patient';
 export * from './patientInput';
 export * from './patientTagInput';
+export * from './patientTagsItem';
 export * from './patientUpdate';
 export * from './presentation';
 export * from './presentationInput';

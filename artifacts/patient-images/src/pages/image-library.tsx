@@ -15,7 +15,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Upload, Trash2, Check, Library, MonitorPlay, PlusCircle, X, ImagePlus, Pencil,
-  Play, Tags as TagsIcon, Tag,
+  Play, Tags as TagsIcon, Tag, Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -328,7 +328,7 @@ export default function ImageLibrary() {
     });
     if (selectedPresentation === "new") {
       const title = newPresentationTitle.trim() || t("library.defaultPresentationTitle");
-      const patId = dialogPatientId !== "all" ? parseInt(dialogPatientId, 10) : undefined;
+      const patId = dialogPatientId !== "all" && dialogPatientId !== "multi" ? parseInt(dialogPatientId, 10) : undefined;
       createPresentation.mutate({ data: { title, slides: slides as unknown[], ...(patId ? { patientId: patId } : {}) } });
     } else {
       const pres = (presentations as ApiPresentation[]).find(
@@ -680,6 +680,12 @@ export default function ImageLibrary() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All patients</SelectItem>
+                <SelectItem value="multi">
+                  <span className="flex items-center gap-1.5">
+                    <Users className="h-4 w-4" />
+                    {t("presentation.crossPatient")}
+                  </span>
+                </SelectItem>
                 {(patients as any[]).map((p: any) => (
                   <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
                 ))}
@@ -701,10 +707,11 @@ export default function ImageLibrary() {
                   </span>
                 </SelectItem>
                 {(presentations as ApiPresentation[])
-                  .filter((p) =>
-                    dialogPatientId === "all" ||
-                    String((p as any).patientId) === dialogPatientId,
-                  )
+                  .filter((p) => {
+                    if (dialogPatientId === "all") return true;
+                    if (dialogPatientId === "multi") return (p as any).patientId == null;
+                    return String((p as any).patientId) === dialogPatientId;
+                  })
                   .map((p) => (
                     <SelectItem key={p.id} value={String(p.id)}>
                       {p.title}

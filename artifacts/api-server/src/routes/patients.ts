@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, ilike, sql, and, inArray, desc } from "drizzle-orm";
-import { db, patientsTable, imagesTable, auditLogTable } from "@workspace/db";
+import { db, patientsTable, imagesTable, auditLogTable, tagsTable, patientTagsTable } from "@workspace/db";
 import {
   ListPatientsQueryParams,
   CreatePatientBody,
@@ -26,6 +26,7 @@ router.get("/patients", async (req, res): Promise<void> => {
     const tenantId = tid(req);
     const parsed = ListPatientsQueryParams.safeParse(req.query);
     const search = parsed.success ? parsed.data.search : undefined;
+    const tagIdsRaw = parsed.success ? parsed.data.tagIds : undefined;
 
     const accessibleIds = await getAccessiblePatientIds(req);
 
@@ -45,6 +46,29 @@ router.get("/patients", async (req, res): Promise<void> => {
       conditions.push(inArray(patientsTable.id, accessibleIds) as any);
     }
 
+    // Tag filter: restrict to patients carrying at least one of the given tags.
+    if (tagIdsRaw) {
+      const tagIdList = tagIdsRaw
+        .split(",")
+        .map((s) => parseInt(s.trim(), 10))
+        .filter((n) => !isNaN(n));
+      if (tagIdList.length === 0) {
+        res.json([]);
+        return;
+      }
+      const taggedPatientRows = await db
+        .selectDistinct({ patientId: patientTagsTable.patientId })
+        .from(patientTagsTable)
+        .innerJoin(tagsTable, and(eq(tagsTable.id, patientTagsTable.tagId), eq(tagsTable.tenantId, tenantId)))
+        .where(inArray(patientTagsTable.tagId, tagIdList));
+      const taggedPatientIds = taggedPatientRows.map((r) => r.patientId);
+      if (taggedPatientIds.length === 0) {
+        res.json([]);
+        return;
+      }
+      conditions.push(inArray(patientsTable.id, taggedPatientIds) as any);
+    }
+
     const patients = await db
       .select({
         id: patientsTable.id,
@@ -56,7 +80,7 @@ router.get("/patients", async (req, res): Promise<void> => {
         legalHold: patientsTable.legalHold,
         legalHoldReason: patientsTable.legalHoldReason,
         createdAt: patientsTable.createdAt,
-        imageCount: sql<number>`cast(count(${imagesTable.id}) as integer)`,
+        imageCount: sql<number>`cast(count(distinct ${imagesTable.id}) as integer)`,
       })
       .from(patientsTable)
       .leftJoin(imagesTable, eq(imagesTable.patientId, patientsTable.id))
@@ -64,7 +88,28 @@ router.get("/patients", async (req, res): Promise<void> => {
       .groupBy(patientsTable.id)
       .orderBy(patientsTable.name);
 
-    res.json(patients);
+    const patientIds = patients.map((p) => p.id);
+    let tagsByPatient = new Map<number, { id: number; name: string }[]>();
+    if (patientIds.length > 0) {
+      const tagRows = await db
+        .select({
+          patientId: patientTagsTable.patientId,
+          id: tagsTable.id,
+          name: tagsTable.name,
+        })
+        .from(patientTagsTable)
+        .innerJoin(tagsTable, eq(tagsTable.id, patientTagsTable.tagId))
+        .where(inArray(patientTagsTable.patientId, patientIds))
+        .orderBy(tagsTable.name);
+      tagsByPatient = new Map();
+      for (const row of tagRows) {
+        const list = tagsByPatient.get(row.patientId) ?? [];
+        list.push({ id: row.id, name: row.name });
+        tagsByPatient.set(row.patientId, list);
+      }
+    }
+
+    res.json(patients.map((p) => ({ ...p, tags: tagsByPatient.get(p.id) ?? [] })));
   } catch (err: any) {
     if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
     const msg = err instanceof Error ? err.message : String(err);

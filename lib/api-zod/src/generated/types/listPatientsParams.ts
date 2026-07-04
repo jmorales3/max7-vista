@@ -8,4 +8,8 @@
 
 export type ListPatientsParams = {
 search?: string;
+/**
+ * Comma-separated tag IDs. When present, only patients with at least one of these tags are returned.
+ */
+tagIds?: string;
 };

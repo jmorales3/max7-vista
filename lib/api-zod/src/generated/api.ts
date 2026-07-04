@@ -21,7 +21,8 @@ export const HealthCheckResponse = zod.object({
  * @summary List all patients
  */
 export const ListPatientsQueryParams = zod.object({
-  "search": zod.coerce.string().optional()
+  "search": zod.coerce.string().optional(),
+  "tagIds": zod.coerce.string().optional().describe('Comma-separated tag IDs. When present, only patients with at least one of these tags are returned.')
 })
 
 export const ListPatientsResponseItem = zod.object({
@@ -34,7 +35,11 @@ export const ListPatientsResponseItem = zod.object({
   "imageCount": zod.number().optional(),
   "legalHold": zod.boolean().optional(),
   "legalHoldReason": zod.string().nullish(),
-  "legalHoldSetAt": zod.string().nullish()
+  "legalHoldSetAt": zod.string().nullish(),
+  "tags": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string()
+})).optional()
 })
 export const ListPatientsResponse = zod.array(ListPatientsResponseItem)
 
@@ -71,7 +76,11 @@ export const GetPatientResponse = zod.object({
   "imageCount": zod.number().optional(),
   "legalHold": zod.boolean().optional(),
   "legalHoldReason": zod.string().nullish(),
-  "legalHoldSetAt": zod.string().nullish()
+  "legalHoldSetAt": zod.string().nullish(),
+  "tags": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string()
+})).optional()
 })
 
 
@@ -103,7 +112,11 @@ export const UpdatePatientResponse = zod.object({
   "imageCount": zod.number().optional(),
   "legalHold": zod.boolean().optional(),
   "legalHoldReason": zod.string().nullish(),
-  "legalHoldSetAt": zod.string().nullish()
+  "legalHoldSetAt": zod.string().nullish(),
+  "tags": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string()
+})).optional()
 })
 
 
