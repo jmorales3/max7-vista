@@ -729,7 +729,7 @@
     },
     "gallery": {
       "heading": "Galería y Vistas de Cuadrícula",
-      "body": "La Galería muestra todas las imágenes de todos los pacientes o filtradas por un paciente específico. Use el selector de cuadrícula para mostrar 1, 2, 4 u 8 imágenes por fila. Haga clic en cualquier imagen para abrirla en el editor."
+      "body": "La Galería muestra todas las imágenes y los recursos de la biblioteca, filtrables por etiquetas mediante la barra de etiquetas. Para ver las imágenes de un paciente específico, vaya a la sección de ese paciente. Use el selector de cuadrícula para mostrar 1, 2, 4 u 8 imágenes por fila. Haga clic en cualquier imagen para abrirla en el editor."
     },
     "editor": {
       "heading": "Edición de Imágenes",

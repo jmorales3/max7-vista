@@ -90,7 +90,6 @@ export default function Gallery() {
   const { toast } = useToast();
   const qc = useQueryClient();
 
-  const [patientFilter, setPatientFilter] = useState<string>("all");
   const [gridColumns, setGridColumns] = useState<1 | 2 | 4 | 8>(4);
   const [selectedTagIds, setSelectedTagIds] = useState<Set<number>>(new Set());
   const [selectionMode, setSelectionMode] = useState(false);
@@ -123,32 +122,21 @@ export default function Gallery() {
     { query: { queryKey: getListPresentationsQueryKey({}) } },
   );
 
-  const isUnassignedFilter = patientFilter === "unassigned";
-  const patientIdParam = !isUnassignedFilter && patientFilter !== "all"
-    ? parseInt(patientFilter, 10)
-    : undefined;
   const tagIdsParam = selectedTagIds.size > 0
     ? [...selectedTagIds].join(",")
     : undefined;
 
   const { data: allImages, isLoading: imagesLoading } = useListImages(
-    { patientId: patientIdParam, tagIds: tagIdsParam },
-    { query: { queryKey: getListImagesQueryKey({ patientId: patientIdParam, tagIds: tagIdsParam }) } }
+    { tagIds: tagIdsParam },
+    { query: { queryKey: getListImagesQueryKey({ tagIds: tagIdsParam }) } }
   );
 
-  const patientImages = isUnassignedFilter
-    ? allImages?.filter((img) => img.isUnassigned)
-    : allImages;
-
-  const showLibrary = patientFilter === "all";
-  const filteredLibraryAssets = showLibrary
-    ? (selectedTagIds.size > 0
-        ? libraryAssets.filter((a) => a.tags.some((tag) => selectedTagIds.has(tag.id)))
-        : libraryAssets)
-    : [];
+  const filteredLibraryAssets = selectedTagIds.size > 0
+    ? libraryAssets.filter((a) => a.tags.some((tag) => selectedTagIds.has(tag.id)))
+    : libraryAssets;
 
   const items: GalleryItem[] = useMemo(() => {
-    const patientItems: GalleryItem[] = (patientImages ?? []).map((img) => ({
+    const patientItems: GalleryItem[] = (allImages ?? []).map((img) => ({
       key: `p-${img.id}`,
       id: img.id,
       kind: "patient",
@@ -173,7 +161,7 @@ export default function Gallery() {
     return [...patientItems, ...libraryItems].sort(
       (a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime(),
     );
-  }, [patientImages, filteredLibraryAssets]);
+  }, [allImages, filteredLibraryAssets]);
 
   const isLoading = imagesLoading || libraryLoading;
 
@@ -293,21 +281,6 @@ export default function Gallery() {
         </div>
 
         <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
-          <Select value={patientFilter} onValueChange={setPatientFilter}>
-            <SelectTrigger className="w-[200px] bg-card">
-              <SelectValue placeholder="All Patients" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("gallery.allPatients")}</SelectItem>
-              <SelectItem value="unassigned">{t("gallery.unassigned")}</SelectItem>
-              {patients?.map(p => (
-                <SelectItem key={p.id} value={p.id.toString()}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
           <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-md border shrink-0">
             {[1, 2, 4, 8].map((cols) => (
               <Button
@@ -428,12 +401,10 @@ export default function Gallery() {
           <p className="text-muted-foreground max-w-sm mt-2 mb-6">
             {selectedTagIds.size > 0
               ? t("gallery.noImagesTags")
-              : patientFilter !== "all"
-              ? t("gallery.noImagesPatient")
               : t("gallery.noImagesEmpty")}
           </p>
           <Button asChild>
-            <Link href={patientFilter !== "all" ? `/capture?patientId=${patientFilter}` : "/capture"}>
+            <Link href="/capture">
               <Camera className="mr-2 h-4 w-4" />
               {t("gallery.captureImage")}
             </Link>

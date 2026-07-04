@@ -729,7 +729,7 @@
     },
     "gallery": {
       "heading": "Galeria e Visualizações em Grade",
-      "body": "A Galeria mostra todas as imagens de todos os pacientes ou filtradas por um paciente específico. Use o seletor de grade para exibir 1, 2, 4 ou 8 imagens por linha. Clique em qualquer imagem para abri-la no editor."
+      "body": "A Galeria mostra todas as imagens e os ativos da biblioteca, filtráveis por tags usando a barra de tags. Para ver as imagens de um paciente específico, acesse a seção desse paciente. Use o seletor de grade para exibir 1, 2, 4 ou 8 imagens por linha. Clique em qualquer imagem para abri-la no editor."
     },
     "editor": {
       "heading": "Edição de Imagens",

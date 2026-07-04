@@ -729,7 +729,7 @@
     },
     "gallery": {
       "heading": "Galerie et Vues en Grille",
-      "body": "La Galerie affiche toutes les images de tous les patients ou filtrées par un patient spécifique. Utilisez le sélecteur de grille pour afficher 1, 2, 4 ou 8 images par ligne. Cliquez sur n'importe quelle image pour l'ouvrir dans l'éditeur."
+      "body": "La Galerie affiche toutes les images et les ressources de la bibliothèque, filtrables par étiquettes grâce à la barre d'étiquettes. Pour voir les images d'un patient spécifique, rendez-vous dans la section de ce patient. Utilisez le sélecteur de grille pour afficher 1, 2, 4 ou 8 images par ligne. Cliquez sur n'importe quelle image pour l'ouvrir dans l'éditeur."
     },
     "editor": {
       "heading": "Édition d'Images",

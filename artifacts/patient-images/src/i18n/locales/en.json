@@ -729,7 +729,7 @@
     },
     "gallery": {
       "heading": "Gallery & Grid Views",
-      "body": "The Gallery shows all images across all patients or filtered by a specific patient. Use the grid selector to display 1, 2, 4, or 8 images per row. Click any image to open it in the editor."
+      "body": "The Gallery shows all images and library assets, filterable by tags using the tag bar. To view a single patient's images, go to that patient's own section instead. Use the grid selector to display 1, 2, 4, or 8 images per row. Click any image to open it in the editor."
     },
     "editor": {
       "heading": "Image Editing",
