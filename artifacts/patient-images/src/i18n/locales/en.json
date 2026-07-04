@@ -749,11 +749,11 @@
     },
     "roles": {
       "heading": "User Roles",
-      "body": "Max7 Vista supports three roles: User (can view, capture, and edit/delete only their own uploaded images, and can create — but not edit or delete — cephalometric tracings), Doctor (can manage patients, clinical records, templates, presentations, and documents within their organization), and Superadministrator (full system access across all tenants, including user management, the audit log, per-patient access control, and system integrity tools)."
+      "body": "Max7 Vista supports three roles, all scoped to a single organization: User (can view, capture, and edit/delete only their own uploaded images, and can create — but not edit or delete — cephalometric tracings), Doctor (can manage patients, clinical records, templates, presentations, and documents within their organization), and Superadministrator (full administrative access within their own organization only, including user management, the audit log, per-patient access control, and system integrity tools). Cross-organization functions such as billing, subscriptions, and activating or deactivating organizations are reserved for a separate system-owner role, not available to any organization's Superadministrator."
     },
     "tenants": {
       "heading": "Multi-Tenant Setup",
-      "body": "Each organization using Max7 Vista operates as an independent tenant. Data is fully isolated between tenants. Superadministrators can create and manage tenants and users across all organizations, while Doctors manage their own organization's clinical data (patients, templates, presentations, documents)."
+      "body": "Each organization using Max7 Vista operates as an independent tenant. Data is fully isolated between tenants. A Superadministrator can create and manage users only within their own organization — they cannot see or manage other tenants' users or data. Doctors manage their own organization's clinical data (patients, templates, presentations, documents). Creating new tenants and cross-organization administration (billing, subscriptions, activating/deactivating tenants) is handled outside the app by the system owner."
     },
     "presentations": {
       "heading": "Presentations",

@@ -205,7 +205,17 @@ router.patch("/admin/session-alert", requireRole("superadmin"), async (req, res)
   return res.json({ threshold: await getSessionAlertThreshold() });
 });
 
-router.get("/admin/users", requireRole("superadmin"), async (_req, res) => {
+// NOTE: Superadministrator is a single-tenant role. Every endpoint below is
+// scoped to req.session.tenantId — a superadmin may only view/create/edit/
+// delete users within their own organization. Cross-tenant administration
+// (activating/deactivating tenants, billing, etc.) is reserved for a future
+// Supersuperadministrator role, not yet implemented.
+router.get("/admin/users", requireRole("superadmin"), async (req, res) => {
+  const tenantId = req.session.tenantId;
+  if (!tenantId) {
+    res.status(400).json({ error: "No tenant associated with this session" });
+    return;
+  }
   try {
     const users = await db
       .select({
@@ -217,6 +227,7 @@ router.get("/admin/users", requireRole("superadmin"), async (_req, res) => {
         tenantId: usersTable.tenantId,
       })
       .from(usersTable)
+      .where(eq(usersTable.tenantId, tenantId))
       .orderBy(usersTable.createdAt);
 
     res.json(users);
@@ -227,6 +238,11 @@ router.get("/admin/users", requireRole("superadmin"), async (_req, res) => {
 
 router.patch("/admin/users/:id", requireRole("superadmin"), async (req, res) => {
   const userId = parseInt(req.params.id, 10);
+  const tenantId = req.session.tenantId;
+  if (!tenantId) {
+    res.status(400).json({ error: "No tenant associated with this session" });
+    return;
+  }
   if (isNaN(userId)) {
     res.status(400).json({ error: "Invalid user id" });
     return;
@@ -253,7 +269,7 @@ router.patch("/admin/users/:id", requireRole("superadmin"), async (req, res) => 
     const [updated] = await db
       .update(usersTable)
       .set(updates)
-      .where(eq(usersTable.id, userId))
+      .where(and(eq(usersTable.id, userId), eq(usersTable.tenantId, tenantId)))
       .returning({
         id: usersTable.id,
         username: usersTable.username,
@@ -289,11 +305,10 @@ router.patch("/admin/users/:id", requireRole("superadmin"), async (req, res) => 
 });
 
 router.post("/admin/users", requireRole("superadmin"), async (req, res) => {
-  const { username, password, role, tenantId } = req.body as {
+  const { username, password, role } = req.body as {
     username?: string;
     password?: string;
     role?: "user" | "admin" | "superadmin";
-    tenantId?: number;
   };
 
   if (!username || !password) {
@@ -304,9 +319,13 @@ router.post("/admin/users", requireRole("superadmin"), async (req, res) => {
   const validRoles = ["user", "admin", "superadmin"] as const;
   const assignedRole = role && validRoles.includes(role) ? role : "user";
 
-  // Default the new user to the same tenant as the creator, unless superadmin specifies otherwise
+  // Superadmin can only create users within their own tenant — the tenant
+  // is never taken from the request body.
   const creatorTenantId = req.session.tenantId;
-  const resolvedTenantId = tenantId ?? creatorTenantId ?? null;
+  if (!creatorTenantId) {
+    res.status(400).json({ error: "No tenant associated with this session" });
+    return;
+  }
 
   try {
     const passwordHash = await bcrypt.hash(password, 10);
@@ -318,7 +337,7 @@ router.post("/admin/users", requireRole("superadmin"), async (req, res) => {
         role: assignedRole,
         isActive: true,
         forcePasswordChange: true,
-        tenantId: resolvedTenantId,
+        tenantId: creatorTenantId,
       })
       .returning({
         id: usersTable.id,
@@ -343,7 +362,12 @@ router.post("/admin/users", requireRole("superadmin"), async (req, res) => {
 router.delete("/admin/users/:id", requireRole("superadmin"), async (req, res) => {
   const userId = parseInt(req.params.id, 10);
   const requestingUserId = req.session.userId;
+  const tenantId = req.session.tenantId;
 
+  if (!tenantId) {
+    res.status(400).json({ error: "No tenant associated with this session" });
+    return;
+  }
   if (isNaN(userId)) {
     res.status(400).json({ error: "Invalid user id" });
     return;
@@ -357,7 +381,7 @@ router.delete("/admin/users/:id", requireRole("superadmin"), async (req, res) =>
   try {
     const [deleted] = await db
       .delete(usersTable)
-      .where(eq(usersTable.id, userId))
+      .where(and(eq(usersTable.id, userId), eq(usersTable.tenantId, tenantId)))
       .returning({ id: usersTable.id });
 
     if (!deleted) {

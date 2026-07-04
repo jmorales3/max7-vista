@@ -749,11 +749,11 @@
     },
     "roles": {
       "heading": "Rôles Utilisateur",
-      "body": "Max7 Vista prend en charge trois rôles : Utilisateur (peut voir, capturer et modifier/supprimer uniquement les images qu'il a téléversées, et peut créer — mais pas modifier ni supprimer — des tracés céphalométriques), Docteur (peut gérer les patients, les dossiers cliniques, les modèles, les présentations et les documents au sein de son organisation) et Super Administrateur (accès complet au système sur tous les locataires, y compris la gestion des utilisateurs, le journal d'audit, le contrôle d'accès par patient et les outils d'intégrité du système)."
+      "body": "Max7 Vista prend en charge trois rôles, tous limités à une seule organisation : Utilisateur (peut voir, capturer et modifier/supprimer uniquement les images qu'il a téléversées, et peut créer — mais pas modifier ni supprimer — des tracés céphalométriques), Docteur (peut gérer les patients, les dossiers cliniques, les modèles, les présentations et les documents au sein de son organisation) et Super Administrateur (accès administratif complet uniquement au sein de sa propre organisation, y compris la gestion des utilisateurs, le journal d'audit, le contrôle d'accès par patient et les outils d'intégrité du système). Les fonctions inter-organisations, telles que la facturation, les abonnements et l'activation ou la désactivation d'organisations, sont réservées à un rôle distinct de propriétaire du système, non accessible au Super Administrateur d'une organisation quelconque."
     },
     "tenants": {
       "heading": "Configuration Multi-Organisation",
-      "body": "Chaque organisation utilisant Max7 Vista fonctionne comme un locataire indépendant. Les données sont entièrement isolées entre les locataires. Les Super Administrateurs peuvent créer et gérer les locataires et les utilisateurs dans toutes les organisations, tandis que les Docteurs gèrent les données cliniques de leur propre organisation (patients, modèles, présentations, documents)."
+      "body": "Chaque organisation utilisant Max7 Vista fonctionne comme un locataire indépendant. Les données sont entièrement isolées entre les locataires. Un Super Administrateur ne peut créer et gérer des utilisateurs qu'au sein de sa propre organisation — il ne peut ni voir ni gérer les utilisateurs ou les données des autres locataires. Les Docteurs gèrent les données cliniques de leur propre organisation (patients, modèles, présentations, documents). La création de nouveaux locataires et l'administration inter-organisations (facturation, abonnements, activation/désactivation des locataires) sont gérées en dehors de l'application par le propriétaire du système."
     },
     "presentations": {
       "heading": "Présentations",

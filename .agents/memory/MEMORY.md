@@ -19,3 +19,4 @@
 - [Main agent git commits are not continuous](main-agent-commit-timing.md) — edits stay uncommitted for the whole session; you cannot tag/push a release against your own uncommitted changes mid-session.
 - [esbuild format/outExtension must match package.json type](esbuild-format-extension-mismatch.md) — a rebase flipped esm→cjs + .mjs→.js in build.mjs, breaking `node dist/index.mjs` start script; format and outExtension must stay in sync with the start script's expected filename.
 - [Git hooksPath large-file guard](git-hooksPath-large-file-guard.md) — pre-commit hook blocks >8MB files; core.hooksPath is unset on fresh clones, so post-merge.sh must re-apply it every merge.
+- [Tenant-scoped role audit pattern](tenant-scoped-role-audit.md) — a "single-tenant only" role regains cross-tenant power via missing WHERE filters, client-supplied tenantId overrides, or id-only lookups; audit every requireRole() call site, esp. export/import.

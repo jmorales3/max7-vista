@@ -749,11 +749,11 @@
     },
     "roles": {
       "heading": "Roles de Usuario",
-      "body": "Max7 Vista admite tres roles: Usuario (puede ver, capturar y editar/eliminar únicamente las imágenes que ha subido, y puede crear —pero no editar ni eliminar— trazados cefalométricos), Doctor (puede gestionar pacientes, registros clínicos, plantillas, presentaciones y documentos dentro de su organización) y Superadministrador (acceso completo al sistema en todos los inquilinos, incluida la gestión de usuarios, el registro de auditoría, el control de acceso por paciente y las herramientas de integridad del sistema)."
+      "body": "Max7 Vista admite tres roles, todos limitados a una sola organización: Usuario (puede ver, capturar y editar/eliminar únicamente las imágenes que ha subido, y puede crear —pero no editar ni eliminar— trazados cefalométricos), Doctor (puede gestionar pacientes, registros clínicos, plantillas, presentaciones y documentos dentro de su organización) y Superadministrador (acceso administrativo completo únicamente dentro de su propia organización, incluida la gestión de usuarios, el registro de auditoría, el control de acceso por paciente y las herramientas de integridad del sistema). Las funciones entre organizaciones, como facturación, suscripciones y activar o desactivar organizaciones, están reservadas para un rol separado de propietario del sistema, no disponible para el Superadministrador de ninguna organización."
     },
     "tenants": {
       "heading": "Configuración Multiempresa",
-      "body": "Cada organización que usa Max7 Vista opera como un inquilino independiente. Los datos están completamente aislados entre inquilinos. Los Superadministradores pueden crear y gestionar inquilinos y usuarios en todas las organizaciones, mientras que los Doctores gestionan los datos clínicos de su propia organización (pacientes, plantillas, presentaciones, documentos)."
+      "body": "Cada organización que usa Max7 Vista opera como un inquilino independiente. Los datos están completamente aislados entre inquilinos. Un Superadministrador solo puede crear y gestionar usuarios dentro de su propia organización — no puede ver ni gestionar los usuarios o datos de otros inquilinos. Los Doctores gestionan los datos clínicos de su propia organización (pacientes, plantillas, presentaciones, documentos). La creación de nuevos inquilinos y la administración entre organizaciones (facturación, suscripciones, activar/desactivar inquilinos) se gestiona fuera de la aplicación por el propietario del sistema."
     },
     "presentations": {
       "heading": "Presentaciones",

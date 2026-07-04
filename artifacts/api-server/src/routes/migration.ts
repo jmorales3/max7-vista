@@ -30,9 +30,18 @@ router.get(
   requireRole("superadmin"),
   async (req, res): Promise<void> => {
     try {
-      const patients = await db.select().from(patientsTable).orderBy(patientsTable.id);
-      const images   = await db.select().from(imagesTable).orderBy(imagesTable.id);
-      const users    = await db.select().from(usersTable).orderBy(usersTable.id);
+      // Superadministrator is single-tenant: export must never leak another
+      // tenant's PHI (patients/images) or credentials (users/settings).
+      const tenantId = tid(req);
+      const patients = await db.select().from(patientsTable)
+        .where(eq(patientsTable.tenantId, tenantId))
+        .orderBy(patientsTable.id);
+      const patientIds = new Set(patients.map((p) => p.id));
+      const imagesRaw  = await db.select().from(imagesTable).orderBy(imagesTable.id);
+      const images     = imagesRaw.filter((img) => img.patientId != null && patientIds.has(img.patientId));
+      const users    = await db.select().from(usersTable)
+        .where(eq(usersTable.tenantId, tenantId))
+        .orderBy(usersTable.id);
       const settings = await db.select().from(settingsTable);
 
       const zip = new AdmZip();

@@ -749,11 +749,11 @@
     },
     "roles": {
       "heading": "Funções de Usuário",
-      "body": "O Max7 Vista suporta três funções: Usuário (pode visualizar, capturar e editar/excluir apenas as imagens que enviou, e pode criar — mas não editar ou excluir — traçados cefalométricos), Médico (pode gerenciar pacientes, registros clínicos, modelos, apresentações e documentos dentro de sua organização) e Superadministrador (acesso completo ao sistema em todos os tenants, incluindo gerenciamento de usuários, registro de auditoria, controle de acesso por paciente e ferramentas de integridade do sistema)."
+      "body": "O Max7 Vista suporta três funções, todas restritas a uma única organização: Usuário (pode visualizar, capturar e editar/excluir apenas as imagens que enviou, e pode criar — mas não editar ou excluir — traçados cefalométricos), Médico (pode gerenciar pacientes, registros clínicos, modelos, apresentações e documentos dentro de sua organização) e Superadministrador (acesso administrativo completo apenas dentro de sua própria organização, incluindo gerenciamento de usuários, registro de auditoria, controle de acesso por paciente e ferramentas de integridade do sistema). Funções entre organizações, como faturamento, assinaturas e ativação ou desativação de organizações, são reservadas para uma função separada de proprietário do sistema, não disponível ao Superadministrador de nenhuma organização."
     },
     "tenants": {
       "heading": "Configuração Multitenant",
-      "body": "Cada organização que usa o Max7 Vista opera como um tenant independente. Os dados são completamente isolados entre tenants. Os Superadministradores podem criar e gerenciar tenants e usuários em todas as organizações, enquanto os Médicos gerenciam os dados clínicos de sua própria organização (pacientes, modelos, apresentações, documentos)."
+      "body": "Cada organização que usa o Max7 Vista opera como um tenant independente. Os dados são completamente isolados entre tenants. Um Superadministrador só pode criar e gerenciar usuários dentro de sua própria organização — ele não pode ver nem gerenciar usuários ou dados de outros tenants. Os Médicos gerenciam os dados clínicos de sua própria organização (pacientes, modelos, apresentações, documentos). A criação de novos tenants e a administração entre organizações (faturamento, assinaturas, ativação/desativação de tenants) é feita fora do aplicativo pelo proprietário do sistema."
     },
     "presentations": {
       "heading": "Apresentações",
