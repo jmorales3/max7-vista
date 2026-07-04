@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BookOpen, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,11 +57,20 @@ const SECTIONS: SectionKey[] = [
 export default function Manual() {
   const { t } = useTranslation();
   const [active, setActive] = useState<SectionKey>("overview");
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const handleSelect = (key: SectionKey) => {
     setActive(key);
+    const viewport = scrollAreaRef.current?.querySelector<HTMLElement>(
+      "[data-radix-scroll-area-viewport]"
+    );
     const el = document.getElementById(`manual-section-${key}`);
-    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (viewport && el) {
+      const viewportRect = viewport.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      const offset = elRect.top - viewportRect.top + viewport.scrollTop;
+      viewport.scrollTo({ top: offset, behavior: "smooth" });
+    }
   };
 
   return (
@@ -105,7 +114,7 @@ export default function Manual() {
         </Card>
 
         <Card className="flex-1">
-          <ScrollArea className="h-[calc(100vh-280px)]">
+          <ScrollArea className="h-[calc(100vh-280px)]" ref={scrollAreaRef}>
             <div className="p-6 space-y-8">
               {SECTIONS.map((key) => (
                 <section
