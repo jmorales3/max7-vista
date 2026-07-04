@@ -22,5 +22,7 @@ export interface Patient {
   legalHoldReason?: string | null;
   /** @nullable */
   legalHoldSetAt?: string | null;
+  /** @nullable */
+  profileImageId?: number | null;
   tags?: PatientTagsItem[];
 }

@@ -678,6 +678,8 @@ components:
           type: ["string", "null"]
         legalHoldSetAt:
           type: ["string", "null"]
+        profileImageId:
+          type: ["integer", "null"]
         tags:
           type: array
           items:
@@ -741,6 +743,8 @@ components:
           type: string
         notes:
           type: string
+        profileImageId:
+          type: ["integer", "null"]
 
     Image:
       type: object

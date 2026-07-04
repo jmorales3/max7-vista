@@ -36,6 +36,7 @@ export const ListPatientsResponseItem = zod.object({
   "legalHold": zod.boolean().optional(),
   "legalHoldReason": zod.string().nullish(),
   "legalHoldSetAt": zod.string().nullish(),
+  "profileImageId": zod.number().nullish(),
   "tags": zod.array(zod.object({
   "id": zod.number(),
   "name": zod.string()
@@ -77,6 +78,7 @@ export const GetPatientResponse = zod.object({
   "legalHold": zod.boolean().optional(),
   "legalHoldReason": zod.string().nullish(),
   "legalHoldSetAt": zod.string().nullish(),
+  "profileImageId": zod.number().nullish(),
   "tags": zod.array(zod.object({
   "id": zod.number(),
   "name": zod.string()
@@ -99,7 +101,8 @@ export const UpdatePatientBody = zod.object({
   "name": zod.string().min(1).optional(),
   "patientCode": zod.string().min(1).optional(),
   "dateOfBirth": zod.string().optional(),
-  "notes": zod.string().optional()
+  "notes": zod.string().optional(),
+  "profileImageId": zod.number().nullish()
 })
 
 export const UpdatePatientResponse = zod.object({
@@ -113,6 +116,7 @@ export const UpdatePatientResponse = zod.object({
   "legalHold": zod.boolean().optional(),
   "legalHoldReason": zod.string().nullish(),
   "legalHoldSetAt": zod.string().nullish(),
+  "profileImageId": zod.number().nullish(),
   "tags": zod.array(zod.object({
   "id": zod.number(),
   "name": zod.string()
