@@ -305,7 +305,7 @@ router.post("/images/upload-url", async (req, res): Promise<void> => {
 router.post("/images/register", async (req, res): Promise<void> => {
   try {
   const tenantId = tid(req);
-  const { objectName, fileName, mimeType, patientId: rawPatientId, notes, capturedAt: rawCapturedAt, sha256: rawSha256 } = req.body ?? {};
+  const { objectName, fileName, mimeType, patientId: rawPatientId, notes, capturedAt: rawCapturedAt, sha256: rawSha256, derivedFromImageId: rawDerivedFromImageId } = req.body ?? {};
 
   if (!objectName || typeof objectName !== "string") {
     res.status(400).json({ error: "objectName is required" });
@@ -320,6 +320,7 @@ router.post("/images/register", async (req, res): Promise<void> => {
   const capturedAt = rawCapturedAt ? new Date(rawCapturedAt) : new Date();
   const filePath = toGcsPath(objectName);
   const sha256 = typeof rawSha256 === "string" && rawSha256.length === 64 ? rawSha256 : null;
+  const derivedFromImageId = rawDerivedFromImageId != null ? parseInt(String(rawDerivedFromImageId), 10) : null;
 
   // Verify patient belongs to this tenant
   let patientName: string | null = null;
@@ -353,10 +354,11 @@ router.post("/images/register", async (req, res): Promise<void> => {
       isUnassigned: patientId === null,
       sha256,
       uploadedBy: req.session?.userId ?? null,
+      derivedFromImageId,
     })
     .returning();
 
-  logAudit(req, "image_upload", "image", image.id, { fileName, patientId }, { patientId: patientId ?? null });
+  logAudit(req, "image_upload", "image", image.id, { fileName, patientId, derivedFromImageId }, { patientId: patientId ?? null });
   res.status(201).json(buildImageRow({ ...image, patientName, patientCode }));
   } catch (err: any) {
     if (err.status === 403) { res.status(403).json({ error: err.message }); return; }

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Link, useRoute, useLocation } from "wouter";
+import { Link, useRoute, useLocation, useSearch } from "wouter";
 import { useTranslation } from "react-i18next";
 import { uploadPatientImage } from "@/lib/upload";
 import {
@@ -16,6 +16,8 @@ import {
   useListPresentations,
   useCreatePresentation,
   useUpdatePresentation,
+  useGetPresentation,
+  getGetPresentationQueryKey,
   getListPresentationsQueryKey,
 } from "@workspace/api-client-react";
 import {
@@ -93,7 +95,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { type Slide } from "@/components/PresentationBuilder";
+import { type Slide, type SlideImageField } from "@/components/PresentationBuilder";
 
 type Tool = "pointer" | "pen" | "text" | "eraser" | "crop" | "arrow" | "circle" | "straightline" | "select" | "eyedropper" | "hand" | "smooth" | "ruler" | "angle" | "overlay";
 
@@ -494,7 +496,17 @@ export default function Editor() {
   const [, params] = useRoute("/editor/:id");
   const id = parseInt(params?.id || "0", 10);
   const [, setLocation] = useLocation();
+  const search = useSearch();
   const { toast } = useToast();
+
+  const searchParams = new URLSearchParams(search);
+  const editPresentationId = searchParams.get("presentationId");
+  const editSlideIndexRaw = searchParams.get("slideIndex");
+  const editField = searchParams.get("field") as SlideImageField | null;
+  const isPresentationEditMode = !!editPresentationId && editSlideIndexRaw !== null && !!editField;
+  const editPresentationIdNum = editPresentationId ? parseInt(editPresentationId, 10) : 0;
+  const editSlideIndex = editSlideIndexRaw !== null ? parseInt(editSlideIndexRaw, 10) : -1;
+  const [isSavingPresentationCopy, setIsSavingPresentationCopy] = useState(false);
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showSaveOverlayDialog, setShowSaveOverlayDialog] = useState(false);
@@ -694,6 +706,9 @@ export default function Editor() {
     { patientId: image?.patientId },
     { query: { enabled: !!image?.patientId, queryKey: getListPresentationsQueryKey({ patientId: image?.patientId }) } },
   );
+  const { data: editPresentation } = useGetPresentation(editPresentationIdNum, {
+    query: { enabled: isPresentationEditMode, queryKey: getGetPresentationQueryKey(editPresentationIdNum) },
+  });
   const createPresentation = useCreatePresentation();
   const updatePresentation = useUpdatePresentation();
 
@@ -2193,6 +2208,51 @@ export default function Editor() {
     }, "image/png");
   }
 
+  async function handleSaveToPresentationCopy() {
+    const img = imgRef.current;
+    if (!img || !image?.patientId || !editPresentation || !editField || editSlideIndex < 0) {
+      toast({ variant: "destructive", title: t("editor.canvasNotReady") });
+      return;
+    }
+
+    setIsSavingPresentationCopy(true);
+    try {
+      const blob = await renderFlatBlob();
+      if (!blob) throw new Error("Failed to export canvas");
+
+      const file = new File([blob], "edited.png", { type: "image/png" });
+      const result = await uploadPatientImage(file, image.patientId, notes || undefined, undefined, id);
+
+      const currentSlides = ((editPresentation.slides as Slide[] | undefined) ?? []).slice();
+      const targetSlide = currentSlides[editSlideIndex];
+      if (!targetSlide) throw new Error("Slide no longer exists in this presentation");
+      const updatedSlide = { ...(targetSlide as any), [editField]: result.id };
+      currentSlides[editSlideIndex] = updatedSlide;
+
+      await updatePresentation.mutateAsync({
+        id: editPresentationIdNum,
+        data: { title: editPresentation.title, slides: currentSlides },
+      });
+
+      queryClient.invalidateQueries({ queryKey: getListPresentationsQueryKey() });
+      queryClient.invalidateQueries({ queryKey: getGetPresentationQueryKey(editPresentationIdNum) });
+
+      toast({
+        title: t("presentation.presentationEditSaved"),
+        description: t("presentation.presentationEditSavedDesc"),
+      });
+      setLocation(`/presentations`);
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: t("editor.saveFailed"),
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setIsSavingPresentationCopy(false);
+    }
+  }
+
   async function handleSaveAsCopy() {
     const img = imgRef.current;
     if (!img || !image?.patientId) {
@@ -2654,36 +2714,40 @@ export default function Editor() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {!isPresentationEditMode && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8"
+              onClick={() => setShowDeleteDialog(true)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+          {!isPresentationEditMode && (
+            <Button
+              variant="outline"
+              onClick={handleSaveAsCopy}
+              disabled={isSaving || isSavingCopy || !image?.patientId}
+              size="sm"
+              className="h-8"
+              title={t("editor.saveAsCopy")}
+            >
+              {isSavingCopy ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Copy className="h-4 w-4 mr-2" />
+              )}
+              {t("editor.saveAsCopy")}
+            </Button>
+          )}
           <Button
-            variant="ghost"
-            size="icon"
-            className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8"
-            onClick={() => setShowDeleteDialog(true)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleSaveAsCopy}
-            disabled={isSaving || isSavingCopy || !image?.patientId}
+            onClick={isPresentationEditMode ? handleSaveToPresentationCopy : handleSave}
+            disabled={isSaving || isSavingCopy || isSavingPresentationCopy}
             size="sm"
             className="h-8"
-            title={t("editor.saveAsCopy")}
           >
-            {isSavingCopy ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Copy className="h-4 w-4 mr-2" />
-            )}
-            {t("editor.saveAsCopy")}
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={isSaving || isSavingCopy}
-            size="sm"
-            className="h-8"
-          >
-            {isSaving ? (
+            {isSaving || isSavingPresentationCopy ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
             ) : (
               <Save className="h-4 w-4 mr-2" />
@@ -2692,6 +2756,12 @@ export default function Editor() {
           </Button>
         </div>
       </div>
+
+      {isPresentationEditMode && (
+        <div className="px-4 py-2 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-900 text-xs text-amber-800 dark:text-amber-300">
+          {t("presentation.presentationEditBanner")}
+        </div>
+      )}
 
       {/* Overlay secondary toolbar */}
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import {
   useListPresentations, getListPresentationsQueryKey,
@@ -37,6 +38,11 @@ type Mode = "list" | "select-tags" | "select-patients" | "builder";
 export default function Presentations() {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+
+  function handleEditSlideImage(presentationId: number, imageId: number, field: string, slideIndex: number) {
+    setLocation(`/editor/${imageId}?presentationId=${presentationId}&slideIndex=${slideIndex}&field=${field}`);
+  }
 
   const [mode, setMode] = useState<Mode>("list");
   const [editingPresentation, setEditingPresentation] = useState<ApiPresentation | null>(null);
@@ -356,6 +362,11 @@ export default function Presentations() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
         }
+        onEditSlideImage={
+          editingPresentation && editingPresentation.patientId == null
+            ? (imageId, field, slideIndex) => handleEditSlideImage(editingPresentation.id, imageId, field, slideIndex)
+            : undefined
+        }
       />
     );
   }
@@ -481,6 +492,11 @@ export default function Presentations() {
             initialTitle={openViewer.title}
             groupByPatient
             headerLeft={null}
+            onEditSlideImage={
+              openViewer.patientId == null
+                ? (imageId, field, slideIndex) => handleEditSlideImage(openViewer.id, imageId, field, slideIndex)
+                : undefined
+            }
           />
         </div>
       )}

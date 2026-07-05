@@ -23,4 +23,6 @@ export interface Image {
   capturedAt: string;
   createdAt: string;
   isUnassigned?: boolean;
+  /** @nullable */
+  derivedFromImageId?: number | null;
 }

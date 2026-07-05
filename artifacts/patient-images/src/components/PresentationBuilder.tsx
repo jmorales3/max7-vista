@@ -9,6 +9,8 @@ import {
   ArrowLeftRight, ChevronsLeftRight, Camera, Save, Pencil, Check, Layers,
 } from "lucide-react";
 
+export type SlideImageField = "imageId" | "beforeId" | "afterId" | "baseId" | "overlayId";
+
 export type SingleSlide = { type: "single"; imageId: number };
 export type CompareSlide = { type: "compare"; beforeId: number; afterId: number };
 export type SuperimposeSlide = {
@@ -204,6 +206,7 @@ export interface PresentationBuilderProps {
   onSave?: (title: string, slides: Slide[]) => void;
   headerLeft?: React.ReactNode;
   groupByPatient?: boolean;
+  onEditSlideImage?: (imageId: number, field: SlideImageField, slideIndex: number) => void;
 }
 
 export function PresentationBuilder({
@@ -216,6 +219,7 @@ export function PresentationBuilder({
   onSave,
   headerLeft,
   groupByPatient = false,
+  onEditSlideImage,
 }: PresentationBuilderProps) {
   const { t } = useTranslation();
 
@@ -487,6 +491,9 @@ export function PresentationBuilder({
               {slides.map((slide, idx) => {
                 const mainId = (slide.type === "single" || slide.type === "video") ? slide.imageId : slide.type === "compare" ? slide.beforeId : slide.baseId;
                 const secondId = slide.type === "compare" ? slide.afterId : slide.type === "superimpose" ? slide.overlayId : null;
+                const mainField: SlideImageField = slide.type === "compare" ? "beforeId" : slide.type === "superimpose" ? "baseId" : "imageId";
+                const secondField: SlideImageField | null = slide.type === "compare" ? "afterId" : slide.type === "superimpose" ? "overlayId" : null;
+                const canEditImages = !!onEditSlideImage && slide.type !== "video";
                 const isPairing = pairingSlideIdx === idx;
                 return (
                   <div key={idx}>
@@ -494,11 +501,21 @@ export function PresentationBuilder({
                       <CardContent className="p-2 flex items-center gap-2">
                         <span className="text-xs font-bold text-muted-foreground w-5 text-center shrink-0">{idx + 1}</span>
                         <div className="flex items-center gap-1 shrink-0">
-                          <div className="w-14 h-10 rounded-md overflow-hidden bg-muted flex items-center justify-center">
+                          <div className="relative w-14 h-10 rounded-md overflow-hidden bg-muted flex items-center justify-center group">
                             {slide.type === "video" ? (
                               <video src={`/api/library-assets/${mainId}/file`} className="w-full h-full object-cover" muted preload="metadata" />
                             ) : (
                               <img src={imageUrl(mainId)} className="w-full h-full object-cover" />
+                            )}
+                            {canEditImages && (
+                              <button
+                                type="button"
+                                onClick={() => onEditSlideImage!(mainId, mainField, idx)}
+                                className="absolute inset-0 bg-black/0 hover:bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                                title={t("presentation.editSlideImage")}
+                              >
+                                <Pencil className="h-3.5 w-3.5 text-white" />
+                              </button>
                             )}
                           </div>
                           {secondId && (
@@ -508,8 +525,18 @@ export function PresentationBuilder({
                               ) : (
                                 <Layers className="h-3 w-3 text-violet-500" />
                               )}
-                              <div className={`w-14 h-10 rounded-md overflow-hidden bg-muted ${slide.type === "superimpose" ? "opacity-70" : ""}`}>
+                              <div className={`relative w-14 h-10 rounded-md overflow-hidden bg-muted ${slide.type === "superimpose" ? "opacity-70" : ""}`}>
                                 <img src={imageUrl(secondId)} className="w-full h-full object-cover" />
+                                {canEditImages && secondField && (
+                                  <button
+                                    type="button"
+                                    onClick={() => onEditSlideImage!(secondId, secondField, idx)}
+                                    className="absolute inset-0 bg-black/0 hover:bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                                    title={t("presentation.editSlideImage")}
+                                  >
+                                    <Pencil className="h-3.5 w-3.5 text-white" />
+                                  </button>
+                                )}
                               </div>
                             </>
                           )}

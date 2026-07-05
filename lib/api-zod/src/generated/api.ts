@@ -297,7 +297,8 @@ export const ListPatientImagesResponseItem = zod.object({
   "annotation": zod.string().nullish(),
   "capturedAt": zod.string(),
   "createdAt": zod.string(),
-  "isUnassigned": zod.boolean().optional()
+  "isUnassigned": zod.boolean().optional(),
+  "derivedFromImageId": zod.number().nullish()
 })
 export const ListPatientImagesResponse = zod.array(ListPatientImagesResponseItem)
 
@@ -321,7 +322,8 @@ export const ReorderImagesResponseItem = zod.object({
   "annotation": zod.string().nullish(),
   "capturedAt": zod.string(),
   "createdAt": zod.string(),
-  "isUnassigned": zod.boolean().optional()
+  "isUnassigned": zod.boolean().optional(),
+  "derivedFromImageId": zod.number().nullish()
 })
 export const ReorderImagesResponse = zod.array(ReorderImagesResponseItem)
 
@@ -348,7 +350,8 @@ export const ListImagesResponseItem = zod.object({
   "annotation": zod.string().nullish(),
   "capturedAt": zod.string(),
   "createdAt": zod.string(),
-  "isUnassigned": zod.boolean().optional()
+  "isUnassigned": zod.boolean().optional(),
+  "derivedFromImageId": zod.number().nullish()
 })
 export const ListImagesResponse = zod.array(ListImagesResponseItem)
 
@@ -390,7 +393,8 @@ export const GetImageResponse = zod.object({
   "annotation": zod.string().nullish(),
   "capturedAt": zod.string(),
   "createdAt": zod.string(),
-  "isUnassigned": zod.boolean().optional()
+  "isUnassigned": zod.boolean().optional(),
+  "derivedFromImageId": zod.number().nullish()
 })
 
 
@@ -417,7 +421,8 @@ export const UpdateImageResponse = zod.object({
   "annotation": zod.string().nullish(),
   "capturedAt": zod.string(),
   "createdAt": zod.string(),
-  "isUnassigned": zod.boolean().optional()
+  "isUnassigned": zod.boolean().optional(),
+  "derivedFromImageId": zod.number().nullish()
 })
 
 
@@ -451,7 +456,8 @@ export const ReplaceImageFileResponse = zod.object({
   "annotation": zod.string().nullish(),
   "capturedAt": zod.string(),
   "createdAt": zod.string(),
-  "isUnassigned": zod.boolean().optional()
+  "isUnassigned": zod.boolean().optional(),
+  "derivedFromImageId": zod.number().nullish()
 })
 
 

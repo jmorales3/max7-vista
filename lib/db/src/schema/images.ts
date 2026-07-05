@@ -17,6 +17,7 @@ export const imagesTable = pgTable("images", {
   sha256: text("sha256"),
   sortOrder: integer("sort_order"),
   uploadedBy: integer("uploaded_by"),
+  derivedFromImageId: integer("derived_from_image_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

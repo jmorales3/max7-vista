@@ -772,6 +772,8 @@ components:
           type: string
         isUnassigned:
           type: boolean
+        derivedFromImageId:
+          type: ["integer", "null"]
 
     ExportImagesZipInput:
       type: object

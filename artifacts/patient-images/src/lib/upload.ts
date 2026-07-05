@@ -50,6 +50,7 @@ export async function uploadPatientImage(
   patientId: number,
   notes?: string,
   capturedAt?: string,
+  derivedFromImageId?: number,
 ) {
   let uploadBlob: Blob = file;
   let mimeType = file.type || "image/jpeg";
@@ -115,6 +116,7 @@ export async function uploadPatientImage(
       notes,
       capturedAt: capturedAt ?? new Date().toISOString(),
       sha256,
+      derivedFromImageId,
     }),
     signal: AbortSignal.timeout(30_000),
   });
