@@ -1884,4 +1884,31 @@ Key behavior changes from the prior model:
 
 ---
 
+## FEAT-023 — Presentation Copy-Edit Redirect Fix + Naming/Loading UX
+
+**Status:** ✅ Confirmed working in Vista (e2e tested with disposable test user + fixture data)
+**Date:** 2026-07-05
+**Vista files:**
+- `artifacts/patient-images/src/pages/editor.tsx` — reads a `returnTo` query param and redirects there (falling back to `/presentations`) after a successful presentation-copy save via `handleSaveToPresentationCopy`
+- `artifacts/patient-images/src/pages/presentation.tsx` — passes an encoded `returnTo=/presentation/:id?load=:presentationId` when opening the editor from a slide's edit-pencil icon; added `?load=<id>` query param support to restore `activePresentationId` on mount; added a numeric badge on the "Load" dropdown trigger showing the saved-presentation count, with the active item highlighted
+- `artifacts/patient-images/src/pages/presentations.tsx` — passes `returnTo=/presentations?builder=<id>` or `?view=<id>` depending on caller (builder mode vs. inline list-mode viewer); added matching `?builder=<id>`/`?view=<id>` restore-on-mount logic
+- `artifacts/patient-images/src/components/PresentationBuilder.tsx` — replaced the silent "Untitled" fallback with required-title validation (`attemptSave()` blocks save, shows an inline error + destructive toast, and auto-opens the title editor when the title is blank)
+- `artifacts/patient-images/src/i18n/locales/{en,es,fr,pt}.json` — new keys: `titleRequired`, `titlePlaceholder`, `savedCount`/`savedCount_other`, `contextWithSavedHint`/`contextWithSavedHint_other`
+
+### What it does
+Two related fixes to the presentation feature:
+
+1. **Redirect bug fix:** Previously, editing an image as a "save as copy" from inside a single-patient presentation's slide always redirected back to the generic `/presentations` hub after saving, losing the user's place. Now a `returnTo` URL is threaded through from wherever the editor was opened (a specific presentation, or the builder/viewer on the presentations hub) so the user lands back exactly where they started, with the relevant presentation still loaded.
+2. **Naming/loading UX:** (a) Presentations can no longer be saved with a blank title — the Save action is blocked, the title field shows an inline error, and a destructive toast explains why, until a title is entered. (b) The "Load" dropdown for a patient's saved presentations now shows a small numeric badge with the count of saved presentations, and highlights whichever one is currently active, making it obvious at a glance when a patient has more than one saved presentation (previously this was easy to miss).
+
+### Testing note (useful for Max7 agent's own e2e verification)
+When wiring up a fixture presentation slide for automated testing, verify the referenced image ID is actually an image (not a video) — a video row silently fails to fire `<img onload>` with no error, producing a misleading "canvas not ready" failure that looks like an app bug but is actually a bad fixture. Confirm the file's content-type before trusting an arbitrary DB row ID.
+
+### Notes for Max7 agent
+- If Max7's own presentation/slide-editor flow has a similar "edit this slide's image" pathway that routes through a shared image editor, check for the same class of bug: any editor entry point reached from more than one place needs to know where to return to (a `returnTo`-style param, or equivalent), rather than hardcoding a single default destination.
+- The saved-presentation-count badge is a low-risk, high-clarity UX addition — worth porting even independently of the redirect fix if Max7 has any "load a previously saved X" dropdown/list where multiplicity is currently invisible.
+- The required-title validation pattern (block save + inline error + auto-open the title editor) is a good generic template for any "must be named to save" entity in Max7, not just presentations.
+
+---
+
 <!-- Add new entries below as features are confirmed in Vista -->
