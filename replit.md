@@ -34,7 +34,7 @@ _Describe the high-level user-facing capabilities of this app once they exist._
 
 ## User preferences
 
-- **Every new feature must be reflected in three places**: (1) the chatbot system prompt (`artifacts/api-server/src/routes/chat.ts`), (2) the in-app instruction manual (`manual.sections` + `manual.<section>` keys in all four locale files), and (3) all four translation files (EN, ES, FR, PT) at `artifacts/patient-images/src/i18n/locales/`.
+- **Every new feature must be reflected in five places**: (1) the chatbot system prompt (`artifacts/api-server/src/routes/chat.ts`), (2) the in-app instruction manual (`manual.sections` + `manual.<section>` keys in all four locale files), (3) all four translation files (EN, ES, FR, PT) at `artifacts/patient-images/src/i18n/locales/`, (4) the GitHub build (the project's CI/release build pipeline), and (5) a set of instructions the user will hand off to the "Max7 agent" to carry out the equivalent change on the Max7 side. When wrapping up a feature, proactively remind the user of any of these five that haven't been addressed yet, and draft the Max7 agent instructions when the feature is otherwise complete.
 
 ## Gotchas
 
