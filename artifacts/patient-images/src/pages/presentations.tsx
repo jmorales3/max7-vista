@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -40,12 +40,17 @@ export default function Presentations() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const search = useSearch();
+  const restoreParams = useMemo(() => new URLSearchParams(search), [search]);
+  const restoreBuilderId = restoreParams.get("builder");
+  const restoreViewId = restoreParams.get("view");
 
-  function handleEditSlideImage(presentationId: number, imageId: number, field: string, slideIndex: number) {
-    setLocation(`/editor/${imageId}?presentationId=${presentationId}&slideIndex=${slideIndex}&field=${field}`);
+  function handleEditSlideImage(presentationId: number, imageId: number, field: string, slideIndex: number, viewer?: boolean) {
+    const returnTo = encodeURIComponent(`/presentations?${viewer ? "view" : "builder"}=${presentationId}`);
+    setLocation(`/editor/${imageId}?presentationId=${presentationId}&slideIndex=${slideIndex}&field=${field}&returnTo=${returnTo}`);
   }
 
-  const [mode, setMode] = useState<Mode>("list");
+  const [mode, setMode] = useState<Mode>(restoreBuilderId ? "builder" : "list");
   const [editingPresentation, setEditingPresentation] = useState<ApiPresentation | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ApiPresentation | null>(null);
@@ -105,6 +110,22 @@ export default function Presentations() {
     () => new Set((libraryAssets as { id: number }[]).map((a) => a.id)),
     [libraryAssets],
   );
+
+  useEffect(() => {
+    if (restoreBuilderId && presentations.length > 0 && !editingPresentation) {
+      const found = presentations.find((p) => p.id === parseInt(restoreBuilderId, 10));
+      if (found) {
+        setEditingPresentation(found as ApiPresentation);
+        setIsSaved(true);
+        setMode("builder");
+      }
+    }
+    if (restoreViewId && presentations.length > 0 && !openViewer) {
+      const found = presentations.find((p) => p.id === parseInt(restoreViewId, 10));
+      if (found) setOpenViewer(found as ApiPresentation);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restoreBuilderId, restoreViewId, presentations]);
 
   const patientMap = new Map((patients as any[]).map((p: any) => [p.id, p.name as string]));
 
@@ -377,7 +398,7 @@ export default function Presentations() {
         }
         onEditSlideImage={
           editingPresentation
-            ? (imageId, field, slideIndex) => handleEditSlideImage(editingPresentation.id, imageId, field, slideIndex)
+            ? (imageId, field, slideIndex) => handleEditSlideImage(editingPresentation.id, imageId, field, slideIndex, false)
             : undefined
         }
         isCrossPatient={!editingPresentation || editingPresentation.patientId == null}
@@ -508,7 +529,7 @@ export default function Presentations() {
             groupByPatient
             headerLeft={null}
             onEditSlideImage={
-              (imageId, field, slideIndex) => handleEditSlideImage(openViewer.id, imageId, field, slideIndex)
+              (imageId, field, slideIndex) => handleEditSlideImage(openViewer.id, imageId, field, slideIndex, true)
             }
             isCrossPatient={openViewer.patientId == null}
             libraryAssetIds={libraryAssetIds}

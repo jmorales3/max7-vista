@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 import {
   ChevronLeft, ChevronRight, Play, X, ArrowUp, ArrowDown,
   ArrowLeftRight, ChevronsLeftRight, Camera, Save, Pencil, Check, Layers,
@@ -229,16 +230,32 @@ export function PresentationBuilder({
   libraryAssetIds,
 }: PresentationBuilderProps) {
   const { t } = useTranslation();
+  const { toast } = useToast();
 
   const [slides, setSlides] = useState<Slide[]>(initialSlides);
   const [pairingSlideIdx, setPairingSlideIdx] = useState<number | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [title, setTitle] = useState(initialTitle);
-  const [editingTitle, setEditingTitle] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(!initialTitle);
+  const [titleError, setTitleError] = useState(false);
 
   useEffect(() => { setSlides(initialSlides); }, [JSON.stringify(initialSlides)]);
-  useEffect(() => { setTitle(initialTitle); }, [initialTitle]);
+  useEffect(() => {
+    setTitle(initialTitle);
+    setEditingTitle(!initialTitle);
+    setTitleError(false);
+  }, [initialTitle]);
+
+  function attemptSave() {
+    if (!title.trim()) {
+      setTitleError(true);
+      setEditingTitle(true);
+      toast({ variant: "destructive", title: t("presentation.titleRequired") });
+      return;
+    }
+    onSave?.(title.trim(), slides);
+  }
 
   const imageUrl = (id: number) => `/api/images/${id}/file`;
 
@@ -391,18 +408,32 @@ export function PresentationBuilder({
         {headerLeft}
         <div className="flex-1 min-w-0 flex items-center gap-2">
           {editingTitle ? (
-            <div className="flex items-center gap-2">
-              <Input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="h-8 text-sm font-semibold w-56"
-                autoFocus
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") setEditingTitle(false); }}
-                onBlur={() => setEditingTitle(false)}
-              />
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingTitle(false)}>
-                <Check className="h-4 w-4" />
-              </Button>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <Input
+                  value={title}
+                  onChange={(e) => { setTitle(e.target.value); if (e.target.value.trim()) setTitleError(false); }}
+                  placeholder={t("presentation.titlePlaceholder")}
+                  className={`h-8 text-sm font-semibold w-56 ${titleError ? "border-destructive ring-1 ring-destructive/40" : ""}`}
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") { if (title.trim()) { setEditingTitle(false); setTitleError(false); } else setTitleError(true); }
+                    if (e.key === "Escape" && title.trim()) setEditingTitle(false);
+                  }}
+                  onBlur={() => { if (title.trim()) setEditingTitle(false); }}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => { if (title.trim()) setEditingTitle(false); else setTitleError(true); }}
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+              </div>
+              {titleError && (
+                <p className="text-xs text-destructive font-medium">{t("presentation.titleRequired")}</p>
+              )}
             </div>
           ) : (
             <div className="flex items-center gap-2 min-w-0">
@@ -418,7 +449,7 @@ export function PresentationBuilder({
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {onSave && (
-            <Button variant="outline" onClick={() => onSave(title || t("presentation.untitled"), slides)} disabled={isSaving || slides.length === 0}>
+            <Button variant="outline" onClick={attemptSave} disabled={isSaving || slides.length === 0}>
               <Save className="h-4 w-4 mr-2" />
               {isSaved ? t("presentation.saved") : t("presentation.save")}
             </Button>

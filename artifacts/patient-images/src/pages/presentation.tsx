@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Link, useRoute, useLocation } from "wouter";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useRoute, useLocation, useSearch } from "wouter";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -27,9 +27,13 @@ export default function PatientPresentation() {
   const [, setLocation] = useLocation();
   const [, params] = useRoute("/presentation/:id");
   const patientId = parseInt(params?.id || "0", 10);
+  const search = useSearch();
+  const loadIdParam = new URLSearchParams(search).get("load");
 
-  const [activePresentationId, setActivePresentationId] = useState<number | null>(null);
-  const [isSaved, setIsSaved] = useState(false);
+  const [activePresentationId, setActivePresentationId] = useState<number | null>(
+    loadIdParam ? parseInt(loadIdParam, 10) : null,
+  );
+  const [isSaved, setIsSaved] = useState(!!loadIdParam);
 
   const { data: patient, isLoading: patientLoading } = useGetPatient(patientId, {
     query: { enabled: !!patientId, queryKey: getGetPatientQueryKey(patientId) },
@@ -58,7 +62,8 @@ export default function PatientPresentation() {
   );
 
   function handleEditSlideImage(presentationId: number, imageId: number, field: string, slideIndex: number) {
-    setLocation(`/editor/${imageId}?presentationId=${presentationId}&slideIndex=${slideIndex}&field=${field}`);
+    const returnTo = encodeURIComponent(`/presentation/${patientId}?load=${presentationId}`);
+    setLocation(`/editor/${imageId}?presentationId=${presentationId}&slideIndex=${slideIndex}&field=${field}&returnTo=${returnTo}`);
   }
 
   const createPresentation = useCreatePresentation({
@@ -133,7 +138,11 @@ export default function PatientPresentation() {
       images={pickerImages}
       initialSlides={(activePresentation?.slides as Slide[] | undefined) ?? []}
       initialTitle={activePresentation?.title ?? ""}
-      contextLabel={patient?.name}
+      contextLabel={
+        !activePresentationId && savedPresentations.length > 0
+          ? t("presentation.contextWithSavedHint", { name: patient?.name, count: savedPresentations.length })
+          : patient?.name
+      }
       isSaving={createPresentation.isPending || updatePresentation.isPending}
       isSaved={isSaved}
       onSave={handleSave}
@@ -159,9 +168,15 @@ export default function PatientPresentation() {
                 <Button variant="outline" size="sm" className="gap-2 h-8">
                   <FolderOpen className="h-3.5 w-3.5" />
                   {t("presentation.load")}
+                  <span className="bg-primary/15 text-primary rounded-full px-1.5 text-[11px] font-bold leading-4">
+                    {savedPresentations.length}
+                  </span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-64">
+                <p className="px-2 pt-1 pb-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                  {t("presentation.savedCount", { count: savedPresentations.length })}
+                </p>
                 <DropdownMenuItem onClick={newPresentation} className="gap-2">
                   <PlusCircle className="h-4 w-4 text-primary" />
                   {t("presentation.newPresentation")}
@@ -170,10 +185,10 @@ export default function PatientPresentation() {
                 {savedPresentations.map((p) => (
                   <DropdownMenuItem
                     key={p.id}
-                    className="flex items-center justify-between gap-2"
+                    className={`flex items-center justify-between gap-2 ${p.id === activePresentationId ? "bg-primary/10" : ""}`}
                     onClick={() => loadPresentation(p)}
                   >
-                    <span className="truncate flex-1 font-medium">{p.title}</span>
+                    <span className="truncate flex-1 font-medium">{p.title || t("presentation.untitled")}</span>
                     <span className="text-xs text-muted-foreground shrink-0">
                       {format(new Date(p.updatedAt), "MMM d")}
                     </span>

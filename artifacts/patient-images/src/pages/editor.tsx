@@ -503,6 +503,7 @@ export default function Editor() {
   const editPresentationId = searchParams.get("presentationId");
   const editSlideIndexRaw = searchParams.get("slideIndex");
   const editField = searchParams.get("field") as SlideImageField | null;
+  const editReturnTo = searchParams.get("returnTo");
   const isPresentationEditMode = !!editPresentationId && editSlideIndexRaw !== null && !!editField;
   const editPresentationIdNum = editPresentationId ? parseInt(editPresentationId, 10) : 0;
   const editSlideIndex = editSlideIndexRaw !== null ? parseInt(editSlideIndexRaw, 10) : -1;
@@ -2246,7 +2247,7 @@ export default function Editor() {
         title: t("presentation.presentationEditSaved"),
         description: t("presentation.presentationEditSavedDesc"),
       });
-      setLocation(`/presentations`);
+      setLocation(editReturnTo || `/presentations`);
     } catch (err) {
       toast({
         variant: "destructive",
