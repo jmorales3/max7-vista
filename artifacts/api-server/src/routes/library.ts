@@ -4,6 +4,7 @@ import path from "path";
 import { db, imagesTable, tagsTable, libraryAssetTagsTable } from "@workspace/db";
 import { streamFile, streamFileWithRange, deleteFile, isGcsPath, toGcsPath, getSignedUploadUrl } from "../lib/gcsStorage";
 import { logAudit } from "../lib/audit";
+import { findPresentationsReferencingImages, removeImagesFromPresentations } from "../lib/presentationRefs";
 
 const router: IRouter = Router();
 
@@ -142,21 +143,41 @@ router.patch("/library-assets/:id", async (req, res): Promise<void> => {
 });
 
 router.delete("/library-assets/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  const [row] = await db
-    .select()
-    .from(imagesTable)
-    .where(eq(imagesTable.id, id));
-  if (!row || !row.isLibraryAsset) {
-    res.status(404).json({ error: "Library asset not found" });
-    return;
+  try {
+    const tenantId = tid(req);
+    const id = parseInt(req.params.id, 10);
+    const [row] = await db
+      .select()
+      .from(imagesTable)
+      .where(eq(imagesTable.id, id));
+    if (!row || !row.isLibraryAsset) {
+      res.status(404).json({ error: "Library asset not found" });
+      return;
+    }
+
+    const force = req.query.force === "true" || req.query.force === "1";
+    const referencingPresentations = await findPresentationsReferencingImages(tenantId, [id]);
+    if (referencingPresentations.length > 0 && !force) {
+      res.status(409).json({
+        error: "This asset is used in one or more saved presentations. Delete it anyway?",
+        presentations: referencingPresentations,
+      });
+      return;
+    }
+
+    if (isGcsPath(row.filePath)) {
+      try { await deleteFile(row.filePath); } catch (e) { console.warn("Could not delete GCS object:", e); }
+    }
+    await db.delete(imagesTable).where(eq(imagesTable.id, id));
+    if (referencingPresentations.length > 0) {
+      await removeImagesFromPresentations(tenantId, [id]);
+    }
+    logAudit(req, "library_delete", "library_asset", id, { fileName: row.fileName });
+    res.status(204).send();
+  } catch (err: any) {
+    if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
+    res.status(500).json({ error: String(err) });
   }
-  if (isGcsPath(row.filePath)) {
-    try { await deleteFile(row.filePath); } catch (e) { console.warn("Could not delete GCS object:", e); }
-  }
-  await db.delete(imagesTable).where(eq(imagesTable.id, id));
-  logAudit(req, "library_delete", "library_asset", id, { fileName: row.fileName });
-  res.status(204).send();
 });
 
 router.get("/library-assets/:id/file", async (req, res): Promise<void> => {

@@ -92,11 +92,23 @@ async function registerAsset(objectName: string, fileName: string, mimeType: str
   return res.json() as Promise<LibraryAsset>;
 }
 
-async function deleteAsset(id: number) {
-  const res = await fetch(`/api/library-assets/${id}`, {
+class PresentationConflictError extends Error {
+  presentations: { id: number; title: string }[];
+  constructor(presentations: { id: number; title: string }[]) {
+    super("This asset is used in one or more saved presentations.");
+    this.presentations = presentations;
+  }
+}
+
+async function deleteAsset(id: number, force = false) {
+  const res = await fetch(`/api/library-assets/${id}${force ? "?force=true" : ""}`, {
     method: "DELETE",
     credentials: "include",
   });
+  if (res.status === 409) {
+    const body = await res.json().catch(() => ({}));
+    throw new PresentationConflictError(body.presentations ?? []);
+  }
   if (!res.ok && res.status !== 204) throw new Error("Delete failed");
 }
 
@@ -143,6 +155,7 @@ export default function ImageLibrary() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<LibraryAsset | null>(null);
+  const [deleteConflict, setDeleteConflict] = useState<{ id: number; title: string }[] | null>(null);
   const [editTarget, setEditTarget] = useState<LibraryAsset | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editTagIds, setEditTagIds] = useState<Set<number>>(new Set());
@@ -271,17 +284,24 @@ export default function ImageLibrary() {
     [],
   );
 
-  async function confirmDelete() {
+  async function confirmDelete(force = false) {
     if (!deleteTarget) return;
     try {
-      await deleteAsset(deleteTarget.id);
+      await deleteAsset(deleteTarget.id, force);
       await qc.invalidateQueries({ queryKey: LIBRARY_QUERY_KEY });
       setSelected((prev) => { const n = new Set(prev); n.delete(deleteTarget.id); return n; });
       toast({ title: t("library.deleted") });
-    } catch {
+      setDeleteTarget(null);
+      setDeleteConflict(null);
+    } catch (err) {
+      if (err instanceof PresentationConflictError) {
+        setDeleteConflict(err.presentations);
+        return;
+      }
       toast({ variant: "destructive", title: t("common.error") });
+      setDeleteTarget(null);
+      setDeleteConflict(null);
     }
-    setDeleteTarget(null);
   }
 
   async function saveEdit() {
@@ -592,18 +612,36 @@ export default function ImageLibrary() {
       </div>
 
       {/* Delete dialog */}
-      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) { setDeleteTarget(null); setDeleteConflict(null); } }}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t("library.deleteTitle")}</DialogTitle>
-            <DialogDescription>{t("library.deleteDesc")}</DialogDescription>
+            <DialogTitle>
+              {deleteConflict ? t("library.deleteConflictTitle") : t("library.deleteTitle")}
+            </DialogTitle>
+            <DialogDescription>
+              {deleteConflict ? (
+                <>
+                  {t("library.deleteConflictDesc")}
+                  <ul className="mt-2 list-disc list-inside space-y-0.5">
+                    {deleteConflict.map((p) => (
+                      <li key={p.id} className="text-foreground">{p.title}</li>
+                    ))}
+                  </ul>
+                </>
+              ) : (
+                t("library.deleteDesc")
+              )}
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+            <Button variant="outline" onClick={() => { setDeleteTarget(null); setDeleteConflict(null); }}>
               {t("common.cancel")}
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              {t("common.delete")}
+            <Button variant="destructive" onClick={() => confirmDelete(!!deleteConflict)}>
+              {deleteConflict ? t("library.deleteAnyway") : t("common.delete")}
             </Button>
           </DialogFooter>
         </DialogContent>

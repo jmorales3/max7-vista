@@ -19,6 +19,8 @@ import {
   useGetPresentation,
   getGetPresentationQueryKey,
   getListPresentationsQueryKey,
+  ApiError,
+  customFetch,
 } from "@workspace/api-client-react";
 import {
   Select,
@@ -510,6 +512,8 @@ export default function Editor() {
   const [isSavingPresentationCopy, setIsSavingPresentationCopy] = useState(false);
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteConflict, setDeleteConflict] = useState<{ id: number; title: string }[] | null>(null);
+  const [isForceDeletingImage, setIsForceDeletingImage] = useState(false);
   const [showSaveOverlayDialog, setShowSaveOverlayDialog] = useState(false);
   const [saveOverlayPickId, setSaveOverlayPickId] = useState<string>("new");
   const [saveOverlayNewTitle, setSaveOverlayNewTitle] = useState("");
@@ -2116,10 +2120,33 @@ export default function Editor() {
         setLocation(image?.patientId ? `/patients/${image.patientId}` : "/gallery");
       },
       onError: (e) => {
+        if (e instanceof ApiError && e.status === 409) {
+          setDeleteConflict((e.data as { presentations?: { id: number; title: string }[] })?.presentations ?? []);
+          return;
+        }
         toast({ variant: "destructive", title: t("editor.deleteFailed"), description: String(e) });
       },
     },
   });
+
+  async function forceDeleteImage() {
+    setIsForceDeletingImage(true);
+    try {
+      await customFetch(`/api/images/${id}?force=true`, { method: "DELETE" });
+      queryClient.invalidateQueries({ queryKey: getListImagesQueryKey() });
+      if (image?.patientId) {
+        queryClient.invalidateQueries({ queryKey: getListPatientImagesQueryKey(image.patientId) });
+      }
+      toast({ title: t("editor.imageDeleted") });
+      setShowDeleteDialog(false);
+      setDeleteConflict(null);
+      setLocation(image?.patientId ? `/patients/${image.patientId}` : "/gallery");
+    } catch (e) {
+      toast({ variant: "destructive", title: t("editor.deleteFailed"), description: String(e) });
+    } finally {
+      setIsForceDeletingImage(false);
+    }
+  }
 
   /**
    * Renders the image + annotations into an off-screen canvas at the image's
@@ -3554,21 +3581,45 @@ export default function Editor() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <AlertDialog
+        open={showDeleteDialog}
+        onOpenChange={(o) => { setShowDeleteDialog(o); if (!o) setDeleteConflict(null); }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("editor.deleteImage")}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {deleteConflict ? t("library.deleteConflictTitle") : t("editor.deleteImage")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              {t("editor.deleteConfirm")}
+              {deleteConflict ? (
+                <>
+                  {t("library.deleteConflictDesc")}
+                  <ul className="mt-2 list-disc list-inside space-y-0.5">
+                    {deleteConflict.map((p) => (
+                      <li key={p.id} className="text-foreground">{p.title}</li>
+                    ))}
+                  </ul>
+                </>
+              ) : (
+                t("editor.deleteConfirm")
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deleteImage.mutate({ id })}
+              onClick={(e) => {
+                if (deleteConflict) {
+                  e.preventDefault();
+                  forceDeleteImage();
+                } else {
+                  deleteImage.mutate({ id });
+                }
+              }}
+              disabled={isForceDeletingImage}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {t("common.delete")}
+              {deleteConflict ? t("library.deleteAnyway") : t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

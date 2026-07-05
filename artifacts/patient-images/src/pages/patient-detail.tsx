@@ -20,6 +20,7 @@ import {
   useAddPatientTag,
   useRemovePatientTag,
   customFetch,
+  ApiError,
 } from "@workspace/api-client-react";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -116,6 +117,8 @@ export default function PatientDetail() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteConflict, setDeleteConflict] = useState<{ id: number; title: string }[] | null>(null);
+  const [isForceDeletingPatient, setIsForceDeletingPatient] = useState(false);
   const [gridColumns, setGridColumns] = useState<1 | 2 | 4 | 8>(4);
   const [selectedTagId, setSelectedTagId] = useState("");
   const [templateDocOpen, setTemplateDocOpen] = useState(false);
@@ -299,6 +302,10 @@ export default function PatientDetail() {
         setLocation("/patients");
       },
       onError: (e) => {
+        if (e instanceof ApiError && e.status === 409) {
+          setDeleteConflict((e.data as { presentations?: { id: number; title: string }[] })?.presentations ?? []);
+          return;
+        }
         toast({
           variant: "destructive",
           title: t("common.error"),
@@ -307,6 +314,27 @@ export default function PatientDetail() {
       }
     }
   });
+
+  async function forceDeletePatient() {
+    if (!patient) return;
+    setIsForceDeletingPatient(true);
+    try {
+      await customFetch(`/api/patients/${patient.id}?force=true`, { method: "DELETE" });
+      queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
+      toast({ title: t("patients.deletePatient") });
+      setShowDeleteDialog(false);
+      setDeleteConflict(null);
+      setLocation("/patients");
+    } catch (e) {
+      toast({
+        variant: "destructive",
+        title: t("common.error"),
+        description: e instanceof Error ? e.message : t("common.error"),
+      });
+    } finally {
+      setIsForceDeletingPatient(false);
+    }
+  }
 
   const setProfileMutation = useUpdatePatient({
     mutation: {
@@ -914,21 +942,45 @@ export default function PatientDetail() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <AlertDialog
+        open={showDeleteDialog}
+        onOpenChange={(o) => { setShowDeleteDialog(o); if (!o) setDeleteConflict(null); }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("patients.deleteConfirmTitle")}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {deleteConflict ? t("library.deleteConflictTitle") : t("patients.deleteConfirmTitle")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              {t("patients.deleteConfirmDesc", { name: patient.name })}
+              {deleteConflict ? (
+                <>
+                  {t("library.deleteConflictDesc")}
+                  <ul className="mt-2 list-disc list-inside space-y-0.5">
+                    {deleteConflict.map((p) => (
+                      <li key={p.id} className="text-foreground">{p.title}</li>
+                    ))}
+                  </ul>
+                </>
+              ) : (
+                t("patients.deleteConfirmDesc", { name: patient.name })
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => deletePatient.mutate({ id: patient.id })}
+              disabled={isForceDeletingPatient}
+              onClick={(e) => {
+                if (deleteConflict) {
+                  e.preventDefault();
+                  forceDeletePatient();
+                } else {
+                  deletePatient.mutate({ id: patient.id });
+                }
+              }}
             >
-              {t("patients.deletePatient")}
+              {deleteConflict ? t("library.deleteAnyway") : t("patients.deletePatient")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -21,6 +21,7 @@ import { logAudit } from "../lib/audit";
 import { requireRole } from "../middlewares/requireAuth";
 import { uploadToGcs, streamFile, deleteFile, isGcsPath, toGcsPath, getSignedUploadUrl, readFileAsBuffer } from "../lib/gcsStorage";
 import { getAccessiblePatientIds, canAccessPatient } from "../lib/patientAccess";
+import { findPresentationsReferencingImages, removeImagesFromPresentations } from "../lib/presentationRefs";
 
 const router: IRouter = Router();
 
@@ -923,6 +924,16 @@ router.delete("/images/:id", async (req, res): Promise<void> => {
       return;
     }
 
+    const force = req.query.force === "true" || req.query.force === "1";
+    const referencingPresentations = await findPresentationsReferencingImages(tenantId, [params.data.id]);
+    if (referencingPresentations.length > 0 && !force) {
+      res.status(409).json({
+        error: "This image is used in one or more saved presentations. Delete it anyway?",
+        presentations: referencingPresentations,
+      });
+      return;
+    }
+
     const [image] = await db
       .delete(imagesTable)
       .where(eq(imagesTable.id, params.data.id))
@@ -931,6 +942,9 @@ router.delete("/images/:id", async (req, res): Promise<void> => {
     if (!image) { res.status(404).json({ error: "Image not found" }); return; }
 
     await deleteFile(image.filePath);
+    if (referencingPresentations.length > 0) {
+      await removeImagesFromPresentations(tenantId, [image.id]);
+    }
     logAudit(req, "image_delete", "image", params.data.id, { fileName: image.fileName, patientId: image.patientId }, { patientId: image.patientId ?? null });
     res.sendStatus(204);
   } catch (err: any) {
