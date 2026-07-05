@@ -144,6 +144,16 @@ export interface Presentation {
   updatedAt: string;
 }
 
+export type PresentationReferenceConflictPresentationsItem = {
+  id: number;
+  title: string;
+};
+
+export interface PresentationReferenceConflict {
+  error: string;
+  presentations: PresentationReferenceConflictPresentationsItem[];
+}
+
 export interface PresentationInput {
   patientId?: number;
   /** @minLength 1 */

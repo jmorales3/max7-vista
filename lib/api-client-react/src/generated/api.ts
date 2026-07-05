@@ -36,6 +36,7 @@ import type {
   PatientUpdate,
   Presentation,
   PresentationInput,
+  PresentationReferenceConflict,
   PresentationUpdate,
   ReorderImagesInput,
   ScanResult,
@@ -464,7 +465,7 @@ export const deletePatient = async (id: number, options?: RequestInit): Promise<
 
 
 
-export const getDeletePatientMutationOptions = <TError = ErrorType<unknown>,
+export const getDeletePatientMutationOptions = <TError = ErrorType<PresentationReferenceConflict>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePatient>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof deletePatient>>, TError,{id: number}, TContext> => {
 
@@ -493,12 +494,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeletePatientMutationResult = NonNullable<Awaited<ReturnType<typeof deletePatient>>>
 
-    export type DeletePatientMutationError = ErrorType<unknown>
+    export type DeletePatientMutationError = ErrorType<PresentationReferenceConflict>
 
     /**
  * @summary Delete a patient
  */
-export const useDeletePatient = <TError = ErrorType<unknown>,
+export const useDeletePatient = <TError = ErrorType<PresentationReferenceConflict>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePatient>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof deletePatient>>,
@@ -1881,7 +1882,7 @@ export const deleteImage = async (id: number, options?: RequestInit): Promise<vo
 
 
 
-export const getDeleteImageMutationOptions = <TError = ErrorType<unknown>,
+export const getDeleteImageMutationOptions = <TError = ErrorType<PresentationReferenceConflict>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteImage>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteImage>>, TError,{id: number}, TContext> => {
 
@@ -1910,12 +1911,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteImageMutationResult = NonNullable<Awaited<ReturnType<typeof deleteImage>>>
 
-    export type DeleteImageMutationError = ErrorType<unknown>
+    export type DeleteImageMutationError = ErrorType<PresentationReferenceConflict>
 
     /**
  * @summary Delete an image
  */
-export const useDeleteImage = <TError = ErrorType<unknown>,
+export const useDeleteImage = <TError = ErrorType<PresentationReferenceConflict>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteImage>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof deleteImage>>,

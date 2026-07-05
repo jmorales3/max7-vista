@@ -12,6 +12,7 @@ import {
 import { logAudit } from "../lib/audit";
 import { getAccessiblePatientIds, canAccessPatient } from "../lib/patientAccess";
 import { requireRole } from "../middlewares/requireAuth";
+import { findPresentationsReferencingImages, removeImagesFromPresentations } from "../lib/presentationRefs";
 
 const router: IRouter = Router();
 
@@ -313,6 +314,28 @@ router.delete("/patients/:id", requireRole("admin", "superadmin"), async (req, r
     if (!canAccessPatient(accessibleIds, params.data.id)) {
       res.status(403).json({ error: "Access denied" });
       return;
+    }
+
+    const force = req.query.force === "true" || req.query.force === "1";
+    const patientImageRows = await db
+      .select({ id: imagesTable.id })
+      .from(imagesTable)
+      .where(eq(imagesTable.patientId, params.data.id));
+    const patientImageIds = patientImageRows.map((r) => r.id);
+
+    const referencingPresentations = patientImageIds.length > 0
+      ? await findPresentationsReferencingImages(tenantId, patientImageIds)
+      : [];
+    if (referencingPresentations.length > 0 && !force) {
+      res.status(409).json({
+        error: "This patient's images are used in one or more saved presentations. Delete anyway?",
+        presentations: referencingPresentations,
+      });
+      return;
+    }
+
+    if (referencingPresentations.length > 0) {
+      await removeImagesFromPresentations(tenantId, patientImageIds);
     }
 
     const [deleted] = await db

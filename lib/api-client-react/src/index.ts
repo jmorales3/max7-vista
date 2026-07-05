@@ -1,4 +1,4 @@
 export * from "./generated/api";
 export * from "./generated/api.schemas";
-export { customFetch, setBaseUrl, getBaseUrl, setAuthTokenGetter, setSessionCookie, setUnauthorizedHandler, setSuspendedHandler } from "./custom-fetch";
+export { customFetch, setBaseUrl, getBaseUrl, setAuthTokenGetter, setSessionCookie, setUnauthorizedHandler, setSuspendedHandler, ApiError } from "./custom-fetch";
 export type { AuthTokenGetter, CustomFetchOptions } from "./custom-fetch";

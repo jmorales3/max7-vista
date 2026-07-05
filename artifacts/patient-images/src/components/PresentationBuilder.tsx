@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import {
   ChevronLeft, ChevronRight, Play, X, ArrowUp, ArrowDown,
-  ArrowLeftRight, ChevronsLeftRight, Camera, Save, Pencil, Check, Layers,
+  ArrowLeftRight, ChevronsLeftRight, Camera, Save, Pencil, Check, Layers, ImageOff,
 } from "lucide-react";
 
 export type SlideImageField = "imageId" | "beforeId" | "afterId" | "baseId" | "overlayId";
@@ -35,12 +35,36 @@ export interface PickerImage {
   isLibraryAsset?: boolean;
 }
 
+/* ─── Missing image placeholder ─────────────────────────────── */
+function ImageUnavailable({ className = "" }: { className?: string }) {
+  const { t } = useTranslation();
+  return (
+    <div className={`flex flex-col items-center justify-center gap-1 bg-muted text-muted-foreground text-center px-1 ${className}`}>
+      <ImageOff className="h-4 w-4 opacity-60 shrink-0" />
+      <span className="text-[10px] leading-tight">{t("presentation.imageUnavailable")}</span>
+    </div>
+  );
+}
+
+/** <img> that swaps to an "image no longer available" placeholder on load failure. */
+function SlideImage({ src, className, alt = "" }: { src: string; className?: string; alt?: string }) {
+  const [errored, setErrored] = useState(false);
+  useEffect(() => setErrored(false), [src]);
+  if (errored) return <ImageUnavailable className={className} />;
+  return <img src={src} alt={alt} className={className} onError={() => setErrored(true)} />;
+}
+
 /* ─── Before/After Slider ──────────────────────────────────── */
 export function BeforeAfterSlider({ beforeUrl, afterUrl }: { beforeUrl: string; afterUrl: string }) {
   const { t } = useTranslation();
   const [position, setPosition] = useState(50);
+  const [beforeErrored, setBeforeErrored] = useState(false);
+  const [afterErrored, setAfterErrored] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
+
+  useEffect(() => setBeforeErrored(false), [beforeUrl]);
+  useEffect(() => setAfterErrored(false), [afterUrl]);
 
   const updatePosition = useCallback((clientX: number) => {
     if (!containerRef.current) return;
@@ -63,9 +87,17 @@ export function BeforeAfterSlider({ beforeUrl, afterUrl }: { beforeUrl: string; 
       onMouseMove={(e) => { if (dragging.current) updatePosition(e.clientX); }}
       onTouchMove={(e) => { if (dragging.current) updatePosition(e.touches[0].clientX); }}
     >
-      <img src={beforeUrl} className="absolute inset-0 w-full h-full object-contain" />
+      {beforeErrored ? (
+        <ImageUnavailable className="absolute inset-0 w-full h-full" />
+      ) : (
+        <img src={beforeUrl} className="absolute inset-0 w-full h-full object-contain" onError={() => setBeforeErrored(true)} />
+      )}
       <div className="absolute inset-0" style={{ clipPath: `inset(0 0 0 ${position}%)` }}>
-        <img src={afterUrl} className="absolute inset-0 w-full h-full object-contain" />
+        {afterErrored ? (
+          <ImageUnavailable className="absolute inset-0 w-full h-full" />
+        ) : (
+          <img src={afterUrl} className="absolute inset-0 w-full h-full object-contain" onError={() => setAfterErrored(true)} />
+        )}
       </div>
       <div className="absolute top-4 left-4 bg-black/70 text-white text-xs font-bold px-3 py-1.5 rounded-full tracking-widest uppercase">
         {t("presentation.before")}
@@ -99,6 +131,7 @@ export function SuperimposeViewer({ baseUrl, overlayUrl, initialOpacity, offsetX
 }) {
   const { t } = useTranslation();
   const [opacity, setOpacity] = useState(initialOpacity);
+  const [loadError, setLoadError] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -156,11 +189,14 @@ export function SuperimposeViewer({ baseUrl, overlayUrl, initialOpacity, offsetX
 
   // Load images
   useEffect(() => {
+    setLoadError(false);
     const bImg = new Image();
     const oImg = new Image();
     let alive = true;
     bImg.onload = () => { if (!alive) return; dataRef.current.baseImg = bImg; drawRef.current(); };
     oImg.onload = () => { if (!alive) return; dataRef.current.overlayImg = oImg; drawRef.current(); };
+    bImg.onerror = () => { if (!alive) return; setLoadError(true); };
+    oImg.onerror = () => { if (!alive) return; setLoadError(true); };
     bImg.src = baseUrl;
     oImg.src = overlayUrl;
     return () => { alive = false; };
@@ -169,6 +205,12 @@ export function SuperimposeViewer({ baseUrl, overlayUrl, initialOpacity, offsetX
   return (
     <div ref={containerRef} className="relative w-full h-full bg-black select-none">
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+      {loadError && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60 text-white/80 text-center px-4 pointer-events-none">
+          <ImageOff className="h-6 w-6 opacity-70" />
+          <span className="text-sm">{t("presentation.imageUnavailable")}</span>
+        </div>
+      )}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-black/70 backdrop-blur-sm px-4 py-2.5 rounded-full z-10">
         <Layers className="h-3.5 w-3.5 text-white/60 shrink-0" />
         <input
@@ -357,7 +399,7 @@ export function PresentationBuilder({
 
         <div className="flex-1 relative overflow-hidden">
           {slide.type === "single" ? (
-            <img src={imageUrl(slide.imageId)} className="absolute inset-0 w-full h-full object-contain" />
+            <SlideImage src={imageUrl(slide.imageId)} className="absolute inset-0 w-full h-full object-contain" />
           ) : slide.type === "video" ? (
             <video src={`/api/library-assets/${slide.imageId}/file`} className="absolute inset-0 w-full h-full object-contain" controls autoPlay />
           ) : slide.type === "compare" ? (
@@ -494,7 +536,7 @@ export function PresentationBuilder({
                           disabled={isUsedElsewhere}
                           className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all duration-150 ${isSelected ? "border-primary ring-2 ring-primary/30 scale-[0.96]" : isUsedElsewhere ? "border-muted opacity-40 cursor-not-allowed" : "border-transparent hover:border-primary/50 hover:scale-[0.98]"}`}
                         >
-                          <img src={imageUrl(img.id)} alt="" className="w-full h-full object-cover" loading="lazy" />
+                          <SlideImage src={imageUrl(img.id)} className="w-full h-full object-cover" />
                           {isSelected && (
                             <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
                               <span className="bg-primary text-primary-foreground text-sm font-bold rounded-full h-7 w-7 flex items-center justify-center shadow-lg">{slideIdx + 1}</span>
@@ -545,7 +587,7 @@ export function PresentationBuilder({
                             {slide.type === "video" ? (
                               <video src={`/api/library-assets/${mainId}/file`} className="w-full h-full object-cover" muted preload="metadata" />
                             ) : (
-                              <img src={imageUrl(mainId)} className="w-full h-full object-cover" />
+                              <SlideImage src={imageUrl(mainId)} className="w-full h-full object-cover" />
                             )}
                             {canEditMain && (
                               <button
@@ -566,7 +608,7 @@ export function PresentationBuilder({
                                 <Layers className="h-3 w-3 text-violet-500" />
                               )}
                               <div className={`relative w-14 h-10 rounded-md overflow-hidden bg-muted ${slide.type === "superimpose" ? "opacity-70" : ""}`}>
-                                <img src={imageUrl(secondId)} className="w-full h-full object-cover" />
+                                <SlideImage src={imageUrl(secondId)} className="w-full h-full object-cover" />
                                 {canEditSecond && secondField && (
                                   <button
                                     type="button"
@@ -634,7 +676,7 @@ export function PresentationBuilder({
                             {availableForPairing.map((img) => (
                               <button key={img.id} onClick={() => selectPairImage(idx, img.id)}
                                 className="aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-primary hover:scale-105 transition-all">
-                                <img src={imageUrl(img.id)} className="w-full h-full object-cover" loading="lazy" />
+                                <SlideImage src={imageUrl(img.id)} className="w-full h-full object-cover" />
                               </button>
                             ))}
                           </div>
