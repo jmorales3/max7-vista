@@ -29,3 +29,9 @@ id = "6qan0bDyMotOHLgWmQZOr"
 uri = "file://exports/max7-feature-transfer-register.md"
 type = "text"
 title = "Max7 Feature Transfer Register (updated with today's work)"
+
+[[outputs]]
+id = "PfBvH6ngfenLHs0V8DcmP"
+uri = "file://exports/max7vista-marketing-brief.md"
+type = "text"
+title = "Max7 Vista — Marketing & Product Brief (for max7vista.com Agent)"
