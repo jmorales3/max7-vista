@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { Link, useRoute } from "wouter";
+import { useMemo, useState } from "react";
+import { Link, useRoute, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import {
   useGetPatient, getGetPatientQueryKey,
   useListPatientImages, getListPatientImagesQueryKey,
@@ -23,6 +24,7 @@ import { PresentationBuilder, type Slide, type PickerImage } from "@/components/
 export default function PatientPresentation() {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [, params] = useRoute("/presentation/:id");
   const patientId = parseInt(params?.id || "0", 10);
 
@@ -41,6 +43,23 @@ export default function PatientPresentation() {
   );
 
   const activePresentation = savedPresentations.find((p) => p.id === activePresentationId) ?? null;
+
+  const { data: libraryAssets = [] } = useQuery<{ id: number }[]>({
+    queryKey: ["library-assets"],
+    queryFn: async () => {
+      const res = await fetch("/api/library-assets", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load library assets");
+      return res.json();
+    },
+  });
+  const libraryAssetIds = useMemo(
+    () => new Set((libraryAssets as { id: number }[]).map((a) => a.id)),
+    [libraryAssets],
+  );
+
+  function handleEditSlideImage(presentationId: number, imageId: number, field: string, slideIndex: number) {
+    setLocation(`/editor/${imageId}?presentationId=${presentationId}&slideIndex=${slideIndex}&field=${field}`);
+  }
 
   const createPresentation = useCreatePresentation({
     mutation: {
@@ -118,6 +137,13 @@ export default function PatientPresentation() {
       isSaving={createPresentation.isPending || updatePresentation.isPending}
       isSaved={isSaved}
       onSave={handleSave}
+      onEditSlideImage={
+        activePresentation
+          ? (imageId, field, slideIndex) => handleEditSlideImage(activePresentation.id, imageId, field, slideIndex)
+          : undefined
+      }
+      isCrossPatient={false}
+      libraryAssetIds={libraryAssetIds}
       headerLeft={
         <div className="flex items-center gap-2 shrink-0">
           <Button variant="outline" size="icon" asChild className="h-8 w-8">

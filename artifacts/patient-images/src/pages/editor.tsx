@@ -2210,10 +2210,15 @@ export default function Editor() {
 
   async function handleSaveToPresentationCopy() {
     const img = imgRef.current;
-    if (!img || !image?.patientId || !editPresentation || !editField || editSlideIndex < 0) {
+    if (!img || !editPresentation || !editField || editSlideIndex < 0) {
       toast({ variant: "destructive", title: t("editor.canvasNotReady") });
       return;
     }
+
+    // Library assets (and any other unassigned images) have no owning patient.
+    // Attribute the copy to the presentation's patient if it has one (single-patient
+    // presentation); otherwise leave it unassigned (cross-patient presentation).
+    const targetPatientId = image?.patientId ?? editPresentation.patientId ?? null;
 
     setIsSavingPresentationCopy(true);
     try {
@@ -2221,7 +2226,7 @@ export default function Editor() {
       if (!blob) throw new Error("Failed to export canvas");
 
       const file = new File([blob], "edited.png", { type: "image/png" });
-      const result = await uploadPatientImage(file, image.patientId, notes || undefined, undefined, id);
+      const result = await uploadPatientImage(file, targetPatientId, notes || undefined, undefined, id);
 
       const currentSlides = ((editPresentation.slides as Slide[] | undefined) ?? []).slice();
       const targetSlide = currentSlides[editSlideIndex];

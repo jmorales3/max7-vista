@@ -791,26 +791,34 @@ router.get("/images/:id", async (req, res): Promise<void> => {
     const params = GetImageParams.safeParse(req.params);
     if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
 
-    const rows = await db
-      .select({
-        id: imagesTable.id, patientId: imagesTable.patientId, filePath: imagesTable.filePath,
-        fileName: imagesTable.fileName, notes: imagesTable.notes, annotation: imagesTable.annotation,
-        capturedAt: imagesTable.capturedAt, isUnassigned: imagesTable.isUnassigned, createdAt: imagesTable.createdAt,
-        patientName: patientsTable.name, patientCode: patientsTable.patientCode,
-      })
+    const [image] = await db
+      .select()
       .from(imagesTable)
-      .innerJoin(patientsTable, and(eq(patientsTable.id, imagesTable.patientId), eq(patientsTable.tenantId, tenantId)))
       .where(eq(imagesTable.id, params.data.id));
 
-    if (!rows[0]) { res.status(404).json({ error: "Image not found" }); return; }
+    if (!image) { res.status(404).json({ error: "Image not found" }); return; }
+
+    // Library assets have no patient — they are shared, non-patient media, matching
+    // the access model already used by /api/images/:id/file.
+    if (image.isLibraryAsset) {
+      res.json(buildImageRow(image));
+      return;
+    }
+
+    const [patient] = await db
+      .select({ id: patientsTable.id, name: patientsTable.name, patientCode: patientsTable.patientCode })
+      .from(patientsTable)
+      .where(and(eq(patientsTable.id, image.patientId as number), eq(patientsTable.tenantId, tenantId)));
+
+    if (!patient) { res.status(404).json({ error: "Image not found" }); return; }
 
     const accessibleIds = await getAccessiblePatientIds(req);
-    if (!canAccessPatient(accessibleIds, rows[0].patientId)) {
+    if (!canAccessPatient(accessibleIds, image.patientId)) {
       res.status(403).json({ error: "Access denied" });
       return;
     }
 
-    res.json(buildImageRow(rows[0]));
+    res.json(buildImageRow({ ...image, patientName: patient.name, patientCode: patient.patientCode }));
   } catch (err: any) {
     if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
     res.status(500).json({ error: String(err) });

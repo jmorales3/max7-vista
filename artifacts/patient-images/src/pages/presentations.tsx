@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import {
   useListPresentations, getListPresentationsQueryKey,
   useListImages, getListImagesQueryKey,
@@ -92,6 +93,18 @@ export default function Presentations() {
   const { data: tags = [], isLoading: tagsLoading } = useListTags({
     query: { queryKey: getListTagsQueryKey(), enabled: mode === "select-tags" },
   });
+  const { data: libraryAssets = [] } = useQuery<{ id: number }[]>({
+    queryKey: ["library-assets"],
+    queryFn: async () => {
+      const res = await fetch("/api/library-assets", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load library assets");
+      return res.json();
+    },
+  });
+  const libraryAssetIds = useMemo(
+    () => new Set((libraryAssets as { id: number }[]).map((a) => a.id)),
+    [libraryAssets],
+  );
 
   const patientMap = new Map((patients as any[]).map((p: any) => [p.id, p.name as string]));
 
@@ -363,10 +376,12 @@ export default function Presentations() {
           </Button>
         }
         onEditSlideImage={
-          editingPresentation && editingPresentation.patientId == null
+          editingPresentation
             ? (imageId, field, slideIndex) => handleEditSlideImage(editingPresentation.id, imageId, field, slideIndex)
             : undefined
         }
+        isCrossPatient={!editingPresentation || editingPresentation.patientId == null}
+        libraryAssetIds={libraryAssetIds}
       />
     );
   }
@@ -493,10 +508,10 @@ export default function Presentations() {
             groupByPatient
             headerLeft={null}
             onEditSlideImage={
-              openViewer.patientId == null
-                ? (imageId, field, slideIndex) => handleEditSlideImage(openViewer.id, imageId, field, slideIndex)
-                : undefined
+              (imageId, field, slideIndex) => handleEditSlideImage(openViewer.id, imageId, field, slideIndex)
             }
+            isCrossPatient={openViewer.patientId == null}
+            libraryAssetIds={libraryAssetIds}
           />
         </div>
       )}

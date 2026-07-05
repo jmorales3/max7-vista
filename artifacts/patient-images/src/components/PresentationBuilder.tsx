@@ -31,6 +31,7 @@ export interface PickerImage {
   id: number;
   patientName?: string;
   patientId?: number | null;
+  isLibraryAsset?: boolean;
 }
 
 /* ─── Before/After Slider ──────────────────────────────────── */
@@ -207,6 +208,10 @@ export interface PresentationBuilderProps {
   headerLeft?: React.ReactNode;
   groupByPatient?: boolean;
   onEditSlideImage?: (imageId: number, field: SlideImageField, slideIndex: number) => void;
+  /** True when this presentation has no single owning patient (cross-patient). */
+  isCrossPatient?: boolean;
+  /** IDs of images that are shared library assets — always editable via a copy, regardless of presentation scope. */
+  libraryAssetIds?: Set<number>;
 }
 
 export function PresentationBuilder({
@@ -220,6 +225,8 @@ export function PresentationBuilder({
   headerLeft,
   groupByPatient = false,
   onEditSlideImage,
+  isCrossPatient = false,
+  libraryAssetIds,
 }: PresentationBuilderProps) {
   const { t } = useTranslation();
 
@@ -493,7 +500,9 @@ export function PresentationBuilder({
                 const secondId = slide.type === "compare" ? slide.afterId : slide.type === "superimpose" ? slide.overlayId : null;
                 const mainField: SlideImageField = slide.type === "compare" ? "beforeId" : slide.type === "superimpose" ? "baseId" : "imageId";
                 const secondField: SlideImageField | null = slide.type === "compare" ? "afterId" : slide.type === "superimpose" ? "overlayId" : null;
-                const canEditImages = !!onEditSlideImage && slide.type !== "video";
+                const canEditBase = !!onEditSlideImage && slide.type !== "video";
+                const canEditMain = canEditBase && (isCrossPatient || (libraryAssetIds?.has(mainId) ?? false));
+                const canEditSecond = canEditBase && secondId != null && (isCrossPatient || (libraryAssetIds?.has(secondId) ?? false));
                 const isPairing = pairingSlideIdx === idx;
                 return (
                   <div key={idx}>
@@ -507,7 +516,7 @@ export function PresentationBuilder({
                             ) : (
                               <img src={imageUrl(mainId)} className="w-full h-full object-cover" />
                             )}
-                            {canEditImages && (
+                            {canEditMain && (
                               <button
                                 type="button"
                                 onClick={() => onEditSlideImage!(mainId, mainField, idx)}
@@ -527,7 +536,7 @@ export function PresentationBuilder({
                               )}
                               <div className={`relative w-14 h-10 rounded-md overflow-hidden bg-muted ${slide.type === "superimpose" ? "opacity-70" : ""}`}>
                                 <img src={imageUrl(secondId)} className="w-full h-full object-cover" />
-                                {canEditImages && secondField && (
+                                {canEditSecond && secondField && (
                                   <button
                                     type="button"
                                     onClick={() => onEditSlideImage!(secondId, secondField, idx)}

@@ -47,7 +47,7 @@ function compressImage(file: File): Promise<{ blob: Blob; mimeType: string }> {
  */
 export async function uploadPatientImage(
   file: File,
-  patientId: number,
+  patientId: number | null,
   notes?: string,
   capturedAt?: string,
   derivedFromImageId?: number,
@@ -129,7 +129,9 @@ export async function uploadPatientImage(
   const result = await regRes.json();
 
   queryClient.invalidateQueries({ queryKey: getListImagesQueryKey() });
-  queryClient.invalidateQueries({ queryKey: getListPatientImagesQueryKey(patientId) });
+  if (patientId != null) {
+    queryClient.invalidateQueries({ queryKey: getListPatientImagesQueryKey(patientId) });
+  }
 
   return result;
 }
