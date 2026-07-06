@@ -139,9 +139,9 @@
     <p id="statusDesc" class="desc"></p>
 
     <div class="machine-id" id="machineIdBlock" style="display:none">
-      <div class="machine-id-label">Machine ID</div>
+      <div class="machine-id-label">Your Machine ID</div>
       <div class="machine-id-value" id="machineIdValue" title="Click to copy"></div>
-      <div class="machine-id-hint">Share this ID with Max7 to receive your activation code.</div>
+      <div class="machine-id-hint">Send this ID to the app owner (Max7 Vista) to receive your activation code. Click the ID to copy it.</div>
     </div>
 
     <div class="form-group">
@@ -160,7 +160,28 @@
   </div>
 
   <script>
-    const API_PORT = new URLSearchParams(window.location.search).get('port') || 8080;
+    const urlParams = new URLSearchParams(window.location.search);
+    const API_PORT = urlParams.get('port') || 8080;
+    // The main process resolves the machine ID (purely from hardware, never
+    // from the HMAC secret) before this window even opens, and passes it in
+    // as a query param. Show it immediately — do not wait on or depend on
+    // the /api/license/status fetch below, so the user can always retrieve
+    // it even if that request is slow, errors, or the record is tampered.
+    let currentMachineId = urlParams.get('machineId') || null;
+    if (currentMachineId) showMachineId(currentMachineId);
+
+    function showMachineId(id) {
+      currentMachineId = id;
+      const machineBlock = document.getElementById('machineIdBlock');
+      const machineVal = document.getElementById('machineIdValue');
+      machineBlock.style.display = 'block';
+      machineVal.textContent = id;
+      machineVal.onclick = () => {
+        navigator.clipboard.writeText(id).catch(() => {});
+        machineVal.textContent = 'Copied!';
+        setTimeout(() => { machineVal.textContent = id; }, 1500);
+      };
+    }
 
     async function loadStatus() {
       try {
@@ -168,8 +189,12 @@
         const status = await res.json();
         renderStatus(status);
       } catch (e) {
-        document.getElementById('statusTitle').textContent = 'Unable to connect to application server';
-        document.getElementById('statusDesc').textContent = 'Please restart the application.';
+        document.getElementById('statusTitle').textContent = currentMachineId
+          ? 'Unable to verify license status'
+          : 'Unable to connect to application server';
+        document.getElementById('statusDesc').textContent = currentMachineId
+          ? 'We could not reach the local application server to check your license, but your Machine ID is shown above. You can still send it to the app owner, or enter an activation code below and retry.'
+          : 'Please restart the application.';
       }
     }
 
@@ -177,33 +202,27 @@
       const badge = document.getElementById('statusBadge');
       const title = document.getElementById('statusTitle');
       const desc = document.getElementById('statusDesc');
-      const machineBlock = document.getElementById('machineIdBlock');
-      const machineVal = document.getElementById('machineIdValue');
 
       badge.style.display = 'inline-flex';
-      machineBlock.style.display = 'block';
-      machineVal.textContent = status.machineId ?? '';
-      machineVal.onclick = () => {
-        navigator.clipboard.writeText(status.machineId ?? '').catch(() => {});
-        machineVal.textContent = 'Copied!';
-        setTimeout(() => { machineVal.textContent = status.machineId ?? ''; }, 1500);
-      };
+      // Prefer the ID passed in via query param (always available pre-fetch);
+      // fall back to whatever the status endpoint returned if that's all we have.
+      if (status.machineId && !currentMachineId) showMachineId(status.machineId);
 
       if (status.state === 'trial_expired') {
         badge.textContent = 'Trial Expired';
         badge.className = 'status-badge badge-expired';
         title.textContent = 'Your trial has expired';
-        desc.textContent = 'Your 30-day trial period has ended. Enter a license code below to continue using Max7 Vista.';
+        desc.textContent = 'Your 30-day trial period has ended. Send the Machine ID above to the app owner to receive an activation code, then enter it below.';
       } else if (status.state === 'expired') {
         badge.textContent = 'License Expired';
         badge.className = 'status-badge badge-expired';
         title.textContent = 'Your license has expired';
-        desc.textContent = 'Your license is no longer valid. Please renew and enter your new activation code below.';
+        desc.textContent = 'Your license is no longer valid. Send the Machine ID above to the app owner to receive a new activation code, then enter it below.';
       } else if (status.state === 'tampered') {
         badge.textContent = 'Tampered';
         badge.className = 'status-badge badge-tampered';
-        title.textContent = 'License record tampered';
-        desc.textContent = 'The license file has been modified. Please enter a valid activation code to restore access.';
+        title.textContent = 'License needs to be revalidated';
+        desc.textContent = 'Your existing license record could not be verified (this is expected after a license system update). Send the Machine ID above to the app owner to receive a fresh activation code, then enter it below.';
       } else if (status.state === 'trial') {
         badge.textContent = `Trial — ${status.daysLeft} day${status.daysLeft === 1 ? '' : 's'} left`;
         badge.className = 'status-badge badge-trial';
@@ -218,7 +237,7 @@
         badge.textContent = 'Unable to Verify';
         badge.className = 'status-badge badge-expired';
         title.textContent = 'Unable to verify license status';
-        desc.textContent = 'We could not confirm your license status. Please enter your activation code below, or restart the application and try again.';
+        desc.textContent = 'We could not confirm your license status. Your Machine ID is shown above if you need to request an activation code — otherwise, enter your code below or restart the application and try again.';
       }
     }
 

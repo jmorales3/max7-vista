@@ -91,8 +91,8 @@ function getLanAddresses(): string[] {
 
 async function startApiServer(): Promise<void> {
   const serverEntry = IS_DEV
-    ? path.resolve(__dirname, "../../api-server/dist/index.js")
-    : path.join(process.resourcesPath, "api-server", "index.js");
+    ? path.resolve(__dirname, "../../api-server/dist/index.mjs")
+    : path.join(process.resourcesPath, "api-server", "index.mjs");
 
   const dbPath = getDbPath();
   const uploadsDir = getUploadsDir();
@@ -182,19 +182,29 @@ function stopApiServer(): void {
  * A license gate that fails open on error would let expired/tampered
  * installs bypass enforcement whenever the status check errors.
  */
-async function checkLicenseStatus(): Promise<{ state: string; daysLeft: number | null }> {
+async function checkLicenseStatus(): Promise<{
+  state: string;
+  daysLeft: number | null;
+  machineId: string | null;
+}> {
   try {
     const res = await fetch(`http://127.0.0.1:${API_PORT}/api/license/status`);
-    if (res.ok) {
-      const data = (await res.json()) as { state?: unknown; daysLeft?: number | null };
-      if (data && typeof data.state === "string") {
-        return { state: data.state, daysLeft: data.daysLeft ?? null };
-      }
+    // Even a non-2xx response (e.g. a 500 from a transient DB hiccup) may still
+    // carry a valid machineId in its JSON body — computeMachineId() never
+    // throws, so try to recover it regardless of status code before failing
+    // closed, so the activation screen can still show the ID to the user.
+    const data = (await res.json().catch(() => null)) as
+      | { state?: unknown; daysLeft?: number | null; machineId?: unknown }
+      | null;
+    const machineId = typeof data?.machineId === "string" ? data.machineId : null;
+    if (res.ok && data && typeof data.state === "string") {
+      return { state: data.state, daysLeft: data.daysLeft ?? null, machineId };
     }
+    return { state: "check_failed", daysLeft: null, machineId };
   } catch {
     // fall through to fail-closed result below
   }
-  return { state: "check_failed", daysLeft: null };
+  return { state: "check_failed", daysLeft: null, machineId: null };
 }
 
 // ─── Splash Window ───────────────────────────────────────────────────────────
@@ -302,7 +312,7 @@ function createWindow(): void {
 
 let licenseWindow: BrowserWindow | null = null;
 
-function createLicenseWindow(): void {
+function createLicenseWindow(machineId: string | null): void {
   licenseWindow = new BrowserWindow({
     width: 520,
     height: 640,
@@ -322,7 +332,15 @@ function createLicenseWindow(): void {
     ? path.join(__dirname, "../src/license.html")
     : path.join(__dirname, "license.html");
 
-  licenseWindow.loadFile(licensePath, { query: { port: String(API_PORT) } }).catch((err) => {
+  // Pass the machineId (already resolved from computeMachineId(), which never
+  // depends on the HMAC secret) directly as a query param. This guarantees the
+  // activation screen can always show it, even if the page's own later fetch
+  // to /api/license/status is slow, transiently fails, or the record itself
+  // is in a "tampered"/"check_failed" state.
+  const query: Record<string, string> = { port: String(API_PORT) };
+  if (machineId) query["machineId"] = machineId;
+
+  licenseWindow.loadFile(licensePath, { query }).catch((err) => {
     console.error("[license] Failed to load license screen:", err);
   });
 
@@ -453,7 +471,7 @@ app.whenReady().then(async () => {
   if (needsLicenseScreen) {
     // Show blocking activation window; app opens only after user activates or
     // the license IPC handlers (above) create the main window.
-    createLicenseWindow();
+    createLicenseWindow(licenseStatus.machineId);
   } else {
     showFirstRunDialog();
     createWindow();

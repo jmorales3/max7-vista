@@ -394,6 +394,63 @@ function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation, scale: n
   }
 }
 
+export type ImageAdjustments = {
+  brightness: number;
+  contrast: number;
+  saturation: number;
+  sharpness: number;
+};
+
+export const DEFAULT_ADJUSTMENTS: ImageAdjustments = {
+  brightness: 100,
+  contrast: 100,
+  saturation: 100,
+  sharpness: 0,
+};
+
+function toneFilterString(adj: ImageAdjustments): string {
+  if (adj.brightness === 100 && adj.contrast === 100 && adj.saturation === 100) return "none";
+  return `brightness(${adj.brightness}%) contrast(${adj.contrast}%) saturate(${adj.saturation}%)`;
+}
+
+// Lightweight 3x3 unsharp-mask style convolution applied in-place on the whole canvas.
+// `amount` is a 0-100 slider value; scaled down so the effect stays subtle and fast.
+function applySharpen(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, amount: number) {
+  if (amount <= 0 || canvas.width === 0 || canvas.height === 0) return;
+  const w = canvas.width;
+  const h = canvas.height;
+  const src = ctx.getImageData(0, 0, w, h);
+  const srcData = src.data;
+  const out = ctx.createImageData(w, h);
+  const outData = out.data;
+  const k = amount / 100;
+  const center = 1 + 4 * k;
+  const edge = -k;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (x === 0 || y === 0 || x === w - 1 || y === h - 1) {
+        outData[i] = srcData[i];
+        outData[i + 1] = srcData[i + 1];
+        outData[i + 2] = srcData[i + 2];
+        outData[i + 3] = srcData[i + 3];
+        continue;
+      }
+      for (let c = 0; c < 3; c++) {
+        const val =
+          srcData[i + c] * center +
+          srcData[i - 4 + c] * edge +
+          srcData[i + 4 + c] * edge +
+          srcData[i - w * 4 + c] * edge +
+          srcData[i + w * 4 + c] * edge;
+        outData[i + c] = Math.max(0, Math.min(255, val));
+      }
+      outData[i + 3] = srcData[i + 3];
+    }
+  }
+  ctx.putImageData(out, 0, 0);
+}
+
 function renderCanvas(
   canvas: HTMLCanvasElement,
   img: HTMLImageElement | null,
@@ -409,11 +466,13 @@ function renderCanvas(
   hoveredAngleIdx?: number | null,
   labelScale?: number,
   selectedCircleId?: string | null,
+  adjustments?: ImageAdjustments,
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
   const px = panOffset?.x ?? 0;
   const py = panOffset?.y ?? 0;
+  const adj = adjustments ?? DEFAULT_ADJUSTMENTS;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save();
@@ -422,7 +481,9 @@ function renderCanvas(
   ctx.scale(scale, scale);
 
   if (img) {
+    ctx.filter = toneFilterString(adj);
     ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+    ctx.filter = "none";
   }
 
   const allAnns: Annotation[] = previewAnn ? [...annotations, previewAnn] : annotations;
@@ -431,6 +492,10 @@ function renderCanvas(
   }
 
   ctx.restore();
+
+  if (adj.sharpness > 0) {
+    applySharpen(ctx, canvas, adj.sharpness);
+  }
 
   // White "hole" where a selection was cut from
   if (cutPath && cutPath.length > 2) {
@@ -648,6 +713,10 @@ export default function Editor() {
   useEffect(() => { scaleRef.current = scale; }, [scale]);
   useEffect(() => { rotationRef.current = rotation; }, [rotation]);
 
+  const [adjustments, setAdjustments] = useState<ImageAdjustments>(DEFAULT_ADJUSTMENTS);
+  const adjustmentsRef = useRef<ImageAdjustments>(DEFAULT_ADJUSTMENTS);
+  useEffect(() => { adjustmentsRef.current = adjustments; }, [adjustments]);
+
   const pushHistory = useCallback(() => {
     annotationHistoryRef.current = [
       ...annotationHistoryRef.current,
@@ -852,7 +921,7 @@ export default function Editor() {
       overlayCanvasRef.current.width = container.offsetWidth;
       overlayCanvasRef.current.height = container.offsetHeight;
     }
-    renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, panOffsetRef.current, cutPath, hoveredAngleIdx, undefined, selectedCircleId);
+    renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, panOffsetRef.current, cutPath, hoveredAngleIdx, undefined, selectedCircleId, adjustmentsRef.current);
     redrawOverlay();
   }, [scale, rotation, cropRect, cutRect, selectionRect, cutPath, redrawOverlay, hoveredAngleIdx, selectedCircleId]);
 
@@ -863,9 +932,9 @@ export default function Editor() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    renderCanvas(canvas, imgRef.current, annotations, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, panOffset, cutPath, undefined, undefined, selectedCircleId);
+    renderCanvas(canvas, imgRef.current, annotations, scale, rotation, cropRect, null, cutRect, selectionRect ?? undefined, panOffset, cutPath, undefined, undefined, selectedCircleId, adjustments);
     redrawOverlay();
-  }, [annotations, scale, rotation, cropRect, cutRect, selectionRect, panOffset, cutPath, redrawOverlay, selectedCircleId]);
+  }, [annotations, scale, rotation, cropRect, cutRect, selectionRect, panOffset, cutPath, redrawOverlay, selectedCircleId, adjustments]);
 
   useEffect(() => {
     const observer = new ResizeObserver(resizeCanvas);
@@ -2165,7 +2234,7 @@ export default function Editor() {
     const flat = document.createElement("canvas");
     flat.width = outW;
     flat.height = outH;
-    renderCanvas(flat, img, annotations, 1, rotation, null, null, null, undefined, { x: 0, y: 0 }, undefined, undefined, scale);
+    renderCanvas(flat, img, annotations, 1, rotation, null, null, null, undefined, { x: 0, y: 0 }, undefined, undefined, scale, undefined, adjustments);
     return new Promise<Blob | null>((resolve) => flat.toBlob(resolve, "image/png"));
   }
 
@@ -3516,6 +3585,81 @@ export default function Editor() {
                   {deg}°
                 </Button>
               ))}
+            </div>
+          </div>
+
+          {/* Tone, contrast, saturation and sharpness adjustments */}
+          <div className="p-4 border-b space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">{t("editor.adjustments")}</Label>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={() => setAdjustments(DEFAULT_ADJUSTMENTS)}
+              >
+                {t("editor.resetAdjustments")}
+              </Button>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-muted-foreground">{t("editor.brightness")}</Label>
+                <span className="text-xs font-mono text-muted-foreground">{adjustments.brightness}%</span>
+              </div>
+              <Slider
+                min={50}
+                max={150}
+                step={1}
+                value={[adjustments.brightness]}
+                onValueChange={([v]) => setAdjustments((prev) => ({ ...prev, brightness: v }))}
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-muted-foreground">{t("editor.contrast")}</Label>
+                <span className="text-xs font-mono text-muted-foreground">{adjustments.contrast}%</span>
+              </div>
+              <Slider
+                min={50}
+                max={150}
+                step={1}
+                value={[adjustments.contrast]}
+                onValueChange={([v]) => setAdjustments((prev) => ({ ...prev, contrast: v }))}
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-muted-foreground">{t("editor.saturation")}</Label>
+                <span className="text-xs font-mono text-muted-foreground">{adjustments.saturation}%</span>
+              </div>
+              <Slider
+                min={0}
+                max={200}
+                step={1}
+                value={[adjustments.saturation]}
+                onValueChange={([v]) => setAdjustments((prev) => ({ ...prev, saturation: v }))}
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-muted-foreground">{t("editor.sharpness")}</Label>
+                <span className="text-xs font-mono text-muted-foreground">{adjustments.sharpness}%</span>
+              </div>
+              <Slider
+                min={0}
+                max={100}
+                step={1}
+                value={[adjustments.sharpness]}
+                onValueChange={([v]) => setAdjustments((prev) => ({ ...prev, sharpness: v }))}
+                className="w-full"
+              />
             </div>
           </div>
 
