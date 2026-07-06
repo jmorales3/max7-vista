@@ -1911,4 +1911,23 @@ When wiring up a fixture presentation slide for automated testing, verify the re
 
 ---
 
+## FEAT-024 — Tone & Sharpness Photo Enhancement Controls
+
+**Status:** ✅ Confirmed working in Vista (e2e tested with disposable test user + fixture data)
+**Date:** 2026-07-06
+**Vista files:**
+- `artifacts/patient-images/src/pages/editor.tsx` — `renderCanvas()` gained a trailing optional `adjustments?: ImageAdjustments` param (`{ brightness, contrast, saturation, sharpness }`, neutral defaults `100/100/100/0`); Brightness/Contrast/Saturation are applied via the native Canvas 2D `ctx.filter = "brightness()% contrast()% saturate()%"` set immediately before `ctx.drawImage(img, ...)` and reset to `"none"` right after so annotations stay unaffected. Sharpness has no native canvas filter equivalent, so it's implemented as a small 3×3 unsharp-mask convolution (`applySharpen()`) run once via `getImageData`/`putImageData` on the whole canvas immediately after the main image+annotation draw pass, only when `sharpness > 0` (skipped entirely otherwise for perf). New `adjustments` React state + `adjustmentsRef` (mirrors the existing `scaleRef`/`rotationRef` pattern) is threaded only into the main live-redraw effect and into `renderFlatBlob()` (the save-flatten function) so adjustments preview live and are baked into the actual saved pixels on Save / Save as Copy — the ~18 other one-off `renderCanvas` call sites (crop preview, undo, post-crop reload, etc.) were left unchanged since the optional param defaults to neutral.
+- `artifacts/patient-images/src/i18n/locales/{en,es,fr,pt}.json` — new `editor` namespace keys: `adjustments`, `resetAdjustments`, `brightness`, `contrast`, `saturation`, `sharpness`; extended the `manual.editor.body` text in all 4 locales.
+- `artifacts/api-server/src/routes/chat.ts` — extended the `SYSTEM_PROMPT` Image Editor bullet to mention the Tone & Sharpness panel.
+
+### What it does
+Adds a "Tone & Sharpness" panel to the Image Editor's right sidebar (below Free Rotation) with 4 live-preview sliders — Brightness (50–150%), Contrast (50–150%), Saturation (0–200%), Sharpness (0–100%) — plus a Reset button that restores all four to neutral defaults. Adjustments preview in real time on the canvas and are non-destructive until the user clicks Save or Save as Copy, at which point they are baked into the exported pixels (same flatten step that already handles rotation/annotations).
+
+### Notes for Max7 agent
+- If Max7's image editor is also canvas-based, this is a drop-in pattern: `ctx.filter` for brightness/contrast/saturation is cheap and native (no library needed), reset it to `"none"` before drawing any vector annotations/overlays so they stay crisp.
+- Sharpness has no native Canvas 2D filter — don't reach for CSS/SVG `feConvolveMatrix` via `ctx.filter = "url(#id)"`; Safari/iOS support is unreliable. A plain `getImageData`/convolution/`putImageData` pass is slower but universally supported; gate it behind `amount > 0` so it costs nothing when unused.
+- If Max7's editor has many scattered direct calls to its render function (rather than one central redraw), add the adjustments as a single trailing *optional* parameter defaulting to neutral, so you only need to update the call sites that represent live preview + final export, not every call site.
+
+---
+
 <!-- Add new entries below as features are confirmed in Vista -->

@@ -405,6 +405,12 @@
     "unassigned": "Sin asignar — seleccione paciente para vincular",
     "selectPatient": "Seleccionar paciente…",
     "freeRotation": "Rotación Libre",
+    "adjustments": "Tono y Nitidez",
+    "resetAdjustments": "Restablecer",
+    "brightness": "Brillo",
+    "contrast": "Contraste",
+    "saturation": "Saturación",
+    "sharpness": "Nitidez",
     "clinicalNotes": "Notas Clínicas",
     "notesPlaceholder": "Agregar notas para esta imagen...",
     "annotations": "{{count}} anotación",
@@ -761,7 +767,7 @@
     },
     "editor": {
       "heading": "Edición de Imágenes",
-      "body": "El Editor de Imágenes proporciona herramientas para recortar, hacer zoom, rotar, dibujo libre y borrar. Flecha: trace flechas que señalen estructuras clínicas. Círculo: marque áreas de interés. Etiquetas de texto: colóquelas en cualquier parte y arrástrelas en modo Puntero — se admiten múltiples anotaciones de cualquier tipo. Cuentagotas: muestree un color de la imagen para anotaciones. Regla: trace líneas de medición; el modo Medir calibra la escala real (mm/px); el modo Redimensionar ajusta la imagen para que una línea de referencia coincida con una medida de referencia. Ángulo: mida el ángulo entre dos líneas haciendo clic en tres puntos. Superposición: seleccione otra imagen del paciente como capa semitransparente para comparación visual; al seleccionarla, una barra de herramientas secundaria debajo de la principal ofrece controles de Opacidad, Escala (10%–300%) y posición X/Y con Restablecer. Suavizar (Varita): suavice trazos de dibujo libre. Selección: región rectangular o a mano alzada para cortar, copiar o mover. Use el selector de color para cambiar el color de anotación. Guardar persiste todas las ediciones en disco. Guardar como copia crea una nueva imagen sin modificar el original."
+      "body": "El Editor de Imágenes proporciona herramientas para recortar, hacer zoom, rotar, dibujo libre y borrar. Flecha: trace flechas que señalen estructuras clínicas. Círculo: marque áreas de interés. Etiquetas de texto: colóquelas en cualquier parte y arrástrelas en modo Puntero — se admiten múltiples anotaciones de cualquier tipo. Cuentagotas: muestree un color de la imagen para anotaciones. Regla: trace líneas de medición; el modo Medir calibra la escala real (mm/px); el modo Redimensionar ajusta la imagen para que una línea de referencia coincida con una medida de referencia. Ángulo: mida el ángulo entre dos líneas haciendo clic en tres puntos. Superposición: seleccione otra imagen del paciente como capa semitransparente para comparación visual; al seleccionarla, una barra de herramientas secundaria debajo de la principal ofrece controles de Opacidad, Escala (10%–300%) y posición X/Y con Restablecer. Suavizar (Varita): suavice trazos de dibujo libre. Selección: región rectangular o a mano alzada para cortar, copiar o mover. Use el selector de color para cambiar el color de anotación. El panel Tono y Nitidez en la barra lateral permite ajustar Brillo, Contraste, Saturación y Nitidez con controles deslizantes de vista previa en vivo y un botón Restablecer; los cambios se aplican a la imagen solo al Guardar o Guardar como copia. Guardar persiste todas las ediciones en disco. Guardar como copia crea una nueva imagen sin modificar el original."
     },
     "bulkImport": {
       "heading": "Importación Masiva de Imágenes",

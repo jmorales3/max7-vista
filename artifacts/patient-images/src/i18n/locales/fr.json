@@ -405,6 +405,12 @@
     "unassigned": "Non assigné — sélectionner un patient pour lier",
     "selectPatient": "Sélectionner un patient…",
     "freeRotation": "Rotation Libre",
+    "adjustments": "Tonalité et Netteté",
+    "resetAdjustments": "Réinitialiser",
+    "brightness": "Luminosité",
+    "contrast": "Contraste",
+    "saturation": "Saturation",
+    "sharpness": "Netteté",
     "clinicalNotes": "Notes Cliniques",
     "notesPlaceholder": "Ajouter des notes pour cette image...",
     "annotations": "{{count}} annotation",
@@ -761,7 +767,7 @@
     },
     "editor": {
       "heading": "Édition d'Images",
-      "body": "L'Éditeur d'Images fournit des outils pour recadrer, zoomer, pivoter, dessiner à main levée et effacer. Flèche : tracez des flèches indiquant des structures cliniques. Cercle : marquez des zones d'intérêt. Étiquettes de texte : placez-les n'importe où sur l'image et faites-les glisser en mode Pointeur — plusieurs annotations de tout type sont prises en charge. Pipette : prélevez une couleur de l'image pour les annotations. Règle : tracez des lignes de mesure ; le mode Mesurer calibre l'échelle réelle (mm/px) ; le mode Redimensionner ajuste l'image pour qu'une ligne de repère corresponde à une mesure de référence. Angle : mesurez l'angle entre deux lignes en cliquant sur trois points. Superposition : sélectionnez une autre image du patient comme couche semi-transparente pour la comparaison visuelle ; une barre d'outils secondaire sous la barre principale fournit des contrôles d'Opacité, d'Échelle (10%–300%) et de position X/Y avec Réinitialiser. Lissage (Baguette) : lissez les traits à main levée. Sélection : région rectangulaire ou à main levée pour couper, copier ou déplacer. Utilisez le sélecteur de couleur pour changer la couleur d'annotation. Enregistrer persiste toutes les modifications sur disque. Enregistrer comme copie crée une nouvelle image sans modifier l'original."
+      "body": "L'Éditeur d'Images fournit des outils pour recadrer, zoomer, pivoter, dessiner à main levée et effacer. Flèche : tracez des flèches indiquant des structures cliniques. Cercle : marquez des zones d'intérêt. Étiquettes de texte : placez-les n'importe où sur l'image et faites-les glisser en mode Pointeur — plusieurs annotations de tout type sont prises en charge. Pipette : prélevez une couleur de l'image pour les annotations. Règle : tracez des lignes de mesure ; le mode Mesurer calibre l'échelle réelle (mm/px) ; le mode Redimensionner ajuste l'image pour qu'une ligne de repère corresponde à une mesure de référence. Angle : mesurez l'angle entre deux lignes en cliquant sur trois points. Superposition : sélectionnez une autre image du patient comme couche semi-transparente pour la comparaison visuelle ; une barre d'outils secondaire sous la barre principale fournit des contrôles d'Opacité, d'Échelle (10%–300%) et de position X/Y avec Réinitialiser. Lissage (Baguette) : lissez les traits à main levée. Sélection : région rectangulaire ou à main levée pour couper, copier ou déplacer. Utilisez le sélecteur de couleur pour changer la couleur d'annotation. Le panneau Tonalité et Netteté dans la barre latérale permet d'ajuster la Luminosité, le Contraste, la Saturation et la Netteté avec des curseurs à aperçu en direct et un bouton Réinitialiser ; les changements ne sont appliqués à l'image qu'à l'Enregistrement ou à l'Enregistrement comme copie. Enregistrer persiste toutes les modifications sur disque. Enregistrer comme copie crée une nouvelle image sans modifier l'original."
     },
     "bulkImport": {
       "heading": "Import en Masse d'Images",
