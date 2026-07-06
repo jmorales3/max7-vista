@@ -28,3 +28,5 @@
 - [Seed/reset migrations must never delete by shared key alone](seed-reset-data-loss.md) — a reseed deleting by patient_id alone wiped real user images sharing a seeded patient; match deletes to exact seed rows, not shared parent ids.
 - ["Show All" must not mean "every record system-wide"](gallery-show-all-tag-scope.md) — a filter-bar reset chip silently became an unbounded query once data grew large; give resets an explicit bounded-default param instead.
 - [Nullable-patientId image fetch](nullable-patientid-image-fetch.md) — GET-by-id image routes using innerJoin(patients) 404 for library assets; fetch row first, branch on isLibraryAsset.
+- [GitHub API commit-replay newline gotcha](github-api-commit-message-newline.md) — recreating commits via GitHub's Git Data API needs a trailing `\n` on the message or the replayed SHA won't match the original.
+- [Main agent .git write lockdown](main-agent-git-write-lockdown.md) — ANY write to .git internals (fetch, merge, ref update, rm .lock) is hard-blocked for main agent, not just "destructive" verbs; reconcile diverged histories via GitHub's REST Git Data API from bash instead.
