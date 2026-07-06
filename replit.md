@@ -38,7 +38,8 @@ _Describe the high-level user-facing capabilities of this app once they exist._
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- **Release checklist**: before tagging any new release, ask the agent to run the GitHub sync check first. It compares this workspace's `main` against GitHub's `main` via the API (local `git fetch`/`merge`/ref-writes are blocked in this sandbox) and flags whether it's safe to tag, whether local is just behind (needs catching up before release), or genuinely diverged (needs reconciliation before release). Never tag a release without this check passing clean.
+- **Project task merges are a separate approval step from starting the work.** Approving a task only schedules/starts it — once a task agent finishes, it sits in "Ready" state and does NOT merge automatically; merging is a distinct action taken from the tasks UI. Use that as the control point: hold off merging "Ready" tasks while mid-release (between the sync check and pushing the tag), then merge them once the release is out.
 
 ## Pointers
 
