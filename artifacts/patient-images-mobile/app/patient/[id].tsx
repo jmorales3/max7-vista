@@ -10,15 +10,34 @@ import {
   Dimensions,
   Platform,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, router } from "expo-router";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
-import { useGetPatient, useListPatientImages, getBaseUrl } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useGetPatient,
+  useListPatientImages,
+  useDeletePatient,
+  useDeleteImage,
+  getBaseUrl,
+  getListPatientsQueryKey,
+  getListPatientImagesQueryKey,
+  customFetch,
+  ApiError,
+} from "@workspace/api-client-react";
 import type { Image as PatientImage } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+type DeleteConflict = { id: number; title: string }[];
+
+function conflictMessage(base: string, conflict: DeleteConflict) {
+  const titles = conflict.map((p) => `• ${p.title}`).join("\n");
+  return `${base}\n\n${titles}`;
+}
 
 type GridColumns = 1 | 2 | 4;
 
@@ -129,9 +148,12 @@ export default function PatientDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const patientId = Number(id);
+  const queryClient = useQueryClient();
 
   const [columns, setColumns] = useState<GridColumns>(2);
   const [lightboxImage, setLightboxImage] = useState<PatientImage | null>(null);
+  const [isDeletingPatient, setIsDeletingPatient] = useState(false);
+  const [isDeletingImage, setIsDeletingImage] = useState(false);
 
   const baseUrl = getBaseUrl() ?? "";
 
@@ -148,6 +170,129 @@ export default function PatientDetailScreen() {
     refetch,
     isFetching,
   } = useListPatientImages(patientId);
+
+  const deletePatient = useDeletePatient({
+    mutation: {
+      onSuccess: () => {
+        void queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
+        router.back();
+      },
+      onError: (e) => {
+        if (e instanceof ApiError && e.status === 409) {
+          const conflict = (e.data as { presentations?: DeleteConflict })?.presentations ?? [];
+          Alert.alert(
+            "Used in presentations",
+            conflictMessage(
+              "This patient's images are used in saved presentations. Deleting the patient will remove them from these presentations too.",
+              conflict,
+            ),
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Delete Anyway",
+                style: "destructive",
+                onPress: () => forceDeletePatient(),
+              },
+            ],
+          );
+          return;
+        }
+        Alert.alert("Error", e instanceof Error ? e.message : "Failed to delete patient.");
+      },
+    },
+  });
+
+  const forceDeletePatient = useCallback(async () => {
+    setIsDeletingPatient(true);
+    try {
+      await customFetch(`/api/patients/${patientId}?force=true`, { method: "DELETE" });
+      void queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
+      router.back();
+    } catch (e) {
+      Alert.alert("Error", e instanceof Error ? e.message : "Failed to delete patient.");
+    } finally {
+      setIsDeletingPatient(false);
+    }
+  }, [patientId, queryClient]);
+
+  const handleDeletePatient = useCallback(async () => {
+    if (!patient) return;
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Alert.alert(
+      "Delete patient",
+      `Are you sure you want to delete ${patient.name}? This will also delete all of their images.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => deletePatient.mutate({ id: patientId }),
+        },
+      ],
+    );
+  }, [patient, patientId, deletePatient]);
+
+  const deleteImage = useDeleteImage({
+    mutation: {
+      onSuccess: () => {
+        void queryClient.invalidateQueries({ queryKey: getListPatientImagesQueryKey(patientId) });
+        setLightboxImage(null);
+      },
+      onError: (e) => {
+        if (e instanceof ApiError && e.status === 409) {
+          const conflict = (e.data as { presentations?: DeleteConflict })?.presentations ?? [];
+          Alert.alert(
+            "Used in presentations",
+            conflictMessage(
+              "This image is used in saved presentations. Deleting it will remove it from those presentations too.",
+              conflict,
+            ),
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Delete Anyway",
+                style: "destructive",
+                onPress: () => forceDeleteImage(),
+              },
+            ],
+          );
+          return;
+        }
+        Alert.alert("Error", e instanceof Error ? e.message : "Failed to delete image.");
+      },
+    },
+  });
+
+  const forceDeleteImage = useCallback(async () => {
+    if (!lightboxImage) return;
+    setIsDeletingImage(true);
+    try {
+      await customFetch(`/api/images/${lightboxImage.id}?force=true`, { method: "DELETE" });
+      void queryClient.invalidateQueries({ queryKey: getListPatientImagesQueryKey(patientId) });
+      setLightboxImage(null);
+    } catch (e) {
+      Alert.alert("Error", e instanceof Error ? e.message : "Failed to delete image.");
+    } finally {
+      setIsDeletingImage(false);
+    }
+  }, [lightboxImage, patientId, queryClient]);
+
+  const handleDeleteImage = useCallback(async () => {
+    if (!lightboxImage) return;
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Alert.alert(
+      "Delete image",
+      "Are you sure you want to delete this image?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => deleteImage.mutate({ id: lightboxImage.id }),
+        },
+      ],
+    );
+  }, [lightboxImage, deleteImage]);
 
   const handleImagePress = useCallback(async (image: PatientImage) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -333,6 +478,18 @@ export default function PatientDetailScreen() {
           </Text>
           <Text style={s.headerCode}>{patient?.patientCode}</Text>
         </View>
+        <TouchableOpacity
+          style={s.gridToggle}
+          onPress={handleDeletePatient}
+          disabled={isDeletingPatient || patientLoading}
+          testID="delete-patient-button"
+        >
+          {isDeletingPatient ? (
+            <ActivityIndicator size="small" color={colors.destructive} />
+          ) : (
+            <Ionicons name="trash-outline" size={20} color={colors.destructive} />
+          )}
+        </TouchableOpacity>
         <TouchableOpacity style={s.gridToggle} onPress={cycleColumns}>
           <Ionicons
             name={colIcon[columns] as "grid-outline" | "apps-outline" | "grid"}
@@ -406,6 +563,18 @@ export default function PatientDetailScreen() {
               <Text style={s.lightboxTitle} numberOfLines={1}>
                 {lightboxImage.fileName ?? `Image ${lightboxImage.id}`}
               </Text>
+              <TouchableOpacity
+                style={s.lightboxCloseBtn}
+                onPress={handleDeleteImage}
+                disabled={isDeletingImage}
+                testID="delete-image-button"
+              >
+                {isDeletingImage ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="trash-outline" size={22} color="#fff" />
+                )}
+              </TouchableOpacity>
             </View>
 
             <Image
