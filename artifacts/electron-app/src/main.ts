@@ -111,6 +111,10 @@ async function startApiServer(): Promise<void> {
     LICENSE_HMAC_SECRET: _BAKED_HMAC_SECRET,
     NODE_PATH: nodeModulesPath,
     USER_DATA_DIR: app.getPath("userData"),
+    // Injected so the api-server bundle can report the correct version without
+    // needing to find its package.json on disk (which doesn't exist next to
+    // the self-contained bundle in the packaged app).
+    APP_VERSION: app.getVersion(),
   });
 
   // Inject the electron-app node_modules into Module.globalPaths so that

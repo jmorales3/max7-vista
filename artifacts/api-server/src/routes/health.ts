@@ -3,9 +3,18 @@ import { HealthCheckResponse } from "@workspace/api-zod";
 import { createRequire } from "node:module";
 import os from "os";
 
-const require = createRequire(import.meta.url);
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const pkg = require("../package.json") as { version: string };
+// In the packaged Electron app the bundle is a single self-contained file
+// (resources/api-server/index.mjs), so "../package.json" doesn't exist on
+// disk at runtime. Wrap in try/catch and fall back to the APP_VERSION env var
+// (injected by the Electron main process before importing this bundle).
+let pkg: { version: string } = { version: "unknown" };
+try {
+  const _require = createRequire(import.meta.url);
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  pkg = _require("../package.json") as { version: string };
+} catch {
+  // Packaged build: no package.json next to the bundle — use process.env.APP_VERSION.
+}
 
 const router: IRouter = Router();
 
