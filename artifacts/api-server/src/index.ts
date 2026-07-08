@@ -90,6 +90,10 @@ async function initSqlite() {
       tenant_id INTEGER REFERENCES tenants(id) ON DELETE CASCADE,
       role TEXT NOT NULL DEFAULT 'user',
       is_active INTEGER NOT NULL DEFAULT 1,
+      force_password_change INTEGER NOT NULL DEFAULT 0,
+      mfa_enabled INTEGER NOT NULL DEFAULT 0,
+      mfa_secret TEXT,
+      mfa_backup_codes TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -285,6 +289,11 @@ async function initSqlite() {
   const sqliteMigrations = [
     // images
     `ALTER TABLE images ADD COLUMN sha256 TEXT`,
+    // users — mirrors Postgres schema/users.ts columns (see schema-sqlite/users.ts)
+    `ALTER TABLE users ADD COLUMN force_password_change INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN mfa_enabled INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN mfa_secret TEXT`,
+    `ALTER TABLE users ADD COLUMN mfa_backup_codes TEXT`,
     // audit_log
     `ALTER TABLE audit_log ADD COLUMN tenant_id INTEGER`,
     `ALTER TABLE audit_log ADD COLUMN patient_id INTEGER REFERENCES patients(id)`,
