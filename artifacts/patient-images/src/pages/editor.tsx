@@ -195,6 +195,46 @@ interface CropRect {
   h: number;
 }
 
+// Module-level flag so drawAnnotation can read it without threading it
+// through every renderCanvas call site. Synced every render by the component.
+const _goldenProportion = { current: false };
+
+function drawGoldenProportionMarker(
+  ctx: CanvasRenderingContext2D,
+  x1: number, y1: number,
+  x2: number, y2: number,
+  scale: number,
+) {
+  const PHI = 1.6180339887;
+  const t = 1 / PHI; // 0.618 — the smaller segment
+  const mx = x1 + (x2 - x1) * t;
+  const my = y1 + (y2 - y1) * t;
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  const perp = angle + Math.PI / 2;
+  const tickLen = 9 / scale;
+  const r = 3 / scale;
+  const lw = 1.5 / scale;
+  ctx.save();
+  ctx.strokeStyle = "#f59e0b";
+  ctx.fillStyle = "#f59e0b";
+  ctx.lineWidth = lw;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(mx + Math.cos(perp) * tickLen, my + Math.sin(perp) * tickLen);
+  ctx.lineTo(mx - Math.cos(perp) * tickLen, my - Math.sin(perp) * tickLen);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(mx, my, r, 0, Math.PI * 2);
+  ctx.fill();
+  const fontSize = 12 / scale;
+  ctx.font = `bold ${fontSize}px sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "bottom";
+  ctx.fillStyle = "#b45309";
+  ctx.fillText("φ", mx, my - tickLen - 2 / scale);
+  ctx.restore();
+}
+
 function drawArrow(
   ctx: CanvasRenderingContext2D,
   x1: number, y1: number,
@@ -294,6 +334,9 @@ function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation, scale: n
     ctx.moveTo(ann.x1, ann.y1);
     ctx.lineTo(ann.x2, ann.y2);
     ctx.stroke();
+    if (_goldenProportion.current) {
+      drawGoldenProportionMarker(ctx, ann.x1, ann.y1, ann.x2, ann.y2, scale);
+    }
   } else if (ann.type === "dot") {
     ctx.beginPath();
     ctx.arc(ann.x, ann.y, ann.radius, 0, 2 * Math.PI);
@@ -594,6 +637,8 @@ export default function Editor() {
   const panDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
   const [hudPos, setHudPos] = useState<{ left: number; top: number } | null>(null);
   const hudRef = useRef<HTMLDivElement>(null);
+  const [showGoldenProportion, setShowGoldenProportion] = useState(false);
+  _goldenProportion.current = showGoldenProportion;
   const [penColor, setPenColor] = useState("#ff0000");
   const [strokeWidth, setStrokeWidth] = useState(4);
   const [textSize, setTextSize] = useState(36);
@@ -3338,6 +3383,26 @@ export default function Editor() {
                     title={t("editor.zoomIn")}
                   ><ZoomIn className="h-3.5 w-3.5" /></Button>
                 </div>
+                {/* Golden Proportion toggle — line tool only */}
+                {tool === "straightline" && (
+                  <div className="px-2 py-1.5 border-b">
+                    <button
+                      onClick={() => setShowGoldenProportion((v) => !v)}
+                      className={`w-full flex items-center gap-1.5 rounded px-1.5 py-1 text-xs transition-colors ${
+                        showGoldenProportion
+                          ? "bg-amber-50 text-amber-800 border border-amber-300"
+                          : "text-muted-foreground hover:bg-accent border border-transparent"
+                      }`}
+                      title="Mark the golden proportion point on every line (φ ≈ 1.618)"
+                    >
+                      <span className={`text-sm font-bold leading-none ${showGoldenProportion ? "text-amber-500" : "text-muted-foreground"}`}>φ</span>
+                      <span>Golden Proportion</span>
+                      <div className={`ml-auto w-6 h-3.5 rounded-full flex items-center px-0.5 transition-colors ${showGoldenProportion ? "bg-amber-400" : "bg-muted"}`}>
+                        <div className={`w-2.5 h-2.5 bg-white rounded-full shadow transition-transform ${showGoldenProportion ? "translate-x-2.5" : "translate-x-0"}`} />
+                      </div>
+                    </button>
+                  </div>
+                )}
                 {/* Utilities */}
                 <div className="flex flex-col px-1.5 py-1.5 gap-0.5">
                   <Button
