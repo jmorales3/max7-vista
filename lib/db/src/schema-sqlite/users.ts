@@ -10,6 +10,7 @@ export const usersTable = sqliteTable("users", {
   tenantId: integer("tenant_id").references(() => tenantsTable.id, { onDelete: "cascade" }),
   role: text("role").$type<"user" | "admin" | "superadmin">().notNull().default("user"),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  forcePasswordChange: integer("force_password_change", { mode: "boolean" }).notNull().default(false),
   mfaEnabled: integer("mfa_enabled", { mode: "boolean" }).notNull().default(false),
   mfaSecret: text("mfa_secret"),
   mfaBackupCodes: text("mfa_backup_codes"),
