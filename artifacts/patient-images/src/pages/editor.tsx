@@ -78,6 +78,8 @@ import {
   PaintBucket,
   FlipHorizontal2,
   FlipVertical2,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -639,6 +641,7 @@ export default function Editor() {
   const hudRef = useRef<HTMLDivElement>(null);
   const [showGoldenProportion, setShowGoldenProportion] = useState(false);
   _goldenProportion.current = showGoldenProportion;
+  const [hudCollapsed, setHudCollapsed] = useState(false);
   const [penColor, setPenColor] = useState("#ff0000");
   const [strokeWidth, setStrokeWidth] = useState(4);
   const [textSize, setTextSize] = useState(36);
@@ -2995,8 +2998,21 @@ export default function Editor() {
                   onMouseDown={startHudDrag}
                 >
                   <GripVertical className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  <span className="text-xs font-semibold truncate">{toolLabel}</span>
+                  <span className="text-xs font-semibold truncate flex-1">{toolLabel}</span>
+                  <button
+                    className="ml-auto shrink-0 rounded p-0.5 hover:bg-accent text-muted-foreground transition-colors"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={() => setHudCollapsed((v) => !v)}
+                    title={hudCollapsed ? "Expand panel" : "Collapse panel"}
+                  >
+                    {hudCollapsed
+                      ? <ChevronUp className="h-3 w-3" />
+                      : <ChevronDown className="h-3 w-3" />
+                    }
+                  </button>
                 </div>
+                {/* Collapsible body */}
+                {!hudCollapsed && (<>
                 {/* Instruction text */}
                 {instruction && (
                   <div className="px-2.5 py-1.5 border-b">
@@ -3433,6 +3449,7 @@ export default function Editor() {
                     title={`${t("editor.pasteFromClipboard")} (Ctrl+V)`}
                   ><ClipboardPaste className="h-3.5 w-3.5" />{t("editor.pasteFromClipboard")}</Button>
                 </div>
+                </>)}
               </div>
             );
           })()}
