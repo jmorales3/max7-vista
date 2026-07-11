@@ -68,21 +68,21 @@ function SortableImageCard({
   };
 
   const dragHandle = (
-    <button
-      {...attributes}
-      {...listeners}
-      onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+    <div
       title="Drag to reorder"
-      className="absolute top-1.5 left-1.5 p-1 rounded-full bg-black/40 text-white opacity-60 hover:opacity-100 hover:bg-black/70 cursor-grab active:cursor-grabbing touch-none z-10"
+      className="absolute top-1.5 left-1.5 p-1 rounded-full bg-black/40 text-white opacity-60 hover:opacity-100 hover:bg-black/70 cursor-grab touch-none z-10 pointer-events-none"
     >
       <GripVertical className="h-3.5 w-3.5" />
-    </button>
+    </div>
   );
 
   return (
     <div
       ref={setNodeRef}
       style={style}
+      {...attributes}
+      {...listeners}
+      className="cursor-grab active:cursor-grabbing touch-none"
       onClickCapture={(e) => {
         // A drag that ends on top of another card fires a native click on that
         // card's <Link>, not the one where the drag started — guard globally.

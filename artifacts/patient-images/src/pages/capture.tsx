@@ -251,11 +251,11 @@ export default function Capture() {
           title: t("capture.allSaved", { count: successCount }),
           description: t("capture.allSavedDesc", { count: successCount }),
         });
-        setLocation(`/gallery?patientId=${patientId}`);
+        setLocation(`/patients/${patientId}`);
       }
     } else if (queuedOfflineCount > 0) {
       clearQueue();
-      setLocation(`/gallery?patientId=${patientId}`);
+      setLocation(`/patients/${patientId}`);
     }
   };
 
