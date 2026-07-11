@@ -642,6 +642,31 @@ export default function Editor() {
   const [showGoldenProportion, setShowGoldenProportion] = useState(false);
   _goldenProportion.current = showGoldenProportion;
   const [hudCollapsed, setHudCollapsed] = useState(false);
+
+  // Auto-expand the HUD and clamp its position whenever the active tool changes
+  // so all tool-specific controls are visible without needing a manual un-collapse.
+  useEffect(() => {
+    setHudCollapsed(false);
+    // After the new content has rendered, re-clamp hudPos so the panel doesn't
+    // overflow the bottom/right of the container (common when positioned near a corner).
+    requestAnimationFrame(() => {
+      const el = hudRef.current;
+      const container = containerRef.current;
+      if (!el || !container) return;
+      setHudPos((prev) => {
+        if (!prev) return prev;
+        const cr = container.getBoundingClientRect();
+        const hr = el.getBoundingClientRect();
+        const maxLeft = cr.width - hr.width;
+        const maxTop = cr.height - hr.height;
+        const clampedLeft = Math.max(0, Math.min(maxLeft, prev.left));
+        const clampedTop = Math.max(0, Math.min(maxTop, prev.top));
+        if (clampedLeft === prev.left && clampedTop === prev.top) return prev;
+        return { left: clampedLeft, top: clampedTop };
+      });
+    });
+  }, [tool]);
+
   const [penColor, setPenColor] = useState("#ff0000");
   const [strokeWidth, setStrokeWidth] = useState(4);
   const [textSize, setTextSize] = useState(36);
