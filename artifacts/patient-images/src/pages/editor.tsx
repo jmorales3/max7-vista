@@ -1888,7 +1888,10 @@ export default function Editor() {
         scale,
         rotation,
       };
-      // Extract the selected region into a floater
+      // Extract the selected region into a floater.
+      // Re-render the canvas WITHOUT the selection overlay first so the orange
+      // dotted border isn't baked into the captured image data.
+      renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, null, null, null, undefined, panOffsetRef.current, cutPath);
       const offscreen = document.createElement("canvas");
       offscreen.width = sel.w;
       offscreen.height = sel.h;
@@ -2076,16 +2079,21 @@ export default function Editor() {
     const container = containerRef.current;
     const img = new Image();
     img.onload = () => {
-      // Render current state (image + annotations + white hole), then burn in floater
-      renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, null, null, cutRect, undefined, undefined, cutPath);
+      // Render current state (image + annotations + white hole), then burn in floater.
+      // Pass the current pan offset so the image lands in the same visual position
+      // as what the user sees while positioning the floater.
+      renderCanvas(canvas, imgRef.current, annotationsRef.current, scale, rotation, null, null, cutRect, undefined, panOffsetRef.current, cutPath);
       const ctx = canvas.getContext("2d")!;
       const { x, y, w, h, flipH: fh, angle: ang } = floater;
       const angRad = ((ang ?? 0) * Math.PI) / 180;
       if (fh || angRad !== 0) {
         ctx.save();
         ctx.translate(x + w / 2, y + h / 2);
-        ctx.rotate(angRad);
+        // Apply scale (flip) BEFORE rotate so the canvas transform order matches
+        // the CSS preview: transform: scaleX(-1) rotate(ang) means rotate first
+        // then flip, which in canvas CTM is T × S × R (R applied innermost).
         if (fh) ctx.scale(-1, 1);
+        ctx.rotate(angRad);
         ctx.drawImage(img, -w / 2, -h / 2, w, h);
         ctx.restore();
       } else {
