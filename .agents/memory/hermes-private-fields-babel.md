@@ -1,33 +1,45 @@
 ---
 name: Hermes private class fields — eas update Linux fix
-description: eas update fails on Linux with "private properties are not supported" from hermesc on React Native 0.81 DOMRectReadOnly.js — patch the source file directly.
+description: eas update fails on Linux with "private properties are not supported" from hermesc in React Native 0.81. Full fix requires both a Babel config change and a postinstall patch script.
 ---
 
 The Linux `hermesc` binary bundled with `react-native@0.81.x` does not support ES2022 private
-class fields (`#x`, `#y`, etc.). The offending file is:
-`react-native/src/private/webapis/geometry/DOMRectReadOnly.js`
-which declares `#x`, `#y`, `#width`, `#height` as private fields.
+class fields (`#fieldName`). This affects react-native's own source files AND third-party
+packages (e.g. `@tanstack/query-core`, `@react-navigation/*`, `ws`).
 
-**Symptom:** `eas update` bundles all 1500+ modules successfully with Metro, then fails during
-the Hermes bytecode step: `error: private properties are not supported` for every `#field`
-usage, then `too many errors emitted`, then `Export failed`.
+**Symptom:** `eas update` progresses through Metro bundling then fails during Hermes bytecode
+compilation: `error: private properties are not supported` for every `#field` usage, then
+`too many errors emitted`, then `Export failed`.
 
-**DO NOT try to fix this with Babel plugins.** Adding `@babel/plugin-transform-class-properties`
-and `@babel/plugin-transform-private-methods` to `babel.config.js` creates cascading ordering
-conflicts with:
-- TypeScript `declare` fields in `expo-image/ExpoImage.tsx` (needs TypeScript plugin first)
-- The `react-native-worklets` Babel plugin (crashes with "Cannot read properties of undefined
-  (reading 'length')") when the config is restructured to fix the ordering
+## Two-part fix (both required)
 
-**Correct fix:** Patch `DOMRectReadOnly.js` in-place to replace `#x`/`#y`/`#width`/`#height`
-with `_x`/`_y`/`_width`/`_height` (regular underscore-prefixed properties). The patch script
-lives at `scripts/patch-react-native-domrect.cjs` and is wired to the mobile app's `postinstall`
-hook so it re-runs after every `pnpm install`.
+### Part 1 — `babel.config.js` (universal transform)
+Add these plugins to `artifacts/patient-images-mobile/babel.config.js` so Metro transforms
+private fields from ALL packages before hermesc sees them:
+```js
+plugins: [
+  ['@babel/plugin-transform-private-methods', { loose: true }],
+  ['@babel/plugin-transform-class-properties', { loose: true }],
+],
+```
+`loose: true` is required. The plugins skip TypeScript `declare` fields correctly in v7.28+.
+This is the PRIMARY fix for third-party packages (tanstack, etc.).
 
-**Why:** Patching the single source file is far simpler than fighting Babel plugin ordering
-across mixed JS/Flow/TS files in node_modules. The `babel.config.js` stays as the stock
-`presets: ['babel-preset-expo']` with no additions.
+### Part 2 — `scripts/patch-react-native-domrect.cjs` (postinstall patch)
+The patch script also rewrites private fields in `react-native/src/` and `react-native/Libraries/`
+source files. It is wired to `postinstall` in the mobile app's `package.json`. The script also
+fixes three bugs in the `react-native-worklets@0.5.1` Babel plugin (see worklets topic file).
 
-**How to apply:** Run `node scripts/patch-react-native-domrect.cjs` from the workspace root any
-time `pnpm install` is run manually (postinstall handles it automatically otherwise). Metro cache
-at `/tmp/metro-cache` must also be cleared after a re-patch: `rm -rf /tmp/metro-cache`.
+## Why both are needed
+The Babel config handles third-party packages compiled into the bundle.
+The patch script handles react-native's own source files (some may not go through Babel transform).
+
+## What NOT to do
+Do not try to fix the worklets Babel plugin crash by adding `@babel/plugin-transform-typescript`
+to the top-level config — this doesn't run before the worklets plugin visitor. Instead, the
+postinstall patch to the worklets plugin itself (using original source text from `state.file.code`)
+is the correct approach.
+
+**How to apply after pnpm install:**
+`pnpm install` triggers `postinstall` which runs the patch script automatically.
+After any re-patch, clear Metro cache: `rm -rf /tmp/metro-cache`.
