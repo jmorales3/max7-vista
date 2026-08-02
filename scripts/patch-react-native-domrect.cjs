@@ -71,16 +71,19 @@ function walkJs(dir, callback) {
 
 const rnDirs = storeDirs.filter(f => f.startsWith('react-native@0.81.'));
 for (const dir of rnDirs) {
-  const privateDir = path.join(pnpmStore, dir, 'node_modules/react-native/src/private');
+  const rnRoot = path.join(pnpmStore, dir, 'node_modules/react-native');
   let patched = 0;
-  walkJs(privateDir, filePath => {
+  // Scan both src/ and Libraries/ — private fields appear in both trees
+  for (const subDir of ['src', 'Libraries']) {
+    walkJs(path.join(rnRoot, subDir), filePath => {
     const original = fs.readFileSync(filePath, 'utf8');
     const updated = patchPrivateFields(original);
-    if (updated !== null && updated !== original) {
-      fs.writeFileSync(filePath, updated, 'utf8');
-      patched++;
-    }
-  });
+      if (updated !== null && updated !== original) {
+        fs.writeFileSync(filePath, updated, 'utf8');
+        patched++;
+      }
+    });
+  }
   if (patched > 0) console.log(`[patch-private-fields] Patched ${patched} file(s) in ${dir}`);
   else console.log(`[patch-private-fields] Already patched: ${dir}`);
 }
