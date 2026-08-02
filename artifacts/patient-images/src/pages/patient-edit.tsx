@@ -28,6 +28,18 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ChevronLeft, Loader2 } from "lucide-react";
 
+/** Converts any stored date format to the YYYY-MM-DD value that <input type="date"> requires. */
+function toInputDate(raw: string | null | undefined): string {
+  if (!raw) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;          // already correct
+  const mdy = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); // M/D/YYYY
+  if (mdy) {
+    const [, m, d, y] = mdy;
+    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+  return raw;
+}
+
 const formSchema = z.object({
   name: z.string().min(1),
   patientCode: z.string().min(1),
@@ -63,7 +75,7 @@ export default function PatientEdit() {
     form.reset({
       name: patient.name,
       patientCode: patient.patientCode,
-      dateOfBirth: patient.dateOfBirth ?? "",
+      dateOfBirth: toInputDate(patient.dateOfBirth),
       notes: patient.notes ?? "",
       phone: (patient as any).phone ?? "",
     });
