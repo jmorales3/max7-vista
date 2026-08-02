@@ -1,18 +1,21 @@
 #!/usr/bin/env node
 /**
- * Patches two known bugs that prevent `eas update` from succeeding on Linux (Replit):
+ * Patches known bugs that prevent `eas update` from succeeding on Linux (Replit).
  *
- * 1. react-native@0.81.x — DOMRectReadOnly.js uses private class fields (#x, #y, #width,
- *    #height) that the Linux hermesc binary cannot compile. Replace with _x/_y/_width/_height.
+ * PATCH 1 — react-native@0.81.x DOMRectReadOnly.js
+ *   Private class fields (#x, #y, #width, #height) that the Linux hermesc binary cannot compile.
+ *   Replace with _x/_y/_width/_height.
  *
- * 2. react-native-worklets@0.5.1 — Babel plugin crashes with
- *    "Cannot read properties of undefined (reading 'length')" when a worklet function is
- *    defined inside a TypeScript file. The plugin calls @babel/generator on the raw TS AST
- *    before type annotations are stripped, causing the crash. Patch the generator call to
- *    clone the node and strip TS annotations first. Also fix hardcoded negative numericLiteral
- *    values that Babel rejects.
+ * PATCH 2 — react-native-worklets@0.5.1 Babel plugin (three sub-fixes)
+ *   A) negative numericLiteral values: Babel rejects numericLiteral(-27); use unaryExpression instead.
+ *   B) @babel/generator called on raw TypeScript AST: crashes with "Cannot read properties of
+ *      undefined (reading 'length')". Fix: use the original TypeScript source text from
+ *      state.file.code instead of regenerating from the AST. workletTransformSync already
+ *      includes @babel/preset-typescript so it handles the TS source fine.
+ *   C) workletTransformSync not passed sourceMaps:true: returns map:null, which then hits the
+ *      "[Reanimated] `inputMap` is undefined" assertion in buildWorkletString. Fix: add sourceMaps:true.
  *
- * Re-run (or pnpm install) after any package update.
+ * Re-run (or pnpm install triggers postinstall) after any package update.
  */
 
 const fs = require('fs');
@@ -71,7 +74,7 @@ for (const dir of workletsDirs) {
   let content = fs.readFileSync(pluginPath, 'utf8');
   let changed = false;
 
-  // Fix A: negative numericLiteral(-27) — Babel rejects negative numericLiteral values
+  // Fix 2A: negative numericLiteral — Babel rejects negative numericLiteral values
   if (content.includes('numericLiteral)(-27)')) {
     content = content.replace(
       '(0, types_12.numericLiteral)(lineOffset),\n            (0, types_12.numericLiteral)(-27)',
@@ -80,32 +83,58 @@ for (const dir of workletsDirs) {
     changed = true;
   }
 
-  // Fix B: @babel/generator called on raw TypeScript AST — strip TS annotations first
+  // Fix 2B: @babel/generator called on raw TypeScript AST
+  // Use original source text from state.file.code instead — workletTransformSync has
+  // @babel/preset-typescript built in and handles TS source directly.
   const OLD_GEN = `      const codeObject = (0, generator_1.default)(fun.node, {
         sourceMaps: true,
         sourceFileName: state.file.opts.filename
       });`;
-  const NEW_GEN = `      // Patch: strip TypeScript annotations from a clone before @babel/generator
-      // to prevent 'Cannot read properties of undefined (reading length)' crashes
-      // when worklets are defined inside TypeScript files.
-      const _genNode = (0, types_12.cloneNode)(fun.node, true);
-      (function _stripTS(n) {
-        if (!n || typeof n !== 'object') return;
-        if (n.typeAnnotation !== undefined) n.typeAnnotation = null;
-        if (n.returnType !== undefined) n.returnType = null;
-        if (n.typeParameters !== undefined) n.typeParameters = null;
-        if (n.optional) n.optional = false;
-        if (Array.isArray(n.params)) n.params.forEach(_stripTS);
-        if (n.body) _stripTS(n.body);
-        if (Array.isArray(n.body && n.body.body)) n.body.body.forEach(_stripTS);
-      })(_genNode);
-      const codeObject = (0, generator_1.default)(_genNode, {
-        sourceMaps: true,
-        sourceFileName: state.file.opts.filename
-      });`;
+  const NEW_GEN = `      // Patch 2B: use original TypeScript source text instead of @babel/generator
+      // to avoid crashes on TypeScript AST nodes inside worklet function bodies.
+      // workletTransformSync already includes @babel/preset-typescript.
+      const _patchNodeStart = fun.node.start;
+      const _patchNodeEnd = fun.node.end;
+      const _patchFileSrc = state.file.code;
+      let codeObject;
+      if (typeof _patchNodeStart === 'number' && typeof _patchNodeEnd === 'number' && _patchFileSrc) {
+        codeObject = { code: _patchFileSrc.slice(_patchNodeStart, _patchNodeEnd), map: undefined };
+      } else {
+        codeObject = (0, generator_1.default)(fun.node, {
+          sourceMaps: true,
+          sourceFileName: state.file.opts.filename
+        });
+      }`;
 
   if (content.includes(OLD_GEN)) {
     content = content.replace(OLD_GEN, NEW_GEN);
+    changed = true;
+  }
+
+  // Fix 2C: add sourceMaps:true to workletTransformSync so transformed.map is not null,
+  // preventing the "[Reanimated] `inputMap` is undefined" assertion in buildWorkletString.
+  const OLD_TRANSFORM = `      const transformed = (0, transform_1.workletTransformSync)(codeObject.code, {
+        extraPlugins: [...extraPlugins, ...(_a = state.opts.extraPlugins) !== null && _a !== void 0 ? _a : []],
+        extraPresets: state.opts.extraPresets,
+        filename: state.file.opts.filename,
+        ast: true,
+        babelrc: false,
+        configFile: false,
+        inputSourceMap: codeObject.map
+      });`;
+  const NEW_TRANSFORM = `      const transformed = (0, transform_1.workletTransformSync)(codeObject.code, {
+        extraPlugins: [...extraPlugins, ...(_a = state.opts.extraPlugins) !== null && _a !== void 0 ? _a : []],
+        extraPresets: state.opts.extraPresets,
+        filename: state.file.opts.filename,
+        ast: true,
+        sourceMaps: true,
+        babelrc: false,
+        configFile: false,
+        inputSourceMap: codeObject.map
+      });`;
+
+  if (content.includes(OLD_TRANSFORM)) {
+    content = content.replace(OLD_TRANSFORM, NEW_TRANSFORM);
     changed = true;
   }
 
