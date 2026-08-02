@@ -10,9 +10,11 @@ module.exports = function (api) {
       // All three plugins must be v7.28.6 (v8 rejects TS !: fields without a
       // TypeScript-first pass that creates unresolvable Metro dependency ordering).
       // loose:true required for consistent behaviour across all three transforms.
-      ['@babel/plugin-transform-classes', { loose: true }],
+      // Order matters: properties/methods must be lowered before the class
+      // declaration itself is converted to an ES5 function.
       ['@babel/plugin-transform-private-methods', { loose: true }],
       ['@babel/plugin-transform-class-properties', { loose: true }],
+      ['@babel/plugin-transform-classes', { loose: true }],
     ],
   };
 };
