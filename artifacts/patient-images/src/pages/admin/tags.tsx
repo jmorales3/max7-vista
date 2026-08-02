@@ -17,6 +17,22 @@ interface Tag {
   createdAt: string;
 }
 
+interface TagRef {
+  id: number;
+  name?: string;
+  title?: string;
+}
+
+class TagConflictError extends Error {
+  patients: TagRef[];
+  libraryAssets: TagRef[];
+  constructor(patients: TagRef[], libraryAssets: TagRef[]) {
+    super("This tag is still assigned to one or more patients or library assets.");
+    this.patients = patients;
+    this.libraryAssets = libraryAssets;
+  }
+}
+
 async function fetchTags(): Promise<Tag[]> {
   const res = await fetch("/api/tags", { credentials: "include" });
   if (!res.ok) throw new Error("Failed to load tags");
@@ -37,11 +53,15 @@ async function createTag(name: string): Promise<Tag> {
   return res.json();
 }
 
-async function deleteTag(id: number): Promise<void> {
-  const res = await fetch(`/api/tags/${id}`, {
+async function deleteTag(id: number, force = false): Promise<void> {
+  const res = await fetch(`/api/tags/${id}${force ? "?force=true" : ""}`, {
     method: "DELETE",
     credentials: "include",
   });
+  if (res.status === 409) {
+    const body = await res.json().catch(() => ({}));
+    throw new TagConflictError(body.patients ?? [], body.libraryAssets ?? []);
+  }
   if (!res.ok && res.status !== 204) throw new Error("Delete failed");
 }
 
@@ -53,6 +73,7 @@ export default function AdminTags() {
   const qc = useQueryClient();
   const [newName, setNewName] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Tag | null>(null);
+  const [deleteConflict, setDeleteConflict] = useState<{ patients: TagRef[]; libraryAssets: TagRef[] } | null>(null);
 
   const { data: tags = [], isLoading } = useQuery({
     queryKey: TAGS_QUERY_KEY,
@@ -72,14 +93,21 @@ export default function AdminTags() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: deleteTag,
+    mutationFn: ({ id, force }: { id: number; force: boolean }) => deleteTag(id, force),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: TAGS_QUERY_KEY });
       setDeleteTarget(null);
+      setDeleteConflict(null);
       toast({ title: t("adminTags.deleted") });
     },
-    onError: () => {
+    onError: (err: Error) => {
+      if (err instanceof TagConflictError) {
+        setDeleteConflict({ patients: err.patients, libraryAssets: err.libraryAssets });
+        return;
+      }
       toast({ variant: "destructive", title: t("common.error") });
+      setDeleteTarget(null);
+      setDeleteConflict(null);
     },
   });
 
@@ -88,6 +116,11 @@ export default function AdminTags() {
     const name = newName.trim();
     if (!name) return;
     createMutation.mutate(name);
+  }
+
+  function confirmDelete(force = false) {
+    if (!deleteTarget) return;
+    deleteMutation.mutate({ id: deleteTarget.id, force });
   }
 
   return (
@@ -140,24 +173,55 @@ export default function AdminTags() {
         </div>
       )}
 
-      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) { setDeleteTarget(null); setDeleteConflict(null); } }}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t("adminTags.deleteTitle")}</DialogTitle>
-            <DialogDescription>
-              {t("adminTags.deleteDesc", { name: deleteTarget?.name ?? "" })}
+            <DialogTitle>
+              {deleteConflict ? t("adminTags.deleteConflictTitle") : t("adminTags.deleteTitle")}
+            </DialogTitle>
+            <DialogDescription asChild>
+              {deleteConflict ? (
+                <div>
+                  {t("adminTags.deleteConflictDesc")}
+                  {deleteConflict.patients.length > 0 && (
+                    <>
+                      <p className="mt-2 text-xs font-medium text-foreground">{t("adminTags.deleteConflictPatients")}</p>
+                      <ul className="list-disc list-inside space-y-0.5">
+                        {deleteConflict.patients.map((p) => (
+                          <li key={`p-${p.id}`} className="text-foreground">{p.name}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                  {deleteConflict.libraryAssets.length > 0 && (
+                    <>
+                      <p className="mt-2 text-xs font-medium text-foreground">{t("adminTags.deleteConflictAssets")}</p>
+                      <ul className="list-disc list-inside space-y-0.5">
+                        {deleteConflict.libraryAssets.map((a) => (
+                          <li key={`a-${a.id}`} className="text-foreground">{a.title}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <span>{t("adminTags.deleteDesc", { name: deleteTarget?.name ?? "" })}</span>
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+            <Button variant="outline" onClick={() => { setDeleteTarget(null); setDeleteConflict(null); }}>
               {t("common.cancel")}
             </Button>
             <Button
               variant="destructive"
-              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+              onClick={() => confirmDelete(!!deleteConflict)}
               disabled={deleteMutation.isPending}
             >
-              {t("common.delete")}
+              {deleteConflict ? t("adminTags.deleteAnyway") : t("common.delete")}
             </Button>
           </DialogFooter>
         </DialogContent>

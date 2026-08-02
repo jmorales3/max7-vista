@@ -386,7 +386,12 @@
     "deleted": "Etiqueta excluída",
     "noTags": "Nenhuma etiqueta ainda. Crie a primeira acima.",
     "deleteTitle": "Excluir Etiqueta",
-    "deleteDesc": "Excluir a etiqueta \"{{name}}\"? Ela será removida de todos os recursos. Não é possível desfazer."
+    "deleteDesc": "Excluir a etiqueta \"{{name}}\"? Ela será removida de todos os recursos. Não é possível desfazer.",
+    "deleteConflictTitle": "Etiqueta ainda em uso",
+    "deleteConflictDesc": "Esta etiqueta ainda está atribuída aos seguintes pacientes e/ou recursos da biblioteca. Excluí-la a removerá de todos eles.",
+    "deleteConflictPatients": "Pacientes",
+    "deleteConflictAssets": "Recursos da biblioteca",
+    "deleteAnyway": "Excluir mesmo assim"
   },
   "editor": {
     "pointer": "Ponteiro",
@@ -1005,6 +1010,9 @@
     "docCreateFailed": "Falha ao criar o documento",
     "deleteTitle": "Excluir Modelo",
     "deleteDesc": "Excluir \"{{title}}\"? Isso também excluirá todos os documentos criados a partir deste modelo. Esta ação não pode ser desfeita.",
+    "deleteConflictTitle": "O modelo possui documentos",
+    "deleteConflictDesc": "Este modelo possui os seguintes documento(s) criados a partir dele. Excluí-lo também excluirá permanentemente esses documentos.",
+    "deleteAnyway": "Excluir mesmo assim",
     "updatedDate": "Atualizado {{date}}",
     "designer": {
       "loading": "Carregando modelo…",

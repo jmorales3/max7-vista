@@ -20,6 +20,27 @@ import { format } from "date-fns";
 
 interface TemplateFrame { id: string; x: number; y: number; width: number; height: number; label?: string; }
 interface Template { id: number; title: string; description?: string | null; officeName?: string | null; officeInfo?: string | null; pageWidth: number; pageHeight: number; frames: TemplateFrame[]; createdAt: string; updatedAt: string; }
+interface TemplateDocumentRef { id: number; title: string; }
+
+class TemplateConflictError extends Error {
+  documents: TemplateDocumentRef[];
+  constructor(documents: TemplateDocumentRef[]) {
+    super("This template has documents created from it.");
+    this.documents = documents;
+  }
+}
+
+async function deleteTemplate(id: number, force = false): Promise<void> {
+  const res = await fetch(`/api/templates/${id}${force ? "?force=true" : ""}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (res.status === 409) {
+    const body = await res.json().catch(() => ({}));
+    throw new TemplateConflictError(body.documents ?? []);
+  }
+  if (!res.ok && res.status !== 204) throw new Error("Delete failed");
+}
 
 const MM_PER_IN = 25.4;
 const PAGE_PRESETS = [
@@ -50,6 +71,7 @@ export default function Templates() {
   const [createCustomH, setCreateCustomH] = useState("11");
 
   const [deleteTarget, setDeleteTarget] = useState<Template | null>(null);
+  const [deleteConflict, setDeleteConflict] = useState<TemplateDocumentRef[] | null>(null);
 
   const [useOpen, setUseOpen] = useState(false);
   const [useTemplate, setUseTemplate] = useState<Template | null>(null);
@@ -74,14 +96,28 @@ export default function Templates() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => customFetch(`/api/templates/${id}`, { method: "DELETE" }),
+    mutationFn: ({ id, force }: { id: number; force: boolean }) => deleteTemplate(id, force),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["templates"] });
       setDeleteTarget(null);
+      setDeleteConflict(null);
       toast({ title: t("templates.deleted") });
     },
-    onError: () => toast({ title: t("templates.deleteFailed"), variant: "destructive" }),
+    onError: (err: Error) => {
+      if (err instanceof TemplateConflictError) {
+        setDeleteConflict(err.documents);
+        return;
+      }
+      toast({ title: t("templates.deleteFailed"), variant: "destructive" });
+      setDeleteTarget(null);
+      setDeleteConflict(null);
+    },
   });
+
+  function confirmDeleteTemplate(force = false) {
+    if (!deleteTarget) return;
+    deleteMutation.mutate({ id: deleteTarget.id, force });
+  }
 
   const createDocMutation = useMutation<{ id: number }, Error, object>({
     mutationFn: (body: object) => customFetch<{ id: number }>("/api/template-documents", { method: "POST", body: JSON.stringify(body) }),
@@ -262,18 +298,39 @@ export default function Templates() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) { setDeleteTarget(null); setDeleteConflict(null); } }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("templates.deleteTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("templates.deleteDesc", { title: deleteTarget?.title })}
+            <AlertDialogTitle>
+              {deleteConflict ? t("templates.deleteConflictTitle") : t("templates.deleteTitle")}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              {deleteConflict ? (
+                <div>
+                  {t("templates.deleteConflictDesc")}
+                  <ul className="mt-2 list-disc list-inside space-y-0.5">
+                    {deleteConflict.map((d) => (
+                      <li key={d.id} className="text-foreground">{d.title}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <span>{t("templates.deleteDesc", { title: deleteTarget?.title })}</span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}>
-              {t("common.delete")}
+            <AlertDialogCancel onClick={() => { setDeleteTarget(null); setDeleteConflict(null); }}>
+              {t("common.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => { e.preventDefault(); confirmDeleteTemplate(!!deleteConflict); }}
+            >
+              {deleteConflict ? t("templates.deleteAnyway") : t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

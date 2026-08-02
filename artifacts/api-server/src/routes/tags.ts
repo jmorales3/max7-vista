@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
-import { db, tagsTable, patientTagsTable, patientsTable } from "@workspace/db";
+import { db, tagsTable, patientTagsTable, patientsTable, libraryAssetTagsTable, imagesTable } from "@workspace/db";
 import { getAccessiblePatientIds, canAccessPatient } from "../lib/patientAccess";
 import {
   ListPatientTagsParams,
@@ -86,6 +86,40 @@ router.delete("/tags/:id", async (req, res): Promise<void> => {
     const params = DeleteTagParams.safeParse(req.params);
     if (!params.success) {
       res.status(400).json({ error: params.error.message });
+      return;
+    }
+
+    const [tag] = await db
+      .select({ id: tagsTable.id })
+      .from(tagsTable)
+      .where(and(eq(tagsTable.id, params.data.id), eq(tagsTable.tenantId, tenantId)))
+      .limit(1);
+    if (!tag) {
+      res.status(404).json({ error: "Tag not found" });
+      return;
+    }
+
+    const force = req.query.force === "true" || req.query.force === "1";
+
+    const [taggedPatients, taggedAssets] = await Promise.all([
+      db
+        .select({ id: patientsTable.id, name: patientsTable.name })
+        .from(patientTagsTable)
+        .innerJoin(patientsTable, eq(patientsTable.id, patientTagsTable.patientId))
+        .where(and(eq(patientTagsTable.tagId, params.data.id), eq(patientsTable.tenantId, tenantId))),
+      db
+        .select({ id: imagesTable.id, title: imagesTable.fileName })
+        .from(libraryAssetTagsTable)
+        .innerJoin(imagesTable, eq(imagesTable.id, libraryAssetTagsTable.assetId))
+        .where(eq(libraryAssetTagsTable.tagId, params.data.id)),
+    ]);
+
+    if ((taggedPatients.length > 0 || taggedAssets.length > 0) && !force) {
+      res.status(409).json({
+        error: "This tag is still assigned to one or more patients or library assets. Delete it anyway?",
+        patients: taggedPatients,
+        libraryAssets: taggedAssets,
+      });
       return;
     }
 

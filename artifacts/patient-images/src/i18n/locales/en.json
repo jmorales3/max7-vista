@@ -386,7 +386,12 @@
     "deleted": "Tag deleted",
     "noTags": "No tags yet. Create your first tag above.",
     "deleteTitle": "Delete Tag",
-    "deleteDesc": "Delete tag \"{{name}}\"? It will be removed from all assets. This cannot be undone."
+    "deleteDesc": "Delete tag \"{{name}}\"? It will be removed from all assets. This cannot be undone.",
+    "deleteConflictTitle": "Tag still in use",
+    "deleteConflictDesc": "This tag is still assigned to the following patient(s) and/or library asset(s). Deleting it will remove it from all of them.",
+    "deleteConflictPatients": "Patients",
+    "deleteConflictAssets": "Library assets",
+    "deleteAnyway": "Delete anyway"
   },
   "editor": {
     "pointer": "Pointer",
@@ -1005,6 +1010,9 @@
     "docCreateFailed": "Failed to create document",
     "deleteTitle": "Delete Template",
     "deleteDesc": "Delete \"{{title}}\"? This will also delete all documents created from this template. This cannot be undone.",
+    "deleteConflictTitle": "Template has documents",
+    "deleteConflictDesc": "This template has the following document(s) created from it. Deleting it will also permanently delete those documents.",
+    "deleteAnyway": "Delete anyway",
     "updatedDate": "Updated {{date}}",
     "designer": {
       "loading": "Loading template…",

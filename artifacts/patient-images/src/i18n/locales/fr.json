@@ -386,7 +386,12 @@
     "deleted": "Étiquette supprimée",
     "noTags": "Aucune étiquette pour l'instant. Créez la première ci-dessus.",
     "deleteTitle": "Supprimer l'Étiquette",
-    "deleteDesc": "Supprimer l'étiquette \"{{name}}\" ? Elle sera retirée de toutes les ressources. Cette action est irréversible."
+    "deleteDesc": "Supprimer l'étiquette \"{{name}}\" ? Elle sera retirée de toutes les ressources. Cette action est irréversible.",
+    "deleteConflictTitle": "Étiquette encore utilisée",
+    "deleteConflictDesc": "Cette étiquette est encore assignée aux patient(s) et/ou ressource(s) de bibliothèque suivant(s). La supprimer la retirera de tous.",
+    "deleteConflictPatients": "Patients",
+    "deleteConflictAssets": "Ressources de bibliothèque",
+    "deleteAnyway": "Supprimer quand même"
   },
   "editor": {
     "pointer": "Pointeur",
@@ -1005,6 +1010,9 @@
     "docCreateFailed": "Échec de la création du document",
     "deleteTitle": "Supprimer le Modèle",
     "deleteDesc": "Supprimer \"{{title}}\" ? Cela supprimera également tous les documents créés à partir de ce modèle. Cette action est irréversible.",
+    "deleteConflictTitle": "Le modèle a des documents",
+    "deleteConflictDesc": "Ce modèle possède les document(s) suivant(s) créé(s) à partir de lui. Le supprimer supprimera également ces documents de façon définitive.",
+    "deleteAnyway": "Supprimer quand même",
     "updatedDate": "Mis à jour le {{date}}",
     "designer": {
       "loading": "Chargement du modèle…",

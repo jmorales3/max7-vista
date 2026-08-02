@@ -386,7 +386,12 @@
     "deleted": "Etiqueta eliminada",
     "noTags": "Aún no hay etiquetas. Cree la primera arriba.",
     "deleteTitle": "Eliminar Etiqueta",
-    "deleteDesc": "¿Eliminar la etiqueta \"{{name}}\"? Se quitará de todos los recursos. Esta acción no se puede deshacer."
+    "deleteDesc": "¿Eliminar la etiqueta \"{{name}}\"? Se quitará de todos los recursos. Esta acción no se puede deshacer.",
+    "deleteConflictTitle": "Etiqueta en uso",
+    "deleteConflictDesc": "Esta etiqueta todavía está asignada a los siguientes pacientes y/o recursos de biblioteca. Eliminarla la quitará de todos ellos.",
+    "deleteConflictPatients": "Pacientes",
+    "deleteConflictAssets": "Recursos de biblioteca",
+    "deleteAnyway": "Eliminar de todos modos"
   },
   "editor": {
     "pointer": "Puntero",
@@ -1005,6 +1010,9 @@
     "docCreateFailed": "Error al crear el documento",
     "deleteTitle": "Eliminar Plantilla",
     "deleteDesc": "¿Eliminar \"{{title}}\"? También se eliminarán todos los documentos creados con esta plantilla. Esta acción no se puede deshacer.",
+    "deleteConflictTitle": "La plantilla tiene documentos",
+    "deleteConflictDesc": "Esta plantilla tiene los siguientes documentos creados a partir de ella. Eliminarla también eliminará permanentemente esos documentos.",
+    "deleteAnyway": "Eliminar de todos modos",
     "updatedDate": "Actualizado {{date}}",
     "designer": {
       "loading": "Cargando plantilla…",

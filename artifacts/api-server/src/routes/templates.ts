@@ -147,6 +147,31 @@ router.delete("/templates/:id", requireRole("admin", "superadmin"), async (req, 
       res.status(400).json({ error: "Invalid id" });
       return;
     }
+
+    const [template] = await db
+      .select({ id: templatesTable.id })
+      .from(templatesTable)
+      .where(and(eq(templatesTable.id, params.data.id), eq(templatesTable.tenantId, tenantId)))
+      .limit(1);
+    if (!template) {
+      res.status(404).json({ error: "Template not found" });
+      return;
+    }
+
+    const force = req.query.force === "true" || req.query.force === "1";
+    const usingDocuments = await db
+      .select({ id: templateDocumentsTable.id, title: templateDocumentsTable.title })
+      .from(templateDocumentsTable)
+      .where(eq(templateDocumentsTable.templateId, params.data.id));
+
+    if (usingDocuments.length > 0 && !force) {
+      res.status(409).json({
+        error: "This template has documents created from it. Deleting it will also delete those documents. Delete it anyway?",
+        documents: usingDocuments,
+      });
+      return;
+    }
+
     const [deleted] = await db
       .delete(templatesTable)
       .where(and(eq(templatesTable.id, params.data.id), eq(templatesTable.tenantId, tenantId)))

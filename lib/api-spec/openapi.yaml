@@ -264,6 +264,8 @@ paths:
           description: Deleted
         "404":
           description: Not found
+        "409":
+          description: Tag is still assigned to one or more patients or library assets. Retry with `?force=true` on the query string to delete anyway.
 
   /presentations:
     get:
