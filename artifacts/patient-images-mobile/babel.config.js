@@ -3,11 +3,14 @@ module.exports = function (api) {
   return {
     presets: ['babel-preset-expo'],
     plugins: [
-      // The Linux hermesc binary bundled with react-native@0.81.x does not support
-      // ES2022 private class fields (#fieldName). These v7 transforms lower them to
-      // regular properties for every package in the bundle before hermesc runs.
-      // v7.28.6 is required — v8 rejects TypeScript !: fields unless TypeScript runs
-      // first, which creates an unresolvable dependency ordering problem in Metro.
+      // The Linux hermesc binary bundled with react-native@0.81.5 is Hermes 0.12.0,
+      // which does not support:
+      //   1. ES2022 private class fields (#fieldName)
+      //   2. ES6 class declarations as statements
+      // All three plugins must be v7.28.6 (v8 rejects TS !: fields without a
+      // TypeScript-first pass that creates unresolvable Metro dependency ordering).
+      // loose:true required for consistent behaviour across all three transforms.
+      ['@babel/plugin-transform-classes', { loose: true }],
       ['@babel/plugin-transform-private-methods', { loose: true }],
       ['@babel/plugin-transform-class-properties', { loose: true }],
     ],
