@@ -35,3 +35,10 @@ id = "PfBvH6ngfenLHs0V8DcmP"
 uri = "file://exports/max7vista-marketing-brief.md"
 type = "text"
 title = "Max7 Vista — Marketing & Product Brief (for max7vista.com Agent)"
+
+[[outputs]]
+id = "N1qIBhbcikqOhWBw2th7o"
+uri = "file://Max7-Vista-Feature-Transfer-Register.md"
+type = "text"
+title = "Max7 Vista → Max7 Feature Transfer Register"
+description = "Complete register of all 25 confirmed features (FEAT-001 through FEAT-025) ready for porting to the Max7 practice administration package."
