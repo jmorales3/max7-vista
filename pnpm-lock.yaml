@@ -743,6 +743,9 @@ importers:
       '@babel/core':
         specifier: ^7.25.2
         version: 7.29.0
+      '@babel/plugin-transform-arrow-functions':
+        specifier: ~7.27.1
+        version: 7.27.1(@babel/core@7.29.0)
       '@babel/plugin-transform-class-properties':
         specifier: ~7.28.6
         version: 7.28.6(@babel/core@7.29.0)
