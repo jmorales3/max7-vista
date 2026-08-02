@@ -1935,4 +1935,33 @@ Adds a "Tone & Sharpness" panel to the Image Editor's right sidebar (below Free 
 
 ---
 
+## FEAT-025 — Word-by-Word Patient Name Search
+
+**Status:** ✅ Confirmed working in Vista  
+**Date:** 2026-08-02  
+**Vista file:** `artifacts/api-server/src/routes/patients.ts`
+
+### What it does
+Patient search now matches on every individual word in the query rather than the full string as a single phrase. Typing "Patricia Morales" finds "Patricia De Morales"; typing "Juan Morales" finds "Juan Roberto Morales III". Single-word searches behave identically to before. The patient-code match still uses the original full-string `ILIKE` (codes are never multi-word).
+
+### How it works
+The search term is split on whitespace into individual tokens. When two or more tokens are present, each token is tested independently with `ILIKE '%token%'` and the conditions are ANDed together (all words must appear, in any position/order). For a single token the existing single `ILIKE` is used directly (no change to the common case). The name condition is then ORed with the code `ILIKE` as before.
+
+```typescript
+const words = search.trim().split(/\s+/).filter(Boolean);
+const nameCondition = words.length === 1
+  ? ilike(patientsTable.name, `%${words[0]}%`)
+  : sql`(${sql.join(words.map(w => ilike(patientsTable.name, `%${w}%`)), sql` AND `)})`;
+conditions.push(
+  sql`(${nameCondition} OR ${ilike(patientsTable.patientCode, `%${search}%`)})` as any,
+);
+```
+
+### Notes for Max7 agent
+- This is a pure backend change — no frontend or schema changes needed. Apply the same token-split pattern to whatever ORM/query builder Max7 uses.
+- The word order is irrelevant: "Morales Patricia" also finds "Patricia De Morales" because both words are present in the name.
+- If Max7's search also covers other fields (email, phone, etc.), apply the single-token `ILIKE` to those fields unchanged and only apply the multi-token AND logic to the full-name field, since splitting a phone number on spaces makes no sense.
+
+---
+
 <!-- Add new entries below as features are confirmed in Vista -->
