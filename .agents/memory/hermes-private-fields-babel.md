@@ -14,8 +14,8 @@ emitted`, then `Export failed`.
 **Fix:** add explicit Babel plugins to `babel.config.js` in the Expo app:
 ```js
 plugins: [
-  ["@babel/plugin-transform-class-properties", { loose: true }],
-  ["@babel/plugin-transform-private-methods", { loose: true }],
+  "@babel/plugin-transform-class-properties",
+  "@babel/plugin-transform-private-methods",
 ],
 ```
 And install them as devDependencies:
@@ -24,9 +24,11 @@ pnpm --filter @workspace/patient-images-mobile add -D @babel/plugin-transform-cl
 ```
 
 **Why:** Babel transforms the bundle JS before it reaches hermesc, so adding these plugins
-downcompiles private fields to regular properties that hermesc can handle. `loose: true` is
-required to avoid the conflicting-decorator-metadata error that strict mode triggers in this
-Expo version.
+downcompiles private fields to regular properties that hermesc can handle.
+
+**CRITICAL:** Do NOT use `loose: true` on these plugins. The `loose` option is deprecated for
+`@babel/plugin-transform-private-methods` and silently fails to transform private fields when
+used with Flow-typed React Native source files. Without `loose`, the transform works correctly.
 
 **How to apply:** any time `eas update` or `eas build` fails with "private properties are not
 supported" in hermesc on a Linux build host.
