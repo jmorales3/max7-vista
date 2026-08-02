@@ -14,7 +14,8 @@
       "backgroundColor": "#f5f8fc"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.max7vista.patientimages"
     },
     "android": {
       "package": "com.max7vista.patientimages",

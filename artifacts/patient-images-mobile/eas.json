@@ -4,10 +4,13 @@
   },
   "build": {
     "preview": {
+      "distribution": "internal",
       "android": {
         "buildType": "apk"
       },
-      "distribution": "internal",
+      "ios": {
+        "simulator": false
+      },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://patient-image-manager.replit.app"
       }
@@ -16,6 +19,7 @@
       "android": {
         "buildType": "app-bundle"
       },
+      "ios": {},
       "env": {
         "EXPO_PUBLIC_API_URL": "https://patient-image-manager.replit.app"
       }
