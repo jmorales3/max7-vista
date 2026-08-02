@@ -315,6 +315,25 @@ async function initSqlite() {
     try { exec(sql); } catch { /* column already exists — safe to ignore */ }
   }
 
+  // ── Data migration: normalize date_of_birth M/D/YYYY → YYYY-MM-DD ────────
+  // Idempotent: LIKE '%/%/%' only matches slash-delimited dates, not ISO format.
+  try {
+    exec(`
+      UPDATE patients
+      SET date_of_birth =
+        substr(date_of_birth, length(date_of_birth) - 3) || '-' ||
+        printf('%02d', CAST(substr(date_of_birth, 1, instr(date_of_birth, '/') - 1) AS INTEGER)) || '-' ||
+        printf('%02d', CAST(
+          substr(
+            substr(date_of_birth, instr(date_of_birth, '/') + 1),
+            1,
+            instr(substr(date_of_birth, instr(date_of_birth, '/') + 1), '/') - 1
+          ) AS INTEGER
+        ))
+      WHERE date_of_birth LIKE '%/%/%'
+    `);
+  } catch { /* no date_of_birth column yet — column migration will add it */ }
+
   logger.info("SQLite tables initialized");
 
   // ── First-run: seed default admin if no users exist ──────────────────────
@@ -622,6 +641,14 @@ async function runMigrations(pool: import("pg").Pool) {
   await pool.query(`ALTER TABLE ceph_measurements ADD COLUMN IF NOT EXISTS ideal_max REAL`);
   // ceph_tracings treatment-phase badge
   await pool.query(`ALTER TABLE ceph_tracings ADD COLUMN IF NOT EXISTS record_phase TEXT DEFAULT 'initial'`);
+
+  // ── Data migration: normalize date_of_birth M/D/YYYY → YYYY-MM-DD ───────────
+  // Idempotent: regex only matches slash-delimited dates, not ISO format.
+  await pool.query(`
+    UPDATE patients
+    SET date_of_birth = to_char(to_date(date_of_birth, 'FMMM/FMDD/YYYY'), 'YYYY-MM-DD')
+    WHERE date_of_birth ~ '^\\d{1,2}/\\d{1,2}/\\d{4}$'
+  `);
 
   // ── ADD FUTURE MIGRATIONS ABOVE THIS LINE ────────────────────────────────────
   logger.info("PostgreSQL schema migrations applied");
