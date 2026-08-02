@@ -39,8 +39,14 @@ router.get("/patients", async (req, res): Promise<void> => {
 
     const conditions: ReturnType<typeof eq>[] = [eq(patientsTable.tenantId, tenantId)];
     if (search) {
+      // Split into words so "Patricia Morales" matches "Patricia De Morales":
+      // every word must appear somewhere in the name, OR the full term matches the code.
+      const words = search.trim().split(/\s+/).filter(Boolean);
+      const nameCondition = words.length === 1
+        ? ilike(patientsTable.name, `%${words[0]}%`)
+        : sql`(${sql.join(words.map(w => ilike(patientsTable.name, `%${w}%`)), sql` AND `)})`;
       conditions.push(
-        sql`(${ilike(patientsTable.name, `%${search}%`)} OR ${ilike(patientsTable.patientCode, `%${search}%`)})` as any,
+        sql`(${nameCondition} OR ${ilike(patientsTable.patientCode, `%${search}%`)})` as any,
       );
     }
     if (accessibleIds !== null) {
