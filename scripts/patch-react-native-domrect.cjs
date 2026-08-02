@@ -2,9 +2,10 @@
 /**
  * Patches known bugs that prevent `eas update` from succeeding on Linux (Replit).
  *
- * PATCH 1 — react-native@0.81.x DOMRectReadOnly.js
- *   Private class fields (#x, #y, #width, #height) that the Linux hermesc binary cannot compile.
- *   Replace with _x/_y/_width/_height.
+ * PATCH 1 — react-native@0.81.x private class fields
+ *   The Linux hermesc binary does not support private class fields (#fieldName).
+ *   Scans ALL JS files under react-native/src/private/ and replaces every private
+ *   field declaration and this.#field access with the _fieldName equivalent.
  *
  * PATCH 2 — react-native-worklets@0.5.1 Babel plugin (three sub-fixes)
  *   A) negative numericLiteral values: Babel rejects numericLiteral(-27); use unaryExpression instead.
@@ -31,34 +32,57 @@ try {
   process.exit(0);
 }
 
-// ── Patch 1: DOMRectReadOnly private class fields ────────────────────────────
+// ── Patch 1: react-native private class fields ───────────────────────────────
+// hermesc on Linux64 does not support ES2022 private class fields (#name).
+// Walk ALL JS files under react-native/src/private/ and replace every
+// private field declaration and this.#name access with _name equivalents.
+
+function patchPrivateFields(content) {
+  // Collect field names from class-field declarations: `  #name;` or `  #name =`
+  const fieldNames = new Set();
+  const declRe = /^\s{1,}#([a-zA-Z_$][a-zA-Z0-9_$]*)\s*[:;=({]/gm;
+  const accessRe = /\bthis\.#([a-zA-Z_$][a-zA-Z0-9_$]*)/g;
+  let m;
+  while ((m = declRe.exec(content)) !== null) fieldNames.add(m[1]);
+  while ((m = accessRe.exec(content)) !== null) fieldNames.add(m[1]);
+  if (fieldNames.size === 0) return null; // no private fields found
+
+  // Replace declarations (`  #name;`, `  #name =`, `  #name =`)
+  // and this.#name accesses — but not random # in strings/comments
+  for (const name of fieldNames) {
+    // Declaration: #name at start of class body line (includes Flow type annotations with : and methods with ()
+    content = content.replace(new RegExp(`(^\\s+)#(${name})(?=\\s*[:;=({])`, 'gm'), `$1_$2`);
+    // Access: this.#name
+    content = content.replace(new RegExp(`(\\bthis\\.)#(${name})\\b`, 'g'), `$1_$2`);
+  }
+  return content;
+}
+
+function walkJs(dir, callback) {
+  if (!fs.existsSync(dir)) return;
+  for (const entry of fs.readdirSync(dir)) {
+    if (entry === '__tests__' || entry === 'node_modules') continue;
+    const full = path.join(dir, entry);
+    const stat = fs.statSync(full);
+    if (stat.isDirectory()) walkJs(full, callback);
+    else if (entry.endsWith('.js')) callback(full);
+  }
+}
 
 const rnDirs = storeDirs.filter(f => f.startsWith('react-native@0.81.'));
 for (const dir of rnDirs) {
-  const filePath = path.join(
-    pnpmStore, dir,
-    'node_modules/react-native/src/private/webapis/geometry/DOMRectReadOnly.js'
-  );
-  if (!fs.existsSync(filePath)) continue;
-
-  let content = fs.readFileSync(filePath, 'utf8');
-  if (!content.includes('#x')) {
-    console.log(`[patch-domrect] Already patched: ${filePath}`);
-    continue;
-  }
-
-  content = content
-    .replace(/  #x: number;/g,      '  _x: number;')
-    .replace(/  #y: number;/g,      '  _y: number;')
-    .replace(/  #width: number;/g,  '  _width: number;')
-    .replace(/  #height: number;/g, '  _height: number;')
-    .replace(/this\.#x\b/g,      'this._x')
-    .replace(/this\.#y\b/g,      'this._y')
-    .replace(/this\.#width\b/g,  'this._width')
-    .replace(/this\.#height\b/g, 'this._height');
-
-  fs.writeFileSync(filePath, content, 'utf8');
-  console.log(`[patch-domrect] Patched: ${filePath}`);
+  const privateDir = path.join(pnpmStore, dir, 'node_modules/react-native/src/private');
+  let patched = 0;
+  walkJs(privateDir, filePath => {
+    const original = fs.readFileSync(filePath, 'utf8');
+    const updated = patchPrivateFields(original);
+    if (updated !== null && updated !== original) {
+      fs.writeFileSync(filePath, updated, 'utf8');
+      patched++;
+    }
+  });
+  if (patched > 0) console.log(`[patch-private-fields] Patched ${patched} file(s) in ${dir}`);
+  else console.log(`[patch-private-fields] Already patched: ${dir}`);
 }
 
 // ── Patch 2: react-native-worklets Babel plugin ──────────────────────────────
