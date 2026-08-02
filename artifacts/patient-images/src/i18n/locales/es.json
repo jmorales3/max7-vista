@@ -155,6 +155,7 @@
     "patientCodeLabel": "ID de Paciente / Expediente",
     "patientCodeHint": "Debe ser único en la clínica.",
     "notesOptional": "Notas Clínicas (Opcional)",
+    "phone": "Teléfono",
     "addContextPlaceholder": "Agregue cualquier contexto clínico relevante aquí...",
     "createSuccess": "Paciente creado",
     "createSuccessDesc": "El registro del paciente ha sido creado exitosamente.",

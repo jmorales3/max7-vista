@@ -66,6 +66,7 @@ import {
   Scale,
   ShieldAlert,
   FileDown,
+  Phone,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -457,6 +458,12 @@ export default function PatientDetail() {
               <div className="flex items-center gap-1.5">
                 <Calendar className="h-3.5 w-3.5" />
                 {t("patients.dob")}: {format(new Date(patient.dateOfBirth), "MMM d, yyyy")}
+              </div>
+            )}
+            {(patient as any).phone && (
+              <div className="flex items-center gap-1.5">
+                <Phone className="h-3.5 w-3.5" />
+                {(patient as any).phone}
               </div>
             )}
             <div className="flex items-center gap-1.5">

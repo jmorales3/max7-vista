@@ -13,4 +13,5 @@ export interface PatientInput {
   patientCode: string;
   dateOfBirth?: string;
   notes?: string;
+  phone?: string;
 }

@@ -155,6 +155,7 @@
     "patientCodeLabel": "ID Patient / Dossier",
     "patientCodeHint": "Doit être unique dans la clinique.",
     "notesOptional": "Notes Cliniques (Facultatif)",
+    "phone": "Téléphone",
     "addContextPlaceholder": "Ajoutez tout contexte clinique pertinent ici...",
     "createSuccess": "Patient créé",
     "createSuccessDesc": "Le dossier patient a été créé avec succès.",

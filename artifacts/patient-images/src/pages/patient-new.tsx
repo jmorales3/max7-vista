@@ -28,6 +28,7 @@ const formSchema = z.object({
   patientCode: z.string().min(1),
   dateOfBirth: z.string().optional(),
   notes: z.string().optional(),
+  phone: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -68,6 +69,7 @@ export default function PatientNew() {
       patientCode: "",
       dateOfBirth: "",
       notes: "",
+      phone: "",
     },
   });
 
@@ -156,6 +158,20 @@ export default function PatientNew() {
                         className="resize-none h-24"
                         {...field}
                       />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem className="max-w-xs">
+                    <FormLabel>{t("patients.phone")}</FormLabel>
+                    <FormControl>
+                      <Input type="tel" placeholder="e.g. +1 555-0100" {...field} value={field.value || ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

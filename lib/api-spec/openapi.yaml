@@ -690,6 +690,8 @@ components:
           type: ["string", "null"]
         legalHoldSetAt:
           type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
         profileImageId:
           type: ["integer", "null"]
         tags:
@@ -741,6 +743,8 @@ components:
           type: string
         notes:
           type: string
+        phone:
+          type: string
 
     PatientUpdate:
       type: object
@@ -754,6 +758,8 @@ components:
         dateOfBirth:
           type: string
         notes:
+          type: string
+        phone:
           type: string
         profileImageId:
           type: ["integer", "null"]

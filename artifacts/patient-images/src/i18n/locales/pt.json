@@ -155,6 +155,7 @@
     "patientCodeLabel": "ID do Paciente / Prontuário",
     "patientCodeHint": "Deve ser único na clínica.",
     "notesOptional": "Notas Clínicas (Opcional)",
+    "phone": "Telefone",
     "addContextPlaceholder": "Adicione qualquer contexto clínico relevante aqui...",
     "createSuccess": "Paciente criado",
     "createSuccessDesc": "O registro do paciente foi criado com sucesso.",

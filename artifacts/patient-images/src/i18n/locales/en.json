@@ -155,6 +155,7 @@
     "patientCodeLabel": "Patient ID / MRN",
     "patientCodeHint": "Must be unique across the clinic.",
     "notesOptional": "Clinical Notes (Optional)",
+    "phone": "Phone",
     "addContextPlaceholder": "Add any relevant clinical context here...",
     "createSuccess": "Patient created",
     "createSuccessDesc": "The patient record has been successfully created.",

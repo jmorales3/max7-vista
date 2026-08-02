@@ -11,6 +11,7 @@ export const patientsTable = pgTable("patients", {
   dateOfBirth: text("date_of_birth"),
   notes: text("notes"),
   profileImageId: integer("profile_image_id"),
+  phone: text("phone"),
   legalHold: boolean("legal_hold").notNull().default(false),
   legalHoldReason: text("legal_hold_reason"),
   legalHoldSetAt: timestamp("legal_hold_set_at", { withTimezone: true }),

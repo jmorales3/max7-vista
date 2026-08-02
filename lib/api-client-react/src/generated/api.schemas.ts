@@ -30,6 +30,8 @@ export interface Patient {
   /** @nullable */
   legalHoldSetAt?: string | null;
   /** @nullable */
+  phone?: string | null;
+  /** @nullable */
   profileImageId?: number | null;
   tags?: PatientTagsItem[];
 }
@@ -54,6 +56,7 @@ export interface PatientInput {
   patientCode: string;
   dateOfBirth?: string;
   notes?: string;
+  phone?: string;
 }
 
 export interface PatientUpdate {
@@ -63,6 +66,7 @@ export interface PatientUpdate {
   patientCode?: string;
   dateOfBirth?: string;
   notes?: string;
+  phone?: string;
   /** @nullable */
   profileImageId?: number | null;
 }

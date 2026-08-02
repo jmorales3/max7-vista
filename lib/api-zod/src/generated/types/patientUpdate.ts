@@ -13,6 +13,7 @@ export interface PatientUpdate {
   patientCode?: string;
   dateOfBirth?: string;
   notes?: string;
+  phone?: string;
   /** @nullable */
   profileImageId?: number | null;
 }
