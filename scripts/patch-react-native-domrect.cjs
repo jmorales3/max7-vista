@@ -4,8 +4,8 @@
  *
  * PATCH 1 — react-native@0.81.x private class fields
  *   The Linux hermesc binary does not support private class fields (#fieldName).
- *   Scans ALL JS files under react-native/src/private/ and replaces every private
- *   field declaration and this.#field access with the _fieldName equivalent.
+ *   Scans ALL JS files under react-native/src/ and react-native/Libraries/ and replaces
+ *   every private field declaration and this.#field access with the _fieldName equivalent.
  *
  * PATCH 2 — react-native-worklets@0.5.1 Babel plugin (three sub-fixes)
  *   A) negative numericLiteral values: Babel rejects numericLiteral(-27); use unaryExpression instead.
@@ -15,6 +15,11 @@
  *      includes @babel/preset-typescript so it handles the TS source fine.
  *   C) workletTransformSync not passed sourceMaps:true: returns map:null, which then hits the
  *      "[Reanimated] `inputMap` is undefined" assertion in buildWorkletString. Fix: add sourceMaps:true.
+ *
+ * PATCH 3 — react-native-worklets@0.5.1 missing @babel/types symlink
+ *   pnpm strict isolation does not link @babel/types into the worklets plugin's virtual
+ *   node_modules, causing "Cannot find module '@babel/types'" at Metro startup.
+ *   Fix: create a symlink @babel/types → the installed @babel/types in the pnpm store.
  *
  * Re-run (or pnpm install triggers postinstall) after any package update.
  */
@@ -170,6 +175,47 @@ for (const dir of workletsDirs) {
     console.log(`[patch-worklets] Patched: ${pluginPath}`);
   } else {
     console.log(`[patch-worklets] Already patched: ${pluginPath}`);
+  }
+}
+
+// ── Patch 3: @babel/types symlink for react-native-worklets ──────────────────
+// pnpm strict isolation does not hoist @babel/types into the worklets plugin's
+// virtual node_modules. The plugin does require('@babel/types') at load time,
+// so Metro fails immediately with "Cannot find module '@babel/types'".
+// Fix: create a symlink in the plugin's @babel/ sibling directory.
+
+const workletsDirsForTypes = storeDirs.filter(f => f.startsWith('react-native-worklets@0.5.'));
+const typesDirs = storeDirs.filter(f => f.startsWith('@babel+types@7.'));
+
+if (typesDirs.length > 0) {
+  // Pick the highest-versioned @babel/types@7.x in the store
+  const typesDir = typesDirs.sort().pop();
+  const typesSrc = path.join(pnpmStore, typesDir, 'node_modules/@babel/types');
+
+  for (const dir of workletsDirsForTypes) {
+    const babelDir = path.join(pnpmStore, dir, 'node_modules/@babel');
+    const symTarget = path.join(babelDir, 'types');
+
+    if (!fs.existsSync(babelDir)) fs.mkdirSync(babelDir, { recursive: true });
+
+    // Check if the symlink already points to the right place
+    let needsLink = true;
+    try {
+      const existing = fs.readlinkSync(symTarget);
+      if (existing === typesSrc) needsLink = false;
+    } catch { /* not a symlink or doesn't exist */ }
+
+    if (needsLink) {
+      try {
+        if (fs.existsSync(symTarget)) fs.rmSync(symTarget, { recursive: true, force: true });
+        fs.symlinkSync(typesSrc, symTarget);
+        console.log(`[patch-worklets-types] Linked @babel/types into ${dir}`);
+      } catch (e) {
+        console.error(`[patch-worklets-types] Failed to link: ${e.message}`);
+      }
+    } else {
+      console.log(`[patch-worklets-types] Already linked: ${dir}`);
+    }
   }
 }
 
