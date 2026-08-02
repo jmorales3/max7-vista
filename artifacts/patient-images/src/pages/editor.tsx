@@ -1602,6 +1602,51 @@ export default function Editor() {
       const [x1, y1] = straightLineStartRef.current;
       const preview: DrawStraightLine = { type: "straightline", x1, y1, x2, y2, color: penColor, width: strokeWidth, id: "__preview__" };
       renderCanvas(canvas, imgRef.current, annotations, scale, rotation, null, preview, null, undefined, panOffsetRef.current, undefined, hoveredAngleIdx);
+      // Draw live φ ratio label near the cursor when golden proportion is enabled
+      const cc = cursorCanvasRef.current;
+      if (cc) {
+        const ctx2 = cc.getContext("2d");
+        if (ctx2) {
+          ctx2.clearRect(0, 0, cc.width, cc.height);
+          if (showGoldenProportion) {
+            const PHI = 1.6180339887;
+            const t = 1 / PHI; // ≈ 0.618
+            const label = `φ  ${(t * 100).toFixed(1)} / ${((1 - t) * 100).toFixed(1)} %`;
+            const [sx, sy] = getScreenPoint(e);
+            const fontSize = 13;
+            const pad = 5;
+            ctx2.font = `bold ${fontSize}px sans-serif`;
+            const tw = ctx2.measureText(label).width;
+            // Offset 16px right, 28px up from the cursor tip
+            const bx = sx + 16;
+            const by = sy - 28;
+            ctx2.fillStyle = "rgba(0,0,0,0.75)";
+            ctx2.beginPath();
+            const rx = 4;
+            const rw = tw + pad * 2;
+            const rh = fontSize + pad * 2;
+            const rl = bx - pad;
+            const rt = by - fontSize / 2 - pad;
+            ctx2.moveTo(rl + rx, rt);
+            ctx2.lineTo(rl + rw - rx, rt);
+            ctx2.arcTo(rl + rw, rt, rl + rw, rt + rx, rx);
+            ctx2.lineTo(rl + rw, rt + rh - rx);
+            ctx2.arcTo(rl + rw, rt + rh, rl + rw - rx, rt + rh, rx);
+            ctx2.lineTo(rl + rx, rt + rh);
+            ctx2.arcTo(rl, rt + rh, rl, rt + rh - rx, rx);
+            ctx2.lineTo(rl, rt + rx);
+            ctx2.arcTo(rl, rt, rl + rx, rt, rx);
+            ctx2.closePath();
+            ctx2.fill();
+            ctx2.fillStyle = "#f59e0b";
+            ctx2.textAlign = "left";
+            ctx2.textBaseline = "middle";
+            ctx2.fillText(label, bx, by);
+            ctx2.textAlign = "start";
+            ctx2.textBaseline = "alphabetic";
+          }
+        }
+      }
       return;
     }
 
@@ -1772,6 +1817,7 @@ export default function Editor() {
     }
 
     if (tool === "straightline" && straightLineStartRef.current) {
+      clearBrushCursor();
       const [x2, y2] = getCanvasPoint(e);
       const [x1, y1] = straightLineStartRef.current;
       straightLineStartRef.current = null;
