@@ -4,6 +4,12 @@ import { setBaseUrl } from "@workspace/api-client-react";
 
 export const SERVER_URL_KEY = "server_url";
 
+// The production API URL.  EXPO_PUBLIC_API_URL is baked in by Metro at build
+// time when set in the environment; the hardcoded string is a reliable fallback
+// so the app works out of the box when loaded via Expo Go without any env var.
+const DEFAULT_API_URL =
+  process.env.EXPO_PUBLIC_API_URL ?? "https://patient-image-manager.replit.app";
+
 interface ServerContextValue {
   serverUrl: string | null;
   isLoading: boolean;
@@ -20,13 +26,16 @@ export function ServerProvider({ children }: { children: React.ReactNode }) {
     async function load() {
       try {
         const stored = await AsyncStorage.getItem(SERVER_URL_KEY);
-        // Prefer the user-saved URL; fall back to the URL baked in at build time.
-        const url = stored ?? process.env.EXPO_PUBLIC_API_URL ?? null;
-        if (url) {
-          const normalized = url.trim().replace(/\/+$/, "");
-          setBaseUrl(normalized);
-          setServerUrlState(normalized);
+        // Prefer the user-saved URL; fall back to the baked-in / hardcoded URL.
+        const url = stored ?? DEFAULT_API_URL;
+        const normalized = url.trim().replace(/\/+$/, "");
+        // Persist the resolved URL so AuthContext (which reads AsyncStorage
+        // directly) always finds a valid base URL even on a fresh install.
+        if (!stored) {
+          await AsyncStorage.setItem(SERVER_URL_KEY, normalized);
         }
+        setBaseUrl(normalized);
+        setServerUrlState(normalized);
       } catch {
         // ignore storage errors
       } finally {

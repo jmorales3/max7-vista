@@ -29,7 +29,9 @@ export default function ServerSetupScreen() {
   const params = useLocalSearchParams<{ edit?: string }>();
   const isEditMode = params.edit === "true";
 
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState(
+    process.env.EXPO_PUBLIC_API_URL ?? "https://patient-image-manager.replit.app",
+  );
   const [testing, setTesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
