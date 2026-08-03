@@ -10,18 +10,27 @@ module.exports = function (api) {
       // Plugin execution order (first → last):
       //   1. TypeScript  — strip `private` param props, `declare` fields, `!:` syntax
       //   2. Arrow fns   — async () => {} → async function() {} (Hermes 0.12 rejects async arrows)
-      //   3. Private     — #method / #field → _method / _field  (loose: ok for private methods)
-      //   4. Properties  — field initialisers → constructor assignments
-      //                    MUST be non-loose (no `loose` option) so it uses Object.defineProperty.
-      //                    Loose mode uses direct assignment (Child.NONE = value) which throws
-      //                    "Cannot assign to read only property" when a parent class defined
-      //                    the same static property as non-writable via Object.defineProperty and
-      //                    _inheritsLoose set Child.__proto__ = Parent (prototype chain lookup).
-      //   5. Classes     — ES6 class declarations → ES5 constructor functions (loose: ok here)
+      //   3. Private methods / properties / property-in-object   ← ALL must share the same
+      //   4. Properties  — field initialisers                       `loose` value.
+      //   5. Private property-in-object                          Babel 7.29+ throws a hard error
+      //                                                          if they differ. All three use
+      //                                                          NON-loose (no `loose` option):
+      //                                                          - Non-loose uses Object.defineProperty
+      //                                                            which defines OWN properties,
+      //                                                            bypassing prototype chain. Loose
+      //                                                            (direct assignment) throws
+      //                                                            "Cannot assign to read only
+      //                                                            property" at runtime when a parent
+      //                                                            class defined the same static prop
+      //                                                            as non-writable via defineProperty
+      //                                                            and _inheritsLoose set __proto__.
+      //   6. Classes     — ES6 class declarations → ES5 constructor functions (loose: ok — unrelated
+      //                    to the three plugins above, Babel's consistency check doesn't cover it)
       ['@babel/plugin-transform-typescript', { isTSX: true, allowDeclareFields: true }],
       ['@babel/plugin-transform-arrow-functions'],
-      ['@babel/plugin-transform-private-methods', { loose: true }],
+      ['@babel/plugin-transform-private-methods'],
       ['@babel/plugin-transform-class-properties'],
+      ['@babel/plugin-transform-private-property-in-object'],
       ['@babel/plugin-transform-classes', { loose: true }],
     ],
   };
