@@ -2,6 +2,7 @@
 node_modules/
 .git/
 .pnpm-store/
+.local/
 
 # Web app build output — not needed for mobile builds
 artifacts/patient-images/dist/
