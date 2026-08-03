@@ -4,6 +4,11 @@ import { AppState, type AppStateStatus } from "react-native";
 import { setAuthTokenGetter, setUnauthorizedHandler, setSuspendedHandler } from "@workspace/api-client-react";
 import { SERVER_URL_KEY } from "./ServerContext";
 
+// Mirrors the fallback in ServerContext so that AuthContext can always
+// construct a valid base URL even before ServerContext writes to AsyncStorage.
+const DEFAULT_API_URL =
+  process.env.EXPO_PUBLIC_API_URL ?? "https://patient-image-manager.replit.app";
+
 interface AuthUser {
   id: number;
   username: string;
@@ -79,7 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const refresh = async () => {
       if (!userRef.current || !tokenRef.current) return;
       try {
-        const baseUrl = (await AsyncStorage.getItem(SERVER_URL_KEY)) ?? "";
+        const baseUrl = (await AsyncStorage.getItem(SERVER_URL_KEY)) ?? DEFAULT_API_URL;
         await fetch(`${baseUrl}/api/auth/refresh`, {
           method: "POST",
           headers: { Authorization: `Bearer ${tokenRef.current}` },
@@ -128,7 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (token && userJson) {
           tokenRef.current = token;
           setAuthTokenGetter(() => token);
-          const baseUrl = (await AsyncStorage.getItem(SERVER_URL_KEY)) ?? "";
+          const baseUrl = (await AsyncStorage.getItem(SERVER_URL_KEY)) ?? DEFAULT_API_URL;
           const resp = await fetch(`${baseUrl}/api/auth/session`, {
             headers: { Authorization: `Bearer ${token}` },
           });
@@ -153,7 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(async (username: string, password: string) => {
-    const baseUrl = (await AsyncStorage.getItem(SERVER_URL_KEY)) ?? "";
+    const baseUrl = (await AsyncStorage.getItem(SERVER_URL_KEY)) ?? DEFAULT_API_URL;
     const resp = await fetch(`${baseUrl}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -178,7 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    const baseUrl = (await AsyncStorage.getItem(SERVER_URL_KEY)) ?? "";
+    const baseUrl = (await AsyncStorage.getItem(SERVER_URL_KEY)) ?? DEFAULT_API_URL;
     const token = await AsyncStorage.getItem(TOKEN_KEY);
     try {
       await fetch(`${baseUrl}/api/auth/logout`, {
