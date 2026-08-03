@@ -31,7 +31,7 @@ property directly on `Child` as an own property, bypassing prototype chain looku
 here because the helpers are independent.
 
 ## Final working `artifacts/patient-images-mobile/babel.config.js`
-Five plugins in this EXACT order with these EXACT loose settings:
+Six plugins in this EXACT order with these EXACT loose settings:
 
 ```js
 module.exports = function (api) {
@@ -41,13 +41,26 @@ module.exports = function (api) {
     plugins: [
       ['@babel/plugin-transform-typescript', { isTSX: true, allowDeclareFields: true }],
       ['@babel/plugin-transform-arrow-functions'],
-      ['@babel/plugin-transform-private-methods', { loose: true }],
-      ['@babel/plugin-transform-class-properties'],          // NON-loose — critical
+      ['@babel/plugin-transform-private-methods'],            // NON-loose — must match properties
+      ['@babel/plugin-transform-class-properties'],           // NON-loose — must match methods
+      ['@babel/plugin-transform-private-property-in-object'], // NON-loose — must match both
       ['@babel/plugin-transform-classes', { loose: true }],
     ],
   };
 };
 ```
+
+**CRITICAL: Babel 7.29+ strict consistency enforcement.**
+`@babel/plugin-transform-class-properties`, `@babel/plugin-transform-private-methods`, and
+`@babel/plugin-transform-private-property-in-object` must ALL share the same `loose` setting or
+Babel throws a hard SyntaxError: "'loose' mode configuration must be the same...". The EAS build
+server may have a newer `@babel/core` than the local environment, which started enforcing this
+strictly. All three must be non-loose (no `loose` option).
+
+**Why non-loose for all three:** Non-loose uses `Object.defineProperty` which defines OWN
+properties directly on the class, bypassing prototype chain. Loose uses direct assignment
+(`Child.NONE = value`) which throws "Cannot assign to read only property" at runtime when a
+parent class defined the same static property as non-writable and `_inheritsLoose` set `__proto__`.
 
 **Why TypeScript first:** strips `private` keyword and `!:` fields before class transforms run.
 
@@ -57,12 +70,8 @@ generates `_this` patterns.
 **Why private/properties before classes:** `@babel/plugin-transform-classes` throws
 "Missing class properties transform" on uninitialised fields not yet lowered.
 
-**Why class-properties NON-loose:** loose = `Child.STATIC = value` → throws when the parent
-has a non-writable property with the same name. Non-loose = `Object.defineProperty(Child, ...)` →
-defines own property directly, no prototype chain traversal.
-
-**Why classes loose:** Hermes 0.12.0 still handles the `_inheritsLoose` + `__proto__` pattern.
-Non-loose would use `_createSuper`/`Reflect.construct` which also works but isn't needed.
+**Why classes stays loose:** independent of the three class-feature plugins — Babel's consistency
+check doesn't cover it. `_inheritsLoose` + `__proto__` pattern works fine with Hermes 0.12.0.
 
 ## Part 2 — `scripts/patch-react-native-domrect.cjs` (postinstall patch)
 Wired via `package.json` `postinstall`. Three patches:
