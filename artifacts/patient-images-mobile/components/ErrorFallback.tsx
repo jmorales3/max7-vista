@@ -77,6 +77,16 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
           Please reload the app to continue.
         </Text>
 
+        <Text
+          selectable
+          style={[
+            styles.errorMessage,
+            { color: colors.destructive, fontFamily: Platform.select({ android: "monospace", ios: "Menlo", default: "monospace" }) },
+          ]}
+        >
+          {error.message || String(error)}
+        </Text>
+
         <Pressable
           onPress={handleRestart}
           style={({ pressed }) => [
@@ -263,6 +273,12 @@ const styles = StyleSheet.create({
   },
   modalScrollContent: {
     padding: 16,
+  },
+  errorMessage: {
+    fontSize: 11,
+    lineHeight: 16,
+    textAlign: "center",
+    width: "100%",
   },
   errorContainer: {
     width: "100%",
