@@ -1,0 +1,20 @@
+# EAS reinstalls these from pnpm-lock.yaml
+node_modules/
+
+# Git history not needed
+.git/
+
+# Replit agent memory and skills — not part of the app
+.local/
+.agents/
+
+# Other artifact build outputs — not needed for the mobile build
+artifacts/patient-images/dist/
+artifacts/patient-images/.vite/
+artifacts/api-server/dist/
+artifacts/mockup-sandbox/
+
+# Logs and temp files
+*.log
+*.log.*
+attached_assets/
