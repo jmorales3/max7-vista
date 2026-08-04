@@ -1,7 +1,13 @@
 module.exports = function (api) {
   api.cache(true);
   return {
-    presets: ['babel-preset-expo'],
+    presets: [
+      // Disable React Compiler: it must run BEFORE class/TypeScript transforms to
+      // correctly analyse React components. Our explicit plugins (TypeScript, classes,
+      // private fields) run first (plugins before presets), so the compiler sees
+      // already-lowered ES5 code and can produce incorrect memoisation output.
+      ['babel-preset-expo', { 'react-compiler': false }],
+    ],
     plugins: [
       // The Linux hermesc binary bundled with react-native@0.81.5 is Hermes 0.12.0,
       // which rejects: (1) ES2022 private class fields, (2) ES6 class declarations as

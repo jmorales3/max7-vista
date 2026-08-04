@@ -19,10 +19,10 @@ import { useColors } from "@/hooks/useColors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function PatientRow({ patient, colors }: { patient: Patient; colors: ReturnType<typeof useColors> }) {
-  const initials = patient.name
+  const initials = (patient.name ?? "")
     .split(" ")
     .slice(0, 2)
-    .map((n) => n[0])
+    .map((n) => n?.[0] ?? "")
     .join("")
     .toUpperCase();
 
