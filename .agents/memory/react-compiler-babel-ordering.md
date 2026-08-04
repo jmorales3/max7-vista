@@ -18,6 +18,11 @@ presets: [['babel-preset-expo', { 'react-compiler': false }]],
 ## Detection
 Build log shows "React Compiler enabled" (Metro log). All functional components in post-login screens crash immediately; login screen may work if the compiler bailed out on it due to complexity. Crash happens in ErrorBoundary with no obvious error message (since the memoization corruption is subtle).
 
+## FINAL FIX: remove all explicit plugins entirely
+`babel-preset-expo@57` with `hermes-stable` profile (auto-selected for Hermes engine) already handles everything Hermes 0.12.0 needs: TypeScript stripping (via `tsFragment.overrides`), async arrow non-simple params (`fix-hermes-v1-async-arrow-non-simple-params`), class-in-finally, super-in-accessor. It intentionally skips `@babel/plugin-transform-class-properties` and leaves class fields for Hermes native handling. Any explicit class-properties plugin (even `loose:true`, even scoped via `overrides.exclude`) generates `_defineProperty` for files the preset expects Hermes to own natively, crashing on class hierarchies. The correct minimal config is just `['babel-preset-expo', { 'react-compiler': false }]` — nothing else.
+
+`overrides.exclude: /node_modules/` does NOT work for this purpose: `babel-preset-expo@57` uses Metro's `api.caller(getIsNodeModule)` caller API (not path patterns) to distinguish files; our path-based exclude has no way to replicate this and runs on the wrong set of files.
+
 ## Root cause confirmed: plugins must be scoped to non-node_modules via `overrides`
 Putting explicit `@babel/plugin-transform-class-properties` in the top-level `plugins` array makes it run on ALL files Metro processes — including React Native's own source (VirtualizedList, FlatList, etc.). VirtualizedList is a class component; Babel's `_defineProperty` helper checks `key in obj` (prototype chain) before deciding whether to call `Object.defineProperty`. In VirtualizedList's deep inheritance chain (`VirtualizedList → StateSafePureComponent → PureComponent`), a field name is found in the chain, `Object.defineProperty` is called, and Hermes 0.12.0 throws "property is not configurable".
 
