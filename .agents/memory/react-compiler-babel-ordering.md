@@ -17,3 +17,14 @@ presets: [['babel-preset-expo', { 'react-compiler': false }]],
 
 ## Detection
 Build log shows "React Compiler enabled" (Metro log). All functional components in post-login screens crash immediately; login screen may work if the compiler bailed out on it due to complexity. Crash happens in ErrorBoundary with no obvious error message (since the memoization corruption is subtle).
+
+## Also: Hermes 0.12.0 — non-loose class-properties + Error subclass → "property is not configurable"
+Even with React Compiler disabled, non-loose `@babel/plugin-transform-class-properties` throws "property is not configurable" in Hermes 0.12.0 when a class that extends `Error` has a field named `cause`. Hermes exposes `cause` on `Error.prototype` as a non-configurable accessor; the non-loose `_defineProperty` helper sees `"cause" in this` → true → calls `Object.defineProperty` → Hermes rejects it.
+
+**Fix**: set ALL THREE class-feature plugins to `loose: true` (they must share the same value per Babel 7.29+ constraint):
+```js
+['@babel/plugin-transform-private-methods', { loose: true }],
+['@babel/plugin-transform-class-properties', { loose: true }],
+['@babel/plugin-transform-private-property-in-object', { loose: true }],
+```
+Loose mode uses simple assignment, never `Object.defineProperty`, so no prototype chain collision. Safe when there are no private `#field` declarations in the codebase (verify with grep before applying).
