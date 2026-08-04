@@ -85,6 +85,8 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
           ]}
         >
           {error.message || String(error)}
+          {"\n\n"}
+          {(error.stack ?? "").split("\n").slice(0, 8).join("\n")}
         </Text>
 
         <Pressable
