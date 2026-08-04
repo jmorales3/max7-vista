@@ -18,6 +18,7 @@ interface AuthUser {
 
 interface AuthContextValue {
   user: AuthUser | null;
+  token: string | null;
   isLoading: boolean;
   sessionExpired: boolean;
   suspended: boolean;
@@ -203,7 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, sessionExpired, suspended, login, logout }}>
+    <AuthContext.Provider value={{ user, token: tokenRef.current, isLoading, sessionExpired, suspended, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

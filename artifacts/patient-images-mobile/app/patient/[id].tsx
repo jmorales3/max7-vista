@@ -31,6 +31,7 @@ import {
 import type { Image as PatientImage } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAuth } from "@/contexts/AuthContext";
 
 type DeleteConflict = { id: number; title: string }[];
 
@@ -47,12 +48,14 @@ function ImageGridItem({
   image,
   columns,
   baseUrl,
+  authToken,
   colors,
   onPress,
 }: {
   image: PatientImage;
   columns: GridColumns;
   baseUrl: string;
+  authToken: string | null;
   colors: ReturnType<typeof useColors>;
   onPress: (image: PatientImage) => void;
 }) {
@@ -61,6 +64,7 @@ function ImageGridItem({
   const totalPad = padding * 2 + gap * (columns - 1);
   const itemSize = (SCREEN_WIDTH - totalPad) / columns;
   const imageUrl = `${baseUrl}/api/images/${image.id}/file`;
+  const imageHeaders = authToken ? { Authorization: `Bearer ${authToken}` } : undefined;
 
   return (
     <TouchableOpacity
@@ -78,7 +82,7 @@ function ImageGridItem({
       testID={`image-item-${image.id}`}
     >
       <Image
-        source={{ uri: imageUrl }}
+        source={{ uri: imageUrl, headers: imageHeaders }}
         style={{ width: "100%", height: "100%" }}
         contentFit="cover"
         transition={200}
@@ -156,6 +160,7 @@ export default function PatientDetailScreen() {
   const [isDeletingImage, setIsDeletingImage] = useState(false);
 
   const baseUrl = getBaseUrl() ?? "";
+  const { token: authToken } = useAuth();
 
   const { data: patient, isLoading: patientLoading, isError: patientError, error: patientErrorObj } = useGetPatient(patientId);
   const isAccessDenied =
@@ -530,6 +535,7 @@ export default function PatientDetailScreen() {
               image={item}
               columns={columns}
               baseUrl={baseUrl}
+              authToken={authToken}
               colors={colors}
               onPress={handleImagePress}
             />
@@ -578,7 +584,10 @@ export default function PatientDetailScreen() {
             </View>
 
             <Image
-              source={{ uri: `${baseUrl}/api/images/${lightboxImage.id}/file` }}
+              source={{
+                uri: `${baseUrl}/api/images/${lightboxImage.id}/file`,
+                headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
+              }}
               style={s.lightboxImage}
               contentFit="contain"
               transition={150}
