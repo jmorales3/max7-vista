@@ -18,6 +18,11 @@ presets: [['babel-preset-expo', { 'react-compiler': false }]],
 ## Detection
 Build log shows "React Compiler enabled" (Metro log). All functional components in post-login screens crash immediately; login screen may work if the compiler bailed out on it due to complexity. Crash happens in ErrorBoundary with no obvious error message (since the memoization corruption is subtle).
 
+## Root cause confirmed: plugins must be scoped to non-node_modules via `overrides`
+Putting explicit `@babel/plugin-transform-class-properties` in the top-level `plugins` array makes it run on ALL files Metro processes — including React Native's own source (VirtualizedList, FlatList, etc.). VirtualizedList is a class component; Babel's `_defineProperty` helper checks `key in obj` (prototype chain) before deciding whether to call `Object.defineProperty`. In VirtualizedList's deep inheritance chain (`VirtualizedList → StateSafePureComponent → PureComponent`), a field name is found in the chain, `Object.defineProperty` is called, and Hermes 0.12.0 throws "property is not configurable".
+
+**Confirmed fix**: wrap ALL explicit plugins in `overrides: [{ exclude: /node_modules/, plugins: [...] }]`. React Native's own node_modules files are then handled exclusively by `babel-preset-expo`'s built-in loose class-properties, which uses simple assignment and never touches the prototype chain.
+
 ## Also: Hermes 0.12.0 — non-loose class-properties + Error subclass → "property is not configurable"
 Even with React Compiler disabled, non-loose `@babel/plugin-transform-class-properties` throws "property is not configurable" in Hermes 0.12.0 when a class that extends `Error` has a field named `cause`. Hermes exposes `cause` on `Error.prototype` as a non-configurable accessor; the non-loose `_defineProperty` helper sees `"cause" in this` → true → calls `Object.defineProperty` → Hermes rejects it.
 
