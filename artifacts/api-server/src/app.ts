@@ -141,11 +141,19 @@ if (IS_SQLITE) {
 // Bearer-token auth for mobile clients: load session from store when an
 // Authorization: Bearer <sessionId> header is present and no cookie session
 // has already been established.
+// Also accepts a ?token= query parameter as a fallback for native image loaders
+// (e.g. Glide on Android) that cannot attach custom HTTP headers to requests
+// made outside of the JS runtime.
 app.use((req, _res, next) => {
   if (req.session?.userId) return next();
   const auth = req.headers.authorization;
-  if (!auth?.startsWith("Bearer ")) return next();
-  const token = auth.slice(7).trim();
+  const queryToken = typeof req.query.token === "string" ? req.query.token : null;
+  let token: string | null = null;
+  if (auth?.startsWith("Bearer ")) {
+    token = auth.slice(7).trim() || null;
+  } else if (queryToken) {
+    token = queryToken;
+  }
   if (!token) return next();
   req.sessionStore.get(token, (err, sessionData) => {
     if (!err && sessionData?.userId) {

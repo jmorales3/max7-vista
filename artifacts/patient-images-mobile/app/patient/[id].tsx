@@ -63,8 +63,9 @@ function ImageGridItem({
   const padding = 16;
   const totalPad = padding * 2 + gap * (columns - 1);
   const itemSize = (SCREEN_WIDTH - totalPad) / columns;
-  const imageUrl = `${baseUrl}/api/images/${image.id}/file`;
-  const imageHeaders = authToken ? { Authorization: `Bearer ${authToken}` } : undefined;
+  const imageUrl = authToken
+    ? `${baseUrl}/api/images/${image.id}/file?token=${encodeURIComponent(authToken)}`
+    : `${baseUrl}/api/images/${image.id}/file`;
 
   return (
     <TouchableOpacity
@@ -82,7 +83,7 @@ function ImageGridItem({
       testID={`image-item-${image.id}`}
     >
       <Image
-        source={{ uri: imageUrl, headers: imageHeaders }}
+        source={{ uri: imageUrl }}
         style={{ width: "100%", height: "100%" }}
         contentFit="cover"
         transition={200}
@@ -585,8 +586,9 @@ export default function PatientDetailScreen() {
 
             <Image
               source={{
-                uri: `${baseUrl}/api/images/${lightboxImage.id}/file`,
-                headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
+                uri: authToken
+                  ? `${baseUrl}/api/images/${lightboxImage.id}/file?token=${encodeURIComponent(authToken)}`
+                  : `${baseUrl}/api/images/${lightboxImage.id}/file`,
               }}
               style={s.lightboxImage}
               contentFit="contain"
