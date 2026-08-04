@@ -19,24 +19,31 @@ module.exports = function (api) {
       //   3. Private methods / properties / property-in-object   ← ALL must share the same
       //   4. Properties  — field initialisers                       `loose` value.
       //   5. Private property-in-object                          Babel 7.29+ throws a hard error
-      //                                                          if they differ. All three use
-      //                                                          NON-loose (no `loose` option):
+      //                                                          if they differ. All three must be
+      //                                                          LOOSE (loose: true):
       //                                                          - Non-loose uses Object.defineProperty
-      //                                                            which defines OWN properties,
-      //                                                            bypassing prototype chain. Loose
-      //                                                            (direct assignment) throws
-      //                                                            "Cannot assign to read only
-      //                                                            property" at runtime when a parent
-      //                                                            class defined the same static prop
-      //                                                            as non-writable via defineProperty
-      //                                                            and _inheritsLoose set __proto__.
+      //                                                            via _defineProperty helper which
+      //                                                            checks `key in obj` (prototype chain)
+      //                                                            before deciding whether to call
+      //                                                            Object.defineProperty. If the key
+      //                                                            exists on an inherited non-configurable
+      //                                                            property (e.g. `cause` on Error in
+      //                                                            Hermes 0.12.0), Hermes throws
+      //                                                            "property is not configurable".
+      //                                                          - Loose uses simple assignment
+      //                                                            (this.field = value), which skips
+      //                                                            Object.defineProperty entirely and
+      //                                                            never touches the prototype chain.
+      //                                                          - No private class fields (#field) exist
+      //                                                            in this codebase, so loose private
+      //                                                            field handling is safe.
       //   6. Classes     — ES6 class declarations → ES5 constructor functions (loose: ok — unrelated
       //                    to the three plugins above, Babel's consistency check doesn't cover it)
       ['@babel/plugin-transform-typescript', { isTSX: true, allowDeclareFields: true }],
       ['@babel/plugin-transform-arrow-functions'],
-      ['@babel/plugin-transform-private-methods'],
-      ['@babel/plugin-transform-class-properties'],
-      ['@babel/plugin-transform-private-property-in-object'],
+      ['@babel/plugin-transform-private-methods', { loose: true }],
+      ['@babel/plugin-transform-class-properties', { loose: true }],
+      ['@babel/plugin-transform-private-property-in-object', { loose: true }],
       ['@babel/plugin-transform-classes', { loose: true }],
     ],
   };
