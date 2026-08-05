@@ -42,3 +42,10 @@ uri = "file://Max7-Vista-Feature-Transfer-Register.md"
 type = "text"
 title = "Max7 Vista → Max7 Feature Transfer Register"
 description = "Complete register of all 25 confirmed features (FEAT-001 through FEAT-025) ready for porting to the Max7 practice administration package."
+
+[[outputs]]
+id = "1Im7JQKMV1MQ_GwPkgmfK"
+uri = "file://attached_assets/apk-qrcode.png"
+type = "image"
+title = "APK Install QR Code"
+description = "Scan to open the Expo build page and install the Patient Image Manager APK"
