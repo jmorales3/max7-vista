@@ -100,6 +100,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { type Slide, type SlideImageField } from "@/components/PresentationBuilder";
+import { SaveOverlayDialog } from "@/components/SaveOverlayDialog";
 
 type Tool = "pointer" | "pen" | "text" | "eraser" | "crop" | "arrow" | "circle" | "straightline" | "select" | "eyedropper" | "hand" | "smooth" | "ruler" | "angle" | "overlay";
 
@@ -625,8 +626,6 @@ export default function Editor() {
   const [deleteConflict, setDeleteConflict] = useState<{ id: number; title: string }[] | null>(null);
   const [isForceDeletingImage, setIsForceDeletingImage] = useState(false);
   const [showSaveOverlayDialog, setShowSaveOverlayDialog] = useState(false);
-  const [saveOverlayPickId, setSaveOverlayPickId] = useState<string>("new");
-  const [saveOverlayNewTitle, setSaveOverlayNewTitle] = useState("");
   const [isSavingCopy, setIsSavingCopy] = useState(false);
   const [notes, setNotes] = useState("");
   const [tool, setTool] = useState<Tool>("pointer");
@@ -2522,7 +2521,7 @@ export default function Editor() {
     }
   }
 
-  function handleSaveOverlayToPresentation() {
+  function handleSaveOverlayToPresentation(pickId: string, newTitle: string) {
     if (!overlayImageId) return;
     const slide: Slide = {
       type: "superimpose",
@@ -2534,8 +2533,8 @@ export default function Editor() {
       overlayScaleCorrection,
       overlayBaseScale: scale,
     };
-    if (saveOverlayPickId === "new") {
-      const title = saveOverlayNewTitle.trim() || t("presentation.untitled");
+    if (pickId === "new") {
+      const title = newTitle.trim() || t("presentation.untitled");
       createPresentation.mutate(
         { data: { title, slides: [slide], patientId: image?.patientId ?? undefined } },
         {
@@ -2550,7 +2549,7 @@ export default function Editor() {
         },
       );
     } else {
-      const existing = presentations.find((p) => p.id === parseInt(saveOverlayPickId, 10));
+      const existing = presentations.find((p) => p.id === parseInt(pickId, 10));
       if (!existing) return;
       const currentSlides = (existing.slides as Slide[] | undefined) ?? [];
       updatePresentation.mutate(
@@ -3832,52 +3831,13 @@ export default function Editor() {
         </div>
       </div>
 
-      <Dialog open={showSaveOverlayDialog} onOpenChange={setShowSaveOverlayDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t("editor.overlayPresentationTitle")}</DialogTitle>
-            <DialogDescription>{t("editor.overlayPresentationDesc")}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>{t("editor.overlayPresentationAddTo")}</Label>
-              <Select value={saveOverlayPickId} onValueChange={setSaveOverlayPickId}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="new">{t("editor.overlayPresentationNewLabel")}</SelectItem>
-                  {presentations.map((p) => (
-                    <SelectItem key={p.id} value={String(p.id)}>{p.title}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {saveOverlayPickId === "new" && (
-              <div className="space-y-2">
-                <Label>{t("editor.overlayPresentationNewName")}</Label>
-                <Input
-                  placeholder={t("editor.overlayPresentationNewName")}
-                  value={saveOverlayNewTitle}
-                  onChange={(e) => setSaveOverlayNewTitle(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") handleSaveOverlayToPresentation(); }}
-                />
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSaveOverlayDialog(false)}>
-              {t("common.cancel")}
-            </Button>
-            <Button
-              onClick={handleSaveOverlayToPresentation}
-              disabled={createPresentation.isPending || updatePresentation.isPending}
-            >
-              {t("presentation.addToPresentation")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <SaveOverlayDialog
+        open={showSaveOverlayDialog}
+        onOpenChange={setShowSaveOverlayDialog}
+        presentations={presentations}
+        isPending={createPresentation.isPending || updatePresentation.isPending}
+        onSave={handleSaveOverlayToPresentation}
+      />
 
       <AlertDialog
         open={showDeleteDialog}
