@@ -1,0 +1,142 @@
+{
+  "tabs": {
+    "patients": "Patients",
+    "capture": "Capture",
+    "settings": "Settings"
+  },
+  "patients": {
+    "title": "Patients",
+    "search": "Search by name or code...",
+    "loadError": "Failed to load patients",
+    "retry": "Retry",
+    "notFound": "No patients found",
+    "noneYet": "No patients yet",
+    "tryDifferent": "Try a different search term"
+  },
+  "patient": {
+    "fallbackName": "Patient",
+    "imageCount_one": "{{count}} image",
+    "imageCount_other": "{{count}} images",
+    "noImages": "No images yet",
+    "captureHint": "Capture images from the Camera tab",
+    "accessDenied": "Access denied",
+    "accessDeniedMsg": "You don't have access to this patient.",
+    "goBack": "Go back",
+    "lightboxTitle": "Image {{id}}",
+    "delete": {
+      "confirmTitle": "Delete patient",
+      "confirmMsg": "Are you sure you want to delete {{name}}? This will also delete all of their images.",
+      "cancel": "Cancel",
+      "confirm": "Delete",
+      "usedTitle": "Used in presentations",
+      "usedMsg": "This patient's images are used in saved presentations. Deleting the patient will remove them from these presentations too.",
+      "deleteAnyway": "Delete Anyway",
+      "error": "Failed to delete patient."
+    },
+    "deleteImage": {
+      "confirmTitle": "Delete image",
+      "confirmMsg": "Are you sure you want to delete this image?",
+      "cancel": "Cancel",
+      "confirm": "Delete",
+      "usedTitle": "Used in presentations",
+      "usedMsg": "This image is used in saved presentations. Deleting it will remove it from those presentations too.",
+      "deleteAnyway": "Delete Anyway",
+      "error": "Failed to delete image."
+    }
+  },
+  "camera": {
+    "title": "Capture",
+    "noImage": "No image selected",
+    "tapHint": "Tap below to capture or select",
+    "cameraBtn": "Camera",
+    "galleryBtn": "Gallery",
+    "assignToPatient": "Assign to Patient",
+    "selectPatient": "Select patient (optional)",
+    "imageDescription": "Image Description",
+    "notesPlaceholder": "e.g. Pre-op left knee, lateral view…",
+    "upload": "Upload Image",
+    "discard": "Discard & Select Again",
+    "selectPatientTitle": "Select Patient",
+    "searchPatients": "Search patients...",
+    "noPatient": "No patient (unassigned)",
+    "captureError": "Capture failed",
+    "captureErrorMsg": "Could not take photo. Please try again.",
+    "uploadError": "Upload failed",
+    "permission": {
+      "webTitle": "Camera",
+      "webMsg": "Camera is only available on mobile devices.",
+      "deniedTitle": "Camera Permission Required",
+      "deniedMsg": "Camera access has been denied. Please enable it in your device Settings to capture patient images.",
+      "cancel": "Cancel",
+      "openSettings": "Open Settings",
+      "requireTitle": "Camera Permission",
+      "requireMsg": "Camera access is required to capture patient images. Please allow access when prompted.",
+      "overlayMsg": "Camera access is required to take patient photos.",
+      "close": "Close",
+      "libraryTitle": "Permission required",
+      "libraryMsg": "Please allow access to your photo library."
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "account": "Account",
+    "signOut": "Sign Out",
+    "signOutTitle": "Sign Out",
+    "signOutMsg": "Are you sure you want to sign out?",
+    "cancel": "Cancel",
+    "server": "Server",
+    "serverAddress": "Server Address",
+    "notConfigured": "Not configured",
+    "language": "Language",
+    "languageTitle": "Select Language",
+    "footer": "Max7 Vista — Clinical Image Management"
+  },
+  "serverSetup": {
+    "title": "Server Setup",
+    "changeTitle": "Change Server",
+    "subtitle": "Enter the address of the Max7 Vista server on your clinic network",
+    "changeSubtitle": "Enter the new server address to reconnect",
+    "infoPublishedPrefix": "Use your clinic's published address (e.g.\u00a0",
+    "infoPublishedSuffix": ") to connect from anywhere without Wi-Fi restrictions.",
+    "infoLocalPrefix": "Or use the local network address (e.g.\u00a0",
+    "infoLocalSuffix": ") when on the same Wi-Fi as the server.",
+    "addressLabel": "Server Address",
+    "addressPlaceholder": "http://192.168.1.50:8080",
+    "addressHint": "Include http:// and the port number",
+    "scanQr": "Scan QR Code",
+    "connect": "Test & Connect",
+    "connected": "Connected!",
+    "cancel": "Cancel",
+    "scanHint": "Point the camera at the QR code shown in the app's Settings page",
+    "errors": {
+      "permissionNeeded": "Camera permission is needed to scan the QR code",
+      "enterAddress": "Please enter a server address",
+      "mustStartWith": "Address must start with http:// or https://",
+      "invalidUrl": "Not a valid URL — example: http://192.168.1.50:8080",
+      "serverStatus": "Server responded with {{status}} — check the address and try again",
+      "timeout": "Connection timed out — check the address and make sure the server is running",
+      "unreachable": "Could not reach server — check the address and your network connection"
+    }
+  },
+  "login": {
+    "title": "Patient Images",
+    "subtitle": "Clinical Image Management",
+    "footer": "Secure clinical image management",
+    "usernameLabel": "Username",
+    "usernamePlaceholder": "Enter username",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "Enter password",
+    "signIn": "Sign In",
+    "sessionExpired": "Your session expired. Please sign in again.",
+    "suspended": "Your account has been suspended. Please contact your administrator.",
+    "errors": {
+      "enterCredentials": "Please enter your username and password",
+      "failed": "Login failed"
+    }
+  },
+  "error": {
+    "title": "Something went wrong",
+    "message": "Please reload the app to continue.",
+    "tryAgain": "Try Again"
+  }
+}

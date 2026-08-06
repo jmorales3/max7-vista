@@ -1,0 +1,142 @@
+{
+  "tabs": {
+    "patients": "Patients",
+    "capture": "Capturer",
+    "settings": "Paramètres"
+  },
+  "patients": {
+    "title": "Patients",
+    "search": "Rechercher par nom ou code...",
+    "loadError": "Échec du chargement des patients",
+    "retry": "Réessayer",
+    "notFound": "Aucun patient trouvé",
+    "noneYet": "Aucun patient pour l'instant",
+    "tryDifferent": "Essayez un autre terme de recherche"
+  },
+  "patient": {
+    "fallbackName": "Patient",
+    "imageCount_one": "{{count}} image",
+    "imageCount_other": "{{count}} images",
+    "noImages": "Aucune image pour l'instant",
+    "captureHint": "Capturez des images depuis l'onglet Caméra",
+    "accessDenied": "Accès refusé",
+    "accessDeniedMsg": "Vous n'avez pas accès à ce patient.",
+    "goBack": "Retour",
+    "lightboxTitle": "Image {{id}}",
+    "delete": {
+      "confirmTitle": "Supprimer le patient",
+      "confirmMsg": "Êtes-vous sûr de vouloir supprimer {{name}} ? Toutes ses images seront également supprimées.",
+      "cancel": "Annuler",
+      "confirm": "Supprimer",
+      "usedTitle": "Utilisé dans des présentations",
+      "usedMsg": "Les images de ce patient sont utilisées dans des présentations enregistrées. Les supprimer les retirera également de ces présentations.",
+      "deleteAnyway": "Supprimer quand même",
+      "error": "Échec de la suppression du patient."
+    },
+    "deleteImage": {
+      "confirmTitle": "Supprimer l'image",
+      "confirmMsg": "Êtes-vous sûr de vouloir supprimer cette image ?",
+      "cancel": "Annuler",
+      "confirm": "Supprimer",
+      "usedTitle": "Utilisé dans des présentations",
+      "usedMsg": "Cette image est utilisée dans des présentations enregistrées. La supprimer la retirera de ces présentations.",
+      "deleteAnyway": "Supprimer quand même",
+      "error": "Échec de la suppression de l'image."
+    }
+  },
+  "camera": {
+    "title": "Capturer",
+    "noImage": "Aucune image sélectionnée",
+    "tapHint": "Appuyez ci-dessous pour capturer ou sélectionner",
+    "cameraBtn": "Caméra",
+    "galleryBtn": "Galerie",
+    "assignToPatient": "Assigner au Patient",
+    "selectPatient": "Sélectionner un patient (optionnel)",
+    "imageDescription": "Description de l'Image",
+    "notesPlaceholder": "Ex. Pré-op genou gauche, vue latérale…",
+    "upload": "Téléverser l'Image",
+    "discard": "Annuler et Sélectionner à Nouveau",
+    "selectPatientTitle": "Sélectionner un Patient",
+    "searchPatients": "Rechercher des patients...",
+    "noPatient": "Sans patient (non assigné)",
+    "captureError": "Échec de la capture",
+    "captureErrorMsg": "Impossible de prendre la photo. Veuillez réessayer.",
+    "uploadError": "Échec du téléversement",
+    "permission": {
+      "webTitle": "Caméra",
+      "webMsg": "La caméra n'est disponible que sur les appareils mobiles.",
+      "deniedTitle": "Permission Caméra Requise",
+      "deniedMsg": "L'accès à la caméra a été refusé. Activez-le dans les Réglages de votre appareil pour capturer des images.",
+      "cancel": "Annuler",
+      "openSettings": "Ouvrir les Réglages",
+      "requireTitle": "Permission Caméra",
+      "requireMsg": "L'accès à la caméra est requis pour capturer des images. Veuillez l'autoriser lorsque demandé.",
+      "overlayMsg": "L'accès à la caméra est requis pour prendre des photos de patients.",
+      "close": "Fermer",
+      "libraryTitle": "Permission requise",
+      "libraryMsg": "Veuillez autoriser l'accès à votre photothèque."
+    }
+  },
+  "settings": {
+    "title": "Paramètres",
+    "account": "Compte",
+    "signOut": "Se Déconnecter",
+    "signOutTitle": "Se Déconnecter",
+    "signOutMsg": "Êtes-vous sûr de vouloir vous déconnecter ?",
+    "cancel": "Annuler",
+    "server": "Serveur",
+    "serverAddress": "Adresse du Serveur",
+    "notConfigured": "Non configuré",
+    "language": "Langue",
+    "languageTitle": "Sélectionner la Langue",
+    "footer": "Max7 Vista — Gestion des Images Cliniques"
+  },
+  "serverSetup": {
+    "title": "Configuration du Serveur",
+    "changeTitle": "Changer de Serveur",
+    "subtitle": "Entrez l'adresse du serveur Max7 Vista sur votre réseau clinique",
+    "changeSubtitle": "Entrez la nouvelle adresse du serveur pour vous reconnecter",
+    "infoPublishedPrefix": "Utilisez l'adresse publiée de votre clinique (ex.\u00a0",
+    "infoPublishedSuffix": ") pour vous connecter de partout sans restrictions Wi-Fi.",
+    "infoLocalPrefix": "Ou utilisez l'adresse réseau locale (ex.\u00a0",
+    "infoLocalSuffix": ") lorsque vous êtes sur le même Wi-Fi que le serveur.",
+    "addressLabel": "Adresse du Serveur",
+    "addressPlaceholder": "http://192.168.1.50:8080",
+    "addressHint": "Incluez http:// et le numéro de port",
+    "scanQr": "Scanner le Code QR",
+    "connect": "Tester et Connecter",
+    "connected": "Connecté !",
+    "cancel": "Annuler",
+    "scanHint": "Pointez la caméra vers le code QR affiché dans la page Paramètres de l'application",
+    "errors": {
+      "permissionNeeded": "La permission caméra est nécessaire pour scanner le code QR",
+      "enterAddress": "Veuillez entrer une adresse de serveur",
+      "mustStartWith": "L'adresse doit commencer par http:// ou https://",
+      "invalidUrl": "URL invalide — exemple : http://192.168.1.50:8080",
+      "serverStatus": "Le serveur a répondu avec {{status}} — vérifiez l'adresse et réessayez",
+      "timeout": "Délai de connexion dépassé — vérifiez l'adresse et que le serveur fonctionne",
+      "unreachable": "Impossible d'atteindre le serveur — vérifiez l'adresse et votre connexion réseau"
+    }
+  },
+  "login": {
+    "title": "Images Patients",
+    "subtitle": "Gestion des Images Cliniques",
+    "footer": "Gestion sécurisée des images cliniques",
+    "usernameLabel": "Nom d'utilisateur",
+    "usernamePlaceholder": "Entrez le nom d'utilisateur",
+    "passwordLabel": "Mot de passe",
+    "passwordPlaceholder": "Entrez le mot de passe",
+    "signIn": "Se Connecter",
+    "sessionExpired": "Votre session a expiré. Veuillez vous reconnecter.",
+    "suspended": "Votre compte a été suspendu. Contactez votre administrateur.",
+    "errors": {
+      "enterCredentials": "Veuillez entrer votre nom d'utilisateur et mot de passe",
+      "failed": "Échec de la connexion"
+    }
+  },
+  "error": {
+    "title": "Une erreur s'est produite",
+    "message": "Veuillez recharger l'application pour continuer.",
+    "tryAgain": "Réessayer"
+  }
+}

@@ -65,6 +65,8 @@
   },
   "dependencies": {
     "expo-camera": "~17.0.10",
-    "expo-updates": "~29.0.19"
+    "expo-updates": "~29.0.19",
+    "i18next": "^26.2.0",
+    "react-i18next": "^17.0.8"
   }
 }

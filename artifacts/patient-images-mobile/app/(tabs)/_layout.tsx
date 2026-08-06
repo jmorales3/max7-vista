@@ -8,6 +8,7 @@ import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 import { useColors } from "@/hooks/useColors";
+import { useTranslation } from "react-i18next";
 
 export default function TabLayout() {
   const colors = useColors();
@@ -15,6 +16,7 @@ export default function TabLayout() {
   const isDark = colorScheme === "dark";
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
+  const { t } = useTranslation();
 
   return (
     <Tabs
@@ -50,7 +52,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Patients",
+          title: t("tabs.patients"),
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="person.2" tintColor={color} size={24} />
@@ -62,7 +64,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="camera"
         options={{
-          title: "Capture",
+          title: t("tabs.capture"),
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="camera" tintColor={color} size={24} />
@@ -74,7 +76,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: "Settings",
+          title: t("tabs.settings"),
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="gearshape" tintColor={color} size={24} />

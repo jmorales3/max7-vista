@@ -15,24 +15,27 @@ import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/contexts/AuthContext";
 import { useServer } from "@/contexts/ServerContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
+import i18n, { AVAILABLE_LANGUAGES, setLanguage, type LanguageCode } from "@/i18n";
 
 export default function SettingsScreen() {
   const colors = useColors();
   const { user, logout } = useAuth();
   const { serverUrl } = useServer();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
   const handleLogout = () => {
     Alert.alert(
-      "Sign Out",
-      "Are you sure you want to sign out?",
+      t("settings.signOutTitle"),
+      t("settings.signOutMsg"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("settings.cancel"), style: "cancel" },
         {
-          text: "Sign Out",
+          text: t("settings.signOut"),
           style: "destructive",
           onPress: async () => {
             await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -47,6 +50,13 @@ export default function SettingsScreen() {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push("/server-setup?edit=true");
   };
+
+  const handleSelectLanguage = async (code: LanguageCode) => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await setLanguage(code);
+  };
+
+  const currentLanguage = i18n.language as LanguageCode;
 
   const s = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
@@ -123,6 +133,23 @@ export default function SettingsScreen() {
       fontFamily: "Inter_500Medium",
       color: colors.destructive,
     },
+    langRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 13,
+      gap: 12,
+    },
+    langLabel: {
+      flex: 1,
+      fontSize: 15,
+      fontFamily: "Inter_500Medium",
+      color: colors.foreground,
+    },
+    langActive: {
+      color: colors.primary,
+      fontFamily: "Inter_600SemiBold",
+    },
     footer: {
       paddingVertical: 32,
       paddingBottom: bottomInset + 32,
@@ -138,13 +165,13 @@ export default function SettingsScreen() {
   return (
     <View style={s.container}>
       <View style={s.header}>
-        <Text style={s.headerTitle}>Settings</Text>
+        <Text style={s.headerTitle}>{t("settings.title")}</Text>
       </View>
 
       <ScrollView style={s.scroll}>
         {/* Account */}
         <View style={s.section}>
-          <Text style={s.sectionLabel}>Account</Text>
+          <Text style={s.sectionLabel}>{t("settings.account")}</Text>
           <View style={s.card}>
             <View style={s.row}>
               <View style={[s.rowIcon, { backgroundColor: colors.primary + "20" }]}>
@@ -160,23 +187,23 @@ export default function SettingsScreen() {
               <View style={[s.rowIcon, { backgroundColor: "#fff0f0" }]}>
                 <Ionicons name="log-out-outline" size={16} color={colors.destructive} />
               </View>
-              <Text style={s.logoutLabel}>Sign Out</Text>
+              <Text style={s.logoutLabel}>{t("settings.signOut")}</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Server */}
         <View style={s.section}>
-          <Text style={s.sectionLabel}>Server</Text>
+          <Text style={s.sectionLabel}>{t("settings.server")}</Text>
           <View style={s.card}>
             <TouchableOpacity style={s.row} onPress={handleChangeServer} activeOpacity={0.7}>
               <View style={[s.rowIcon, { backgroundColor: colors.accent }]}>
                 <Ionicons name="server-outline" size={16} color={colors.primary} />
               </View>
               <View style={s.rowContent}>
-                <Text style={s.rowLabel}>Server Address</Text>
+                <Text style={s.rowLabel}>{t("settings.serverAddress")}</Text>
                 <Text style={s.rowValue} numberOfLines={1}>
-                  {serverUrl ?? "Not configured"}
+                  {serverUrl ?? t("settings.notConfigured")}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
@@ -184,8 +211,30 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* Language */}
+        <View style={s.section}>
+          <Text style={s.sectionLabel}>{t("settings.language")}</Text>
+          <View style={s.card}>
+            {AVAILABLE_LANGUAGES.map((lang, idx) => (
+              <TouchableOpacity
+                key={lang.code}
+                style={[s.langRow, idx > 0 && s.rowDivider]}
+                onPress={() => handleSelectLanguage(lang.code)}
+                activeOpacity={0.7}
+              >
+                <Text style={[s.langLabel, currentLanguage === lang.code && s.langActive]}>
+                  {lang.label}
+                </Text>
+                {currentLanguage === lang.code && (
+                  <Ionicons name="checkmark" size={18} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
         <View style={s.footer}>
-          <Text style={s.footerText}>Max7 Vista — Clinical Image Management</Text>
+          <Text style={s.footerText}>{t("settings.footer")}</Text>
         </View>
       </ScrollView>
     </View>

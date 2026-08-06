@@ -432,6 +432,20 @@ router.post("/auth/refresh", async (req, res) => {
   const idleTimeoutMinutes = await getTenantIdleTimeoutMinutes(req.session.tenantId);
   req.session.cookie.maxAge = idleTimeoutMinutes * 60 * 1000;
   req.session.touch();
+
+  // For mobile clients using Bearer-token auth, req.session is a transient
+  // copy — the original session (keyed by the Bearer token in the store) is
+  // never touched by rolling:true.  Explicitly touch it here so the
+  // periodic refresh pings actually extend the mobile session lifetime.
+  const bearerAuth = req.headers.authorization;
+  const queryToken = typeof req.query.token === "string" ? req.query.token : null;
+  const bearerToken = bearerAuth?.startsWith("Bearer ")
+    ? bearerAuth.slice(7).trim() || null
+    : queryToken;
+  if (bearerToken && typeof req.sessionStore.touch === "function") {
+    req.sessionStore.touch(bearerToken, req.session as any, () => {});
+  }
+
   req.session.save((err) => {
     if (err) {
       res.status(500).json({ error: "Internal server error" });

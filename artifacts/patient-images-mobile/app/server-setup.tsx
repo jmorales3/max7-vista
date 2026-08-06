@@ -19,6 +19,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { useColors } from "@/hooks/useColors";
 import { useServer } from "@/contexts/ServerContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 export default function ServerSetupScreen() {
   const colors = useColors();
@@ -28,6 +29,7 @@ export default function ServerSetupScreen() {
   const isDark = colorScheme === "dark";
   const params = useLocalSearchParams<{ edit?: string }>();
   const isEditMode = params.edit === "true";
+  const { t } = useTranslation();
 
   const [url, setUrl] = useState(
     process.env.EXPO_PUBLIC_API_URL ?? "https://patient-image-manager.replit.app",
@@ -45,7 +47,7 @@ export default function ServerSetupScreen() {
     if (!permission?.granted) {
       const result = await requestPermission();
       if (!result.granted) {
-        setError("Camera permission is needed to scan the QR code");
+        setError(t("serverSetup.errors.permissionNeeded"));
         return;
       }
     }
@@ -64,12 +66,12 @@ export default function ServerSetupScreen() {
 
   const validate = (raw: string): string | null => {
     const u = normalise(raw);
-    if (!u) return "Please enter a server address";
-    if (!/^https?:\/\//i.test(u)) return "Address must start with http:// or https://";
+    if (!u) return t("serverSetup.errors.enterAddress");
+    if (!/^https?:\/\//i.test(u)) return t("serverSetup.errors.mustStartWith");
     try {
       new URL(u);
     } catch {
-      return "Not a valid URL — example: http://192.168.1.50:8080";
+      return t("serverSetup.errors.invalidUrl");
     }
     return null;
   };
@@ -94,15 +96,15 @@ export default function ServerSetupScreen() {
       });
       clearTimeout(timeout);
       if (!resp.ok && resp.status !== 401) {
-        setError(`Server responded with ${resp.status} — check the address and try again`);
+        setError(t("serverSetup.errors.serverStatus", { status: resp.status }));
         setTesting(false);
         return;
       }
     } catch (err) {
       if ((err as Error).name === "AbortError") {
-        setError("Connection timed out — check the address and make sure the server is running");
+        setError(t("serverSetup.errors.timeout"));
       } else {
-        setError(`Could not reach server — check the address and your network connection`);
+        setError(t("serverSetup.errors.unreachable"));
       }
       setTesting(false);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -308,12 +310,12 @@ export default function ServerSetupScreen() {
               <Ionicons name="server-outline" size={34} color="#fff" />
             </View>
             <Text style={styles.title}>
-              {isEditMode ? "Change Server" : "Server Setup"}
+              {isEditMode ? t("serverSetup.changeTitle") : t("serverSetup.title")}
             </Text>
             <Text style={styles.subtitle}>
               {isEditMode
-                ? "Enter the new server address to reconnect"
-                : "Enter the address of the Max7 Vista server on your clinic network"}
+                ? t("serverSetup.changeSubtitle")
+                : t("serverSetup.subtitle")}
             </Text>
           </View>
 
@@ -321,28 +323,28 @@ export default function ServerSetupScreen() {
             <View style={styles.infoRow}>
               <Ionicons name="globe-outline" size={16} color={colors.mutedForeground} />
               <Text style={styles.infoText}>
-                Use your clinic's published address (e.g.{" "}
+                {t("serverSetup.infoPublishedPrefix")}
                 <Text style={{ fontFamily: "Inter_600SemiBold" }}>https://your-clinic.replit.app</Text>
-                ) to connect from anywhere without Wi-Fi restrictions.
+                {t("serverSetup.infoPublishedSuffix")}
               </Text>
             </View>
             <View style={styles.infoRow}>
               <Ionicons name="wifi-outline" size={16} color={colors.mutedForeground} />
               <Text style={styles.infoText}>
-                Or use the local network address (e.g.{" "}
+                {t("serverSetup.infoLocalPrefix")}
                 <Text style={{ fontFamily: "Inter_600SemiBold" }}>http://192.168.x.x:8080</Text>
-                ) when on the same Wi-Fi as the server.
+                {t("serverSetup.infoLocalSuffix")}
               </Text>
             </View>
           </View>
 
-          <Text style={styles.label}>Server Address</Text>
+          <Text style={styles.label}>{t("serverSetup.addressLabel")}</Text>
           <View style={styles.inputRow}>
             <TextInput
               style={styles.input}
               value={url}
               onChangeText={(v) => { setUrl(v); setError(null); }}
-              placeholder="http://192.168.1.50:8080"
+              placeholder={t("serverSetup.addressPlaceholder")}
               placeholderTextColor={colors.mutedForeground}
               autoCapitalize="none"
               autoCorrect={false}
@@ -353,7 +355,7 @@ export default function ServerSetupScreen() {
             />
           </View>
           <Text style={styles.example}>
-            Include http:// and the port number
+            {t("serverSetup.addressHint")}
           </Text>
 
           <TouchableOpacity
@@ -363,7 +365,7 @@ export default function ServerSetupScreen() {
             disabled={testing}
           >
             <Ionicons name="qr-code-outline" size={18} color={colors.primary} />
-            <Text style={styles.scanBtnText}>Scan QR Code</Text>
+            <Text style={styles.scanBtnText}>{t("serverSetup.scanQr")}</Text>
           </TouchableOpacity>
 
           {error && (
@@ -384,16 +386,16 @@ export default function ServerSetupScreen() {
             ) : success ? (
               <>
                 <Ionicons name="checkmark-circle" size={20} color={colors.primaryForeground} />
-                <Text style={styles.connectBtnText}>Connected!</Text>
+                <Text style={styles.connectBtnText}>{t("serverSetup.connected")}</Text>
               </>
             ) : (
-              <Text style={styles.connectBtnText}>Test & Connect</Text>
+              <Text style={styles.connectBtnText}>{t("serverSetup.connect")}</Text>
             )}
           </TouchableOpacity>
 
           {isEditMode && (
             <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-              <Text style={styles.backBtnText}>Cancel</Text>
+              <Text style={styles.backBtnText}>{t("serverSetup.cancel")}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -416,7 +418,7 @@ export default function ServerSetupScreen() {
           <View style={[StyleSheet.absoluteFill, styles.scannerOverlay]} pointerEvents="none">
             <View style={styles.scannerFrame} />
             <Text style={styles.scannerHint}>
-              Point the camera at the QR code shown in the app's Settings page
+              {t("serverSetup.scanHint")}
             </Text>
           </View>
           <TouchableOpacity

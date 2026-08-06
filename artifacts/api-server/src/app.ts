@@ -161,6 +161,13 @@ app.use((req, _res, next) => {
       req.session.username = sessionData.username;
       req.session.role = sessionData.role;
       req.session.tenantId = sessionData.tenantId;
+      // Extend the original session's TTL on every request so that
+      // rolling:true applies to Bearer-token mobile clients too.
+      // Without this the original session expires 30 min after login
+      // regardless of activity, causing silent 401s on protected routes.
+      if (typeof req.sessionStore.touch === "function") {
+        req.sessionStore.touch(token, sessionData as any, () => {});
+      }
     }
     next();
   });

@@ -8,21 +8,23 @@ import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 import { useColors } from "@/hooks/useColors";
+import { useTranslation } from "react-i18next";
 
 function NativeTabLayout() {
+  const { t } = useTranslation();
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
         <Icon sf={{ default: "person.2", selected: "person.2.fill" }} />
-        <Label>Patients</Label>
+        <Label>{t("tabs.patients")}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="camera">
         <Icon sf={{ default: "camera", selected: "camera.fill" }} />
-        <Label>Capture</Label>
+        <Label>{t("tabs.capture")}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="settings">
         <Icon sf={{ default: "gearshape", selected: "gearshape.fill" }} />
-        <Label>Settings</Label>
+        <Label>{t("tabs.settings")}</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -34,6 +36,7 @@ function ClassicTabLayout() {
   const isDark = colorScheme === "dark";
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
+  const { t } = useTranslation();
 
   return (
     <Tabs
@@ -69,7 +72,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Patients",
+          title: t("tabs.patients"),
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="person.2" tintColor={color} size={24} />
@@ -81,7 +84,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="camera"
         options={{
-          title: "Capture",
+          title: t("tabs.capture"),
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="camera" tintColor={color} size={24} />
@@ -93,7 +96,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: "Settings",
+          title: t("tabs.settings"),
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="gearshape" tintColor={color} size={24} />

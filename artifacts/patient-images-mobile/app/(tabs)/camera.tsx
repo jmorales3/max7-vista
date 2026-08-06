@@ -22,6 +22,7 @@ import { customFetch, useListPatients } from "@workspace/api-client-react";
 import type { Patient } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 type UploadState = "idle" | "selecting" | "uploading" | "done" | "error";
 
@@ -29,6 +30,7 @@ export default function CameraScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   const [capturedUri, setCapturedUri] = useState<string | null>(null);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
@@ -88,7 +90,7 @@ export default function CameraScreen() {
 
   const openCamera = useCallback(async () => {
     if (Platform.OS === "web") {
-      Alert.alert("Camera", "Camera is only available on mobile devices.");
+      Alert.alert(t("camera.permission.webTitle"), t("camera.permission.webMsg"));
       return;
     }
     let permission = cameraPermission;
@@ -98,12 +100,12 @@ export default function CameraScreen() {
     if (!permission.granted) {
       if (!permission.canAskAgain) {
         Alert.alert(
-          "Camera Permission Required",
-          "Camera access has been denied. Please enable it in your device Settings to capture patient images.",
+          t("camera.permission.deniedTitle"),
+          t("camera.permission.deniedMsg"),
           [
-            { text: "Cancel", style: "cancel" },
+            { text: t("camera.permission.cancel"), style: "cancel" },
             {
-              text: "Open Settings",
+              text: t("camera.permission.openSettings"),
               onPress: () => {
                 if (Platform.OS !== "web") {
                   void Linking.openSettings();
@@ -114,14 +116,14 @@ export default function CameraScreen() {
         );
       } else {
         Alert.alert(
-          "Camera Permission",
-          "Camera access is required to capture patient images. Please allow access when prompted.",
+          t("camera.permission.requireTitle"),
+          t("camera.permission.requireMsg"),
         );
       }
       return;
     }
     setViewfinderOpen(true);
-  }, [cameraPermission, requestCameraPermission]);
+  }, [cameraPermission, requestCameraPermission, t]);
 
   const takePicture = useCallback(async () => {
     if (!cameraRef.current || isCapturing) return;
@@ -139,7 +141,7 @@ export default function CameraScreen() {
         setViewfinderOpen(false);
       }
     } catch (err) {
-      Alert.alert("Capture failed", err instanceof Error ? err.message : "Could not take photo. Please try again.");
+      Alert.alert(t("camera.captureError"), err instanceof Error ? err.message : t("camera.captureErrorMsg"));
     } finally {
       setIsCapturing(false);
     }
@@ -156,7 +158,7 @@ export default function CameraScreen() {
   const openGallery = useCallback(async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Permission required", "Please allow access to your photo library.");
+      Alert.alert(t("camera.permission.libraryTitle"), t("camera.permission.libraryMsg"));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -190,7 +192,7 @@ export default function CameraScreen() {
         },
         onError: (err) => {
           setUploadState("error");
-          setErrorMsg(err instanceof Error ? err.message : "Upload failed");
+          setErrorMsg(err instanceof Error ? err.message : t("camera.uploadError"));
           void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         },
       },
@@ -525,7 +527,7 @@ export default function CameraScreen() {
   return (
     <View style={s.container}>
       <View style={s.header}>
-        <Text style={s.headerTitle}>Capture</Text>
+        <Text style={s.headerTitle}>{t("camera.title")}</Text>
       </View>
 
       <View style={s.body}>
@@ -542,7 +544,7 @@ export default function CameraScreen() {
           ) : (
             <View style={s.placeholder}>
               <Ionicons name="camera-outline" size={56} color={colors.mutedForeground} />
-              <Text style={s.placeholderText}>No image selected{"\n"}Tap below to capture or select</Text>
+              <Text style={s.placeholderText}>{t("camera.noImage")}{"\n"}{t("camera.tapHint")}</Text>
             </View>
           )}
         </View>
@@ -552,18 +554,18 @@ export default function CameraScreen() {
             {Platform.OS !== "web" && (
               <TouchableOpacity style={s.captureBtn} onPress={openCamera} activeOpacity={0.8}>
                 <Ionicons name="camera" size={20} color={colors.primaryForeground} />
-                <Text style={s.captureBtnText}>Camera</Text>
+                <Text style={s.captureBtnText}>{t("camera.cameraBtn")}</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity style={s.galleryBtn} onPress={openGallery} activeOpacity={0.8}>
               <Ionicons name="images" size={20} color={colors.foreground} />
-              <Text style={s.galleryBtnText}>Gallery</Text>
+              <Text style={s.galleryBtnText}>{t("camera.galleryBtn")}</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <>
             <View style={s.patientSection}>
-              <Text style={s.sectionLabel}>Assign to Patient</Text>
+              <Text style={s.sectionLabel}>{t("camera.assignToPatient")}</Text>
               <TouchableOpacity
                 style={s.patientBtn}
                 onPress={() => setShowPatientPicker(true)}
@@ -571,17 +573,17 @@ export default function CameraScreen() {
               >
                 <Ionicons name="person-outline" size={20} color={colors.mutedForeground} />
                 <Text style={s.patientBtnText}>
-                  {selectedPatient ? selectedPatient.name : "Select patient (optional)"}
+                  {selectedPatient ? selectedPatient.name : t("camera.selectPatient")}
                 </Text>
                 <Ionicons name="chevron-down" size={16} color={colors.mutedForeground} />
               </TouchableOpacity>
             </View>
 
             <View style={s.notesSection}>
-              <Text style={s.sectionLabel}>Image Description</Text>
+              <Text style={s.sectionLabel}>{t("camera.imageDescription")}</Text>
               <TextInput
                 style={s.notesInput}
-                placeholder="e.g. Pre-op left knee, lateral view…"
+                placeholder={t("camera.notesPlaceholder")}
                 placeholderTextColor={colors.mutedForeground}
                 value={imageNotes}
                 onChangeText={setImageNotes}
@@ -605,7 +607,7 @@ export default function CameraScreen() {
                 ) : (
                   <>
                     <Ionicons name="cloud-upload" size={20} color={colors.primaryForeground} />
-                    <Text style={s.uploadBtnText}>Upload Image</Text>
+                    <Text style={s.uploadBtnText}>{t("camera.upload")}</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -619,7 +621,7 @@ export default function CameraScreen() {
                 }}
                 disabled={uploadState === "uploading"}
               >
-                <Text style={s.retakeBtnText}>Discard & Select Again</Text>
+                <Text style={s.retakeBtnText}>{t("camera.discard")}</Text>
               </TouchableOpacity>
             </View>
           </>
@@ -690,10 +692,10 @@ export default function CameraScreen() {
             <View style={s.permissionOverlay}>
               <Ionicons name="camera-outline" size={48} color="#fff" />
               <Text style={s.permissionText}>
-                Camera access is required to take patient photos.
+                {t("camera.permission.overlayMsg")}
               </Text>
               <TouchableOpacity style={s.captureBtn} onPress={() => setViewfinderOpen(false)}>
-                <Text style={s.captureBtnText}>Close</Text>
+                <Text style={s.captureBtnText}>{t("camera.permission.close")}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -707,7 +709,7 @@ export default function CameraScreen() {
       >
         <View style={s.modal}>
           <View style={s.modalHeader}>
-            <Text style={s.modalTitle}>Select Patient</Text>
+            <Text style={s.modalTitle}>{t("camera.selectPatientTitle")}</Text>
             <TouchableOpacity onPress={() => setShowPatientPicker(false)}>
               <Ionicons name="close" size={24} color={colors.foreground} />
             </TouchableOpacity>
@@ -718,7 +720,7 @@ export default function CameraScreen() {
               style={s.modalSearchInput}
               value={patientSearch}
               onChangeText={setPatientSearch}
-              placeholder="Search patients..."
+              placeholder={t("camera.searchPatients")}
               placeholderTextColor={colors.mutedForeground}
               autoCorrect={false}
             />
@@ -735,7 +737,7 @@ export default function CameraScreen() {
                 }}
               >
                 <Ionicons name="ban" size={20} color={colors.mutedForeground} />
-                <Text style={s.noPatientText}>No patient (unassigned)</Text>
+                <Text style={s.noPatientText}>{t("camera.noPatient")}</Text>
               </TouchableOpacity>
             }
             renderItem={({ item }) => {

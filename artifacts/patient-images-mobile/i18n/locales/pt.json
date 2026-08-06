@@ -1,0 +1,142 @@
+{
+  "tabs": {
+    "patients": "Pacientes",
+    "capture": "Capturar",
+    "settings": "Configurações"
+  },
+  "patients": {
+    "title": "Pacientes",
+    "search": "Buscar por nome ou código...",
+    "loadError": "Falha ao carregar pacientes",
+    "retry": "Tentar novamente",
+    "notFound": "Nenhum paciente encontrado",
+    "noneYet": "Ainda não há pacientes",
+    "tryDifferent": "Tente um termo de busca diferente"
+  },
+  "patient": {
+    "fallbackName": "Paciente",
+    "imageCount_one": "{{count}} imagem",
+    "imageCount_other": "{{count}} imagens",
+    "noImages": "Ainda não há imagens",
+    "captureHint": "Capture imagens na aba Câmera",
+    "accessDenied": "Acesso negado",
+    "accessDeniedMsg": "Você não tem acesso a este paciente.",
+    "goBack": "Voltar",
+    "lightboxTitle": "Imagem {{id}}",
+    "delete": {
+      "confirmTitle": "Excluir paciente",
+      "confirmMsg": "Tem certeza que deseja excluir {{name}}? Todas as imagens também serão excluídas.",
+      "cancel": "Cancelar",
+      "confirm": "Excluir",
+      "usedTitle": "Usado em apresentações",
+      "usedMsg": "As imagens deste paciente são usadas em apresentações salvas. Excluí-lo também as removerá dessas apresentações.",
+      "deleteAnyway": "Excluir mesmo assim",
+      "error": "Falha ao excluir o paciente."
+    },
+    "deleteImage": {
+      "confirmTitle": "Excluir imagem",
+      "confirmMsg": "Tem certeza que deseja excluir esta imagem?",
+      "cancel": "Cancelar",
+      "confirm": "Excluir",
+      "usedTitle": "Usado em apresentações",
+      "usedMsg": "Esta imagem é usada em apresentações salvas. Excluí-la também a removerá dessas apresentações.",
+      "deleteAnyway": "Excluir mesmo assim",
+      "error": "Falha ao excluir a imagem."
+    }
+  },
+  "camera": {
+    "title": "Capturar",
+    "noImage": "Nenhuma imagem selecionada",
+    "tapHint": "Toque abaixo para capturar ou selecionar",
+    "cameraBtn": "Câmera",
+    "galleryBtn": "Galeria",
+    "assignToPatient": "Atribuir ao Paciente",
+    "selectPatient": "Selecionar paciente (opcional)",
+    "imageDescription": "Descrição da Imagem",
+    "notesPlaceholder": "Ex. Pré-op joelho esquerdo, vista lateral…",
+    "upload": "Enviar Imagem",
+    "discard": "Descartar e Selecionar Novamente",
+    "selectPatientTitle": "Selecionar Paciente",
+    "searchPatients": "Buscar pacientes...",
+    "noPatient": "Sem paciente (não atribuído)",
+    "captureError": "Falha ao capturar",
+    "captureErrorMsg": "Não foi possível tirar a foto. Tente novamente.",
+    "uploadError": "Falha ao enviar",
+    "permission": {
+      "webTitle": "Câmera",
+      "webMsg": "A câmera só está disponível em dispositivos móveis.",
+      "deniedTitle": "Permissão de Câmera Necessária",
+      "deniedMsg": "O acesso à câmera foi negado. Ative-o nas Configurações do dispositivo para capturar imagens.",
+      "cancel": "Cancelar",
+      "openSettings": "Abrir Configurações",
+      "requireTitle": "Permissão de Câmera",
+      "requireMsg": "O acesso à câmera é necessário para capturar imagens. Permita o acesso quando solicitado.",
+      "overlayMsg": "O acesso à câmera é necessário para tirar fotos de pacientes.",
+      "close": "Fechar",
+      "libraryTitle": "Permissão necessária",
+      "libraryMsg": "Permita o acesso à sua biblioteca de fotos."
+    }
+  },
+  "settings": {
+    "title": "Configurações",
+    "account": "Conta",
+    "signOut": "Sair",
+    "signOutTitle": "Sair",
+    "signOutMsg": "Tem certeza que deseja sair?",
+    "cancel": "Cancelar",
+    "server": "Servidor",
+    "serverAddress": "Endereço do Servidor",
+    "notConfigured": "Não configurado",
+    "language": "Idioma",
+    "languageTitle": "Selecionar Idioma",
+    "footer": "Max7 Vista — Gestão de Imagens Clínicas"
+  },
+  "serverSetup": {
+    "title": "Configurar Servidor",
+    "changeTitle": "Alterar Servidor",
+    "subtitle": "Digite o endereço do servidor Max7 Vista na sua rede clínica",
+    "changeSubtitle": "Digite o novo endereço do servidor para reconectar",
+    "infoPublishedPrefix": "Use o endereço publicado da sua clínica (ex.\u00a0",
+    "infoPublishedSuffix": ") para conectar de qualquer lugar sem restrições de Wi-Fi.",
+    "infoLocalPrefix": "Ou use o endereço de rede local (ex.\u00a0",
+    "infoLocalSuffix": ") quando estiver no mesmo Wi-Fi que o servidor.",
+    "addressLabel": "Endereço do Servidor",
+    "addressPlaceholder": "http://192.168.1.50:8080",
+    "addressHint": "Inclua http:// e o número da porta",
+    "scanQr": "Escanear Código QR",
+    "connect": "Testar e Conectar",
+    "connected": "Conectado!",
+    "cancel": "Cancelar",
+    "scanHint": "Aponte a câmera para o código QR exibido na página de Configurações do app",
+    "errors": {
+      "permissionNeeded": "Permissão de câmera é necessária para escanear o código QR",
+      "enterAddress": "Por favor, insira um endereço de servidor",
+      "mustStartWith": "O endereço deve começar com http:// ou https://",
+      "invalidUrl": "URL inválida — exemplo: http://192.168.1.50:8080",
+      "serverStatus": "O servidor respondeu com {{status}} — verifique o endereço e tente novamente",
+      "timeout": "Tempo de conexão esgotado — verifique o endereço e se o servidor está em execução",
+      "unreachable": "Não foi possível alcançar o servidor — verifique o endereço e sua conexão de rede"
+    }
+  },
+  "login": {
+    "title": "Imagens de Pacientes",
+    "subtitle": "Gestão de Imagens Clínicas",
+    "footer": "Gestão segura de imagens clínicas",
+    "usernameLabel": "Usuário",
+    "usernamePlaceholder": "Digite o usuário",
+    "passwordLabel": "Senha",
+    "passwordPlaceholder": "Digite a senha",
+    "signIn": "Entrar",
+    "sessionExpired": "Sua sessão expirou. Por favor, entre novamente.",
+    "suspended": "Sua conta foi suspensa. Entre em contato com o administrador.",
+    "errors": {
+      "enterCredentials": "Por favor, insira seu usuário e senha",
+      "failed": "Falha ao entrar"
+    }
+  },
+  "error": {
+    "title": "Algo deu errado",
+    "message": "Por favor, recarregue o app para continuar.",
+    "tryAgain": "Tentar Novamente"
+  }
+}

@@ -15,6 +15,7 @@ import * as Haptics from "expo-haptics";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 export default function LoginScreen() {
   const colors = useColors();
@@ -22,6 +23,7 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { t } = useTranslation();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -31,7 +33,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!username.trim() || !password.trim()) {
-      setError("Please enter your username and password");
+      setError(t("login.errors.enterCredentials"));
       return;
     }
     setError(null);
@@ -40,7 +42,7 @@ export default function LoginScreen() {
       await login(username.trim(), password);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Login failed";
+      const msg = err instanceof Error ? err.message : t("login.errors.failed");
       setError(msg);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
@@ -154,22 +156,38 @@ export default function LoginScreen() {
     sessionBanner: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: "#fff7ed",
+      backgroundColor: "#fffbea",
       borderRadius: colors.radius,
       paddingHorizontal: 14,
       paddingVertical: 10,
       gap: 8,
-      marginBottom: 20,
+      marginBottom: 16,
     },
     sessionBannerText: {
       fontSize: 13,
       fontFamily: "Inter_400Regular",
-      color: "#b45309",
+      color: "#92400e",
+      flex: 1,
+    },
+    suspendedBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: "#fff0f0",
+      borderRadius: colors.radius,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      gap: 8,
+      marginBottom: 16,
+    },
+    suspendedBannerText: {
+      fontSize: 13,
+      fontFamily: "Inter_400Regular",
+      color: colors.destructive,
       flex: 1,
     },
     footer: {
+      paddingBottom: 20,
       alignItems: "center",
-      marginTop: 24,
     },
     footerText: {
       fontSize: 12,
@@ -186,39 +204,34 @@ export default function LoginScreen() {
       <View style={styles.inner}>
         <View style={styles.logoRow}>
           <View style={styles.iconBg}>
-            <Ionicons name="medical" size={34} color="#fff" />
+            <Ionicons name="image-outline" size={36} color="#fff" />
           </View>
-          <Text style={styles.title}>Patient Images</Text>
-          <Text style={styles.subtitle}>Clinical Image Management</Text>
+          <Text style={styles.title}>{t("login.title")}</Text>
+          <Text style={styles.subtitle}>{t("login.subtitle")}</Text>
         </View>
 
-        {sessionExpired && (
-          <View style={styles.sessionBanner}>
-            <Ionicons name="time-outline" size={18} color="#b45309" />
-            <Text style={styles.sessionBannerText}>
-              Your session expired. Please sign in again.
-            </Text>
-          </View>
-        )}
-
-        {suspended && (
-          <View style={styles.errorBox}>
-            <Ionicons name="shield-outline" size={18} color={colors.destructive} />
-            <Text style={styles.errorText}>
-              Your account has been suspended. Please contact your administrator.
-            </Text>
-          </View>
-        )}
-
         <View style={styles.form}>
+          {sessionExpired && (
+            <View style={styles.sessionBanner}>
+              <Ionicons name="time-outline" size={18} color="#92400e" />
+              <Text style={styles.sessionBannerText}>{t("login.sessionExpired")}</Text>
+            </View>
+          )}
+          {suspended && (
+            <View style={styles.suspendedBanner}>
+              <Ionicons name="ban-outline" size={18} color={colors.destructive} />
+              <Text style={styles.suspendedBannerText}>{t("login.suspended")}</Text>
+            </View>
+          )}
+
           <View style={styles.field}>
-            <Text style={styles.label}>Username</Text>
+            <Text style={styles.label}>{t("login.usernameLabel")}</Text>
             <View style={styles.inputRow}>
               <TextInput
                 style={styles.input}
                 value={username}
                 onChangeText={setUsername}
-                placeholder="Enter username"
+                placeholder={t("login.usernamePlaceholder")}
                 placeholderTextColor={colors.mutedForeground}
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -229,13 +242,13 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Password</Text>
+            <Text style={styles.label}>{t("login.passwordLabel")}</Text>
             <View style={styles.inputRow}>
               <TextInput
                 style={styles.input}
                 value={password}
                 onChangeText={setPassword}
-                placeholder="Enter password"
+                placeholder={t("login.passwordPlaceholder")}
                 placeholderTextColor={colors.mutedForeground}
                 secureTextEntry={!showPassword}
                 returnKeyType="go"
@@ -272,14 +285,14 @@ export default function LoginScreen() {
             {loading ? (
               <ActivityIndicator color={colors.primaryForeground} />
             ) : (
-              <Text style={styles.loginBtnText}>Sign In</Text>
+              <Text style={styles.loginBtnText}>{t("login.signIn")}</Text>
             )}
           </TouchableOpacity>
         </View>
+      </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Secure clinical image management</Text>
-        </View>
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>{t("login.footer")}</Text>
       </View>
     </KeyboardAvoidingView>
   );

@@ -17,6 +17,7 @@ import { useListPatients } from "@workspace/api-client-react";
 import type { Patient } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 function PatientRow({ patient, colors }: { patient: Patient; colors: ReturnType<typeof useColors> }) {
   const initials = (patient.name ?? "")
@@ -68,6 +69,7 @@ function PatientRow({ patient, colors }: { patient: Patient; colors: ReturnType<
 export default function PatientsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -169,14 +171,14 @@ export default function PatientsScreen() {
   return (
     <View style={s.container}>
       <View style={s.header}>
-        <Text style={s.headerTitle}>Patients</Text>
+        <Text style={s.headerTitle}>{t("patients.title")}</Text>
         <View style={s.searchBar}>
           <Ionicons name="search" size={18} color={colors.mutedForeground} />
           <TextInput
             style={s.searchInput}
             value={search}
             onChangeText={handleSearch}
-            placeholder="Search by name or code..."
+            placeholder={t("patients.search")}
             placeholderTextColor={colors.mutedForeground}
             autoCorrect={false}
             returnKeyType="search"
@@ -197,9 +199,9 @@ export default function PatientsScreen() {
       ) : isError ? (
         <View style={s.errorBox}>
           <Ionicons name="cloud-offline" size={40} color={colors.mutedForeground} />
-          <Text style={s.errorText}>Failed to load patients</Text>
+          <Text style={s.errorText}>{t("patients.loadError")}</Text>
           <TouchableOpacity style={s.retryBtn} onPress={() => refetch()}>
-            <Text style={s.retryBtnText}>Retry</Text>
+            <Text style={s.retryBtnText}>{t("patients.retry")}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -222,10 +224,10 @@ export default function PatientsScreen() {
             <View style={s.emptyBox}>
               <Ionicons name="people-outline" size={48} color={colors.mutedForeground} />
               <Text style={s.emptyText}>
-                {debouncedSearch ? "No patients found" : "No patients yet"}
+                {debouncedSearch ? t("patients.notFound") : t("patients.noneYet")}
               </Text>
               {debouncedSearch ? (
-                <Text style={s.emptySubtext}>Try a different search term</Text>
+                <Text style={s.emptySubtext}>{t("patients.tryDifferent")}</Text>
               ) : null}
             </View>
           }

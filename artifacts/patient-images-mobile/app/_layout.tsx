@@ -10,6 +10,9 @@ import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { AppState, type AppStateStatus } from "react-native";
+// Initialize i18n and restore persisted language before first render
+import "@/i18n";
+import { initLanguage } from "@/i18n";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -170,6 +173,11 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
+
+  // Restore persisted language selection before splash hides
+  useEffect(() => {
+    void initLanguage();
+  }, []);
 
   useEffect(() => {
     if (fontsLoaded || fontError) {

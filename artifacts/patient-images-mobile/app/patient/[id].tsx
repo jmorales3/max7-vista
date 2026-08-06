@@ -32,6 +32,7 @@ import type { Image as PatientImage } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 
 type DeleteConflict = { id: number; title: string }[];
 
@@ -154,6 +155,7 @@ export default function PatientDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const patientId = Number(id);
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   const [columns, setColumns] = useState<GridColumns>(2);
   const [lightboxImage, setLightboxImage] = useState<PatientImage | null>(null);
@@ -187,15 +189,15 @@ export default function PatientDetailScreen() {
         if (e instanceof ApiError && e.status === 409) {
           const conflict = (e.data as { presentations?: DeleteConflict })?.presentations ?? [];
           Alert.alert(
-            "Used in presentations",
+            t("patient.delete.usedTitle"),
             conflictMessage(
-              "This patient's images are used in saved presentations. Deleting the patient will remove them from these presentations too.",
+              t("patient.delete.usedMsg"),
               conflict,
             ),
             [
-              { text: "Cancel", style: "cancel" },
+              { text: t("patient.delete.cancel"), style: "cancel" },
               {
-                text: "Delete Anyway",
+                text: t("patient.delete.deleteAnyway"),
                 style: "destructive",
                 onPress: () => forceDeletePatient(),
               },
@@ -203,7 +205,7 @@ export default function PatientDetailScreen() {
           );
           return;
         }
-        Alert.alert("Error", e instanceof Error ? e.message : "Failed to delete patient.");
+        Alert.alert("Error", e instanceof Error ? e.message : t("patient.delete.error"));
       },
     },
   });
@@ -215,28 +217,28 @@ export default function PatientDetailScreen() {
       void queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
       router.back();
     } catch (e) {
-      Alert.alert("Error", e instanceof Error ? e.message : "Failed to delete patient.");
+      Alert.alert("Error", e instanceof Error ? e.message : t("patient.delete.error"));
     } finally {
       setIsDeletingPatient(false);
     }
-  }, [patientId, queryClient]);
+  }, [patientId, queryClient, t]);
 
   const handleDeletePatient = useCallback(async () => {
     if (!patient) return;
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert(
-      "Delete patient",
-      `Are you sure you want to delete ${patient.name}? This will also delete all of their images.`,
+      t("patient.delete.confirmTitle"),
+      t("patient.delete.confirmMsg", { name: patient.name }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("patient.delete.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("patient.delete.confirm"),
           style: "destructive",
           onPress: () => deletePatient.mutate({ id: patientId }),
         },
       ],
     );
-  }, [patient, patientId, deletePatient]);
+  }, [patient, patientId, deletePatient, t]);
 
   const deleteImage = useDeleteImage({
     mutation: {
@@ -248,15 +250,15 @@ export default function PatientDetailScreen() {
         if (e instanceof ApiError && e.status === 409) {
           const conflict = (e.data as { presentations?: DeleteConflict })?.presentations ?? [];
           Alert.alert(
-            "Used in presentations",
+            t("patient.deleteImage.usedTitle"),
             conflictMessage(
-              "This image is used in saved presentations. Deleting it will remove it from those presentations too.",
+              t("patient.deleteImage.usedMsg"),
               conflict,
             ),
             [
-              { text: "Cancel", style: "cancel" },
+              { text: t("patient.deleteImage.cancel"), style: "cancel" },
               {
-                text: "Delete Anyway",
+                text: t("patient.deleteImage.deleteAnyway"),
                 style: "destructive",
                 onPress: () => forceDeleteImage(),
               },
@@ -264,7 +266,7 @@ export default function PatientDetailScreen() {
           );
           return;
         }
-        Alert.alert("Error", e instanceof Error ? e.message : "Failed to delete image.");
+        Alert.alert("Error", e instanceof Error ? e.message : t("patient.deleteImage.error"));
       },
     },
   });
@@ -277,28 +279,28 @@ export default function PatientDetailScreen() {
       void queryClient.invalidateQueries({ queryKey: getListPatientImagesQueryKey(patientId) });
       setLightboxImage(null);
     } catch (e) {
-      Alert.alert("Error", e instanceof Error ? e.message : "Failed to delete image.");
+      Alert.alert("Error", e instanceof Error ? e.message : t("patient.deleteImage.error"));
     } finally {
       setIsDeletingImage(false);
     }
-  }, [lightboxImage, patientId, queryClient]);
+  }, [lightboxImage, patientId, queryClient, t]);
 
   const handleDeleteImage = useCallback(async () => {
     if (!lightboxImage) return;
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert(
-      "Delete image",
-      "Are you sure you want to delete this image?",
+      t("patient.deleteImage.confirmTitle"),
+      t("patient.deleteImage.confirmMsg"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("patient.deleteImage.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("patient.deleteImage.confirm"),
           style: "destructive",
           onPress: () => deleteImage.mutate({ id: lightboxImage.id }),
         },
       ],
     );
-  }, [lightboxImage, deleteImage]);
+  }, [lightboxImage, deleteImage, t]);
 
   const handleImagePress = useCallback(async (image: PatientImage) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -463,10 +465,10 @@ export default function PatientDetailScreen() {
     return (
       <View style={[s.container, s.centered]}>
         <Ionicons name="lock-closed-outline" size={40} color={colors.mutedForeground} />
-        <Text style={s.emptyText}>Access denied</Text>
-        <Text style={s.emptySubtext}>You don't have access to this patient.</Text>
+        <Text style={s.emptyText}>{t("patient.accessDenied")}</Text>
+        <Text style={s.emptySubtext}>{t("patient.accessDeniedMsg")}</Text>
         <TouchableOpacity style={s.retryBtn} onPress={() => router.back()}>
-          <Text style={{ color: colors.primaryForeground, fontFamily: "Inter_500Medium" }}>Go back</Text>
+          <Text style={{ color: colors.primaryForeground, fontFamily: "Inter_500Medium" }}>{t("patient.goBack")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -480,7 +482,7 @@ export default function PatientDetailScreen() {
         </TouchableOpacity>
         <View style={s.headerInfo}>
           <Text style={s.headerName} numberOfLines={1}>
-            {patient?.name ?? "Patient"}
+            {patient?.name ?? t("patient.fallbackName")}
           </Text>
           <Text style={s.headerCode}>{patient?.patientCode}</Text>
         </View>
@@ -508,7 +510,7 @@ export default function PatientDetailScreen() {
       {imageList.length > 0 && (
         <View style={s.countBadge}>
           <Text style={s.countText}>
-            {imageList.length} {imageList.length === 1 ? "image" : "images"}
+            {t("patient.imageCount", { count: imageList.length })}
           </Text>
         </View>
       )}
@@ -520,8 +522,8 @@ export default function PatientDetailScreen() {
       ) : imageList.length === 0 ? (
         <View style={s.centered}>
           <Ionicons name="images-outline" size={52} color={colors.mutedForeground} />
-          <Text style={s.emptyText}>No images yet</Text>
-          <Text style={s.emptySubtext}>Capture images from the Camera tab</Text>
+          <Text style={s.emptyText}>{t("patient.noImages")}</Text>
+          <Text style={s.emptySubtext}>{t("patient.captureHint")}</Text>
         </View>
       ) : (
         <FlatList
@@ -568,7 +570,7 @@ export default function PatientDetailScreen() {
                 <Ionicons name="close" size={26} color="#fff" />
               </TouchableOpacity>
               <Text style={s.lightboxTitle} numberOfLines={1}>
-                {lightboxImage.fileName ?? `Image ${lightboxImage.id}`}
+                {lightboxImage.fileName ?? t("patient.lightboxTitle", { id: lightboxImage.id })}
               </Text>
               <TouchableOpacity
                 style={s.lightboxCloseBtn}
