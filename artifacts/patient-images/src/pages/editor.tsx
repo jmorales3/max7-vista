@@ -701,6 +701,7 @@ export default function Editor() {
   const [angleStep, setAngleStep] = useState(0);
   const anglePointsRef = useRef<[number, number][]>([]);
   const [overlayImageId, setOverlayImageId] = useState<string | null>(null);
+  const [overlayPickerOpen, setOverlayPickerOpen] = useState(true);
   const [overlayOpacity, setOverlayOpacity] = useState(0.5);
   const [overlayOffsetX, setOverlayOffsetX] = useState(0);
   const [overlayOffsetY, setOverlayOffsetY] = useState(0);
@@ -979,6 +980,11 @@ export default function Editor() {
   useEffect(() => {
     redrawOverlay();
   }, [redrawOverlay]);
+
+  // Re-open the picker strip whenever the user switches into the overlay tool.
+  useEffect(() => {
+    if (tool === "overlay") setOverlayPickerOpen(true);
+  }, [tool]);
 
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -2674,61 +2680,7 @@ export default function Editor() {
 
           {tool === "overlay" && (
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-muted-foreground">{t("editor.overlayPickHint")}:</span>
-              {overlayImageId && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 gap-1 text-xs"
-                  onClick={() => { setOverlayImageId(null); overlayImgRef.current = null; redrawOverlay(); }}
-                >
-                  <X className="h-3 w-3" />
-                  {t("editor.overlayNone")}
-                </Button>
-              )}
-              {patientImages.filter((pi) => String(pi.id) !== String(id)).length === 0 ? (
-                <span className="text-xs text-muted-foreground italic">{t("editor.overlayNoImages")}</span>
-              ) : (
-                <div className="flex items-center gap-1">
-                  <button
-                    className="shrink-0 h-7 w-5 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground"
-                    onClick={() => overlayScrollRef.current?.scrollBy({ left: -160, behavior: "smooth" })}
-                  >
-                    <ChevronLeft className="h-3 w-3" />
-                  </button>
-                  <div
-                    ref={overlayScrollRef}
-                    className="flex gap-1 overflow-x-auto w-[320px] scroll-smooth"
-                    style={{ scrollbarWidth: "none" }}
-                  >
-                    {patientImages
-                      .filter((pi) => String(pi.id) !== String(id))
-                      .map((pi) => (
-                        <button
-                          key={pi.id}
-                          title={pi.notes ?? String(pi.id)}
-                          className={`shrink-0 w-9 h-9 rounded border-2 overflow-hidden transition-colors ${
-                            overlayImageId === String(pi.id) ? "border-primary" : "border-transparent hover:border-muted-foreground/40"
-                          }`}
-                          onClick={() => setOverlayImageId(overlayImageId === String(pi.id) ? null : String(pi.id))}
-                        >
-                          <img
-                            src={`/api/images/${pi.id}/file`}
-                            alt=""
-                            className="w-full h-full object-cover"
-                            crossOrigin="anonymous"
-                          />
-                        </button>
-                      ))}
-                  </div>
-                  <button
-                    className="shrink-0 h-7 w-5 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground"
-                    onClick={() => overlayScrollRef.current?.scrollBy({ left: 160, behavior: "smooth" })}
-                  >
-                    <ChevronRight className="h-3 w-3" />
-                  </button>
-                </div>
-              )}
+              {/* thumbnail picker moved to the bottom strip — only controls remain here */}
               {overlayImageId && (
                 <>
                   <div className="h-4 w-px bg-border mx-0.5" />
@@ -3535,61 +3487,96 @@ export default function Editor() {
 
           {/* Overlay image picker — floating strip at bottom-center of canvas */}
           {tool === "overlay" && (
-            <div className="absolute z-30 bottom-3 left-1/2 -translate-x-1/2 bg-card/95 backdrop-blur-sm border rounded-xl shadow-lg px-2 py-1.5 flex items-center gap-2 select-none max-w-[90%]">
-              <span className="text-xs text-muted-foreground shrink-0">{t("editor.overlayPickHint")}:</span>
-              {overlayImageId && (
+            overlayPickerOpen ? (
+              <div className="absolute z-30 bottom-3 left-1/2 -translate-x-1/2 bg-card/95 backdrop-blur-sm border rounded-xl shadow-lg px-2 py-1.5 flex items-center gap-2 select-none max-w-[90%]">
+                <span className="text-xs text-muted-foreground shrink-0">{t("editor.overlayPickHint")}:</span>
+                {overlayImageId && (
+                  <button
+                    className="shrink-0 h-7 px-2 text-xs rounded border hover:bg-muted flex items-center gap-1 text-muted-foreground"
+                    onClick={() => { setOverlayImageId(null); overlayImgRef.current = null; redrawOverlay(); }}
+                  >
+                    <X className="h-3 w-3" />
+                    {t("editor.overlayNone")}
+                  </button>
+                )}
+                {patientImages.filter((pi) => String(pi.id) !== String(id)).length === 0 ? (
+                  <span className="text-xs text-muted-foreground italic">{t("editor.overlayNoImages")}</span>
+                ) : (
+                  <>
+                    <button
+                      className="shrink-0 h-7 w-5 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground"
+                      onClick={() => overlayScrollRef.current?.scrollBy({ left: -160, behavior: "smooth" })}
+                    >
+                      <ChevronLeft className="h-3 w-3" />
+                    </button>
+                    <div
+                      ref={overlayScrollRef}
+                      className="flex gap-1 overflow-x-auto scroll-smooth"
+                      style={{ scrollbarWidth: "none", maxWidth: 460 }}
+                    >
+                      {patientImages
+                        .filter((pi) => String(pi.id) !== String(id))
+                        .map((pi) => (
+                          <button
+                            key={pi.id}
+                            title={pi.notes ?? String(pi.id)}
+                            className={`shrink-0 w-28 h-28 rounded border-2 overflow-hidden transition-colors ${
+                              overlayImageId === String(pi.id) ? "border-primary" : "border-transparent hover:border-muted-foreground/40"
+                            }`}
+                            onClick={() => {
+                              setOverlayImageId(overlayImageId === String(pi.id) ? null : String(pi.id));
+                              if (overlayImageId !== String(pi.id)) setOverlayPickerOpen(false);
+                            }}
+                          >
+                            <img
+                              src={`/api/images/${pi.id}/file`}
+                              alt=""
+                              className="w-full h-full object-cover"
+                              crossOrigin="anonymous"
+                            />
+                          </button>
+                        ))}
+                    </div>
+                    <button
+                      className="shrink-0 h-7 w-5 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground"
+                      onClick={() => overlayScrollRef.current?.scrollBy({ left: 160, behavior: "smooth" })}
+                    >
+                      <ChevronRight className="h-3 w-3" />
+                    </button>
+                  </>
+                )}
+                {/* Dismiss button — always visible so user can close without picking */}
                 <button
-                  className="shrink-0 h-7 px-2 text-xs rounded border hover:bg-muted flex items-center gap-1 text-muted-foreground"
-                  onClick={() => { setOverlayImageId(null); overlayImgRef.current = null; redrawOverlay(); }}
+                  className="shrink-0 h-7 w-7 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground ml-1 border"
+                  title="Hide image picker"
+                  onClick={() => setOverlayPickerOpen(false)}
                 >
-                  <X className="h-3 w-3" />
-                  {t("editor.overlayNone")}
+                  <ChevronDown className="h-3 w-3" />
                 </button>
-              )}
-              {patientImages.filter((pi) => String(pi.id) !== String(id)).length === 0 ? (
-                <span className="text-xs text-muted-foreground italic">{t("editor.overlayNoImages")}</span>
-              ) : (
-                <>
-                  <button
-                    className="shrink-0 h-7 w-5 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground"
-                    onClick={() => overlayScrollRef.current?.scrollBy({ left: -160, behavior: "smooth" })}
-                  >
-                    <ChevronLeft className="h-3 w-3" />
-                  </button>
-                  <div
-                    ref={overlayScrollRef}
-                    className="flex gap-1 overflow-x-auto scroll-smooth"
-                    style={{ scrollbarWidth: "none", maxWidth: 460 }}
-                  >
-                    {patientImages
-                      .filter((pi) => String(pi.id) !== String(id))
-                      .map((pi) => (
-                        <button
-                          key={pi.id}
-                          title={pi.notes ?? String(pi.id)}
-                          className={`shrink-0 w-28 h-28 rounded border-2 overflow-hidden transition-colors ${
-                            overlayImageId === String(pi.id) ? "border-primary" : "border-transparent hover:border-muted-foreground/40"
-                          }`}
-                          onClick={() => setOverlayImageId(overlayImageId === String(pi.id) ? null : String(pi.id))}
-                        >
-                          <img
-                            src={`/api/images/${pi.id}/file`}
-                            alt=""
-                            className="w-full h-full object-cover"
-                            crossOrigin="anonymous"
-                          />
-                        </button>
-                      ))}
-                  </div>
-                  <button
-                    className="shrink-0 h-7 w-5 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground"
-                    onClick={() => overlayScrollRef.current?.scrollBy({ left: 160, behavior: "smooth" })}
-                  >
-                    <ChevronRight className="h-3 w-3" />
-                  </button>
-                </>
-              )}
-            </div>
+              </div>
+            ) : (
+              /* Collapsed state — small pill to re-open the picker */
+              <div className="absolute z-30 bottom-3 left-1/2 -translate-x-1/2 bg-card/95 backdrop-blur-sm border rounded-xl shadow-lg px-3 py-1.5 flex items-center gap-2 select-none">
+                {overlayImageId && (
+                  <img
+                    src={`/api/images/${overlayImageId}/file`}
+                    alt=""
+                    className="w-7 h-7 rounded object-cover border"
+                    crossOrigin="anonymous"
+                  />
+                )}
+                <span className="text-xs text-muted-foreground">
+                  {overlayImageId ? t("editor.overlayPickHint") : t("editor.overlayPickHint")}
+                </span>
+                <button
+                  className="shrink-0 h-7 w-7 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground border"
+                  title="Show image picker"
+                  onClick={() => setOverlayPickerOpen(true)}
+                >
+                  <ChevronUp className="h-3 w-3" />
+                </button>
+              </div>
+            )
           )}
 
           {/* Floating selection — draggable cut region */}
