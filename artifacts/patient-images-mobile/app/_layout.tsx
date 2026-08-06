@@ -9,7 +9,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { AppState, type AppStateStatus } from "react-native";
+import { AppState, type AppStateStatus, View, Text, StyleSheet, Platform } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
+import { useColors } from "@/hooks/useColors";
 // Initialize i18n and restore persisted language before first render
 import "@/i18n";
 import { initLanguage } from "@/i18n";
@@ -22,6 +26,64 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { IdleWarningBanner } from "@/components/IdleWarningBanner";
 
 SplashScreen.preventAutoHideAsync();
+
+// ─── Session-expired toast overlay ──────────────────────────────────────────
+// Rendered above the Stack so it persists through the route transition to
+// /login and gives the user immediate feedback before (and during) the redirect.
+function SessionExpiredToast({ onDismiss }: { onDismiss: () => void }) {
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
+  const topInset = Platform.OS === "web" ? 67 : insets.top;
+
+  const styles = StyleSheet.create({
+    container: {
+      position: "absolute",
+      top: topInset + 8,
+      left: 16,
+      right: 16,
+      backgroundColor: "#fffbea",
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: "#fde68a",
+      padding: 14,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+      elevation: 10,
+      zIndex: 200,
+    },
+    text: {
+      flex: 1,
+      fontSize: 13,
+      fontFamily: "Inter_400Regular",
+      color: "#92400e",
+    },
+    close: {
+      padding: 2,
+    },
+  });
+
+  return (
+    <View style={styles.container} testID="session-expired-toast">
+      <Ionicons name="time-outline" size={18} color="#92400e" />
+      <Text style={styles.text}>{t("login.sessionExpired")}</Text>
+      <Ionicons
+        name="close"
+        size={18}
+        color="#92400e"
+        style={styles.close}
+        onPress={onDismiss}
+        testID="session-expired-toast-dismiss"
+      />
+    </View>
+  );
+}
+// ────────────────────────────────────────────────────────────────────────────
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,7 +101,7 @@ const IDLE_WARNING_MS = 60 * 1000;
 
 function RootLayoutNav() {
   const { serverUrl, isLoading: serverLoading } = useServer();
-  const { user, isLoading: authLoading, logout } = useAuth();
+  const { user, isLoading: authLoading, logout, sessionExpired } = useAuth();
   // Tracks whether we have already routed the user to their initial destination.
   // Once true, in-app navigation (patient detail, settings, etc.) is never
   // interrupted by this guard. It resets when the user logs out or the server
@@ -48,6 +110,38 @@ function RootLayoutNav() {
   const bgTimestampRef = useRef<number | null>(null);
   const [idleSecondsLeft, setIdleSecondsLeft] = useState<number | null>(null);
   const idleIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Session-expired toast: fires when the unauthorized handler kicks in
+  // during a live action (delete, upload, etc.) — shows immediately on top of
+  // whatever screen the user is on, then persists into the login redirect.
+  const [sessionExpiredToastVisible, setSessionExpiredToastVisible] = useState(false);
+  const prevSessionExpiredRef = useRef(false);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (sessionExpired && !prevSessionExpiredRef.current) {
+      setSessionExpiredToastVisible(true);
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+      toastTimeoutRef.current = setTimeout(() => {
+        setSessionExpiredToastVisible(false);
+      }, 4000);
+    }
+    if (!sessionExpired) {
+      // User logged in again — clear the toast immediately.
+      setSessionExpiredToastVisible(false);
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+        toastTimeoutRef.current = null;
+      }
+    }
+    prevSessionExpiredRef.current = sessionExpired;
+  }, [sessionExpired]);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
+  }, []);
 
   // Idle timeout is configurable per tenant (Settings > Session Timeout for
   // admins on the web app); the mobile app mirrors whatever the server reports.
@@ -159,6 +253,17 @@ function RootLayoutNav() {
           onSignOut={() => {
             clearIdleWarning();
             void logout().finally(() => router.replace("/login"));
+          }}
+        />
+      )}
+      {sessionExpiredToastVisible && (
+        <SessionExpiredToast
+          onDismiss={() => {
+            setSessionExpiredToastVisible(false);
+            if (toastTimeoutRef.current) {
+              clearTimeout(toastTimeoutRef.current);
+              toastTimeoutRef.current = null;
+            }
           }}
         />
       )}
