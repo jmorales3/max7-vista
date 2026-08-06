@@ -3207,7 +3207,7 @@ export default function Editor() {
                         )}
                       </div>
                     </div>
-                    <Button size="sm" variant="secondary" className="h-7 text-xs gap-1 w-full" onClick={() => { setSaveOverlayPickId("new"); setSaveOverlayNewTitle(""); setShowSaveOverlayDialog(true); }}>
+                    <Button size="sm" variant="secondary" className="h-7 text-xs gap-1 w-full" onClick={() => setShowSaveOverlayDialog(true)}>
                       <Layers className="h-3 w-3" />
                       {t("editor.saveOverlayToPresentation")}
                     </Button>
