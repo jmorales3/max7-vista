@@ -2537,11 +2537,14 @@ export default function Editor() {
     if (saveOverlayPickId === "new") {
       const title = saveOverlayNewTitle.trim() || t("presentation.untitled");
       createPresentation.mutate(
-        { data: { title, slides: [slide] } },
+        { data: { title, slides: [slide], patientId: image?.patientId ?? undefined } },
         {
           onSuccess: () => {
             setShowSaveOverlayDialog(false);
             queryClient.invalidateQueries({ queryKey: getListPresentationsQueryKey() });
+            if (image?.patientId) {
+              queryClient.invalidateQueries({ queryKey: getListPresentationsQueryKey({ patientId: image.patientId }) });
+            }
             toast({ title: t("editor.overlaySavedOk") });
           },
         },
@@ -2556,6 +2559,9 @@ export default function Editor() {
           onSuccess: () => {
             setShowSaveOverlayDialog(false);
             queryClient.invalidateQueries({ queryKey: getListPresentationsQueryKey() });
+            if (image?.patientId) {
+              queryClient.invalidateQueries({ queryKey: getListPresentationsQueryKey({ patientId: image.patientId }) });
+            }
             toast({ title: t("editor.overlaySavedOk") });
           },
         },
