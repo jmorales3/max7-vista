@@ -457,7 +457,7 @@ export default function PatientDetail() {
             {patient.dateOfBirth && (
               <div className="flex items-center gap-1.5">
                 <Calendar className="h-3.5 w-3.5" />
-                {t("patients.dob")}: {format(new Date(patient.dateOfBirth), "MMM d, yyyy")}
+                {t("patients.dob")}: {format(new Date(patient.dateOfBirth + "T00:00:00"), "MMM d, yyyy")}
               </div>
             )}
             {(patient as any).phone && (

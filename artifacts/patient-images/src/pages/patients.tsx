@@ -104,7 +104,7 @@ export default function Patients() {
                   {patient.dateOfBirth && (
                     <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-2">
                       <Calendar className="h-4 w-4 opacity-70" />
-                      {t("patients.dob")}: {format(new Date(patient.dateOfBirth), "MMM d, yyyy")}
+                      {t("patients.dob")}: {format(new Date(patient.dateOfBirth + "T00:00:00"), "MMM d, yyyy")}
                     </div>
                   )}
                   {patient.notes && (
