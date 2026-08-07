@@ -56,6 +56,8 @@ import * as Haptics from "expo-haptics";
 export type QueueItem = {
   uri: string;
   notes: string;
+  /** True once the item has been successfully uploaded in a previous attempt. */
+  uploaded?: boolean;
 };
 
 interface CardStyles {
@@ -362,7 +364,7 @@ export default function DraggablePhotoList({
                       style={cardStyles.photoCardThumbImg}
                       contentFit="cover"
                     />
-                    {!isUploading && !uploadDone && (
+                    {!isUploading && !uploadDone && !item.uploaded && (
                       <TouchableOpacity
                         style={cardStyles.photoCardThumbRemoveBtn}
                         onPress={() => onRemove(idx)}
@@ -370,7 +372,7 @@ export default function DraggablePhotoList({
                         <Ionicons name="close" size={12} color="#fff" />
                       </TouchableOpacity>
                     )}
-                    {uploadDone && (
+                    {(uploadDone || item.uploaded) && (
                       <View style={cardStyles.photoCardSuccessOverlay}>
                         <Ionicons
                           name="checkmark-circle"

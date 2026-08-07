@@ -34,6 +34,8 @@ type Phase = "capture" | "review";
 type QueueItem = {
   uri: string;
   notes: string;
+  /** True once the item has been successfully uploaded in a previous attempt. */
+  uploaded?: boolean;
 };
 
 type DraftData = {
@@ -302,12 +304,24 @@ export default function CameraScreen() {
     suppressDraftSave.current = true;
     setIsUploading(true);
     setErrorMsg(null);
-    setUploadProgress({ current: 0, total: queue.length });
+
+    // On retry, only count items not yet successfully uploaded.
+    const pendingCount = queue.filter((item) => !item.uploaded).length;
+    setUploadProgress({ current: 0, total: pendingCount });
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
+      let doneCount = 0;
       for (let i = 0; i < queue.length; i++) {
-        setUploadProgress({ current: i + 1, total: queue.length });
+        // Skip items that were successfully uploaded in a prior attempt.
+        if (queue[i].uploaded) continue;
+        doneCount++;
+        setUploadProgress({ current: doneCount, total: pendingCount });
         await uploadOne(queue[i].uri, selectedPatient?.id, queue[i].notes);
+        // Mark this item uploaded immediately so the success overlay appears
+        // and it will be skipped if the clinician needs to retry after an error.
+        setQueue((prev) =>
+          prev.map((item, j) => (j === i ? { ...item, uploaded: true } : item)),
+        );
       }
       void queryClient.invalidateQueries({ queryKey: ["listPatients"] });
       void queryClient.invalidateQueries({ queryKey: ["listPatientImages"] });
@@ -318,8 +332,8 @@ export default function CameraScreen() {
       setUploadDone(true);
       setTimeout(() => reset(), 2000);
     } catch (err) {
-      // Re-enable saving so the current queue (with any already-uploaded items
-      // still in the list) can be persisted for the clinician to retry later.
+      // Re-enable saving so the current queue (with uploaded flags preserved)
+      // can be persisted, letting the clinician retry only the remaining items.
       suppressDraftSave.current = false;
       setErrorMsg(err instanceof Error ? err.message : t("camera.uploadError"));
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
