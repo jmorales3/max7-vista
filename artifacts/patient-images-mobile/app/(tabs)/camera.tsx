@@ -195,6 +195,19 @@ export default function CameraScreen() {
     setQueue((prev) => prev.map((item) => ({ ...item, notes: imageNotes })));
   }, [imageNotes]);
 
+  // ─── reorder ─────────────────────────────────────────────────────────────────
+
+  const moveItem = useCallback((from: number, to: number) => {
+    setQueue((prev) => {
+      if (to < 0 || to >= prev.length) return prev;
+      const next = [...prev];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
+
   // ─── upload ──────────────────────────────────────────────────────────────────
 
   const handleUpload = useCallback(async () => {
@@ -340,6 +353,16 @@ export default function CameraScreen() {
       borderWidth: 1, borderColor: colors.border,
       borderRadius: colors.radius,
       padding: 10,
+    },
+    reorderCol: {
+      justifyContent: "center", alignItems: "center",
+      gap: 2, paddingRight: 2,
+    },
+    reorderBtn: {
+      width: 28, height: 28, borderRadius: 6,
+      borderWidth: 1, borderColor: colors.border,
+      backgroundColor: colors.background,
+      alignItems: "center", justifyContent: "center",
     },
     photoCardThumb: {
       width: 72, height: 72, borderRadius: 8,
@@ -532,6 +555,28 @@ export default function CameraScreen() {
             <View style={{ gap: 10 }}>
               {queue.map((item, idx) => (
                 <View key={item.uri + idx} style={s.photoCard}>
+                  {/* reorder arrows */}
+                  {!isUploading && !uploadDone && queue.length > 1 && (
+                    <View style={s.reorderCol}>
+                      <TouchableOpacity
+                        style={[s.reorderBtn, idx === 0 && { opacity: 0.25 }]}
+                        onPress={() => moveItem(idx, idx - 1)}
+                        disabled={idx === 0}
+                        activeOpacity={0.6}
+                      >
+                        <Ionicons name="chevron-up" size={16} color={colors.foreground} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[s.reorderBtn, idx === queue.length - 1 && { opacity: 0.25 }]}
+                        onPress={() => moveItem(idx, idx + 1)}
+                        disabled={idx === queue.length - 1}
+                        activeOpacity={0.6}
+                      >
+                        <Ionicons name="chevron-down" size={16} color={colors.foreground} />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
                   {/* thumbnail */}
                   <View style={s.photoCardThumb}>
                     <Image source={{ uri: item.uri }} style={s.photoCardThumbImg} contentFit="cover" />
