@@ -361,8 +361,13 @@ export default function CameraScreen() {
     body: { padding: 20, gap: 16 },
 
     // ── capture phase ──
-    captureScrollContent: { padding: 20, gap: 16 },
+    // paddingBottom must be >= tallest footer height (both rows ~150px)
+    captureScrollContent: { padding: 20, paddingBottom: 160, gap: 16 },
     captureFooter: {
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
       paddingHorizontal: 20,
       paddingTop: 12,
       paddingBottom: 16,
