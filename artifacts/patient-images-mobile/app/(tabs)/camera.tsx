@@ -13,6 +13,7 @@ import {
   Linking,
   ScrollView,
 } from "react-native";
+import DraggablePhotoList from "@/components/DraggablePhotoList";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { CameraView, useCameraPermissions, type CameraType, type FlashMode } from "expo-camera";
@@ -50,6 +51,7 @@ export default function CameraScreen() {
   // --- queue state ---
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [phase, setPhase] = useState<Phase>("capture");
+  const [isDragging, setIsDragging] = useState(false);
 
   // --- upload state ---
   const [isUploading, setIsUploading] = useState(false);
@@ -445,16 +447,6 @@ export default function CameraScreen() {
       borderRadius: colors.radius,
       padding: 10,
     },
-    reorderCol: {
-      justifyContent: "center", alignItems: "center",
-      gap: 2, paddingRight: 2,
-    },
-    reorderBtn: {
-      width: 28, height: 28, borderRadius: 6,
-      borderWidth: 1, borderColor: colors.border,
-      backgroundColor: colors.background,
-      alignItems: "center", justifyContent: "center",
-    },
     photoCardThumb: {
       width: 72, height: 72, borderRadius: 8,
       overflow: "hidden", backgroundColor: colors.muted,
@@ -592,7 +584,7 @@ export default function CameraScreen() {
         <View style={s.header}>
           <Text style={s.headerTitle}>{t("camera.title")}</Text>
         </View>
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={[s.body, { flexGrow: 1 }]} keyboardShouldPersistTaps="handled">
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={[s.body, { flexGrow: 1 }]} keyboardShouldPersistTaps="handled" scrollEnabled={!isDragging}>
 
           {/* back + title */}
           <View style={s.reviewHeader}>
@@ -640,70 +632,30 @@ export default function CameraScreen() {
             </View>
           </View>
 
-          {/* per-photo label cards */}
+          {/* per-photo label cards – drag to reorder */}
           <View style={{ gap: 8 }}>
             <Text style={s.sectionLabel}>{t("camera.batch.perPhotoLabels", { count: queue.length })}</Text>
-            <View style={{ gap: 10 }}>
-              {queue.map((item, idx) => (
-                <View key={item.uri + idx} style={s.photoCard}>
-                  {/* reorder arrows */}
-                  {!isUploading && !uploadDone && queue.length > 1 && (
-                    <View style={s.reorderCol}>
-                      <TouchableOpacity
-                        style={[s.reorderBtn, idx === 0 && { opacity: 0.25 }]}
-                        onPress={() => moveItem(idx, idx - 1)}
-                        disabled={idx === 0}
-                        activeOpacity={0.6}
-                      >
-                        <Ionicons name="chevron-up" size={16} color={colors.foreground} />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[s.reorderBtn, idx === queue.length - 1 && { opacity: 0.25 }]}
-                        onPress={() => moveItem(idx, idx + 1)}
-                        disabled={idx === queue.length - 1}
-                        activeOpacity={0.6}
-                      >
-                        <Ionicons name="chevron-down" size={16} color={colors.foreground} />
-                      </TouchableOpacity>
-                    </View>
-                  )}
-
-                  {/* thumbnail */}
-                  <View style={s.photoCardThumb}>
-                    <Image source={{ uri: item.uri }} style={s.photoCardThumbImg} contentFit="cover" />
-                    {!isUploading && !uploadDone && (
-                      <TouchableOpacity
-                        style={s.photoCardThumbRemoveBtn}
-                        onPress={() => setQueue((q) => q.filter((_, i) => i !== idx))}
-                      >
-                        <Ionicons name="close" size={12} color="#fff" />
-                      </TouchableOpacity>
-                    )}
-                    {uploadDone && (
-                      <View style={s.photoCardSuccessOverlay}>
-                        <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
-                      </View>
-                    )}
-                  </View>
-
-                  {/* notes field */}
-                  <View style={s.photoCardRight}>
-                    <Text style={s.photoCardLabel}>
-                      {t("camera.batch.photoN", { n: idx + 1, total: queue.length })}
-                    </Text>
-                    <TextInput
-                      style={s.photoCardInput}
-                      placeholder={t("camera.notesPlaceholder")}
-                      placeholderTextColor={colors.mutedForeground}
-                      value={item.notes}
-                      onChangeText={(v) => updateItemNotes(idx, v)}
-                      multiline
-                      editable={!isUploading}
-                    />
-                  </View>
-                </View>
-              ))}
-            </View>
+            <DraggablePhotoList
+              items={queue}
+              isUploading={isUploading}
+              uploadDone={uploadDone}
+              onReorder={moveItem}
+              onRemove={(idx) => setQueue((q) => q.filter((_, i) => i !== idx))}
+              onUpdateNotes={updateItemNotes}
+              onDragStateChange={setIsDragging}
+              cardStyles={{
+                photoCard: s.photoCard,
+                photoCardThumb: s.photoCardThumb,
+                photoCardThumbImg: s.photoCardThumbImg,
+                photoCardThumbRemoveBtn: s.photoCardThumbRemoveBtn,
+                photoCardSuccessOverlay: s.photoCardSuccessOverlay,
+                photoCardRight: s.photoCardRight,
+                photoCardLabel: s.photoCardLabel,
+                photoCardInput: s.photoCardInput,
+              }}
+              colors={colors}
+              t={t}
+            />
           </View>
 
           <View style={s.actions}>
