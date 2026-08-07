@@ -757,7 +757,11 @@ export default function CameraScreen() {
         <Text style={s.headerTitle}>{t("camera.title")}</Text>
       </View>
 
-      <View style={s.body}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[s.body, { flexGrow: 1 }]}
+        keyboardShouldPersistTaps="handled"
+      >
         {queue.length === 0 ? (
           /* empty state */
           <View style={s.emptyCard}>
@@ -800,7 +804,7 @@ export default function CameraScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* add more / review row — only when queue has items */}
+        {/* clear all / review row — only when queue has items */}
         {queue.length > 0 && (
           <View style={s.addMoreRow}>
             <TouchableOpacity style={s.addMoreBtn} onPress={() => setQueue([])} activeOpacity={0.8}>
@@ -813,7 +817,7 @@ export default function CameraScreen() {
             </TouchableOpacity>
           </View>
         )}
-      </View>
+      </ScrollView>
 
       {/* ── in-app camera viewfinder ── */}
       <Modal visible={viewfinderOpen} animationType="slide" onRequestClose={finishViewfinder} testID="camera-viewfinder-modal">
