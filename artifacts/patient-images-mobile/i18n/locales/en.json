@@ -93,6 +93,12 @@
       "perPhotoLabels": "Labels — {{count}} Photos",
       "perPhotoLabels_one": "Label — 1 Photo",
       "photoN": "Photo {{n}} of {{total}}"
+    },
+    "draft": {
+      "resumeTitle": "Resume previous session?",
+      "resumeMsg": "You have {{count}} unsaved photo(s) from a previous session. Would you like to resume where you left off?",
+      "resume": "Resume",
+      "discard": "Discard"
     }
   },
   "settings": {

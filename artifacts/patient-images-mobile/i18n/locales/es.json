@@ -93,6 +93,12 @@
       "perPhotoLabels": "Etiquetas — {{count}} Fotos",
       "perPhotoLabels_one": "Etiqueta — 1 Foto",
       "photoN": "Foto {{n}} de {{total}}"
+    },
+    "draft": {
+      "resumeTitle": "¿Retomar sesión anterior?",
+      "resumeMsg": "Tienes {{count}} foto(s) sin subir de una sesión anterior. ¿Deseas continuar desde donde lo dejaste?",
+      "resume": "Continuar",
+      "discard": "Descartar"
     }
   },
   "settings": {

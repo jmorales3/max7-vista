@@ -93,6 +93,12 @@
       "perPhotoLabels": "Libellés — {{count}} Photos",
       "perPhotoLabels_one": "Libellé — 1 Photo",
       "photoN": "Photo {{n}} sur {{total}}"
+    },
+    "draft": {
+      "resumeTitle": "Reprendre la session précédente ?",
+      "resumeMsg": "Vous avez {{count}} photo(s) non envoyée(s) d'une session précédente. Voulez-vous reprendre là où vous vous étiez arrêté ?",
+      "resume": "Reprendre",
+      "discard": "Ignorer"
     }
   },
   "settings": {

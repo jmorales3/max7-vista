@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -24,12 +24,21 @@ import type { Patient } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const DRAFT_STORAGE_KEY = "@camera_upload_draft_v1";
 
 type Phase = "capture" | "review";
 
 type QueueItem = {
   uri: string;
   notes: string;
+};
+
+type DraftData = {
+  queue: QueueItem[];
+  selectedPatient: Patient | null;
+  phase: Phase;
 };
 
 export default function CameraScreen() {
@@ -47,6 +56,13 @@ export default function CameraScreen() {
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [uploadDone, setUploadDone] = useState(false);
+
+  // --- draft persistence ---
+  // true once the initial AsyncStorage load has been applied; prevents the
+  // save-effect from overwriting the draft before the load resolves.
+  const draftLoaded = useRef(false);
+  // Set to true while upload is in-flight so we don't save a partial state.
+  const suppressDraftSave = useRef(false);
 
   // --- patient / notes ---
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
@@ -96,6 +112,7 @@ export default function CameraScreen() {
   }
 
   const reset = useCallback(() => {
+    suppressDraftSave.current = false;
     setQueue([]);
     setPhase("capture");
     setIsUploading(false);
@@ -104,7 +121,73 @@ export default function CameraScreen() {
     setUploadDone(false);
     setSelectedPatient(null);
     setImageNotes("");
+    // Clear persisted draft so a fresh session starts blank.
+    void AsyncStorage.removeItem(DRAFT_STORAGE_KEY);
   }, []);
+
+  // ─── draft: load on mount ────────────────────────────────────────────────────
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadDraft() {
+      try {
+        const raw = await AsyncStorage.getItem(DRAFT_STORAGE_KEY);
+        if (!raw || cancelled) {
+          draftLoaded.current = true;
+          return;
+        }
+        const draft: DraftData = JSON.parse(raw);
+        if (!draft.queue || draft.queue.length === 0) {
+          draftLoaded.current = true;
+          return;
+        }
+        // Offer to resume the draft via Alert.
+        Alert.alert(
+          t("camera.draft.resumeTitle"),
+          t("camera.draft.resumeMsg", { count: draft.queue.length }),
+          [
+            {
+              text: t("camera.draft.discard"),
+              style: "destructive",
+              onPress: () => {
+                void AsyncStorage.removeItem(DRAFT_STORAGE_KEY);
+                draftLoaded.current = true;
+              },
+            },
+            {
+              text: t("camera.draft.resume"),
+              onPress: () => {
+                if (draft.queue.length > 0) setQueue(draft.queue);
+                if (draft.selectedPatient) setSelectedPatient(draft.selectedPatient);
+                if (draft.phase) setPhase(draft.phase);
+                draftLoaded.current = true;
+              },
+            },
+          ],
+          { cancelable: false },
+        );
+      } catch {
+        draftLoaded.current = true;
+      }
+    }
+    void loadDraft();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ─── draft: save on every meaningful change ───────────────────────────────
+
+  useEffect(() => {
+    if (!draftLoaded.current) return;
+    if (suppressDraftSave.current) return;
+    if (queue.length === 0) {
+      // Queue cleared — remove stale draft.
+      void AsyncStorage.removeItem(DRAFT_STORAGE_KEY);
+      return;
+    }
+    const draft: DraftData = { queue, selectedPatient, phase };
+    void AsyncStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  }, [queue, selectedPatient, phase]);
 
   // ─── camera ─────────────────────────────────────────────────────────────────
 
@@ -212,6 +295,9 @@ export default function CameraScreen() {
 
   const handleUpload = useCallback(async () => {
     if (queue.length === 0) return;
+    // Suppress draft saves while uploading — we don't want to persist a
+    // partially-uploaded queue that would confuse the resume prompt.
+    suppressDraftSave.current = true;
     setIsUploading(true);
     setErrorMsg(null);
     setUploadProgress({ current: 0, total: queue.length });
@@ -224,10 +310,15 @@ export default function CameraScreen() {
       void queryClient.invalidateQueries({ queryKey: ["listPatients"] });
       void queryClient.invalidateQueries({ queryKey: ["listPatientImages"] });
       void queryClient.invalidateQueries({ queryKey: ["listImages"] });
+      // Draft successfully uploaded — remove it before the success animation.
+      await AsyncStorage.removeItem(DRAFT_STORAGE_KEY);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setUploadDone(true);
       setTimeout(() => reset(), 2000);
     } catch (err) {
+      // Re-enable saving so the current queue (with any already-uploaded items
+      // still in the list) can be persisted for the clinician to retry later.
+      suppressDraftSave.current = false;
       setErrorMsg(err instanceof Error ? err.message : t("camera.uploadError"));
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setIsUploading(false);
