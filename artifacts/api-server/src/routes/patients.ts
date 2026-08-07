@@ -126,6 +126,11 @@ router.get("/patients", async (req, res): Promise<void> => {
   }
 });
 
+/** True when err is a PostgreSQL unique-constraint violation (code 23505). */
+function isUniqueViolation(err: any): boolean {
+  return err?.code === "23505" || err?.cause?.code === "23505";
+}
+
 router.post("/patients", async (req, res): Promise<void> => {
   try {
     const tenantId = tid(req);
@@ -145,6 +150,10 @@ router.post("/patients", async (req, res): Promise<void> => {
     res.status(201).json(result);
   } catch (err: any) {
     if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
+    if (isUniqueViolation(err)) {
+      res.status(409).json({ error: "A patient with this ID already exists in this clinic. Please use a different Patient ID." });
+      return;
+    }
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[patients] POST /patients:", msg);
     res.status(500).json({ error: msg });
@@ -304,6 +313,10 @@ router.patch("/patients/:id", requireRole("admin", "superadmin"), async (req, re
     res.json(rows[0] ?? { ...patient, imageCount: 0 });
   } catch (err: any) {
     if (err.status === 403) { res.status(403).json({ error: err.message }); return; }
+    if (isUniqueViolation(err)) {
+      res.status(409).json({ error: "A patient with this ID already exists in this clinic. Please use a different Patient ID." });
+      return;
+    }
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[patients] PATCH /patients/:id:", msg);
     res.status(500).json({ error: msg });
