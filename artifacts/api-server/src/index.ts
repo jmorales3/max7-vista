@@ -601,7 +601,12 @@ async function seedCephTemplatesSqlite(raw: RawSqliteClient) {
 // ────────────────────────────────────────────────────────────────────────────
 async function runMigrations(pool: import("pg").Pool) {
   // ── Column migrations (ADD COLUMN IF NOT EXISTS — safe to run every startup) ──
-  await pool.query(`ALTER TABLE patients  ADD COLUMN IF NOT EXISTS tenant_id INTEGER`);
+  await pool.query(`ALTER TABLE patients  ADD COLUMN IF NOT EXISTS tenant_id         INTEGER`);
+  await pool.query(`ALTER TABLE patients  ADD COLUMN IF NOT EXISTS profile_image_id  INTEGER`);
+  await pool.query(`ALTER TABLE patients  ADD COLUMN IF NOT EXISTS phone             TEXT`);
+  await pool.query(`ALTER TABLE patients  ADD COLUMN IF NOT EXISTS legal_hold        BOOLEAN NOT NULL DEFAULT FALSE`);
+  await pool.query(`ALTER TABLE patients  ADD COLUMN IF NOT EXISTS legal_hold_reason TEXT`);
+  await pool.query(`ALTER TABLE patients  ADD COLUMN IF NOT EXISTS legal_hold_set_at TIMESTAMPTZ`);
   await pool.query(`ALTER TABLE tags      ADD COLUMN IF NOT EXISTS tenant_id INTEGER`);
   await pool.query(`ALTER TABLE templates ADD COLUMN IF NOT EXISTS tenant_id INTEGER`);
   await pool.query(`ALTER TABLE images    ADD COLUMN IF NOT EXISTS sha256 TEXT`);
