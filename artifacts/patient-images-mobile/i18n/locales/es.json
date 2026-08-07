@@ -75,6 +75,18 @@
       "close": "Cerrar",
       "libraryTitle": "Permiso requerido",
       "libraryMsg": "Permite el acceso a tu biblioteca de fotos."
+    },
+    "batch": {
+      "queueLabel": "Fotos en Cola",
+      "photoCount": "{{count}} foto",
+      "photoCount_other": "{{count}} fotos",
+      "done": "Listo ({{count}})",
+      "clearAll": "Borrar Todo",
+      "review": "Revisar {{count}} Fotos",
+      "reviewTitle": "Revisar {{count}} Fotos",
+      "uploadAll": "Subir {{count}} Fotos",
+      "uploadingProgress": "Subiendo {{current}} de {{total}}…",
+      "uploadComplete": "Subida Completa"
     }
   },
   "settings": {
@@ -96,9 +108,9 @@
     "changeTitle": "Cambiar Servidor",
     "subtitle": "Introduce la dirección del servidor Max7 Vista en tu red clínica",
     "changeSubtitle": "Introduce la nueva dirección del servidor para reconectar",
-    "infoPublishedPrefix": "Usa la dirección publicada de tu clínica (ej.\u00a0",
+    "infoPublishedPrefix": "Usa la dirección publicada de tu clínica (ej. ",
     "infoPublishedSuffix": ") para conectarte desde cualquier lugar sin restricciones de Wi-Fi.",
-    "infoLocalPrefix": "O usa la dirección de red local (ej.\u00a0",
+    "infoLocalPrefix": "O usa la dirección de red local (ej. ",
     "infoLocalSuffix": ") cuando estés en el mismo Wi-Fi que el servidor.",
     "addressLabel": "Dirección del Servidor",
     "addressPlaceholder": "http://192.168.1.50:8080",

@@ -75,6 +75,18 @@
       "close": "Close",
       "libraryTitle": "Permission required",
       "libraryMsg": "Please allow access to your photo library."
+    },
+    "batch": {
+      "queueLabel": "Photos in Queue",
+      "photoCount": "{{count}} photo",
+      "photoCount_other": "{{count}} photos",
+      "done": "Done ({{count}})",
+      "clearAll": "Clear All",
+      "review": "Review {{count}} Photos",
+      "reviewTitle": "Review {{count}} Photos",
+      "uploadAll": "Upload {{count}} Photos",
+      "uploadingProgress": "Uploading {{current}} of {{total}}…",
+      "uploadComplete": "Upload Complete"
     }
   },
   "settings": {
@@ -96,9 +108,9 @@
     "changeTitle": "Change Server",
     "subtitle": "Enter the address of the Max7 Vista server on your clinic network",
     "changeSubtitle": "Enter the new server address to reconnect",
-    "infoPublishedPrefix": "Use your clinic's published address (e.g.\u00a0",
+    "infoPublishedPrefix": "Use your clinic's published address (e.g. ",
     "infoPublishedSuffix": ") to connect from anywhere without Wi-Fi restrictions.",
-    "infoLocalPrefix": "Or use the local network address (e.g.\u00a0",
+    "infoLocalPrefix": "Or use the local network address (e.g. ",
     "infoLocalSuffix": ") when on the same Wi-Fi as the server.",
     "addressLabel": "Server Address",
     "addressPlaceholder": "http://192.168.1.50:8080",
