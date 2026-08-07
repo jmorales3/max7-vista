@@ -152,6 +152,21 @@
       "failed": "Échec de la connexion"
     }
   },
+  "unassigned": {
+    "tab": "Non assignées",
+    "noneYet": "Aucune photo non assignée",
+    "noneYetHint": "Les photos téléchargées sans choisir un patient apparaîtront ici",
+    "loadError": "Échec du chargement des photos non assignées",
+    "tapToAssign": "Appuyer pour assigner",
+    "assignTitle": "Assigner au Patient",
+    "selectPatient": "Sélectionner un Patient",
+    "searchPlaceholder": "Rechercher des patients...",
+    "assignBtn": "Assigner au Patient",
+    "assignTo": "Assigner à {{name}}",
+    "assignError": "Échec de l'assignation",
+    "cancel": "Annuler",
+    "notes": "Notes"
+  },
   "error": {
     "title": "Une erreur s'est produite",
     "message": "Veuillez recharger l'application pour continuer.",

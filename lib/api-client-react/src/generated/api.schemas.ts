@@ -99,6 +99,8 @@ export interface ExportImagesZipInput {
 export interface ImageUpdate {
   notes?: string;
   annotation?: string;
+  patientId?: number | null;
+  capturedAt?: string;
 }
 
 export interface ReorderImagesInput {
@@ -203,5 +205,9 @@ tagIds?: string;
  * When true and tagIds is not set, only images whose patient has at least one tag are returned (sorted by tag name). Prevents dumping every image of every patient when no specific tag filter is chosen.
  */
 onlyTagged?: boolean;
+/**
+ * When true, only returns images that have no assigned patient.
+ */
+isUnassigned?: boolean;
 };
 

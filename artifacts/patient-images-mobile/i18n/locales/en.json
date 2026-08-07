@@ -152,6 +152,21 @@
       "failed": "Login failed"
     }
   },
+  "unassigned": {
+    "tab": "Unassigned",
+    "noneYet": "No unassigned photos",
+    "noneYetHint": "Photos uploaded without choosing a patient will appear here",
+    "loadError": "Failed to load unassigned photos",
+    "tapToAssign": "Tap to assign",
+    "assignTitle": "Assign to Patient",
+    "selectPatient": "Select Patient",
+    "searchPlaceholder": "Search patients...",
+    "assignBtn": "Assign to Patient",
+    "assignTo": "Assign to {{name}}",
+    "assignError": "Assignment failed",
+    "cancel": "Cancel",
+    "notes": "Notes"
+  },
   "error": {
     "title": "Something went wrong",
     "message": "Please reload the app to continue.",

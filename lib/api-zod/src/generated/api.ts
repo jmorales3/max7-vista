@@ -341,7 +341,8 @@ export const ListImagesQueryParams = zod.object({
   "dateFrom": zod.coerce.string().optional(),
   "dateTo": zod.coerce.string().optional(),
   "tagIds": zod.coerce.string().optional().describe('Comma-separated tag IDs. When present, only images whose patient has at least one of these tags are returned.'),
-  "onlyTagged": zod.coerce.boolean().optional().describe('When true and tagIds is not set, only images whose patient has at least one tag are returned (sorted by tag name). Prevents dumping every image of every patient when no specific tag filter is chosen.')
+  "onlyTagged": zod.coerce.boolean().optional().describe('When true and tagIds is not set, only images whose patient has at least one tag are returned (sorted by tag name). Prevents dumping every image of every patient when no specific tag filter is chosen.'),
+  "isUnassigned": zod.coerce.boolean().optional().describe('When true, only returns images that have no assigned patient.')
 })
 
 export const ListImagesResponseItem = zod.object({
@@ -412,7 +413,9 @@ export const UpdateImageParams = zod.object({
 
 export const UpdateImageBody = zod.object({
   "notes": zod.string().optional(),
-  "annotation": zod.string().optional()
+  "annotation": zod.string().optional(),
+  "patientId": zod.number().nullable().optional(),
+  "capturedAt": zod.string().optional()
 })
 
 export const UpdateImageResponse = zod.object({

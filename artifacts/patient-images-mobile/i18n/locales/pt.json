@@ -150,5 +150,20 @@
     "title": "Algo deu errado",
     "message": "Por favor, recarregue o app para continuar.",
     "tryAgain": "Tentar Novamente"
+  },
+  "unassigned": {
+    "tab": "Sem paciente",
+    "noneYet": "Nenhuma foto sem paciente",
+    "noneYetHint": "Fotos enviadas sem escolher um paciente aparecerão aqui",
+    "loadError": "Falha ao carregar fotos sem paciente",
+    "tapToAssign": "Toque para atribuir",
+    "assignTitle": "Atribuir ao Paciente",
+    "selectPatient": "Selecionar Paciente",
+    "searchPlaceholder": "Buscar pacientes...",
+    "assignBtn": "Atribuir ao Paciente",
+    "assignTo": "Atribuir a {{name}}",
+    "assignError": "Falha na atribuição",
+    "cancel": "Cancelar",
+    "notes": "Notas"
   }
 }

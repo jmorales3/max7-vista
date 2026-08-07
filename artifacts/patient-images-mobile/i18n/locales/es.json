@@ -152,6 +152,21 @@
       "failed": "Error al iniciar sesión"
     }
   },
+  "unassigned": {
+    "tab": "Sin paciente",
+    "noneYet": "No hay fotos sin paciente",
+    "noneYetHint": "Las fotos subidas sin elegir un paciente aparecerán aquí",
+    "loadError": "Error al cargar fotos sin paciente",
+    "tapToAssign": "Toca para asignar",
+    "assignTitle": "Asignar al Paciente",
+    "selectPatient": "Seleccionar Paciente",
+    "searchPlaceholder": "Buscar pacientes...",
+    "assignBtn": "Asignar al Paciente",
+    "assignTo": "Asignar a {{name}}",
+    "assignError": "Error al asignar",
+    "cancel": "Cancelar",
+    "notes": "Notas"
+  },
   "error": {
     "title": "Algo salió mal",
     "message": "Por favor recarga la app para continuar.",

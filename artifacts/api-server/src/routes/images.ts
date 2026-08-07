@@ -1,10 +1,10 @@
 import { Router, type IRouter } from "express";
-import { eq, and, gte, lte, sql, inArray } from "drizzle-orm";
+import { eq, and, gte, lte, sql, inArray, isNull } from "drizzle-orm";
 import path from "path";
 import fs from "fs";
 import multer from "multer";
 import AdmZip from "adm-zip";
-import { db, imagesTable, patientsTable, tagsTable, patientTagsTable } from "@workspace/db";
+import { db, imagesTable, patientsTable, tagsTable, patientTagsTable, usersTable } from "@workspace/db";
 import {
   ListImagesQueryParams,
   GetImageParams,
@@ -146,6 +146,48 @@ router.get("/images", async (req, res): Promise<void> => {
     const tenantId = tid(req);
     const parsed = ListImagesQueryParams.safeParse(req.query);
     const params = parsed.success ? parsed.data : {};
+
+    // ── Unassigned images fast-path ───────────────────────────────────────────
+    // Unassigned images have no patientId, so the normal patient inner-join
+    // would exclude them. Scope by the uploading user's tenantId for tenant
+    // isolation. For restricted users (patient-access rows exist), further
+    // restrict to their own uploads only — unassigned images have no patient to
+    // check against, so limiting to self is the conservative, safe policy.
+    if (params.isUnassigned === true) {
+      const userId = req.session?.userId as number | undefined;
+      const accessibleIds = await getAccessiblePatientIds(req);
+
+      const unassignedConditions: any[] = [isNull(imagesTable.patientId)];
+      if (params.dateFrom) unassignedConditions.push(gte(imagesTable.capturedAt, new Date(params.dateFrom)));
+      if (params.dateTo) unassignedConditions.push(lte(imagesTable.capturedAt, new Date(params.dateTo)));
+
+      // Restricted users (non-null accessibleIds) may only see their own uploads.
+      // Unrestricted users (admins) see all unassigned images in the tenant.
+      if (accessibleIds !== null) {
+        if (!userId) { res.json([]); return; }
+        unassignedConditions.push(eq(imagesTable.uploadedBy, userId));
+      }
+
+      const rows = await db
+        .select({
+          id: imagesTable.id,
+          patientId: imagesTable.patientId,
+          filePath: imagesTable.filePath,
+          fileName: imagesTable.fileName,
+          notes: imagesTable.notes,
+          annotation: imagesTable.annotation,
+          capturedAt: imagesTable.capturedAt,
+          isUnassigned: imagesTable.isUnassigned,
+          createdAt: imagesTable.createdAt,
+        })
+        .from(imagesTable)
+        .innerJoin(usersTable, and(eq(usersTable.id, imagesTable.uploadedBy), eq(usersTable.tenantId, tenantId)))
+        .where(and(...unassignedConditions))
+        .orderBy(imagesTable.capturedAt);
+
+      res.json(rows.map((r) => buildImageRow({ ...r, patientName: null, patientCode: null })));
+      return;
+    }
 
     const accessibleIds = await getAccessiblePatientIds(req);
     if (accessibleIds !== null && accessibleIds.length === 0) {
@@ -608,19 +650,40 @@ router.get("/images/:id/file", async (req, res): Promise<void> => {
 
     if (!image) { res.status(404).json({ error: "Image not found" }); return; }
 
-    // Library assets have no patient — they are shared, non-patient media, matching
-    // the access model already used by /api/library-assets/:id/file.
+    // Library assets have no patient — they are shared, non-patient media.
     if (!image.isLibraryAsset) {
-      const [ownerCheck] = await db
-        .select({ id: patientsTable.id })
-        .from(patientsTable)
-        .where(and(eq(patientsTable.id, image.patientId as number), eq(patientsTable.tenantId, tenantId)));
-      if (!ownerCheck) { res.status(404).json({ error: "Image not found" }); return; }
+      if (image.isUnassigned || image.patientId == null) {
+        // Unassigned image: verify via uploader's tenantId, then apply own-upload
+        // restriction for restricted (non-admin) users — same policy as the list endpoint.
+        if (image.uploadedBy == null) { res.status(404).json({ error: "Image not found" }); return; }
+        const [userCheck] = await db
+          .select({ id: usersTable.id })
+          .from(usersTable)
+          .where(and(eq(usersTable.id, image.uploadedBy), eq(usersTable.tenantId, tenantId)));
+        if (!userCheck) { res.status(404).json({ error: "Image not found" }); return; }
 
-      const accessibleIds = await getAccessiblePatientIds(req);
-      if (!canAccessPatient(accessibleIds, image.patientId)) {
-        res.status(403).json({ error: "Access denied" });
-        return;
+        const accessibleIds = await getAccessiblePatientIds(req);
+        if (accessibleIds !== null) {
+          // Restricted user: may only view their own unassigned uploads
+          const userId = req.session?.userId as number | undefined;
+          if (!userId || image.uploadedBy !== userId) {
+            res.status(403).json({ error: "Access denied" });
+            return;
+          }
+        }
+      } else {
+        // Assigned image: verify via patient's tenantId and per-patient access
+        const [ownerCheck] = await db
+          .select({ id: patientsTable.id })
+          .from(patientsTable)
+          .where(and(eq(patientsTable.id, image.patientId), eq(patientsTable.tenantId, tenantId)));
+        if (!ownerCheck) { res.status(404).json({ error: "Image not found" }); return; }
+
+        const accessibleIds = await getAccessiblePatientIds(req);
+        if (!canAccessPatient(accessibleIds, image.patientId)) {
+          res.status(403).json({ error: "Access denied" });
+          return;
+        }
       }
     }
 
@@ -799,17 +862,38 @@ router.get("/images/:id", async (req, res): Promise<void> => {
 
     if (!image) { res.status(404).json({ error: "Image not found" }); return; }
 
-    // Library assets have no patient — they are shared, non-patient media, matching
-    // the access model already used by /api/images/:id/file.
+    // Library assets have no patient — they are shared, non-patient media.
     if (image.isLibraryAsset) {
       res.json(buildImageRow(image));
+      return;
+    }
+
+    if (image.isUnassigned || image.patientId == null) {
+      // Unassigned image: verify via uploader's tenantId; restrict to own uploads for restricted users.
+      if (image.uploadedBy == null) { res.status(404).json({ error: "Image not found" }); return; }
+      const [userCheck] = await db
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(and(eq(usersTable.id, image.uploadedBy), eq(usersTable.tenantId, tenantId)));
+      if (!userCheck) { res.status(404).json({ error: "Image not found" }); return; }
+
+      const accessibleIds = await getAccessiblePatientIds(req);
+      if (accessibleIds !== null) {
+        const userId = req.session?.userId as number | undefined;
+        if (!userId || image.uploadedBy !== userId) {
+          res.status(403).json({ error: "Access denied" });
+          return;
+        }
+      }
+
+      res.json(buildImageRow({ ...image, patientName: null, patientCode: null }));
       return;
     }
 
     const [patient] = await db
       .select({ id: patientsTable.id, name: patientsTable.name, patientCode: patientsTable.patientCode })
       .from(patientsTable)
-      .where(and(eq(patientsTable.id, image.patientId as number), eq(patientsTable.tenantId, tenantId)));
+      .where(and(eq(patientsTable.id, image.patientId), eq(patientsTable.tenantId, tenantId)));
 
     if (!patient) { res.status(404).json({ error: "Image not found" }); return; }
 
@@ -838,16 +922,41 @@ router.patch("/images/:id", async (req, res): Promise<void> => {
     const updateData: Record<string, unknown> = {};
     if (parsed.data.notes !== undefined) updateData.notes = parsed.data.notes;
     if (parsed.data.annotation !== undefined) updateData.annotation = parsed.data.annotation;
-    // Only update images that belong to this tenant (via patient join)
-    const [existingCheck] = await db
-      .select({ id: imagesTable.id, patientId: imagesTable.patientId, uploadedBy: imagesTable.uploadedBy })
+
+    // Fetch the image row without joining patients so unassigned images are also found.
+    // Then verify tenant ownership: assigned images via patient.tenantId, unassigned via
+    // the uploader's tenantId.
+    const [rawImage] = await db
+      .select({ id: imagesTable.id, patientId: imagesTable.patientId, uploadedBy: imagesTable.uploadedBy, isUnassigned: imagesTable.isUnassigned })
       .from(imagesTable)
-      .innerJoin(patientsTable, and(eq(patientsTable.id, imagesTable.patientId), eq(patientsTable.tenantId, tenantId)))
       .where(eq(imagesTable.id, params.data.id));
-    if (!existingCheck) { res.status(404).json({ error: "Image not found" }); return; }
+    if (!rawImage) { res.status(404).json({ error: "Image not found" }); return; }
+
+    // Verify tenant ownership
+    if (rawImage.patientId !== null && rawImage.patientId !== undefined) {
+      const [patientCheck] = await db
+        .select({ id: patientsTable.id })
+        .from(patientsTable)
+        .where(and(eq(patientsTable.id, rawImage.patientId), eq(patientsTable.tenantId, tenantId)));
+      if (!patientCheck) { res.status(404).json({ error: "Image not found" }); return; }
+    } else {
+      // Unassigned image: verify uploader belongs to this tenant
+      if (rawImage.uploadedBy == null) { res.status(404).json({ error: "Image not found" }); return; }
+      const [userCheck] = await db
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(and(eq(usersTable.id, rawImage.uploadedBy), eq(usersTable.tenantId, tenantId)));
+      if (!userCheck) { res.status(404).json({ error: "Image not found" }); return; }
+    }
+
+    const existingCheck = rawImage;
 
     const accessibleIds = await getAccessiblePatientIds(req);
-    if (!canAccessPatient(accessibleIds, existingCheck.patientId)) {
+    // For assigned images, verify the user can access the source patient.
+    // For unassigned images (patientId=null), skip this check — tenant ownership
+    // was already verified above via the uploader's tenantId, and the destination
+    // patient access is verified separately below.
+    if (existingCheck.patientId != null && !canAccessPatient(accessibleIds, existingCheck.patientId)) {
       res.status(403).json({ error: "Access denied" });
       return;
     }
