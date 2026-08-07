@@ -86,7 +86,13 @@
       "reviewTitle": "Réviser {{count}} Photos",
       "uploadAll": "Téléverser {{count}} Photos",
       "uploadingProgress": "Téléversement {{current}} sur {{total}}…",
-      "uploadComplete": "Téléversement Terminé"
+      "uploadComplete": "Téléversement Terminé",
+      "applyToAllLabel": "Libellé par Défaut (Appliquer à Toutes)",
+      "applyToAllPlaceholder": "Ex. Session pré-op…",
+      "applyToAll": "Appliquer à Toutes",
+      "perPhotoLabels": "Libellés — {{count}} Photos",
+      "perPhotoLabels_one": "Libellé — 1 Photo",
+      "photoN": "Photo {{n}} sur {{total}}"
     }
   },
   "settings": {

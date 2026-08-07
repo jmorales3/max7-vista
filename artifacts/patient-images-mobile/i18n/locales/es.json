@@ -86,7 +86,13 @@
       "reviewTitle": "Revisar {{count}} Fotos",
       "uploadAll": "Subir {{count}} Fotos",
       "uploadingProgress": "Subiendo {{current}} de {{total}}…",
-      "uploadComplete": "Subida Completa"
+      "uploadComplete": "Subida Completa",
+      "applyToAllLabel": "Etiqueta Predeterminada (Aplicar a Todas)",
+      "applyToAllPlaceholder": "Ej. Sesión pre-op…",
+      "applyToAll": "Aplicar a Todas",
+      "perPhotoLabels": "Etiquetas — {{count}} Fotos",
+      "perPhotoLabels_one": "Etiqueta — 1 Foto",
+      "photoN": "Foto {{n}} de {{total}}"
     }
   },
   "settings": {

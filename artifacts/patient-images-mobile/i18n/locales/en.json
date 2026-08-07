@@ -86,7 +86,13 @@
       "reviewTitle": "Review {{count}} Photos",
       "uploadAll": "Upload {{count}} Photos",
       "uploadingProgress": "Uploading {{current}} of {{total}}…",
-      "uploadComplete": "Upload Complete"
+      "uploadComplete": "Upload Complete",
+      "applyToAllLabel": "Default Label (Apply to All)",
+      "applyToAllPlaceholder": "e.g. Pre-op session…",
+      "applyToAll": "Apply to All",
+      "perPhotoLabels": "Labels — {{count}} Photos",
+      "perPhotoLabels_one": "Label — 1 Photo",
+      "photoN": "Photo {{n}} of {{total}}"
     }
   },
   "settings": {

@@ -27,6 +27,11 @@ import { useTranslation } from "react-i18next";
 
 type Phase = "capture" | "review";
 
+type QueueItem = {
+  uri: string;
+  notes: string;
+};
+
 export default function CameraScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -34,7 +39,7 @@ export default function CameraScreen() {
   const { t } = useTranslation();
 
   // --- queue state ---
-  const [queue, setQueue] = useState<string[]>([]);
+  const [queue, setQueue] = useState<QueueItem[]>([]);
   const [phase, setPhase] = useState<Phase>("capture");
 
   // --- upload state ---
@@ -140,7 +145,7 @@ export default function CameraScreen() {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.9, skipProcessing: false });
       if (photo?.uri) {
-        setQueue((prev) => [...prev, photo.uri]);
+        setQueue((prev) => [...prev, { uri: photo.uri, notes: imageNotes }]);
         setErrorMsg(null);
       }
     } catch (err) {
@@ -148,7 +153,7 @@ export default function CameraScreen() {
     } finally {
       setIsCapturing(false);
     }
-  }, [isCapturing, t]);
+  }, [isCapturing, imageNotes, t]);
 
   const finishViewfinder = useCallback(() => {
     setViewfinderOpen(false);
@@ -171,10 +176,24 @@ export default function CameraScreen() {
       allowsMultipleSelection: true,
     });
     if (!result.canceled && result.assets.length > 0) {
-      setQueue((prev) => [...prev, ...result.assets.map((a) => a.uri)]);
+      setQueue((prev) => [
+        ...prev,
+        ...result.assets.map((a) => ({ uri: a.uri, notes: imageNotes })),
+      ]);
       setErrorMsg(null);
     }
-  }, [t]);
+  }, [imageNotes, t]);
+
+  // ─── per-image notes ─────────────────────────────────────────────────────────
+
+  const updateItemNotes = useCallback((idx: number, value: string) => {
+    setQueue((prev) => prev.map((item, i) => i === idx ? { ...item, notes: value } : item));
+  }, []);
+
+  const applyNotesToAll = useCallback(() => {
+    if (!imageNotes.trim()) return;
+    setQueue((prev) => prev.map((item) => ({ ...item, notes: imageNotes })));
+  }, [imageNotes]);
 
   // ─── upload ──────────────────────────────────────────────────────────────────
 
@@ -187,7 +206,7 @@ export default function CameraScreen() {
     try {
       for (let i = 0; i < queue.length; i++) {
         setUploadProgress({ current: i + 1, total: queue.length });
-        await uploadOne(queue[i], selectedPatient?.id, imageNotes);
+        await uploadOne(queue[i].uri, selectedPatient?.id, queue[i].notes);
       }
       void queryClient.invalidateQueries({ queryKey: ["listPatients"] });
       void queryClient.invalidateQueries({ queryKey: ["listPatientImages"] });
@@ -201,7 +220,7 @@ export default function CameraScreen() {
       setIsUploading(false);
       setUploadProgress(null);
     }
-  }, [queue, selectedPatient, imageNotes, queryClient, reset, t]);
+  }, [queue, selectedPatient, queryClient, reset, t]);
 
   // ─── styles ──────────────────────────────────────────────────────────────────
 
@@ -292,19 +311,66 @@ export default function CameraScreen() {
       backgroundColor: colors.card, alignItems: "center", justifyContent: "center",
     },
     reviewTitle: { fontSize: 17, fontFamily: "Inter_700Bold", color: colors.foreground },
-    reviewStrip: { paddingVertical: 4 },
-    reviewStripContent: { gap: 8, paddingRight: 4 },
-    reviewThumb: {
-      width: 80, height: 80, borderRadius: 10, overflow: "hidden",
-      backgroundColor: colors.muted,
+
+    // ── apply-to-all row ──
+    applyAllRow: {
+      flexDirection: "row", gap: 8, alignItems: "flex-start",
     },
-    reviewThumbImg: { width: "100%", height: "100%" },
-    reviewRemoveBtn: {
+    applyAllInput: {
+      flex: 1,
+      backgroundColor: colors.card, borderWidth: 1,
+      borderColor: colors.border, borderRadius: colors.radius,
+      paddingHorizontal: 14, paddingVertical: 10,
+      fontSize: 14, fontFamily: "Inter_400Regular",
+      color: colors.foreground,
+    },
+    applyAllBtn: {
+      height: 42, borderRadius: colors.radius,
+      borderWidth: 1, borderColor: colors.primary,
+      backgroundColor: colors.card,
+      paddingHorizontal: 12,
+      alignItems: "center", justifyContent: "center",
+    },
+    applyAllBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.primary },
+
+    // ── per-photo card ──
+    photoCard: {
+      flexDirection: "row", gap: 12,
+      backgroundColor: colors.card,
+      borderWidth: 1, borderColor: colors.border,
+      borderRadius: colors.radius,
+      padding: 10,
+    },
+    photoCardThumb: {
+      width: 72, height: 72, borderRadius: 8,
+      overflow: "hidden", backgroundColor: colors.muted,
+      flexShrink: 0,
+    },
+    photoCardThumbImg: { width: "100%", height: "100%" },
+    photoCardThumbRemoveBtn: {
       position: "absolute", top: 3, right: 3,
       width: 20, height: 20, borderRadius: 10,
       backgroundColor: "rgba(0,0,0,0.65)",
       alignItems: "center", justifyContent: "center",
     },
+    photoCardRight: { flex: 1, gap: 4 },
+    photoCardLabel: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.mutedForeground },
+    photoCardInput: {
+      backgroundColor: colors.background,
+      borderWidth: 1, borderColor: colors.border,
+      borderRadius: 8,
+      paddingHorizontal: 10, paddingVertical: 8,
+      fontSize: 14, fontFamily: "Inter_400Regular",
+      color: colors.foreground,
+      minHeight: 52, textAlignVertical: "top",
+    },
+    photoCardSuccessOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(31,137,147,0.18)",
+      alignItems: "center", justifyContent: "center",
+      borderRadius: 8,
+    },
+
     sectionLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.6 },
     patientBtn: {
       flexDirection: "row", alignItems: "center",
@@ -313,13 +379,6 @@ export default function CameraScreen() {
       paddingHorizontal: 14, paddingVertical: 12, gap: 10,
     },
     patientBtnText: { flex: 1, fontSize: 15, fontFamily: "Inter_500Medium" },
-    notesInput: {
-      backgroundColor: colors.card, borderWidth: 1,
-      borderColor: colors.border, borderRadius: colors.radius,
-      paddingHorizontal: 14, paddingVertical: 12,
-      fontSize: 15, fontFamily: "Inter_400Regular",
-      color: colors.foreground, minHeight: 72, textAlignVertical: "top",
-    },
     actions: { gap: 10, paddingBottom: bottomInset + 90 },
     uploadBtn: {
       height: 54, borderRadius: colors.radius,
@@ -330,10 +389,6 @@ export default function CameraScreen() {
     uploadBtnText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: colors.primaryForeground },
     progressText: { fontSize: 13, fontFamily: "Inter_400Regular", color: colors.mutedForeground, textAlign: "center" },
     errorText: { fontSize: 13, fontFamily: "Inter_400Regular", color: colors.destructive, textAlign: "center" },
-    successOverlay: {
-      ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(31,137,147,0.12)",
-      alignItems: "center", justifyContent: "center", borderRadius: 14,
-    },
 
     // ── viewfinder ──
     viewfinderContainer: { flex: 1, backgroundColor: "#000" },
@@ -435,25 +490,6 @@ export default function CameraScreen() {
             </Text>
           </View>
 
-          {/* thumbnail strip */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.reviewStrip} contentContainerStyle={s.reviewStripContent}>
-            {queue.map((uri, idx) => (
-              <View key={uri + idx} style={s.reviewThumb}>
-                <Image source={{ uri }} style={s.reviewThumbImg} contentFit="cover" />
-                {!isUploading && !uploadDone && (
-                  <TouchableOpacity style={s.reviewRemoveBtn} onPress={() => setQueue((q) => q.filter((_, i) => i !== idx))}>
-                    <Ionicons name="close" size={12} color="#fff" />
-                  </TouchableOpacity>
-                )}
-                {uploadDone && (
-                  <View style={s.successOverlay}>
-                    <Ionicons name="checkmark-circle" size={28} color={colors.primary} />
-                  </View>
-                )}
-              </View>
-            ))}
-          </ScrollView>
-
           {/* patient */}
           <View style={{ gap: 8 }}>
             <Text style={s.sectionLabel}>{t("camera.assignToPatient")}</Text>
@@ -466,19 +502,72 @@ export default function CameraScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* notes */}
+          {/* apply-to-all notes */}
           <View style={{ gap: 8 }}>
-            <Text style={s.sectionLabel}>{t("camera.imageDescription")}</Text>
-            <TextInput
-              style={s.notesInput}
-              placeholder={t("camera.notesPlaceholder")}
-              placeholderTextColor={colors.mutedForeground}
-              value={imageNotes}
-              onChangeText={setImageNotes}
-              multiline
-              numberOfLines={3}
-              editable={!isUploading}
-            />
+            <Text style={s.sectionLabel}>{t("camera.batch.applyToAllLabel")}</Text>
+            <View style={s.applyAllRow}>
+              <TextInput
+                style={s.applyAllInput}
+                placeholder={t("camera.batch.applyToAllPlaceholder")}
+                placeholderTextColor={colors.mutedForeground}
+                value={imageNotes}
+                onChangeText={setImageNotes}
+                editable={!isUploading}
+                returnKeyType="done"
+              />
+              <TouchableOpacity
+                style={[s.applyAllBtn, (!imageNotes.trim() || isUploading) && { opacity: 0.4 }]}
+                onPress={applyNotesToAll}
+                disabled={!imageNotes.trim() || isUploading}
+                activeOpacity={0.7}
+              >
+                <Text style={s.applyAllBtnText}>{t("camera.batch.applyToAll")}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* per-photo label cards */}
+          <View style={{ gap: 8 }}>
+            <Text style={s.sectionLabel}>{t("camera.batch.perPhotoLabels", { count: queue.length })}</Text>
+            <View style={{ gap: 10 }}>
+              {queue.map((item, idx) => (
+                <View key={item.uri + idx} style={s.photoCard}>
+                  {/* thumbnail */}
+                  <View style={s.photoCardThumb}>
+                    <Image source={{ uri: item.uri }} style={s.photoCardThumbImg} contentFit="cover" />
+                    {!isUploading && !uploadDone && (
+                      <TouchableOpacity
+                        style={s.photoCardThumbRemoveBtn}
+                        onPress={() => setQueue((q) => q.filter((_, i) => i !== idx))}
+                      >
+                        <Ionicons name="close" size={12} color="#fff" />
+                      </TouchableOpacity>
+                    )}
+                    {uploadDone && (
+                      <View style={s.photoCardSuccessOverlay}>
+                        <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
+                      </View>
+                    )}
+                  </View>
+
+                  {/* notes field */}
+                  <View style={s.photoCardRight}>
+                    <Text style={s.photoCardLabel}>
+                      {t("camera.batch.photoN", { n: idx + 1, total: queue.length })}
+                    </Text>
+                    <TextInput
+                      style={s.photoCardInput}
+                      placeholder={t("camera.notesPlaceholder")}
+                      placeholderTextColor={colors.mutedForeground}
+                      value={item.notes}
+                      onChangeText={(v) => updateItemNotes(idx, v)}
+                      multiline
+                      editable={!isUploading}
+                    />
+                  </View>
+                </View>
+              ))}
+            </View>
           </View>
 
           <View style={s.actions}>
@@ -582,9 +671,9 @@ export default function CameraScreen() {
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View style={s.queueStrip}>
-                {queue.map((uri, idx) => (
-                  <View key={uri + idx} style={s.queueThumb}>
-                    <Image source={{ uri }} style={s.queueThumbImg} contentFit="cover" />
+                {queue.map((item, idx) => (
+                  <View key={item.uri + idx} style={s.queueThumb}>
+                    <Image source={{ uri: item.uri }} style={s.queueThumbImg} contentFit="cover" />
                     <TouchableOpacity style={s.queueRemoveBtn} onPress={() => setQueue((q) => q.filter((_, i) => i !== idx))}>
                       <Ionicons name="close" size={12} color="#fff" />
                     </TouchableOpacity>
