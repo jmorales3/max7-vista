@@ -361,19 +361,14 @@ export default function CameraScreen() {
     body: { padding: 20, gap: 16 },
 
     // ── capture phase ──
-    // paddingBottom must be >= tallest footer height (both rows ~150px)
-    captureScrollContent: { padding: 20, paddingBottom: 160, gap: 16 },
+    captureScrollContent: { padding: 20, gap: 16 },
     captureFooter: {
-      position: "absolute",
-      bottom: 0,
-      left: 0,
-      right: 0,
       paddingHorizontal: 20,
-      paddingTop: 12,
-      paddingBottom: 16,
+      paddingTop: 14,
+      paddingBottom: 14,
       gap: 10,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
       backgroundColor: colors.background,
     },
     emptyCard: {
@@ -772,16 +767,43 @@ export default function CameraScreen() {
         <Text style={s.headerTitle}>{t("camera.title")}</Text>
       </View>
 
-      {/* scrollable area: empty state OR thumbnail strip only */}
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={s.captureScrollContent}>
+      {/* action buttons — always at top, never clipped */}
+      <View style={s.captureFooter}>
+        <View style={s.captureRow}>
+          {Platform.OS !== "web" && (
+            <TouchableOpacity style={s.captureBtn} onPress={openCamera} activeOpacity={0.8}>
+              <Ionicons name="camera" size={20} color={colors.primaryForeground} />
+              <Text style={s.captureBtnText}>{t("camera.cameraBtn")}</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={s.galleryBtn} onPress={openGallery} activeOpacity={0.8}>
+            <Ionicons name="images" size={20} color={colors.foreground} />
+            <Text style={s.galleryBtnText}>{t("camera.galleryBtn")}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {queue.length > 0 && (
+          <View style={s.addMoreRow}>
+            <TouchableOpacity style={s.addMoreBtn} onPress={() => setQueue([])} activeOpacity={0.8}>
+              <Ionicons name="trash-outline" size={16} color={colors.foreground} />
+              <Text style={s.addMoreBtnText}>{t("camera.batch.clearAll")}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.reviewBtn} onPress={() => setPhase("review")} activeOpacity={0.8}>
+              <Ionicons name="checkmark-circle-outline" size={16} color="#fff" />
+              <Text style={s.reviewBtnText}>{t("camera.batch.review", { count: queue.length })}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+      {/* scrollable area: empty state OR thumbnail strip */}
+      <ScrollView contentContainerStyle={s.captureScrollContent}>
         {queue.length === 0 ? (
-          /* empty state */
           <View style={s.emptyCard}>
             <Ionicons name="camera-outline" size={56} color={colors.mutedForeground} />
-            <Text style={s.emptyCardText}>{t("camera.noImage")}{"\n"}{t("camera.tapHint")}</Text>
+            <Text style={s.emptyCardText}>{t("camera.noImage")}</Text>
           </View>
         ) : (
-          /* queue thumbnail strip */
           <>
             <View style={s.queueHeader}>
               <Text style={s.queueLabel}>{t("camera.batch.queueLabel")}</Text>
@@ -802,36 +824,6 @@ export default function CameraScreen() {
           </>
         )}
       </ScrollView>
-
-      {/* fixed footer — always visible above the tab bar */}
-      <View style={s.captureFooter}>
-        <View style={s.captureRow}>
-          {Platform.OS !== "web" && (
-            <TouchableOpacity style={s.captureBtn} onPress={openCamera} activeOpacity={0.8}>
-              <Ionicons name="camera" size={20} color={colors.primaryForeground} />
-              <Text style={s.captureBtnText}>{t("camera.cameraBtn")}</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity style={s.galleryBtn} onPress={openGallery} activeOpacity={0.8}>
-            <Ionicons name="images" size={20} color={colors.foreground} />
-            <Text style={s.galleryBtnText}>{t("camera.galleryBtn")}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* clear all / review row — only when queue has items */}
-        {queue.length > 0 && (
-          <View style={s.addMoreRow}>
-            <TouchableOpacity style={s.addMoreBtn} onPress={() => setQueue([])} activeOpacity={0.8}>
-              <Ionicons name="trash-outline" size={16} color={colors.foreground} />
-              <Text style={s.addMoreBtnText}>{t("camera.batch.clearAll")}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={s.reviewBtn} onPress={() => setPhase("review")} activeOpacity={0.8}>
-              <Ionicons name="checkmark-circle-outline" size={16} color="#fff" />
-              <Text style={s.reviewBtnText}>{t("camera.batch.review", { count: queue.length })}</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
 
       {/* ── in-app camera viewfinder ── */}
       <Modal visible={viewfinderOpen} animationType="slide" onRequestClose={finishViewfinder} testID="camera-viewfinder-modal">
