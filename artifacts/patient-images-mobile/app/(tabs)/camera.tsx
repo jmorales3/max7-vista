@@ -358,9 +358,19 @@ export default function CameraScreen() {
       borderBottomColor: colors.border,
     },
     headerTitle: { fontSize: 28, fontFamily: "Inter_700Bold", color: colors.foreground },
-    body: { flex: 1, padding: 20, gap: 16 },
+    body: { padding: 20, gap: 16 },
 
     // ── capture phase ──
+    captureScrollContent: { padding: 20, gap: 16 },
+    captureFooter: {
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      paddingBottom: 16,
+      gap: 10,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      backgroundColor: colors.background,
+    },
     emptyCard: {
       aspectRatio: 4 / 3,
       borderRadius: 14,
@@ -757,11 +767,8 @@ export default function CameraScreen() {
         <Text style={s.headerTitle}>{t("camera.title")}</Text>
       </View>
 
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={[s.body, { flexGrow: 1 }]}
-        keyboardShouldPersistTaps="handled"
-      >
+      {/* scrollable area: empty state OR thumbnail strip only */}
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={s.captureScrollContent}>
         {queue.length === 0 ? (
           /* empty state */
           <View style={s.emptyCard}>
@@ -789,8 +796,10 @@ export default function CameraScreen() {
             </ScrollView>
           </>
         )}
+      </ScrollView>
 
-        {/* camera / gallery buttons */}
+      {/* fixed footer — always visible above the tab bar */}
+      <View style={s.captureFooter}>
         <View style={s.captureRow}>
           {Platform.OS !== "web" && (
             <TouchableOpacity style={s.captureBtn} onPress={openCamera} activeOpacity={0.8}>
@@ -817,7 +826,7 @@ export default function CameraScreen() {
             </TouchableOpacity>
           </View>
         )}
-      </ScrollView>
+      </View>
 
       {/* ── in-app camera viewfinder ── */}
       <Modal visible={viewfinderOpen} animationType="slide" onRequestClose={finishViewfinder} testID="camera-viewfinder-modal">
