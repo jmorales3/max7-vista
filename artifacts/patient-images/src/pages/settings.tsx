@@ -120,6 +120,13 @@ export default function Settings() {
   const [storageDirectory, setStorageDirectory] = useState("");
   const [newTagName, setNewTagName] = useState("");
 
+  // API Keys state
+  const [newApiKeyName, setNewApiKeyName] = useState("");
+  const [showGenerateKeyDialog, setShowGenerateKeyDialog] = useState(false);
+  const [generatedRawKey, setGeneratedRawKey] = useState<string | null>(null);
+  const [copiedApiKey, setCopiedApiKey] = useState(false);
+  const [revokingKeyId, setRevokingKeyId] = useState<number | null>(null);
+
   const [currentPassword, setCurrentPassword] = useState("");
   const [newUsername, setNewUsername] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -138,6 +145,76 @@ export default function Settings() {
   const [auditExporting, setAuditExporting] = useState(false);
 
   const [idleTimeoutMinutesInput, setIdleTimeoutMinutesInput] = useState<number | null>(null);
+
+  // API key queries & mutations
+  interface ApiKeyRow {
+    id: number;
+    name: string;
+    keyPrefix: string;
+    createdByUserId: number | null;
+    createdAt: string;
+    lastUsedAt: string | null;
+  }
+  const apiKeysQueryKey = ["api-keys"];
+  const { data: apiKeys = [], isLoading: loadingApiKeys, refetch: refetchApiKeys } = useQuery<ApiKeyRow[]>({
+    queryKey: apiKeysQueryKey,
+    queryFn: async () => {
+      const res = await fetch(getApiUrl("/api/api-keys"), { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch API keys");
+      return res.json();
+    },
+    enabled: isAdmin,
+  });
+
+  const generateApiKey = useMutation({
+    mutationFn: async (name: string) => {
+      const res = await fetch(getApiUrl("/api/api-keys"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? "Failed to generate key");
+      }
+      return res.json() as Promise<ApiKeyRow & { rawKey: string }>;
+    },
+    onSuccess: (data) => {
+      setGeneratedRawKey(data.rawKey);
+      setNewApiKeyName("");
+      void refetchApiKeys();
+    },
+    onError: (e) => {
+      toast({ variant: "destructive", title: "Failed to generate key", description: e instanceof Error ? e.message : String(e) });
+    },
+  });
+
+  const revokeApiKey = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(getApiUrl(`/api/api-keys/${id}`), { method: "DELETE", credentials: "include" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? "Failed to revoke key");
+      }
+    },
+    onSuccess: () => {
+      setRevokingKeyId(null);
+      void refetchApiKeys();
+      toast({ title: "API key revoked" });
+    },
+    onError: (e) => {
+      setRevokingKeyId(null);
+      toast({ variant: "destructive", title: "Failed to revoke key", description: e instanceof Error ? e.message : String(e) });
+    },
+  });
+
+  function copyApiKey(key: string) {
+    navigator.clipboard.writeText(key).then(() => {
+      setCopiedApiKey(true);
+      setTimeout(() => setCopiedApiKey(false), 3000);
+    }).catch(() => {});
+  }
 
   const { data: mfaStatus, isLoading: loadingMfaStatus } = useQuery({
     queryKey: ["mfa-status"],
@@ -1942,6 +2019,192 @@ export default function Settings() {
           </CardContent>
         </Card>
       )}
+
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5" />
+              API Keys
+            </CardTitle>
+            <CardDescription>
+              Generate long-lived API keys so external programs (VB6, scripts) can create patients
+              without a user login. Each key is shown only once — copy it immediately.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {/* Key list */}
+            {loadingApiKeys ? (
+              <div className="space-y-2">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : apiKeys.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-2">No API keys yet. Generate one below.</p>
+            ) : (
+              <div className="divide-y rounded-md border overflow-hidden">
+                {apiKeys.map((key) => (
+                  <div key={key.id} className="flex items-center gap-3 px-4 py-3 bg-background hover:bg-muted/30 transition-colors">
+                    <code className="text-xs font-mono bg-muted px-2 py-1 rounded shrink-0">{key.keyPrefix}…</code>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{key.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Created {format(new Date(key.createdAt), "MMM d, yyyy")}
+                        {key.lastUsedAt
+                          ? ` · Last used ${formatDistanceToNow(new Date(key.lastUsedAt), { addSuffix: true })}`
+                          : " · Never used"}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive shrink-0"
+                      onClick={() => setRevokingKeyId(key.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Generate form */}
+            <div className="flex gap-2 pt-1">
+              <Input
+                placeholder="Key name (e.g. VB6 Clinic)"
+                value={newApiKeyName}
+                onChange={(e) => setNewApiKeyName(e.target.value)}
+                className="flex-1"
+                onKeyDown={(e) => { if (e.key === "Enter" && newApiKeyName.trim()) setShowGenerateKeyDialog(true); }}
+              />
+              <Button
+                onClick={() => setShowGenerateKeyDialog(true)}
+                disabled={!newApiKeyName.trim() || generateApiKey.isPending}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Generate Key
+              </Button>
+            </div>
+
+            {/* Integration guide */}
+            <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+              <p className="text-sm font-semibold">Integration Guide</p>
+              <p className="text-xs text-muted-foreground">
+                Send <code className="bg-muted px-1 rounded">X-Api-Key: &lt;your key&gt;</code> in the request header.
+                The endpoint accepts: <strong>name</strong> (required), <strong>patientCode</strong> (required),
+                <strong> dateOfBirth</strong> (YYYY-MM-DD), <strong>phone</strong>, <strong>notes</strong>.
+              </p>
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">VB6 (MSXML2.XMLHTTP)</p>
+                <pre className="text-xs bg-background border rounded p-3 overflow-x-auto whitespace-pre-wrap break-all font-mono leading-relaxed">{`Dim http As Object
+Set http = CreateObject("MSXML2.XMLHTTP")
+
+http.Open "POST", "${typeof window !== "undefined" ? window.location.origin : "https://your-server"}/api/patients", False
+http.setRequestHeader "Content-Type", "application/json"
+http.setRequestHeader "X-Api-Key", "YOUR_API_KEY_HERE"
+http.Send "{""name"":""Jane Smith"",""patientCode"":""P0001"",""dateOfBirth"":""1985-03-20"",""phone"":""555-1234""}"
+
+If http.Status = 201 Then
+    MsgBox "Patient created: " & http.responseText
+Else
+    MsgBox "Error " & http.Status & ": " & http.responseText
+End If`}</pre>
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">cURL (for testing)</p>
+                <pre className="text-xs bg-background border rounded p-3 overflow-x-auto whitespace-pre-wrap break-all font-mono leading-relaxed">{`curl -X POST ${typeof window !== "undefined" ? window.location.origin : "https://your-server"}/api/patients \\
+  -H "Content-Type: application/json" \\
+  -H "X-Api-Key: YOUR_API_KEY_HERE" \\
+  -d '{"name":"Jane Smith","patientCode":"P0001","dateOfBirth":"1985-03-20"}'`}</pre>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Confirm revoke dialog */}
+      <Dialog open={revokingKeyId !== null} onOpenChange={(open) => { if (!open) setRevokingKeyId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Revoke API Key?</DialogTitle>
+            <DialogDescription>
+              Any program using this key will immediately lose access. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRevokingKeyId(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              disabled={revokeApiKey.isPending}
+              onClick={() => { if (revokingKeyId !== null) revokeApiKey.mutate(revokingKeyId); }}
+            >
+              {revokeApiKey.isPending && <RefreshCw className="h-4 w-4 mr-2 animate-spin" />}
+              Revoke Key
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm generate + show raw key dialog */}
+      <Dialog
+        open={showGenerateKeyDialog}
+        onOpenChange={(open) => {
+          if (!open) { setShowGenerateKeyDialog(false); setGeneratedRawKey(null); }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {generatedRawKey ? "Copy Your API Key" : `Generate key "${newApiKeyName}"?`}
+            </DialogTitle>
+            <DialogDescription>
+              {generatedRawKey
+                ? "This is the only time this key will be shown. Copy it now and store it safely."
+                : "The raw key is displayed exactly once after generation. Make sure you're ready to copy it."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {generatedRawKey ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <code className="flex-1 text-xs font-mono bg-muted rounded px-3 py-2 break-all select-all">
+                  {generatedRawKey}
+                </code>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copyApiKey(generatedRawKey)}
+                  className="shrink-0"
+                >
+                  {copiedApiKey ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+              {copiedApiKey && (
+                <p className="text-xs text-green-600 font-medium">Copied to clipboard!</p>
+              )}
+            </div>
+          ) : null}
+
+          <DialogFooter>
+            {generatedRawKey ? (
+              <Button onClick={() => { setShowGenerateKeyDialog(false); setGeneratedRawKey(null); }}>
+                Done — I've copied the key
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setShowGenerateKeyDialog(false)}>Cancel</Button>
+                <Button
+                  disabled={generateApiKey.isPending}
+                  onClick={() => generateApiKey.mutate(newApiKeyName.trim())}
+                >
+                  {generateApiKey.isPending && <RefreshCw className="h-4 w-4 mr-2 animate-spin" />}
+                  Generate
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {isElectron && (
         <Card>

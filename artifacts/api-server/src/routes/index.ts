@@ -20,6 +20,7 @@ import libraryRouter from "./library";
 import userPatientAccessRouter from "./user-patient-access";
 import cephRouter from "./ceph";
 import licenseRouter from "./license";
+import apiKeysRouter from "./api-keys";
 
 const router: IRouter = Router();
 
@@ -27,6 +28,7 @@ router.use(healthRouter);
 router.use(authRouter);
 router.use(licenseRouter);
 router.use(requireAuth);
+router.use(apiKeysRouter);
 router.use(patientsRouter);
 router.use(imagesRouter);
 router.use(tagsRouter);

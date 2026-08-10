@@ -21,3 +21,4 @@ export * from "./ceph-measurements";
 export * from "./ceph-tracings";
 export * from "./ceph-tracing-points";
 export * from "./ceph-tracing-results";
+export * from "./api-keys";

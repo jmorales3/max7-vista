@@ -9,6 +9,7 @@ import connectPg from "connect-pg-simple";
 import { SqliteSessionStore } from "./lib/sqliteSessionStore";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { apiKeyAuth } from "./middlewares/apiKeyAuth";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -137,6 +138,11 @@ if (IS_SQLITE) {
     }),
   );
 }
+
+// API-key auth: resolve an X-Api-Key header into session-equivalent fields
+// before the Bearer-token / cookie path runs, so downstream middlewares and
+// route handlers are unaware of the authentication method.
+app.use(apiKeyAuth);
 
 // Bearer-token auth for mobile clients: load session from store when an
 // Authorization: Bearer <sessionId> header is present and no cookie session

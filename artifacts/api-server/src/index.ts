@@ -272,6 +272,18 @@ async function initSqlite() {
       unit TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id           INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      name                TEXT NOT NULL,
+      key_hash            TEXT NOT NULL UNIQUE,
+      key_prefix          TEXT NOT NULL,
+      created_by_user_id  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+      last_used_at        TEXT,
+      revoked_at          TEXT
+    );
+
     CREATE TABLE IF NOT EXISTS license (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       machine_id TEXT NOT NULL UNIQUE,
@@ -653,6 +665,21 @@ async function runMigrations(pool: import("pg").Pool) {
     UPDATE patients
     SET date_of_birth = to_char(to_date(date_of_birth, 'FMMM/FMDD/YYYY'), 'YYYY-MM-DD')
     WHERE date_of_birth ~ '^\\d{1,2}/\\d{1,2}/\\d{4}$'
+  `);
+
+  // ── API keys table ───────────────────────────────────────────────────────────
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id                  SERIAL PRIMARY KEY,
+      tenant_id           INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      name                TEXT NOT NULL,
+      key_hash            TEXT NOT NULL UNIQUE,
+      key_prefix          TEXT NOT NULL,
+      created_by_user_id  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      last_used_at        TIMESTAMPTZ,
+      revoked_at          TIMESTAMPTZ
+    )
   `);
 
   // ── ADD FUTURE MIGRATIONS ABOVE THIS LINE ────────────────────────────────────

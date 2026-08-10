@@ -37,6 +37,14 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     return;
   }
 
+  // API-key authenticated requests bypass the per-user active check —
+  // keys are tenant-level resources that remain valid even if the creating
+  // user is later suspended.
+  if ((req as any).apiKeyId) {
+    next();
+    return;
+  }
+
   try {
     const active = await isUserActive(req.session.userId);
     if (!active) {
@@ -72,6 +80,17 @@ export const requireRole = (...roles: Array<"user" | "admin" | "superadmin">) =>
       }
     } catch {
       res.status(500).json({ error: "Internal server error" });
+      return;
+    }
+
+    // API-key authenticated requests bypass the per-user active check
+    if ((req as any).apiKeyId) {
+      const userRole = req.session.role;
+      if (!userRole || !roles.includes(userRole)) {
+        res.status(403).json({ error: "Forbidden: insufficient permissions" });
+        return;
+      }
+      next();
       return;
     }
 
