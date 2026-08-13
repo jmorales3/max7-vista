@@ -208,7 +208,20 @@
     "disclosureFrom": "Desde",
     "disclosureTo": "Hasta",
     "disclosureGenerated": "Informe de divulgaciones generado",
-    "disclosureFailed": "Error al generar el informe de divulgaciones"
+    "disclosureFailed": "Error al generar el informe de divulgaciones",
+    "movePhotos": "Mover fotos",
+    "selectPhotos": "Seleccionar",
+    "cancelSelect": "Cancelar",
+    "moveToPatient": "Mover al paciente",
+    "moveToPatientTitle": "Mover fotos a otro paciente",
+    "moveToPatientDesc": "Seleccione un paciente de destino. Todas las fotos seleccionadas serán reasignadas.",
+    "moveToPatientSearch": "Buscar pacientes…",
+    "moveToPatientNone": "No se encontraron pacientes.",
+    "moveToPatientConfirm": "Mover {{count}} foto(s)",
+    "moveToPatientMoving": "Moviendo…",
+    "moveToPatientSuccess": "{{count}} foto(s) movida(s) correctamente",
+    "moveToPatientError": "No se pudieron mover algunas fotos",
+    "moveSelectedCount": "{{count}} seleccionada(s)"
   },
   "capture": {
     "title": "Capturar Imagen",

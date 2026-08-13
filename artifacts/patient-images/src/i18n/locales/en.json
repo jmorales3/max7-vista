@@ -208,7 +208,20 @@
     "disclosureFrom": "From",
     "disclosureTo": "To",
     "disclosureGenerated": "Disclosure report generated",
-    "disclosureFailed": "Failed to generate disclosure report"
+    "disclosureFailed": "Failed to generate disclosure report",
+    "movePhotos": "Move Photos",
+    "selectPhotos": "Select",
+    "cancelSelect": "Cancel",
+    "moveToPatient": "Move to Patient",
+    "moveToPatientTitle": "Move Photos to Another Patient",
+    "moveToPatientDesc": "Select a destination patient. All selected photos will be reassigned to them.",
+    "moveToPatientSearch": "Search patients…",
+    "moveToPatientNone": "No patients found.",
+    "moveToPatientConfirm": "Move {{count}} Photo(s)",
+    "moveToPatientMoving": "Moving…",
+    "moveToPatientSuccess": "{{count}} photo(s) moved successfully",
+    "moveToPatientError": "Failed to move some photos",
+    "moveSelectedCount": "{{count}} selected"
   },
   "capture": {
     "title": "Capture Image",

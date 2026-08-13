@@ -208,7 +208,20 @@
     "disclosureFrom": "Du",
     "disclosureTo": "Au",
     "disclosureGenerated": "Rapport de divulgation généré",
-    "disclosureFailed": "Échec de la génération du rapport de divulgation"
+    "disclosureFailed": "Échec de la génération du rapport de divulgation",
+    "movePhotos": "Déplacer des photos",
+    "selectPhotos": "Sélectionner",
+    "cancelSelect": "Annuler",
+    "moveToPatient": "Déplacer vers un patient",
+    "moveToPatientTitle": "Déplacer des photos vers un autre patient",
+    "moveToPatientDesc": "Sélectionnez un patient de destination. Toutes les photos sélectionnées lui seront réassignées.",
+    "moveToPatientSearch": "Rechercher des patients…",
+    "moveToPatientNone": "Aucun patient trouvé.",
+    "moveToPatientConfirm": "Déplacer {{count}} photo(s)",
+    "moveToPatientMoving": "Déplacement…",
+    "moveToPatientSuccess": "{{count}} photo(s) déplacée(s) avec succès",
+    "moveToPatientError": "Impossible de déplacer certaines photos",
+    "moveSelectedCount": "{{count}} sélectionnée(s)"
   },
   "capture": {
     "title": "Capturer une Image",

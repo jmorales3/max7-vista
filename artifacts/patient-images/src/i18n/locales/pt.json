@@ -208,7 +208,20 @@
     "disclosureFrom": "De",
     "disclosureTo": "Até",
     "disclosureGenerated": "Relatório de divulgações gerado",
-    "disclosureFailed": "Falha ao gerar o relatório de divulgações"
+    "disclosureFailed": "Falha ao gerar o relatório de divulgações",
+    "movePhotos": "Mover fotos",
+    "selectPhotos": "Selecionar",
+    "cancelSelect": "Cancelar",
+    "moveToPatient": "Mover para paciente",
+    "moveToPatientTitle": "Mover fotos para outro paciente",
+    "moveToPatientDesc": "Selecione um paciente de destino. Todas as fotos selecionadas serão reatribuídas a ele.",
+    "moveToPatientSearch": "Buscar pacientes…",
+    "moveToPatientNone": "Nenhum paciente encontrado.",
+    "moveToPatientConfirm": "Mover {{count}} foto(s)",
+    "moveToPatientMoving": "Movendo…",
+    "moveToPatientSuccess": "{{count}} foto(s) movida(s) com sucesso",
+    "moveToPatientError": "Falha ao mover algumas fotos",
+    "moveSelectedCount": "{{count}} selecionada(s)"
   },
   "capture": {
     "title": "Capturar Imagem",
