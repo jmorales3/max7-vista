@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   FlatList,
+  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   Modal,
@@ -20,11 +21,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetPatient,
   useListPatientImages,
+  useListImages,
   useDeletePatient,
   useDeleteImage,
   getBaseUrl,
   getListPatientsQueryKey,
   getListPatientImagesQueryKey,
+  getListImagesQueryKey,
   customFetch,
   ApiError,
 } from "@workspace/api-client-react";
@@ -149,6 +152,281 @@ const gridStyles = StyleSheet.create({
   },
 });
 
+// ─── Add from Unassigned Modal ────────────────────────────────────────────────
+
+const UNASSIGNED_QUERY_PARAMS = { isUnassigned: true };
+
+function AddFromUnassignedModal({
+  patientId,
+  visible,
+  onClose,
+  onAdded,
+}: {
+  patientId: number;
+  visible: boolean;
+  onClose: () => void;
+  onAdded: () => void;
+}) {
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
+  const { token: authToken } = useAuth();
+  const baseUrl = getBaseUrl() ?? "";
+
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [assigning, setAssigning] = useState(false);
+  const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
+
+  const { data: images, isLoading, isFetching, refetch } = useListImages(UNASSIGNED_QUERY_PARAMS);
+  const imageList = images ?? [];
+
+  const GAP = 4;
+  const PADDING = 16;
+  const COLS = 3;
+  const itemSize = (SCREEN_WIDTH - PADDING * 2 - GAP * (COLS - 1)) / COLS;
+
+  const toggleSelect = useCallback((id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const selectAll = useCallback(() => {
+    setSelectedIds(new Set(imageList.map((img) => img.id)));
+  }, [imageList]);
+
+  const handleClose = useCallback(() => {
+    if (assigning) return;
+    setSelectedIds(new Set());
+    setProgress(null);
+    onClose();
+  }, [assigning, onClose]);
+
+  const handleAdd = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    setAssigning(true);
+    setProgress({ current: 0, total: selectedIds.size });
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      let done = 0;
+      for (const imageId of selectedIds) {
+        await customFetch(`/api/images/${imageId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ patientId }),
+        });
+        done++;
+        setProgress({ current: done, total: selectedIds.size });
+      }
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setSelectedIds(new Set());
+      setProgress(null);
+      onAdded();
+    } catch (err) {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(t("patient.addFromUnassigned.addError"), err instanceof Error ? err.message : String(err));
+    } finally {
+      setAssigning(false);
+    }
+  }, [selectedIds, patientId, onAdded, t]);
+
+  const topInset = Platform.OS === "web" ? 67 : insets.top;
+  const selectedCount = selectedIds.size;
+
+  const s = StyleSheet.create({
+    modal: { flex: 1, backgroundColor: colors.background },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingTop: topInset + 12,
+      paddingHorizontal: 16,
+      paddingBottom: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      gap: 12,
+    },
+    headerTitle: { flex: 1, fontSize: 18, fontFamily: "Inter_700Bold", color: colors.foreground },
+    closeBtn: {
+      width: 36, height: 36, borderRadius: 18,
+      borderWidth: 1, borderColor: colors.border,
+      backgroundColor: colors.card, alignItems: "center", justifyContent: "center",
+    },
+    selectBar: {
+      flexDirection: "row", alignItems: "center",
+      paddingHorizontal: 16, paddingVertical: 10,
+      borderBottomWidth: 1, borderBottomColor: colors.border,
+      backgroundColor: colors.card, gap: 8,
+    },
+    selectBarCount: { flex: 1, fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.foreground },
+    selectAllBtn: {
+      paddingHorizontal: 12, paddingVertical: 6,
+      borderRadius: colors.radius, borderWidth: 1, borderColor: colors.border,
+    },
+    selectAllBtnText: { fontSize: 13, fontFamily: "Inter_500Medium", color: colors.foreground },
+    grid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      padding: PADDING,
+      paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 90,
+      gap: GAP,
+    },
+    thumb: {
+      width: itemSize,
+      height: itemSize,
+      borderRadius: 8,
+      overflow: "hidden",
+      backgroundColor: colors.muted,
+    },
+    thumbImg: { width: "100%", height: "100%" },
+    checkOverlay: {
+      position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: "rgba(0,0,0,0.3)", alignItems: "center", justifyContent: "center",
+    },
+    check: {
+      width: 26, height: 26, borderRadius: 13,
+      backgroundColor: colors.primary,
+      alignItems: "center", justifyContent: "center",
+    },
+    checkEmpty: {
+      width: 26, height: 26, borderRadius: 13,
+      borderWidth: 2, borderColor: "#fff",
+      backgroundColor: "rgba(0,0,0,0.2)",
+    },
+    emptyBox: {
+      flex: 1, alignItems: "center", justifyContent: "center",
+      paddingTop: 80, gap: 12,
+    },
+    emptyText: { fontSize: 16, fontFamily: "Inter_500Medium", color: colors.mutedForeground },
+    emptySubtext: { fontSize: 13, fontFamily: "Inter_400Regular", color: colors.mutedForeground, textAlign: "center", paddingHorizontal: 32 },
+    footer: {
+      padding: 16,
+      paddingBottom: Platform.OS === "web" ? 16 : insets.bottom + 16,
+      borderTopWidth: 1, borderTopColor: colors.border,
+      backgroundColor: colors.background, gap: 10,
+    },
+    progressText: { fontSize: 13, fontFamily: "Inter_400Regular", color: colors.mutedForeground, textAlign: "center" },
+    addBtn: {
+      height: 52, borderRadius: colors.radius,
+      backgroundColor: colors.primary, alignItems: "center",
+      justifyContent: "center", flexDirection: "row", gap: 8,
+    },
+    addBtnDisabled: { opacity: 0.45 },
+    addBtnText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: colors.primaryForeground },
+    cancelBtn: {
+      height: 44, borderRadius: colors.radius, borderWidth: 1,
+      borderColor: colors.border, backgroundColor: colors.card,
+      alignItems: "center", justifyContent: "center",
+    },
+    cancelBtnText: { fontSize: 15, fontFamily: "Inter_500Medium", color: colors.foreground },
+  });
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={handleClose}>
+      <View style={s.modal}>
+        <View style={s.header}>
+          <Text style={s.headerTitle}>{t("patient.addFromUnassigned.title")}</Text>
+          <TouchableOpacity style={s.closeBtn} onPress={handleClose} disabled={assigning}>
+            <Ionicons name="close" size={18} color={colors.foreground} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Selection toolbar */}
+        <View style={s.selectBar}>
+          <Text style={s.selectBarCount}>
+            {t("patient.addFromUnassigned.selectedCount", { count: selectedCount })}
+          </Text>
+          {imageList.length > 0 && (
+            <TouchableOpacity style={s.selectAllBtn} onPress={selectAll} disabled={assigning}>
+              <Text style={s.selectAllBtnText}>{t("patient.addFromUnassigned.selectAll")}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {isLoading ? (
+          <View style={s.emptyBox}>
+            <ActivityIndicator color={colors.primary} size="large" />
+          </View>
+        ) : imageList.length === 0 ? (
+          <View style={s.emptyBox}>
+            <Ionicons name="images-outline" size={52} color={colors.mutedForeground} />
+            <Text style={s.emptyText}>{t("patient.addFromUnassigned.empty")}</Text>
+            <Text style={s.emptySubtext}>{t("patient.addFromUnassigned.emptyHint")}</Text>
+          </View>
+        ) : (
+          <ScrollView
+            style={{ flex: 1 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={isFetching && !isLoading}
+                onRefresh={() => refetch()}
+                tintColor={colors.primary}
+              />
+            }
+          >
+            <View style={s.grid}>
+              {imageList.map((img) => {
+                const imageUrl = authToken
+                  ? `${baseUrl}/api/images/${img.id}/file?token=${encodeURIComponent(authToken)}`
+                  : `${baseUrl}/api/images/${img.id}/file`;
+                const isSelected = selectedIds.has(img.id);
+                return (
+                  <TouchableOpacity
+                    key={img.id}
+                    style={[s.thumb, isSelected && { borderWidth: 3, borderColor: colors.primary }]}
+                    onPress={() => toggleSelect(img.id)}
+                    activeOpacity={0.8}
+                    disabled={assigning}
+                  >
+                    <Image source={{ uri: imageUrl }} style={s.thumbImg} contentFit="cover" transition={200} />
+                    <View style={s.checkOverlay}>
+                      {isSelected
+                        ? <View style={s.check}><Ionicons name="checkmark" size={16} color="#fff" /></View>
+                        : <View style={s.checkEmpty} />}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
+        )}
+
+        <View style={s.footer}>
+          {progress && (
+            <Text style={s.progressText}>
+              {t("unassigned.batchProgress", { current: progress.current, total: progress.total })}
+            </Text>
+          )}
+          <TouchableOpacity
+            style={[s.addBtn, (selectedCount === 0 || assigning) && s.addBtnDisabled]}
+            onPress={() => void handleAdd()}
+            disabled={selectedCount === 0 || assigning}
+            activeOpacity={0.8}
+            testID="add-from-unassigned-confirm"
+          >
+            {assigning ? (
+              <ActivityIndicator color={colors.primaryForeground} />
+            ) : (
+              <>
+                <Ionicons name="person-add-outline" size={18} color={colors.primaryForeground} />
+                <Text style={s.addBtnText}>
+                  {selectedCount > 0
+                    ? t("patient.addFromUnassigned.addBtn", { count: selectedCount })
+                    : t("patient.addFromUnassigned.addBtnEmpty")}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity style={s.cancelBtn} onPress={handleClose} disabled={assigning}>
+            <Text style={s.cancelBtnText}>{t("unassigned.cancel")}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function PatientDetailScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -161,6 +439,7 @@ export default function PatientDetailScreen() {
   const [lightboxImage, setLightboxImage] = useState<PatientImage | null>(null);
   const [isDeletingPatient, setIsDeletingPatient] = useState(false);
   const [isDeletingImage, setIsDeletingImage] = useState(false);
+  const [addFromUnassignedVisible, setAddFromUnassignedVisible] = useState(false);
 
   const baseUrl = getBaseUrl() ?? "";
   const { token: authToken } = useAuth();
@@ -311,6 +590,18 @@ export default function PatientDetailScreen() {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setColumns((c) => (c === 1 ? 2 : c === 2 ? 4 : 1));
   }, []);
+
+  const handleAddFromUnassigned = useCallback(async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setAddFromUnassignedVisible(true);
+  }, []);
+
+  const handleAddFromUnassignedDone = useCallback(() => {
+    setAddFromUnassignedVisible(false);
+    void queryClient.invalidateQueries({ queryKey: getListPatientImagesQueryKey(patientId) });
+    void queryClient.invalidateQueries({ queryKey: getListImagesQueryKey(UNASSIGNED_QUERY_PARAMS) });
+    void queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
+  }, [queryClient, patientId]);
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
@@ -488,6 +779,13 @@ export default function PatientDetailScreen() {
         </View>
         <TouchableOpacity
           style={s.gridToggle}
+          onPress={() => void handleAddFromUnassigned()}
+          testID="add-from-unassigned-button"
+        >
+          <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={s.gridToggle}
           onPress={handleDeletePatient}
           disabled={isDeletingPatient || patientLoading}
           testID="delete-patient-button"
@@ -553,6 +851,13 @@ export default function PatientDetailScreen() {
           scrollEnabled={!!imageList.length}
         />
       )}
+
+      <AddFromUnassignedModal
+        patientId={patientId}
+        visible={addFromUnassignedVisible}
+        onClose={() => setAddFromUnassignedVisible(false)}
+        onAdded={handleAddFromUnassignedDone}
+      />
 
       {lightboxImage && (
         <Modal

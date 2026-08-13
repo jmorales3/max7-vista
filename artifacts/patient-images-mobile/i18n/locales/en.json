@@ -42,6 +42,18 @@
       "usedMsg": "This image is used in saved presentations. Deleting it will remove it from those presentations too.",
       "deleteAnyway": "Delete Anyway",
       "error": "Failed to delete image."
+    },
+    "addFromUnassigned": {
+      "title": "Add Unassigned Photos",
+      "selectedCount_one": "{{count}} selected",
+      "selectedCount_other": "{{count}} selected",
+      "selectAll": "Select All",
+      "empty": "No unassigned photos",
+      "emptyHint": "All photos are already assigned to patients",
+      "addBtn_one": "Add 1 Photo",
+      "addBtn_other": "Add {{count}} Photos",
+      "addBtnEmpty": "Select Photos to Add",
+      "addError": "Failed to assign photos"
     }
   },
   "camera": {

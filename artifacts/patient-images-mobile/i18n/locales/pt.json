@@ -42,6 +42,18 @@
       "usedMsg": "Esta imagem é usada em apresentações salvas. Excluí-la também a removerá dessas apresentações.",
       "deleteAnyway": "Excluir mesmo assim",
       "error": "Falha ao excluir a imagem."
+    },
+    "addFromUnassigned": {
+      "title": "Adicionar Fotos Sem Paciente",
+      "selectedCount_one": "{{count}} selecionada",
+      "selectedCount_other": "{{count}} selecionadas",
+      "selectAll": "Selecionar Todas",
+      "empty": "Nenhuma foto sem paciente",
+      "emptyHint": "Todas as fotos já estão atribuídas a pacientes",
+      "addBtn_one": "Adicionar 1 Foto",
+      "addBtn_other": "Adicionar {{count}} Fotos",
+      "addBtnEmpty": "Selecionar Fotos para Adicionar",
+      "addError": "Falha ao atribuir fotos"
     }
   },
   "camera": {
