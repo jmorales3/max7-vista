@@ -1,3 +1,7 @@
+# Playwright e2e test artifacts (generated on each run; not source-controlled)
+test-results/
+playwright-report/
+
 # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 
 # dependencies
