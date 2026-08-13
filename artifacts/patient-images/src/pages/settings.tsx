@@ -154,6 +154,7 @@ export default function Settings() {
     createdByUserId: number | null;
     createdAt: string;
     lastUsedAt: string | null;
+    useCount: number;
   }
   const apiKeysQueryKey = ["api-keys"];
   const { data: apiKeys = [], isLoading: loadingApiKeys, refetch: refetchApiKeys } = useQuery<ApiKeyRow[]>({
@@ -2053,6 +2054,10 @@ export default function Settings() {
                         {key.lastUsedAt
                           ? ` · Last used ${formatDistanceToNow(new Date(key.lastUsedAt), { addSuffix: true })}`
                           : " · Never used"}
+                        {" · "}
+                        <span className={(key.useCount ?? 0) === 0 ? "text-muted-foreground" : "text-foreground font-medium"}>
+                          {(key.useCount ?? 0).toLocaleString()} {(key.useCount ?? 0) === 1 ? "request" : "requests"}
+                        </span>
                       </p>
                     </div>
                     <Button

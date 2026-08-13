@@ -14,6 +14,7 @@ export const apiKeysTable = pgTable("api_keys", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  useCount: integer("use_count").notNull().default(0),
 });
 
 export type ApiKey = typeof apiKeysTable.$inferSelect;

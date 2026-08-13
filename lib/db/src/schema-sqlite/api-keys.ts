@@ -10,6 +10,7 @@ export const apiKeysTable = sqliteTable("api_keys", {
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
   lastUsedAt: text("last_used_at"),
   revokedAt: text("revoked_at"),
+  useCount: integer("use_count").notNull().default(0),
 });
 
 export type ApiKey = typeof apiKeysTable.$inferSelect;

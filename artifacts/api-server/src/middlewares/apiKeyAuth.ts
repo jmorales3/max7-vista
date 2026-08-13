@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import crypto from "node:crypto";
 import { db, apiKeysTable, usersTable } from "@workspace/db";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, sql } from "drizzle-orm";
 
 export function hashApiKey(rawKey: string): string {
   return crypto.createHash("sha256").update(rawKey).digest("hex");
@@ -62,9 +62,9 @@ export const apiKeyAuth = async (req: Request, _res: Response, next: NextFunctio
     (req as any).apiKeyName = keyRow.name;
     (req as any).apiKeyPrefix = keyRow.keyPrefix;
 
-    // Update lastUsedAt asynchronously — never block the request for this
+    // Update lastUsedAt and atomically increment use_count — never block the request for this
     db.update(apiKeysTable)
-      .set({ lastUsedAt: new Date() })
+      .set({ lastUsedAt: new Date(), useCount: sql`${apiKeysTable.useCount} + 1` })
       .where(eq(apiKeysTable.id, keyRow.id))
       .catch((err) => console.error("[api-key] failed to update lastUsedAt:", err));
   } catch (err) {

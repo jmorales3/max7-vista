@@ -281,7 +281,8 @@ async function initSqlite() {
       created_by_user_id  INTEGER REFERENCES users(id) ON DELETE SET NULL,
       created_at          TEXT NOT NULL DEFAULT (datetime('now')),
       last_used_at        TEXT,
-      revoked_at          TEXT
+      revoked_at          TEXT,
+      use_count           INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS license (
@@ -322,6 +323,8 @@ async function initSqlite() {
     `ALTER TABLE ceph_measurements ADD COLUMN ideal_max REAL`,
     // ceph_tracings treatment-phase badge
     `ALTER TABLE ceph_tracings ADD COLUMN record_phase TEXT DEFAULT 'initial'`,
+    // api_keys request counter
+    `ALTER TABLE api_keys ADD COLUMN use_count INTEGER NOT NULL DEFAULT 0`,
   ];
   for (const sql of sqliteMigrations) {
     try { exec(sql); } catch { /* column already exists — safe to ignore */ }
@@ -678,9 +681,11 @@ async function runMigrations(pool: import("pg").Pool) {
       created_by_user_id  INTEGER REFERENCES users(id) ON DELETE SET NULL,
       created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       last_used_at        TIMESTAMPTZ,
-      revoked_at          TIMESTAMPTZ
+      revoked_at          TIMESTAMPTZ,
+      use_count           INTEGER NOT NULL DEFAULT 0
     )
   `);
+  await pool.query(`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS use_count INTEGER NOT NULL DEFAULT 0`);
 
   // ── ADD FUTURE MIGRATIONS ABOVE THIS LINE ────────────────────────────────────
   logger.info("PostgreSQL schema migrations applied");

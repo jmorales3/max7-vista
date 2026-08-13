@@ -31,6 +31,7 @@ router.get("/api-keys", requireRole("admin", "superadmin"), async (req, res): Pr
         createdByUserId: apiKeysTable.createdByUserId,
         createdAt: apiKeysTable.createdAt,
         lastUsedAt: apiKeysTable.lastUsedAt,
+        useCount: apiKeysTable.useCount,
       })
       .from(apiKeysTable)
       .where(and(eq(apiKeysTable.tenantId, tenantId), isNull(apiKeysTable.revokedAt)))
