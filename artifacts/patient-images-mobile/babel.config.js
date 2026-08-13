@@ -7,6 +7,16 @@ module.exports = function (api) {
         {
           'react-compiler': false,
 
+          // Disable the auto-included worklets plugin so we can re-add it
+          // below with `disableSourceMaps: true`.  The auto-included version
+          // (babel-preset-expo ≥ 57) passes no options, leaving source-map
+          // generation on.  react-native-worklets@0.5.1 then reads source files
+          // from inputMap.sources using relative (basename-only) paths, which
+          // fails with ENOENT in Metro's monorepo resolver context.
+          // Disabling source maps in the plugin avoids the readFileSync call
+          // entirely while keeping all worklet functionality intact.
+          worklets: false,
+
           // hermesc 0.12.0 (react-native 0.81.5, linux64-bin) cannot compile
           // class declarations, private class fields, or async functions.
           //
@@ -38,6 +48,16 @@ module.exports = function (api) {
           unstable_transformProfile: 'hermes-v0',
         },
       ],
+    ],
+    plugins: [
+      // Re-add the worklets plugin with disableSourceMaps: true to avoid the
+      // ENOENT bug in react-native-worklets@0.5.1 where buildWorkletString
+      // calls fs.readFileSync(sourceFile) with a basename-only path sourced
+      // from the generated source map's `sources` array.  With this option,
+      // the includeSourceMap flag is false and readFileSync is never called.
+      // Worklets still work correctly on native; source-map-in-worklet-string
+      // is only used for debugger stack traces, not for runtime behaviour.
+      ['react-native-worklets/plugin', { disableSourceMaps: true }],
     ],
   };
 };

@@ -368,6 +368,7 @@ function MoveToPatientModal({
         <View style={s.searchBox}>
           <Ionicons name="search-outline" size={18} color={colors.mutedForeground} />
           <TextInput
+            testID="move-to-patient-search"
             style={s.searchInput}
             placeholder={t("patient.moveToPatient.searchPlaceholder")}
             placeholderTextColor={colors.mutedForeground}
