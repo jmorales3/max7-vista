@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -380,6 +380,210 @@ function AssignModal({
   );
 }
 
+// ─── Batch assign modal ────────────────────────────────────────────────────────
+
+function BatchAssignModal({
+  imageIds,
+  visible,
+  onClose,
+  onAssigned,
+}: {
+  imageIds: number[];
+  visible: boolean;
+  onClose: () => void;
+  onAssigned: () => void;
+}) {
+  const { t } = useTranslation();
+  const colors = useColors();
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [assigning, setAssigning] = useState(false);
+  const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleSearch = useCallback((text: string) => {
+    setSearch(text);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedSearch(text), 300);
+  }, []);
+
+  const { data: patients } = useListPatients(debouncedSearch ? { search: debouncedSearch } : {});
+
+  const handleClose = useCallback(() => {
+    if (assigning) return;
+    setSearch("");
+    setDebouncedSearch("");
+    setSelectedPatient(null);
+    setProgress(null);
+    onClose();
+  }, [assigning, onClose]);
+
+  const handleAssign = useCallback(async () => {
+    if (!selectedPatient || imageIds.length === 0) return;
+    setAssigning(true);
+    setProgress({ current: 0, total: imageIds.length });
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      let done = 0;
+      for (const id of imageIds) {
+        await customFetch(`/api/images/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ patientId: selectedPatient.id }),
+        });
+        done++;
+        setProgress({ current: done, total: imageIds.length });
+      }
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setSearch("");
+      setDebouncedSearch("");
+      setSelectedPatient(null);
+      setProgress(null);
+      onAssigned();
+    } catch (err) {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(t("unassigned.batchAssignError"), err instanceof Error ? err.message : String(err));
+    } finally {
+      setAssigning(false);
+    }
+  }, [imageIds, selectedPatient, onAssigned, t]);
+
+  const insets = useSafeAreaInsets();
+  const topInset = Platform.OS === "web" ? 67 : insets.top;
+
+  const s = StyleSheet.create({
+    modal: { flex: 1, backgroundColor: colors.background },
+    header: {
+      flexDirection: "row", alignItems: "center",
+      paddingTop: topInset + 12, paddingHorizontal: 16, paddingBottom: 14,
+      borderBottomWidth: 1, borderBottomColor: colors.border, gap: 12,
+    },
+    headerTitle: { flex: 1, fontSize: 18, fontFamily: "Inter_700Bold", color: colors.foreground },
+    closeBtn: {
+      width: 36, height: 36, borderRadius: 18, borderWidth: 1,
+      borderColor: colors.border, backgroundColor: colors.card,
+      alignItems: "center", justifyContent: "center",
+    },
+    searchBox: {
+      flexDirection: "row", alignItems: "center",
+      marginHorizontal: 16, marginTop: 14, marginBottom: 6,
+      backgroundColor: colors.muted, borderRadius: colors.radius,
+      paddingHorizontal: 12, height: 42, gap: 8,
+    },
+    searchInput: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular", color: colors.foreground },
+    item: {
+      flexDirection: "row", alignItems: "center",
+      paddingHorizontal: 16, paddingVertical: 14,
+      borderBottomWidth: 1, borderBottomColor: colors.border, gap: 12,
+    },
+    avatar: {
+      width: 38, height: 38, borderRadius: 19,
+      backgroundColor: colors.accent, alignItems: "center", justifyContent: "center",
+    },
+    initials: { fontSize: 14, fontFamily: "Inter_700Bold", color: colors.primary },
+    name: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.foreground },
+    code: { fontSize: 12, fontFamily: "Inter_400Regular", color: colors.mutedForeground },
+    selected: { backgroundColor: colors.accent },
+    footer: {
+      padding: 16, paddingBottom: Platform.OS === "web" ? 16 : insets.bottom + 16,
+      borderTopWidth: 1, borderTopColor: colors.border, gap: 10,
+    },
+    progressText: { fontSize: 13, fontFamily: "Inter_400Regular", color: colors.mutedForeground, textAlign: "center" },
+    assignBtn: {
+      height: 52, borderRadius: colors.radius,
+      backgroundColor: colors.primary, alignItems: "center",
+      justifyContent: "center", flexDirection: "row", gap: 8,
+    },
+    assignBtnDisabled: { opacity: 0.45 },
+    assignBtnText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: colors.primaryForeground },
+    cancelBtn: {
+      height: 44, borderRadius: colors.radius, borderWidth: 1,
+      borderColor: colors.border, alignItems: "center", justifyContent: "center",
+    },
+    cancelBtnText: { fontSize: 15, fontFamily: "Inter_500Medium", color: colors.foreground },
+  });
+
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
+      <View style={s.modal}>
+        <View style={s.header}>
+          <Text style={s.headerTitle}>
+            {t("unassigned.batchAssignTitle", { count: imageIds.length })}
+          </Text>
+          <TouchableOpacity style={s.closeBtn} onPress={handleClose} disabled={assigning}>
+            <Ionicons name="close" size={18} color={colors.foreground} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={s.searchBox}>
+          <Ionicons name="search" size={16} color={colors.mutedForeground} />
+          <TextInput
+            style={s.searchInput}
+            value={search}
+            onChangeText={handleSearch}
+            placeholder={t("unassigned.searchPlaceholder")}
+            placeholderTextColor={colors.mutedForeground}
+            autoCorrect={false}
+            editable={!assigning}
+          />
+        </View>
+
+        <FlatList
+          data={patients ?? []}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={({ item }) => {
+            const initials = item.name.split(" ").slice(0, 2).map((n: string) => n[0]).join("").toUpperCase();
+            const isSelected = selectedPatient?.id === item.id;
+            return (
+              <TouchableOpacity
+                style={[s.item, isSelected && s.selected]}
+                onPress={() => setSelectedPatient(item)}
+                disabled={assigning}
+              >
+                <View style={s.avatar}><Text style={s.initials}>{initials}</Text></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.name}>{item.name}</Text>
+                  <Text style={s.code}>{item.patientCode}</Text>
+                </View>
+                {isSelected && <Ionicons name="checkmark-circle" size={22} color={colors.primary} />}
+              </TouchableOpacity>
+            );
+          }}
+          keyboardShouldPersistTaps="handled"
+        />
+
+        <View style={s.footer}>
+          {progress && (
+            <Text style={s.progressText}>
+              {t("unassigned.batchProgress", { current: progress.current, total: progress.total })}
+            </Text>
+          )}
+          <TouchableOpacity
+            style={[s.assignBtn, (!selectedPatient || assigning) && s.assignBtnDisabled]}
+            onPress={() => void handleAssign()}
+            disabled={!selectedPatient || assigning}
+            activeOpacity={0.8}
+          >
+            {assigning ? (
+              <ActivityIndicator color={colors.primaryForeground} />
+            ) : (
+              <Text style={s.assignBtnText}>
+                {selectedPatient
+                  ? t("unassigned.assignTo", { name: selectedPatient.name })
+                  : t("unassigned.assignBtn")}
+              </Text>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity style={s.cancelBtn} onPress={handleClose} disabled={assigning}>
+            <Text style={s.cancelBtnText}>{t("unassigned.cancel")}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 // ─── Unassigned tab ───────────────────────────────────────────────────────────
 
 function UnassignedTab({ colors, insets }: { colors: ReturnType<typeof useColors>; insets: ReturnType<typeof useSafeAreaInsets> }) {
@@ -391,27 +595,73 @@ function UnassignedTab({ colors, insets }: { colors: ReturnType<typeof useColors
   const [assignTarget, setAssignTarget] = useState<PatientImage | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
+  // ── multi-select state ──────────────────────────────────────────────────────
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [batchAssignVisible, setBatchAssignVisible] = useState(false);
+
   const unassignedQueryParams = { isUnassigned: true };
   const { data: images, isLoading, isError, refetch, isFetching } = useListImages(unassignedQueryParams);
+  const imageList = images ?? [];
 
   const GAP = 4;
   const PADDING = 16;
   const COLS = 3;
   const itemSize = (SCREEN_WIDTH - PADDING * 2 - GAP * (COLS - 1)) / COLS;
 
-  const handlePress = useCallback(async (img: PatientImage) => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setAssignTarget(img);
-    setModalVisible(true);
-  }, []);
-
-  const handleAssigned = useCallback(() => {
-    setModalVisible(false);
-    setAssignTarget(null);
+  const invalidateAll = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: getListImagesQueryKey(unassignedQueryParams) });
     void queryClient.invalidateQueries({ queryKey: ["listPatients"] });
     void queryClient.invalidateQueries({ queryKey: ["listPatientImages"] });
   }, [queryClient]);
+
+  // Single-assign (existing flow)
+  const handleAssigned = useCallback(() => {
+    setModalVisible(false);
+    setAssignTarget(null);
+    invalidateAll();
+  }, [invalidateAll]);
+
+  // Batch assign done
+  const handleBatchAssigned = useCallback(() => {
+    setBatchAssignVisible(false);
+    setSelectMode(false);
+    setSelectedIds(new Set());
+    invalidateAll();
+  }, [invalidateAll]);
+
+  const exitSelectMode = useCallback(() => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  }, []);
+
+  const selectAll = useCallback(() => {
+    setSelectedIds(new Set(imageList.map((img) => img.id)));
+  }, [imageList]);
+
+  const toggleSelect = useCallback((id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleLongPress = useCallback(async (img: PatientImage) => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    setSelectMode(true);
+    setSelectedIds(new Set([img.id]));
+  }, []);
+
+  const handlePress = useCallback(async (img: PatientImage) => {
+    if (selectMode) {
+      toggleSelect(img.id);
+      return;
+    }
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setAssignTarget(img);
+    setModalVisible(true);
+  }, [selectMode, toggleSelect]);
 
   const s = StyleSheet.create({
     flex1: { flex: 1 },
@@ -465,6 +715,52 @@ function UnassignedTab({ colors, insets }: { colors: ReturnType<typeof useColors
       backgroundColor: colors.destructive, borderRadius: 10, marginLeft: 6,
     },
     countBadgeText: { fontSize: 11, fontFamily: "Inter_700Bold", color: "#fff" },
+
+    // ── select mode ──
+    selectBar: {
+      flexDirection: "row", alignItems: "center",
+      paddingHorizontal: 16, paddingVertical: 10,
+      borderBottomWidth: 1, borderBottomColor: colors.border,
+      backgroundColor: colors.card, gap: 8,
+    },
+    selectBarCount: { flex: 1, fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.foreground },
+    selectBarBtn: {
+      paddingHorizontal: 12, paddingVertical: 6,
+      borderRadius: colors.radius, borderWidth: 1, borderColor: colors.border,
+    },
+    selectBarBtnText: { fontSize: 13, fontFamily: "Inter_500Medium", color: colors.foreground },
+    cancelSelectBtn: {
+      paddingHorizontal: 12, paddingVertical: 6,
+      borderRadius: colors.radius, backgroundColor: colors.muted,
+    },
+    cancelSelectBtnText: { fontSize: 13, fontFamily: "Inter_500Medium", color: colors.foreground },
+    checkOverlay: {
+      position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: "rgba(0,0,0,0.3)", alignItems: "center", justifyContent: "center",
+    },
+    checkOverlaySelected: { backgroundColor: "rgba(var(--primary-rgb, 0, 122, 255), 0.25)" },
+    check: {
+      width: 26, height: 26, borderRadius: 13,
+      backgroundColor: colors.primary,
+      alignItems: "center", justifyContent: "center",
+    },
+    checkEmpty: {
+      width: 26, height: 26, borderRadius: 13,
+      borderWidth: 2, borderColor: "#fff",
+      backgroundColor: "rgba(0,0,0,0.2)",
+    },
+    bottomBar: {
+      padding: 16,
+      paddingBottom: Platform.OS === "web" ? 16 : insets.bottom + 16,
+      borderTopWidth: 1, borderTopColor: colors.border,
+      backgroundColor: colors.background,
+    },
+    assignSelectedBtn: {
+      height: 52, borderRadius: colors.radius,
+      backgroundColor: colors.primary, alignItems: "center",
+      justifyContent: "center", flexDirection: "row", gap: 8,
+    },
+    assignSelectedBtnText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: colors.primaryForeground },
   });
 
   if (isLoading) {
@@ -487,10 +783,25 @@ function UnassignedTab({ colors, insets }: { colors: ReturnType<typeof useColors
     );
   }
 
-  const imageList = images ?? [];
+  const selectedCount = selectedIds.size;
 
   return (
     <View style={s.flex1}>
+      {/* Select mode toolbar */}
+      {selectMode && (
+        <View style={s.selectBar}>
+          <Text style={s.selectBarCount}>
+            {t("unassigned.selectedCount", { count: selectedCount })}
+          </Text>
+          <TouchableOpacity style={s.selectBarBtn} onPress={selectAll}>
+            <Text style={s.selectBarBtnText}>{t("unassigned.selectAll")}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.cancelSelectBtn} onPress={exitSelectMode}>
+            <Text style={s.cancelSelectBtnText}>{t("unassigned.cancelSelect")}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <ScrollView
         style={s.flex1}
         contentContainerStyle={imageList.length === 0 ? { flex: 1 } : undefined}
@@ -514,18 +825,28 @@ function UnassignedTab({ colors, insets }: { colors: ReturnType<typeof useColors
               const imageUrl = authToken
                 ? `${baseUrl}/api/images/${img.id}/file?token=${encodeURIComponent(authToken)}`
                 : `${baseUrl}/api/images/${img.id}/file`;
+              const isSelected = selectedIds.has(img.id);
               return (
                 <TouchableOpacity
                   key={img.id}
-                  style={s.thumb}
-                  onPress={() => handlePress(img)}
+                  style={[s.thumb, isSelected && { borderWidth: 3, borderColor: colors.primary }]}
+                  onPress={() => void handlePress(img)}
+                  onLongPress={() => void handleLongPress(img)}
                   activeOpacity={0.8}
                   testID={`unassigned-image-${img.id}`}
                 >
                   <Image source={{ uri: imageUrl }} style={s.thumbImg} contentFit="cover" transition={200} />
-                  <View style={s.assignOverlay}>
-                    <Text style={s.assignOverlayText}>{t("unassigned.tapToAssign")}</Text>
-                  </View>
+                  {selectMode ? (
+                    <View style={s.checkOverlay}>
+                      {isSelected
+                        ? <View style={s.check}><Ionicons name="checkmark" size={16} color="#fff" /></View>
+                        : <View style={s.checkEmpty} />}
+                    </View>
+                  ) : (
+                    <View style={s.assignOverlay}>
+                      <Text style={s.assignOverlayText}>{t("unassigned.tapToAssign")}</Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
               );
             })}
@@ -533,11 +854,34 @@ function UnassignedTab({ colors, insets }: { colors: ReturnType<typeof useColors
         )}
       </ScrollView>
 
+      {/* Batch assign bottom bar — shown when images are selected */}
+      {selectMode && selectedCount > 0 && (
+        <View style={s.bottomBar}>
+          <TouchableOpacity
+            style={s.assignSelectedBtn}
+            onPress={() => setBatchAssignVisible(true)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="person-add" size={20} color={colors.primaryForeground} />
+            <Text style={s.assignSelectedBtnText}>
+              {t("unassigned.assignSelected", { count: selectedCount })}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <AssignModal
         image={assignTarget}
         visible={modalVisible}
         onClose={() => { setModalVisible(false); setAssignTarget(null); }}
         onAssigned={handleAssigned}
+      />
+
+      <BatchAssignModal
+        imageIds={Array.from(selectedIds)}
+        visible={batchAssignVisible}
+        onClose={() => setBatchAssignVisible(false)}
+        onAssigned={handleBatchAssigned}
       />
     </View>
   );

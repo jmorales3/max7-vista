@@ -297,49 +297,70 @@ export default function CameraScreen() {
 
   // ─── upload ──────────────────────────────────────────────────────────────────
 
-  const handleUpload = useCallback(async () => {
+  const handleUpload = useCallback(() => {
     if (queue.length === 0) return;
-    // Suppress draft saves while uploading — we don't want to persist a
-    // partially-uploaded queue that would confuse the resume prompt.
-    suppressDraftSave.current = true;
-    setIsUploading(true);
-    setErrorMsg(null);
 
-    // On retry, only count items not yet successfully uploaded.
-    const pendingCount = queue.filter((item) => !item.uploaded).length;
-    setUploadProgress({ current: 0, total: pendingCount });
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    try {
-      let doneCount = 0;
-      for (let i = 0; i < queue.length; i++) {
-        // Skip items that were successfully uploaded in a prior attempt.
-        if (queue[i].uploaded) continue;
-        doneCount++;
-        setUploadProgress({ current: doneCount, total: pendingCount });
-        await uploadOne(queue[i].uri, selectedPatient?.id, queue[i].notes);
-        // Mark this item uploaded immediately so the success overlay appears
-        // and it will be skipped if the clinician needs to retry after an error.
-        setQueue((prev) =>
-          prev.map((item, j) => (j === i ? { ...item, uploaded: true } : item)),
-        );
+    // Inner async function so we can share logic between the direct path and
+    // the "upload anyway" confirmation path.
+    const proceed = async () => {
+      // Suppress draft saves while uploading — we don't want to persist a
+      // partially-uploaded queue that would confuse the resume prompt.
+      suppressDraftSave.current = true;
+      setIsUploading(true);
+      setErrorMsg(null);
+
+      // On retry, only count items not yet successfully uploaded.
+      const pendingCount = queue.filter((item) => !item.uploaded).length;
+      setUploadProgress({ current: 0, total: pendingCount });
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      try {
+        let doneCount = 0;
+        for (let i = 0; i < queue.length; i++) {
+          // Skip items that were successfully uploaded in a prior attempt.
+          if (queue[i].uploaded) continue;
+          doneCount++;
+          setUploadProgress({ current: doneCount, total: pendingCount });
+          await uploadOne(queue[i].uri, selectedPatient?.id, queue[i].notes);
+          // Mark this item uploaded immediately so the success overlay appears
+          // and it will be skipped if the clinician needs to retry after an error.
+          setQueue((prev) =>
+            prev.map((item, j) => (j === i ? { ...item, uploaded: true } : item)),
+          );
+        }
+        void queryClient.invalidateQueries({ queryKey: ["listPatients"] });
+        void queryClient.invalidateQueries({ queryKey: ["listPatientImages"] });
+        void queryClient.invalidateQueries({ queryKey: ["listImages"] });
+        // Draft successfully uploaded — remove it before the success animation.
+        await AsyncStorage.removeItem(DRAFT_STORAGE_KEY);
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setUploadDone(true);
+        setTimeout(() => reset(), 2000);
+      } catch (err) {
+        // Re-enable saving so the current queue (with uploaded flags preserved)
+        // can be persisted, letting the clinician retry only the remaining items.
+        suppressDraftSave.current = false;
+        setErrorMsg(err instanceof Error ? err.message : t("camera.uploadError"));
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        setIsUploading(false);
+        setUploadProgress(null);
       }
-      void queryClient.invalidateQueries({ queryKey: ["listPatients"] });
-      void queryClient.invalidateQueries({ queryKey: ["listPatientImages"] });
-      void queryClient.invalidateQueries({ queryKey: ["listImages"] });
-      // Draft successfully uploaded — remove it before the success animation.
-      await AsyncStorage.removeItem(DRAFT_STORAGE_KEY);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setUploadDone(true);
-      setTimeout(() => reset(), 2000);
-    } catch (err) {
-      // Re-enable saving so the current queue (with uploaded flags preserved)
-      // can be persisted, letting the clinician retry only the remaining items.
-      suppressDraftSave.current = false;
-      setErrorMsg(err instanceof Error ? err.message : t("camera.uploadError"));
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setIsUploading(false);
-      setUploadProgress(null);
+    };
+
+    // If no patient has been selected, confirm with the user before uploading
+    // as unassigned — this prevents accidentally losing the patient association.
+    if (!selectedPatient) {
+      Alert.alert(
+        t("camera.noPatientTitle"),
+        t("camera.noPatientMsg"),
+        [
+          { text: t("camera.permission.cancel"), style: "cancel" },
+          { text: t("camera.uploadAnyway"), style: "destructive", onPress: () => void proceed() },
+        ],
+      );
+      return;
     }
+
+    void proceed();
   }, [queue, selectedPatient, queryClient, reset, t]);
 
   // ─── styles ──────────────────────────────────────────────────────────────────

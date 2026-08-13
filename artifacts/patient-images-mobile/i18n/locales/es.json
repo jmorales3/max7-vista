@@ -99,7 +99,10 @@
       "resumeMsg": "Tienes {{count}} foto(s) sin subir de una sesión anterior. ¿Deseas continuar desde donde lo dejaste?",
       "resume": "Continuar",
       "discard": "Descartar"
-    }
+    },
+    "noPatientTitle": "Ningún paciente seleccionado",
+    "noPatientMsg": "Estas fotos se guardarán sin paciente. Puedes asignarlas después desde la pestaña Sin paciente. ¿Continuar sin paciente?",
+    "uploadAnyway": "Subir sin paciente"
   },
   "settings": {
     "title": "Configuración",
@@ -171,7 +174,15 @@
     "assignTo": "Asignar a {{name}}",
     "assignError": "Error al asignar",
     "cancel": "Cancelar",
-    "notes": "Notas"
+    "notes": "Notas",
+    "selectedCount": "{{count}} seleccionada(s)",
+    "selectAll": "Seleccionar Todas",
+    "cancelSelect": "Cancelar",
+    "assignSelected": "Asignar {{count}} Fotos",
+    "batchAssignTitle": "Asignar {{count}} Fotos al Paciente",
+    "batchAssignTitle_one": "Asignar 1 Foto al Paciente",
+    "batchProgress": "{{current}} de {{total}} asignada(s)",
+    "batchAssignError": "Algunas fotos no pudieron asignarse"
   },
   "error": {
     "title": "Algo salió mal",

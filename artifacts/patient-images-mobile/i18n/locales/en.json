@@ -99,7 +99,10 @@
       "resumeMsg": "You have {{count}} unsaved photo(s) from a previous session. Would you like to resume where you left off?",
       "resume": "Resume",
       "discard": "Discard"
-    }
+    },
+    "noPatientTitle": "No patient selected",
+    "noPatientMsg": "These photos will be saved as unassigned. You can assign them to a patient later from the Unassigned tab. Continue without a patient?",
+    "uploadAnyway": "Upload Unassigned"
   },
   "settings": {
     "title": "Settings",
@@ -171,7 +174,15 @@
     "assignTo": "Assign to {{name}}",
     "assignError": "Assignment failed",
     "cancel": "Cancel",
-    "notes": "Notes"
+    "notes": "Notes",
+    "selectedCount": "{{count}} selected",
+    "selectAll": "Select All",
+    "cancelSelect": "Cancel",
+    "assignSelected": "Assign {{count}} Photos",
+    "batchAssignTitle": "Assign {{count}} Photos to Patient",
+    "batchAssignTitle_one": "Assign 1 Photo to Patient",
+    "batchProgress": "{{current}} of {{total}} assigned",
+    "batchAssignError": "Some photos could not be assigned"
   },
   "error": {
     "title": "Something went wrong",

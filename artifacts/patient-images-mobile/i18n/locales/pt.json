@@ -87,7 +87,10 @@
       "uploadAll": "Enviar {{count}} Fotos",
       "uploadingProgress": "Enviando {{current}} de {{total}}…",
       "uploadComplete": "Envio Concluído"
-    }
+    },
+    "noPatientTitle": "Nenhum paciente selecionado",
+    "noPatientMsg": "Estas fotos serão salvas sem paciente. Você pode atribuí-las a um paciente depois, na aba Sem paciente. Continuar sem paciente?",
+    "uploadAnyway": "Enviar sem paciente"
   },
   "settings": {
     "title": "Configurações",
@@ -164,6 +167,14 @@
     "assignTo": "Atribuir a {{name}}",
     "assignError": "Falha na atribuição",
     "cancel": "Cancelar",
-    "notes": "Notas"
+    "notes": "Notas",
+    "selectedCount": "{{count}} selecionada(s)",
+    "selectAll": "Selecionar Todas",
+    "cancelSelect": "Cancelar",
+    "assignSelected": "Atribuir {{count}} Fotos",
+    "batchAssignTitle": "Atribuir {{count}} Fotos ao Paciente",
+    "batchAssignTitle_one": "Atribuir 1 Foto ao Paciente",
+    "batchProgress": "{{current}} de {{total}} atribuída(s)",
+    "batchAssignError": "Algumas fotos não puderam ser atribuídas"
   }
 }
