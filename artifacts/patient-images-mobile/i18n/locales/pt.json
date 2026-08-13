@@ -54,6 +54,23 @@
       "addBtn_other": "Adicionar {{count}} Fotos",
       "addBtnEmpty": "Selecionar Fotos para Adicionar",
       "addError": "Falha ao atribuir fotos"
+    },
+    "moveToPatient": {
+      "title": "Mover para Paciente",
+      "subtitle_one": "Mover 1 foto para outro paciente",
+      "subtitle_other": "Mover {{count}} fotos para outro paciente",
+      "selectedCount_one": "1 selecionada",
+      "selectedCount_other": "{{count}} selecionadas",
+      "moveBtn_one": "Mover 1 Foto",
+      "moveBtn_other": "Mover {{count}} Fotos",
+      "moveBtnEmpty": "Selecionar Fotos",
+      "cancel": "Cancelar",
+      "searchPlaceholder": "Buscar pacientes…",
+      "noPatients": "Nenhum outro paciente encontrado",
+      "moving": "Movendo fotos…",
+      "progress": "{{current}} de {{total}} movidas",
+      "moveError": "Falha ao mover as fotos",
+      "longPressHint": "Pressione longo em uma foto para selecioná-la"
     }
   },
   "camera": {

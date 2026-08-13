@@ -42,6 +42,35 @@
       "usedMsg": "Cette image est utilisée dans des présentations enregistrées. La supprimer la retirera de ces présentations.",
       "deleteAnyway": "Supprimer quand même",
       "error": "Échec de la suppression de l'image."
+    },
+    "addFromUnassigned": {
+      "title": "Ajouter des Photos Non Assignées",
+      "selectedCount_one": "{{count}} sélectionnée",
+      "selectedCount_other": "{{count}} sélectionnées",
+      "selectAll": "Tout Sélectionner",
+      "empty": "Aucune photo non assignée",
+      "emptyHint": "Toutes les photos sont déjà assignées à des patients",
+      "addBtn_one": "Ajouter 1 Photo",
+      "addBtn_other": "Ajouter {{count}} Photos",
+      "addBtnEmpty": "Sélectionner des Photos à Ajouter",
+      "addError": "Échec de l'assignation des photos"
+    },
+    "moveToPatient": {
+      "title": "Déplacer vers un Patient",
+      "subtitle_one": "Déplacer 1 photo vers un autre patient",
+      "subtitle_other": "Déplacer {{count}} photos vers un autre patient",
+      "selectedCount_one": "1 sélectionnée",
+      "selectedCount_other": "{{count}} sélectionnées",
+      "moveBtn_one": "Déplacer 1 Photo",
+      "moveBtn_other": "Déplacer {{count}} Photos",
+      "moveBtnEmpty": "Sélectionner des Photos",
+      "cancel": "Annuler",
+      "searchPlaceholder": "Rechercher des patients…",
+      "noPatients": "Aucun autre patient trouvé",
+      "moving": "Déplacement en cours…",
+      "progress": "{{current}} sur {{total}} déplacées",
+      "moveError": "Échec du déplacement des photos",
+      "longPressHint": "Appui long sur une photo pour la sélectionner"
     }
   },
   "camera": {

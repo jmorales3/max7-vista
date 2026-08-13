@@ -54,6 +54,23 @@
       "addBtn_other": "Add {{count}} Photos",
       "addBtnEmpty": "Select Photos to Add",
       "addError": "Failed to assign photos"
+    },
+    "moveToPatient": {
+      "title": "Move to Patient",
+      "subtitle_one": "Move 1 photo to a different patient",
+      "subtitle_other": "Move {{count}} photos to a different patient",
+      "selectedCount_one": "1 selected",
+      "selectedCount_other": "{{count}} selected",
+      "moveBtn_one": "Move 1 Photo",
+      "moveBtn_other": "Move {{count}} Photos",
+      "moveBtnEmpty": "Select Photos",
+      "cancel": "Cancel",
+      "searchPlaceholder": "Search patients…",
+      "noPatients": "No other patients found",
+      "moving": "Moving photos…",
+      "progress": "{{current}} of {{total}} moved",
+      "moveError": "Failed to move photos",
+      "longPressHint": "Long-press a photo to select it"
     }
   },
   "camera": {

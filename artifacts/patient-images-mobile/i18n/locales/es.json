@@ -42,6 +42,35 @@
       "usedMsg": "Esta imagen se usa en presentaciones guardadas. Eliminarla también la quitará de esas presentaciones.",
       "deleteAnyway": "Eliminar de todas formas",
       "error": "Error al eliminar la imagen."
+    },
+    "addFromUnassigned": {
+      "title": "Agregar Fotos Sin Asignar",
+      "selectedCount_one": "{{count}} seleccionada",
+      "selectedCount_other": "{{count}} seleccionadas",
+      "selectAll": "Seleccionar Todo",
+      "empty": "No hay fotos sin asignar",
+      "emptyHint": "Todas las fotos ya están asignadas a pacientes",
+      "addBtn_one": "Agregar 1 Foto",
+      "addBtn_other": "Agregar {{count}} Fotos",
+      "addBtnEmpty": "Seleccionar Fotos para Agregar",
+      "addError": "Error al asignar fotos"
+    },
+    "moveToPatient": {
+      "title": "Mover a Paciente",
+      "subtitle_one": "Mover 1 foto a otro paciente",
+      "subtitle_other": "Mover {{count}} fotos a otro paciente",
+      "selectedCount_one": "1 seleccionada",
+      "selectedCount_other": "{{count}} seleccionadas",
+      "moveBtn_one": "Mover 1 Foto",
+      "moveBtn_other": "Mover {{count}} Fotos",
+      "moveBtnEmpty": "Seleccionar Fotos",
+      "cancel": "Cancelar",
+      "searchPlaceholder": "Buscar pacientes…",
+      "noPatients": "No se encontraron otros pacientes",
+      "moving": "Moviendo fotos…",
+      "progress": "{{current}} de {{total}} movidas",
+      "moveError": "Error al mover las fotos",
+      "longPressHint": "Mantén presionada una foto para seleccionarla"
     }
   },
   "camera": {
