@@ -749,18 +749,17 @@ function UnassignedTab({ colors, insets }: { colors: ReturnType<typeof useColors
       borderWidth: 2, borderColor: "#fff",
       backgroundColor: "rgba(0,0,0,0.2)",
     },
-    bottomBar: {
-      padding: 16,
-      paddingBottom: Platform.OS === "web" ? 16 : insets.bottom + 16,
-      borderTopWidth: 1, borderTopColor: colors.border,
-      backgroundColor: colors.background,
+    assignBar: {
+      paddingHorizontal: 16, paddingVertical: 10,
+      borderBottomWidth: 1, borderBottomColor: colors.border,
+      backgroundColor: colors.card,
     },
     assignSelectedBtn: {
-      height: 52, borderRadius: colors.radius,
+      height: 44, borderRadius: colors.radius,
       backgroundColor: colors.primary, alignItems: "center",
       justifyContent: "center", flexDirection: "row", gap: 8,
     },
-    assignSelectedBtnText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: colors.primaryForeground },
+    assignSelectedBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.primaryForeground },
   });
 
   if (isLoading) {
@@ -789,17 +788,33 @@ function UnassignedTab({ colors, insets }: { colors: ReturnType<typeof useColors
     <View style={s.flex1}>
       {/* Select mode toolbar */}
       {selectMode && (
-        <View style={s.selectBar}>
-          <Text style={s.selectBarCount}>
-            {t("unassigned.selectedCount", { count: selectedCount })}
-          </Text>
-          <TouchableOpacity style={s.selectBarBtn} onPress={selectAll}>
-            <Text style={s.selectBarBtnText}>{t("unassigned.selectAll")}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={s.cancelSelectBtn} onPress={exitSelectMode}>
-            <Text style={s.cancelSelectBtnText}>{t("unassigned.cancelSelect")}</Text>
-          </TouchableOpacity>
-        </View>
+        <>
+          <View style={s.selectBar}>
+            <Text style={s.selectBarCount}>
+              {t("unassigned.selectedCount", { count: selectedCount })}
+            </Text>
+            <TouchableOpacity style={s.selectBarBtn} onPress={selectAll}>
+              <Text style={s.selectBarBtnText}>{t("unassigned.selectAll")}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.cancelSelectBtn} onPress={exitSelectMode}>
+              <Text style={s.cancelSelectBtnText}>{t("unassigned.cancelSelect")}</Text>
+            </TouchableOpacity>
+          </View>
+          {selectedCount > 0 && (
+            <View style={s.assignBar}>
+              <TouchableOpacity
+                style={s.assignSelectedBtn}
+                onPress={() => setBatchAssignVisible(true)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="person-add" size={18} color={colors.primaryForeground} />
+                <Text style={s.assignSelectedBtnText}>
+                  {t("unassigned.assignSelected", { count: selectedCount })}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </>
       )}
 
       <ScrollView
@@ -854,21 +869,6 @@ function UnassignedTab({ colors, insets }: { colors: ReturnType<typeof useColors
         )}
       </ScrollView>
 
-      {/* Batch assign bottom bar — shown when images are selected */}
-      {selectMode && selectedCount > 0 && (
-        <View style={s.bottomBar}>
-          <TouchableOpacity
-            style={s.assignSelectedBtn}
-            onPress={() => setBatchAssignVisible(true)}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="person-add" size={20} color={colors.primaryForeground} />
-            <Text style={s.assignSelectedBtnText}>
-              {t("unassigned.assignSelected", { count: selectedCount })}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
 
       <AssignModal
         image={assignTarget}
