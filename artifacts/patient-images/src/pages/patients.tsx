@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import { useListPatients } from "@workspace/api-client-react";
@@ -12,9 +12,11 @@ import { format } from "date-fns";
 export default function Patients() {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  const hasSearch = search.trim().length > 0;
   const { data: patients, isLoading } = useListPatients(
     { search: search || undefined },
-    {}
+    { enabled: hasSearch }
   );
 
   return (
@@ -35,14 +37,24 @@ export default function Patients() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
+          ref={searchRef}
           placeholder={t("patients.searchPlaceholder")}
           className="pl-9 max-w-md bg-card"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          autoFocus
         />
       </div>
 
-      {isLoading ? (
+      {!hasSearch ? (
+        <div className="flex flex-col items-center justify-center p-12 text-center border rounded-lg bg-card/50 border-dashed">
+          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <Search className="h-6 w-6 text-primary" />
+          </div>
+          <h3 className="text-lg font-medium text-foreground">{t("patients.searchPromptTitle")}</h3>
+          <p className="text-muted-foreground max-w-sm mt-2">{t("patients.searchPromptHint")}</p>
+        </div>
+      ) : isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <Card key={i} className="overflow-hidden">
