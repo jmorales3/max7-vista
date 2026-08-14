@@ -647,8 +647,8 @@ function UnassignedTab({ colors, insets }: { colors: ReturnType<typeof useColors
     });
   }, []);
 
-  const handleLongPress = useCallback(async (img: PatientImage) => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+  const handleLongPress = useCallback((img: PatientImage) => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     setSelectMode(true);
     setSelectedIds(new Set([img.id]));
   }, []);
