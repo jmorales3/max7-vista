@@ -114,6 +114,8 @@
     "subtitle": "Manage patient records and access image galleries.",
     "newPatient": "New Patient",
     "searchPlaceholder": "Search patients by name or ID...",
+    "searchPromptTitle": "Search for a patient",
+    "searchPromptHint": "Type a name or patient ID to find a patient.",
     "noResults": "No patients found",
     "noResultsSearch": "We couldn't find any patients matching your search.",
     "noResultsEmpty": "Get started by adding your first patient record.",
