@@ -10,6 +10,7 @@
     "loadError": "Échec du chargement des patients",
     "retry": "Réessayer",
     "notFound": "Aucun patient trouvé",
+    "searchPrompt": "Tapez un nom ou un identifiant pour rechercher.",
     "noneYet": "Aucun patient pour l'instant",
     "tryDifferent": "Essayez un autre terme de recherche"
   },

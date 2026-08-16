@@ -21,6 +21,7 @@ import * as Haptics from "expo-haptics";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListPatients,
+  getListPatientsQueryKey,
   useListImages,
   getListImagesQueryKey,
   customFetch,
@@ -116,6 +117,7 @@ function AssignModal({
 
   const { data: patients, isLoading: patientsLoading } = useListPatients(
     debouncedSearch ? { search: debouncedSearch } : {},
+    { query: { queryKey: getListPatientsQueryKey(debouncedSearch ? { search: debouncedSearch } : {}), enabled: !!debouncedSearch } }
   );
 
   const handleClose = useCallback(() => {
@@ -311,11 +313,13 @@ function AssignModal({
             <View style={s.emptyBox}>
               <ActivityIndicator color={colors.primary} size="small" />
             </View>
+          ) : !debouncedSearch ? (
+            <View style={s.emptyBox}>
+              <Text style={s.emptyText}>{t("patients.searchPrompt")}</Text>
+            </View>
           ) : (patients ?? []).length === 0 ? (
             <View style={s.emptyBox}>
-              <Text style={s.emptyText}>
-                {debouncedSearch ? t("patients.notFound") : t("patients.noneYet")}
-              </Text>
+              <Text style={s.emptyText}>{t("patients.notFound")}</Text>
             </View>
           ) : (
             (patients ?? []).map((p) => {
@@ -408,7 +412,10 @@ function BatchAssignModal({
     debounceRef.current = setTimeout(() => setDebouncedSearch(text), 300);
   }, []);
 
-  const { data: patients } = useListPatients(debouncedSearch ? { search: debouncedSearch } : {});
+  const { data: patients } = useListPatients(
+    debouncedSearch ? { search: debouncedSearch } : {},
+    { query: { queryKey: getListPatientsQueryKey(debouncedSearch ? { search: debouncedSearch } : {}), enabled: !!debouncedSearch } }
+  );
 
   const handleClose = useCallback(() => {
     if (assigning) return;
@@ -502,6 +509,8 @@ function BatchAssignModal({
       borderColor: colors.border, alignItems: "center", justifyContent: "center",
     },
     cancelBtnText: { fontSize: 15, fontFamily: "Inter_500Medium", color: colors.foreground },
+    emptyHint: { padding: 24, alignItems: "center" },
+    emptyHintText: { fontSize: 14, fontFamily: "Inter_400Regular", color: colors.mutedForeground, textAlign: "center" },
   });
 
   return (
@@ -551,6 +560,13 @@ function BatchAssignModal({
             );
           }}
           keyboardShouldPersistTaps="handled"
+          ListEmptyComponent={
+            <View style={s.emptyHint}>
+              <Text style={s.emptyHintText}>
+                {debouncedSearch ? t("patients.notFound") : t("patients.searchPrompt")}
+              </Text>
+            </View>
+          }
         />
 
         <View style={s.footer}>
@@ -908,6 +924,7 @@ export default function PatientsScreen() {
 
   const { data, isLoading, isError, refetch, isFetching } = useListPatients(
     debouncedSearch ? { search: debouncedSearch } : {},
+    { query: { queryKey: getListPatientsQueryKey(debouncedSearch ? { search: debouncedSearch } : {}), enabled: !!debouncedSearch } }
   );
 
   // Also fetch unassigned count for badge
@@ -1137,13 +1154,17 @@ export default function PatientsScreen() {
               scrollEnabled={!!patients.length}
               ListEmptyComponent={
                 <View style={s.emptyBox}>
-                  <Ionicons name="people-outline" size={48} color={colors.mutedForeground} />
+                  <Ionicons
+                    name={debouncedSearch ? "people-outline" : "search-outline"}
+                    size={48}
+                    color={colors.mutedForeground}
+                  />
                   <Text style={s.emptyText}>
-                    {debouncedSearch ? t("patients.notFound") : t("patients.noneYet")}
+                    {debouncedSearch ? t("patients.notFound") : t("patients.searchPrompt")}
                   </Text>
-                  {debouncedSearch ? (
+                  {debouncedSearch && (
                     <Text style={s.emptySubtext}>{t("patients.tryDifferent")}</Text>
-                  ) : null}
+                  )}
                 </View>
               }
             />
