@@ -114,6 +114,8 @@
     "subtitle": "Gerencie registros de pacientes e acesse galerias de imagens.",
     "newPatient": "Novo Paciente",
     "searchPlaceholder": "Pesquisar pacientes por nome ou ID...",
+    "searchPromptTitle": "Pesquisar um paciente",
+    "searchPromptHint": "Digite um nome ou ID do paciente para encontrá-lo.",
     "noResults": "Nenhum paciente encontrado",
     "noResultsSearch": "Não encontramos nenhum paciente correspondente à sua pesquisa.",
     "noResultsEmpty": "Comece adicionando seu primeiro registro de paciente.",
