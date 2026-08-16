@@ -114,6 +114,8 @@
     "subtitle": "Gérez les dossiers patients et accédez aux galeries d'images.",
     "newPatient": "Nouveau Patient",
     "searchPlaceholder": "Rechercher des patients par nom ou ID...",
+    "searchPromptTitle": "Rechercher un patient",
+    "searchPromptHint": "Tapez un nom ou un identifiant de patient pour le trouver.",
     "noResults": "Aucun patient trouvé",
     "noResultsSearch": "Nous n'avons trouvé aucun patient correspondant à votre recherche.",
     "noResultsEmpty": "Commencez par ajouter votre premier dossier patient.",
