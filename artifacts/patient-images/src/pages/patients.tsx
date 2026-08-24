@@ -1,22 +1,30 @@
 import { useRef, useState } from "react";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
-import { useListPatients } from "@workspace/api-client-react";
+import { getListPatientsQueryKey, useListPatients } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Plus, Calendar, FileText, Image as ImageIcon, Users } from "lucide-react";
 import { format } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Patients() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const canManagePatients = user?.role === "admin" || user?.role === "superadmin";
   const [search, setSearch] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const hasSearch = search.trim().length > 0;
   const { data: patients, isLoading } = useListPatients(
     { search: search || undefined },
-    { enabled: hasSearch }
+    {
+      query: {
+        enabled: hasSearch,
+        queryKey: getListPatientsQueryKey({ search: search || undefined }),
+      },
+    }
   );
 
   return (
@@ -26,12 +34,14 @@ export default function Patients() {
           <h1 className="text-3xl font-bold tracking-tight text-primary">{t("patients.title")}</h1>
           <p className="text-muted-foreground">{t("patients.subtitle")}</p>
         </div>
-        <Button asChild>
-          <Link href="/patients/new">
-            <Plus className="mr-2 h-4 w-4" />
-            {t("patients.newPatient")}
-          </Link>
-        </Button>
+        {canManagePatients && (
+          <Button asChild>
+            <Link href="/patients/new">
+              <Plus className="mr-2 h-4 w-4" />
+              {t("patients.newPatient")}
+            </Link>
+          </Button>
+        )}
       </div>
 
       <div className="relative">
@@ -143,12 +153,14 @@ export default function Patients() {
               {t("patients.clearSearch")}
             </Button>
           ) : (
-            <Button asChild>
-              <Link href="/patients/new">
-                <Plus className="mr-2 h-4 w-4" />
-                {t("patients.addPatient")}
-              </Link>
-            </Button>
+            canManagePatients && (
+              <Button asChild>
+                <Link href="/patients/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("patients.addPatient")}
+                </Link>
+              </Button>
+            )
           )}
         </div>
       )}

@@ -57,6 +57,13 @@ export default function SettingsScreen() {
   };
 
   const currentLanguage = i18n.language as LanguageCode;
+  const roleLabel = user?.role === "superadmin"
+    ? "Superadministrator"
+    : user?.role === "admin"
+      ? "Doctor"
+      : user?.role === "user"
+        ? "User"
+        : "";
 
   const s = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
@@ -179,7 +186,7 @@ export default function SettingsScreen() {
               </View>
               <View style={s.rowContent}>
                 <Text style={s.rowLabel}>{user?.username ?? "—"}</Text>
-                <Text style={s.rowValue}>{user?.role ?? ""}</Text>
+                <Text style={s.rowValue}>{roleLabel}</Text>
               </View>
             </View>
 

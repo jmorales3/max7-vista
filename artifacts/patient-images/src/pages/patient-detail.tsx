@@ -318,7 +318,7 @@ export default function PatientDetail() {
   });
 
   const { data: allTags = [] } = useListTags({
-    query: { queryKey: getListTagsQueryKey() }
+    query: { queryKey: getListTagsQueryKey(), enabled: isAdmin }
   });
 
   const { data: patientTags = [] } = useListPatientTags(id, {
@@ -532,12 +532,14 @@ export default function PatientDetail() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <Button variant="outline" asChild>
-            <Link href={`/presentation/${patient.id}`}>
-              <Monitor className="mr-2 h-4 w-4" />
-              {t("presentation.createPresentation")}
-            </Link>
-          </Button>
+          {isAdmin && (
+            <Button variant="outline" asChild>
+              <Link href={`/presentation/${patient.id}`}>
+                <Monitor className="mr-2 h-4 w-4" />
+                {t("presentation.createPresentation")}
+              </Link>
+            </Button>
+          )}
           <Button asChild>
             <Link href={`/capture?patientId=${patient.id}`}>
               <Camera className="mr-2 h-4 w-4" />
@@ -552,13 +554,17 @@ export default function PatientDetail() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem asChild>
-                <Link href={`/patients/${patient.id}/edit`}>{t("patients.editPatient")}</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTemplateDocOpen(true)}>
-                <LayoutTemplate className="mr-2 h-4 w-4" />
-                {t("patients.createTemplateDoc")}
-              </DropdownMenuItem>
+              {isAdmin && (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link href={`/patients/${patient.id}/edit`}>{t("patients.editPatient")}</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTemplateDocOpen(true)}>
+                    <LayoutTemplate className="mr-2 h-4 w-4" />
+                    {t("patients.createTemplateDoc")}
+                  </DropdownMenuItem>
+                </>
+              )}
               {isAdmin && (images?.length ?? 0) > 0 && (
                 <>
                   <DropdownMenuSeparator />
@@ -592,14 +598,18 @@ export default function PatientDetail() {
                   {patient.legalHold ? t("patients.releaseLegalHold") : t("patients.placeLegalHold")}
                 </DropdownMenuItem>
               )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={() => setShowDeleteDialog(true)}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                {t("patients.deletePatient")}
-              </DropdownMenuItem>
+              {isAdmin && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => setShowDeleteDialog(true)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {t("patients.deletePatient")}
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -629,20 +639,22 @@ export default function PatientDetail() {
               className="gap-1 pr-1 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/15"
             >
               {tag.name}
-              <button
-                onClick={() => removeTag.mutate({ id, tagId: tag.id })}
-                className="ml-0.5 rounded-full p-0.5 hover:bg-destructive/20 hover:text-destructive transition-colors"
-                title={t("tags.removeTag")}
-              >
-                <X className="h-3 w-3" />
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => removeTag.mutate({ id, tagId: tag.id })}
+                  className="ml-0.5 rounded-full p-0.5 hover:bg-destructive/20 hover:text-destructive transition-colors"
+                  title={t("tags.removeTag")}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
             </Badge>
           ))
         ) : (
           <span className="text-sm text-muted-foreground">{t("tags.noPatientTags")}</span>
         )}
 
-        {availableTags.length > 0 && (
+        {isAdmin && availableTags.length > 0 && (
           <div className="flex items-center gap-1.5 ml-1">
             <Select value={selectedTagId} onValueChange={setSelectedTagId}>
               <SelectTrigger className="h-7 text-xs w-36 border-dashed">
@@ -824,15 +836,17 @@ export default function PatientDetail() {
               </span>
             )}
           </h2>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCephNewOpen(true)}
-            disabled={(images ?? []).length === 0}
-          >
-            <Plus className="mr-2 h-3.5 w-3.5" />
-            {t("ceph.newTracing")}
-          </Button>
+          {isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCephNewOpen(true)}
+              disabled={(images ?? []).length === 0}
+            >
+              <Plus className="mr-2 h-3.5 w-3.5" />
+              {t("ceph.newTracing")}
+            </Button>
+          )}
         </div>
 
         {cephTracings.length === 0 ? (

@@ -48,30 +48,30 @@ function Router() {
       <Switch>
         <Route path="/" component={() => <Redirect to="/patients" />} />
         <Route path="/patients" component={Patients} />
-        <Route path="/patients/new" component={PatientNew} />
-        <Route path="/patients/:id/edit" component={PatientEdit} />
+        <Route path="/patients/new" component={isAdmin ? PatientNew : NotAuthorized} />
+        <Route path="/patients/:id/edit" component={isAdmin ? PatientEdit : NotAuthorized} />
         <Route path="/patients/:id" component={PatientDetail} />
         <Route path="/capture" component={Capture} />
         <Route path="/gallery" component={Gallery} />
-        <Route path="/library" component={ImageLibrary} />
+        <Route path="/library" component={isAdmin ? ImageLibrary : NotAuthorized} />
         <Route path="/editor/:id" component={Editor} />
-        <Route path="/presentation/:id" component={Presentation} />
-        <Route path="/presentations" component={Presentations} />
+        <Route path="/presentation/:id" component={isAdmin ? Presentation : NotAuthorized} />
+        <Route path="/presentations" component={isAdmin ? Presentations : NotAuthorized} />
         <Route path="/settings" component={Settings} />
         <Route path="/manual" component={Manual} />
         <Route path="/admin/users" component={isSuperAdmin ? AdminUsers : NotAuthorized} />
         <Route path="/admin/tags" component={isAdmin ? AdminTags : NotAuthorized} />
         <Route path="/admin/audit-log" component={isSuperAdmin ? AdminAuditLog : NotAuthorized} />
         <Route path="/admin/integrity" component={isSuperAdmin ? AdminIntegrity : NotAuthorized} />
-        <Route path="/import" component={BulkImport} />
-        <Route path="/templates" component={Templates} />
-        <Route path="/templates/:id" component={TemplateDesigner} />
-        <Route path="/template-documents/:id" component={TemplateDocumentPage} />
-        <Route path="/cephalometrics" component={Cephalometrics} />
+        <Route path="/import" component={isAdmin ? BulkImport : NotAuthorized} />
+        <Route path="/templates" component={isAdmin ? Templates : NotAuthorized} />
+        <Route path="/templates/:id" component={isAdmin ? TemplateDesigner : NotAuthorized} />
+        <Route path="/template-documents/:id" component={isAdmin ? TemplateDocumentPage : NotAuthorized} />
+        <Route path="/cephalometrics" component={isAdmin ? Cephalometrics : NotAuthorized} />
         <Route path="/cephalometrics/templates/new" component={isAdmin ? CephalometricsNew : NotAuthorized} />
-        <Route path="/cephalometrics/templates/:id/edit" component={CephalometricsEditor} />
-        <Route path="/cephalometrics/trace/:imageId" component={CephalometricsTrace} />
-        <Route path="/cephalometrics/tracings/:id" component={CephalometricsTracing} />
+        <Route path="/cephalometrics/templates/:id/edit" component={isAdmin ? CephalometricsEditor : NotAuthorized} />
+        <Route path="/cephalometrics/trace/:imageId" component={isAdmin ? CephalometricsTrace : NotAuthorized} />
+        <Route path="/cephalometrics/tracings/:id" component={isAdmin ? CephalometricsTracing : NotAuthorized} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>

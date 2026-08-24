@@ -131,7 +131,7 @@ function isUniqueViolation(err: any): boolean {
   return err?.code === "23505" || err?.cause?.code === "23505";
 }
 
-router.post("/patients", async (req, res): Promise<void> => {
+router.post("/patients", requireRole("admin", "superadmin"), async (req, res): Promise<void> => {
   try {
     const tenantId = tid(req);
     const parsed = CreatePatientBody.safeParse(req.body);

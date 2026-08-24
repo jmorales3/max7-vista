@@ -12,6 +12,30 @@ Max7 Vista is a clinical patient-image management system. The principal experien
 | Electron desktop/LAN | Principal web UI plus local SQLite/storage, LAN use, server-folder import, native storage chooser, license/trial gate, and desktop updater. | That cloud-only deployment instructions apply to an offline/local installation. |
 | Expo mobile | Patients, native camera/gallery selection, draft/review/retry, optional patient assignment, unassigned gallery, batch assignment, move images, settings, and server setup/login. | Web editor, presentations, templates, library, bulk import, documents, cephalometrics, or admin modules. |
 
+## Approved role naming and access matrix
+
+Use these display names in every Max7 Vista screen, guide, chatbot answer, recording, and caption. The internal values remain `user`, `admin`, and `superadmin`; they are implementation details and must not appear in staff-facing material. Every permission below is limited to the signed-in organization.
+
+| Sensitive surface | User (`user`) | Doctor (`admin`) | Superadministrator (`superadmin`) |
+|---|---|---|---|
+| Assigned patient records and media | View assigned records; capture media; edit/delete only own uploads | All User capabilities | All Doctor capabilities |
+| Patient clinical records and documents | No create, edit, or delete | Create, edit, and delete patient records; manage documents | All Doctor capabilities |
+| Patient-image ZIP export, presentations, templates, and bulk import | Not available | Create, manage, and export as applicable | All Doctor capabilities |
+| Cephalometric templates and tracings | Not available | Create, edit, delete, calculate, and view | All Doctor capabilities |
+| Tags | Not available | Manage organization tags | All Doctor capabilities |
+| Retention, purge queue, legal holds, and disclosure reports | Not available | Not available | Configure and execute within the organization |
+| Users, patient-access assignments, audit log, integrity tools, and migration | Not available | Not available | Manage within the organization |
+
+### Role evidence captured by the source-policy check
+
+Run `pnpm role-policy:check` whenever a route, permission, Manual entry, chatbot instruction, or navigation item changes. It asserts the required server guards, client route/navigation restrictions, and staff-facing terminology for the sensitive surfaces in this matrix.
+
+| Evidence group | Intended result | Automated coverage |
+|---|---|---|
+| Patient edits and ZIP export | User is blocked; Doctor and Superadministrator are allowed | Patient create/edit/delete and both ZIP-export routes |
+| Templates, presentations, bulk import, and cephalometrics | User navigation and APIs are blocked; Doctor and Superadministrator are allowed | Client route/navigation gates plus import and ceph router guards |
+| Retention, legal hold, disclosures, and administration | Only Superadministrator is allowed | Existing `requireRole("superadmin")` guards verified for each sensitive endpoint |
+
 ## Evidence matrix
 
 “Live capture” means record the actual product, not an animated substitute. Evidence references are source-of-truth locations for the next verification pass.
@@ -40,8 +64,8 @@ Max7 Vista is a clinical patient-image management system. The principal experien
 
 | ID | Conflict / uncertainty | Recording rule |
 |---|---|---|
-| R-01 | The chatbot/manual describe roles as **User, Doctor, Superadministrator**. Router and API checks use `user`, `admin`, `superadmin`. | Use the current UI’s displayed role in screen capture. Say “clinical administrator” in draft narration until product owners choose one naming scheme. Do not use a role-permission animation as final media. |
-| R-02 | Chatbot states Doctors manage patient edits, exports, presentations, templates, retention, and cephalometric templates. Several API guards use `admin`; retention/legal hold appears superadmin-only. | Verify each action with three test accounts. Label the lesson “role-restricted” and withhold its final release if observed behavior differs from approved policy. |
+| R-01 | The chatbot/manual describe roles as **User, Doctor, Superadministrator**. Router and API checks use `user`, `admin`, `superadmin`. | Resolved: use the display names in the approved role matrix. Internal values are never staff-facing. |
+| R-02 | Chatbot states Doctors manage patient edits, exports, presentations, templates, retention, and cephalometric templates. Several API guards use `admin`; retention/legal hold appears superadmin-only. | Resolved: Doctors manage clinical workflows; retention, legal hold, disclosure, and tenant administration are Superadministrator-only. Use the matrix and source-policy check before recording. |
 | R-03 | Chatbot says the Image Library is entirely separate from Gallery. Gallery code shows library assets when “All Patients” is selected. | Teach: “Library is the management home for reusable non-clinical assets; Gallery can also show them in its all-patients view.” |
 | R-04 | Chatbot describes 15-minute inactivity, two-minute warning, and 15-minute mobile background logout. Mobile code currently defaults to a 30-minute background timeout with a final one-minute warning and foreground refresh. | Record web and mobile session behavior as separate lessons only after time-accelerated test verification. Do not quote durations in final media until verified in the target build. |
 | R-05 | Web capture selects a patient then opens the editor; mobile allows an unassigned upload after an explicit confirmation and uploads without an editor. | Keep `MV-04` and `MV-05` separate. |

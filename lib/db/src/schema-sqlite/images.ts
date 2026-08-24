@@ -2,10 +2,12 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { patientsTable } from "./patients";
+import { tenantsTable } from "./tenants";
 
 export const imagesTable = sqliteTable("images", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   patientId: integer("patient_id").references(() => patientsTable.id, { onDelete: "cascade" }),
+  tenantId: integer("tenant_id").references(() => tenantsTable.id, { onDelete: "cascade" }),
   filePath: text("file_path").notNull(),
   fileName: text("file_name").notNull(),
   notes: text("notes"),
