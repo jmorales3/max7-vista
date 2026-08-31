@@ -11,30 +11,35 @@ id = "c8OWldxMwGFi85JKJmVFg"
 uri = "file://.agents/memory/max7-transfer-register.md"
 type = "text"
 title = "Max7 Feature Transfer Register (updated — FEAT-012 added)"
+logical_id = "77d4a44f-87bc-4321-b436-2bbad0a876b1"
 
 [[outputs]]
 id = "RqJanBEPZ8QQ0ncnLxrz6"
 uri = "file://max7-transfer-register.txt"
 type = "text"
 title = "Max7 Transfer Register (text file)"
+logical_id = "1d4916fb-82fd-4617-bea0-73b2f72029cd"
 
 [[outputs]]
 id = "1Pd4PBDkXQ75FcOWE5_lR"
 uri = "file://max7-transfer-register.md"
 type = "text"
 title = "Max7 Vista → Max7 Feature Transfer Register"
+logical_id = "f8e76c38-6e0c-46ef-8e27-1e87d5fee1d0"
 
 [[outputs]]
 id = "6qan0bDyMotOHLgWmQZOr"
 uri = "file://exports/max7-feature-transfer-register.md"
 type = "text"
 title = "Max7 Feature Transfer Register (updated with today's work)"
+logical_id = "789c2fa2-d110-4b05-8828-930402920dad"
 
 [[outputs]]
 id = "PfBvH6ngfenLHs0V8DcmP"
 uri = "file://exports/max7vista-marketing-brief.md"
 type = "text"
 title = "Max7 Vista — Marketing & Product Brief (for max7vista.com Agent)"
+logical_id = "0e988e75-4480-4bf2-8fda-f1a127490235"
 
 [[outputs]]
 id = "N1qIBhbcikqOhWBw2th7o"
@@ -42,6 +47,7 @@ uri = "file://Max7-Vista-Feature-Transfer-Register.md"
 type = "text"
 title = "Max7 Vista → Max7 Feature Transfer Register"
 description = "Complete register of all 25 confirmed features (FEAT-001 through FEAT-025) ready for porting to the Max7 practice administration package."
+logical_id = "2d836290-d81b-4a82-ab20-1f258bc6ace6"
 
 [[outputs]]
 id = "1Im7JQKMV1MQ_GwPkgmfK"
@@ -49,3 +55,4 @@ uri = "file://attached_assets/apk-qrcode.png"
 type = "image"
 title = "APK Install QR Code"
 description = "Scan to open the Expo build page and install the Patient Image Manager APK"
+logical_id = "528076b0-cb7a-4bd9-ac24-b019a167bf07"
