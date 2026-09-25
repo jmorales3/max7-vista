@@ -364,6 +364,7 @@
   },
   "library": {
     "title": "Image Library",
+    "patient": "Patient",
     "subtitle": "Upload and manage decorative images for use as presentation slides.",
     "upload": "Upload Images",
     "uploadedCount": "Uploaded {{count}} image(s)",

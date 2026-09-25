@@ -364,6 +364,7 @@
   },
   "library": {
     "title": "Biblioteca de Imágenes",
+    "patient": "Paciente",
     "subtitle": "Suba y gestione imágenes decorativas para usar como diapositivas en presentaciones.",
     "upload": "Subir Imágenes",
     "uploadedCount": "{{count}} imagen(es) subida(s)",

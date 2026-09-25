@@ -364,6 +364,7 @@
   },
   "library": {
     "title": "Biblioteca de Imagens",
+    "patient": "Paciente",
     "subtitle": "Carregue e gerencie imagens decorativas para usar como slides em apresentações.",
     "upload": "Enviar Imagens",
     "uploadedCount": "{{count}} imagem(ns) enviada(s)",

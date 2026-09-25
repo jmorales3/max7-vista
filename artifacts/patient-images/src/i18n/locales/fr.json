@@ -364,6 +364,7 @@
   },
   "library": {
     "title": "Bibliothèque d'Images",
+    "patient": "Patient",
     "subtitle": "Téléversez et gérez des images décoratives à utiliser comme diapositives.",
     "upload": "Téléverser des Images",
     "uploadedCount": "{{count}} image(s) téléversée(s)",
