@@ -12,6 +12,7 @@ import {
   getListPatientImagesQueryKey,
   useDeletePatient,
   getListPatientsQueryKey,
+  useListPatients,
   useUpdatePatient,
   useListTags,
   getListTagsQueryKey,
@@ -67,6 +68,9 @@ import {
   ShieldAlert,
   FileDown,
   Phone,
+  ArrowRightLeft,
+  Loader2,
+  Search,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -141,6 +145,14 @@ export default function PatientDetail() {
   const [disclosureFrom, setDisclosureFrom] = useState("");
   const [disclosureTo, setDisclosureTo] = useState("");
   const [disclosureGenerating, setDisclosureGenerating] = useState(false);
+
+  // Move photos state
+  const [moveMode, setMoveMode] = useState(false);
+  const [selectedMoveIds, setSelectedMoveIds] = useState<Set<number>>(new Set());
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [moveDestId, setMoveDestId] = useState<number | null>(null);
+  const [moveSearch, setMoveSearch] = useState("");
+  const [moving, setMoving] = useState(false);
 
   const setLegalHold = async (legalHold: boolean, reason?: string) => {
     setLegalHoldSaving(true);
@@ -251,6 +263,48 @@ export default function PatientDetail() {
     }
   };
 
+  const exitMoveMode = () => {
+    setMoveMode(false);
+    setSelectedMoveIds(new Set());
+  };
+
+  const toggleMoveSelect = (imgId: number) => {
+    setSelectedMoveIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(imgId)) next.delete(imgId);
+      else next.add(imgId);
+      return next;
+    });
+  };
+
+  const handleMove = async () => {
+    if (!moveDestId || selectedMoveIds.size === 0) return;
+    setMoving(true);
+    try {
+      await Promise.all(
+        Array.from(selectedMoveIds).map((imgId) =>
+          customFetch(`/api/images/${imgId}`, {
+            method: "PATCH",
+            body: JSON.stringify({ patientId: moveDestId }),
+          })
+        )
+      );
+      // Refresh both source and destination patient image lists
+      void queryClient.invalidateQueries({ queryKey: getListPatientImagesQueryKey(id) });
+      void queryClient.invalidateQueries({ queryKey: getListPatientImagesQueryKey(moveDestId) });
+      const count = selectedMoveIds.size;
+      setMoveOpen(false);
+      exitMoveMode();
+      setMoveDestId(null);
+      setMoveSearch("");
+      toast({ title: t("patients.moveToPatientSuccess", { count }) });
+    } catch {
+      toast({ variant: "destructive", title: t("patients.moveToPatientError") });
+    } finally {
+      setMoving(false);
+    }
+  };
+
   const { data: patient, isLoading: patientLoading } = useGetPatient(id, {
     query: { enabled: !!id, queryKey: getGetPatientQueryKey(id) }
   });
@@ -259,8 +313,12 @@ export default function PatientDetail() {
     query: { enabled: !!id, queryKey: getListPatientImagesQueryKey(id) }
   });
 
+  const { data: allPatients = [] } = useListPatients({}, {
+    query: { queryKey: getListPatientsQueryKey(), enabled: moveOpen }
+  });
+
   const { data: allTags = [] } = useListTags({
-    query: { queryKey: getListTagsQueryKey() }
+    query: { queryKey: getListTagsQueryKey(), enabled: isAdmin }
   });
 
   const { data: patientTags = [] } = useListPatientTags(id, {
@@ -474,12 +532,14 @@ export default function PatientDetail() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <Button variant="outline" asChild>
-            <Link href={`/presentation/${patient.id}`}>
-              <Monitor className="mr-2 h-4 w-4" />
-              {t("presentation.createPresentation")}
-            </Link>
-          </Button>
+          {isAdmin && (
+            <Button variant="outline" asChild>
+              <Link href={`/presentation/${patient.id}`}>
+                <Monitor className="mr-2 h-4 w-4" />
+                {t("presentation.createPresentation")}
+              </Link>
+            </Button>
+          )}
           <Button asChild>
             <Link href={`/capture?patientId=${patient.id}`}>
               <Camera className="mr-2 h-4 w-4" />
@@ -494,13 +554,17 @@ export default function PatientDetail() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem asChild>
-                <Link href={`/patients/${patient.id}/edit`}>{t("patients.editPatient")}</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTemplateDocOpen(true)}>
-                <LayoutTemplate className="mr-2 h-4 w-4" />
-                {t("patients.createTemplateDoc")}
-              </DropdownMenuItem>
+              {isAdmin && (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link href={`/patients/${patient.id}/edit`}>{t("patients.editPatient")}</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTemplateDocOpen(true)}>
+                    <LayoutTemplate className="mr-2 h-4 w-4" />
+                    {t("patients.createTemplateDoc")}
+                  </DropdownMenuItem>
+                </>
+              )}
               {isAdmin && (images?.length ?? 0) > 0 && (
                 <>
                   <DropdownMenuSeparator />
@@ -534,14 +598,18 @@ export default function PatientDetail() {
                   {patient.legalHold ? t("patients.releaseLegalHold") : t("patients.placeLegalHold")}
                 </DropdownMenuItem>
               )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={() => setShowDeleteDialog(true)}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                {t("patients.deletePatient")}
-              </DropdownMenuItem>
+              {isAdmin && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => setShowDeleteDialog(true)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {t("patients.deletePatient")}
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -571,20 +639,22 @@ export default function PatientDetail() {
               className="gap-1 pr-1 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/15"
             >
               {tag.name}
-              <button
-                onClick={() => removeTag.mutate({ id, tagId: tag.id })}
-                className="ml-0.5 rounded-full p-0.5 hover:bg-destructive/20 hover:text-destructive transition-colors"
-                title={t("tags.removeTag")}
-              >
-                <X className="h-3 w-3" />
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => removeTag.mutate({ id, tagId: tag.id })}
+                  className="ml-0.5 rounded-full p-0.5 hover:bg-destructive/20 hover:text-destructive transition-colors"
+                  title={t("tags.removeTag")}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
             </Badge>
           ))
         ) : (
           <span className="text-sm text-muted-foreground">{t("tags.noPatientTags")}</span>
         )}
 
-        {availableTags.length > 0 && (
+        {isAdmin && availableTags.length > 0 && (
           <div className="flex items-center gap-1.5 ml-1">
             <Select value={selectedTagId} onValueChange={setSelectedTagId}>
               <SelectTrigger className="h-7 text-xs w-36 border-dashed">
@@ -612,7 +682,7 @@ export default function PatientDetail() {
       </div>
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
             {t("patients.imageGallery")}
             <span className="text-sm font-normal text-muted-foreground px-2 py-0.5 bg-muted rounded-full">
@@ -620,22 +690,54 @@ export default function PatientDetail() {
             </span>
           </h2>
 
-          <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-md border">
-            {[1, 2, 4, 8].map((cols) => (
+          <div className="flex items-center gap-2">
+            {(images?.length ?? 0) > 0 && !moveMode && (
               <Button
-                key={cols}
-                variant={gridColumns === cols ? "secondary" : "ghost"}
+                variant="outline"
                 size="sm"
-                className="h-7 w-8 px-0"
-                onClick={() => setGridColumns(cols as 1 | 2 | 4 | 8)}
-                title={`${cols} column${cols > 1 ? "s" : ""}`}
+                onClick={() => { setMoveMode(true); setSelectedMoveIds(new Set()); }}
               >
-                <LayoutGrid className="h-4 w-4" style={{
-                  opacity: gridColumns === cols ? 1 : 0.5,
-                  transform: `scale(${cols === 1 ? 1.2 : cols === 2 ? 1 : cols === 4 ? 0.8 : 0.6})`
-                }} />
+                <ArrowRightLeft className="mr-1.5 h-3.5 w-3.5" />
+                {t("patients.selectPhotos")}
               </Button>
-            ))}
+            )}
+            {moveMode && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  {t("patients.moveSelectedCount", { count: selectedMoveIds.size })}
+                </span>
+                <Button
+                  size="sm"
+                  disabled={selectedMoveIds.size === 0}
+                  onClick={() => { setMoveDestId(null); setMoveSearch(""); setMoveOpen(true); }}
+                >
+                  <ArrowRightLeft className="mr-1.5 h-3.5 w-3.5" />
+                  {t("patients.moveToPatient")}
+                </Button>
+                <Button variant="outline" size="sm" onClick={exitMoveMode}>
+                  {t("patients.cancelSelect")}
+                </Button>
+              </div>
+            )}
+            {!moveMode && (
+              <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-md border">
+                {[1, 2, 4, 8].map((cols) => (
+                  <Button
+                    key={cols}
+                    variant={gridColumns === cols ? "secondary" : "ghost"}
+                    size="sm"
+                    className="h-7 w-8 px-0"
+                    onClick={() => setGridColumns(cols as 1 | 2 | 4 | 8)}
+                    title={`${cols} column${cols > 1 ? "s" : ""}`}
+                  >
+                    <LayoutGrid className="h-4 w-4" style={{
+                      opacity: gridColumns === cols ? 1 : 0.5,
+                      transform: `scale(${cols === 1 ? 1.2 : cols === 2 ? 1 : cols === 4 ? 0.8 : 0.6})`
+                    }} />
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -647,9 +749,12 @@ export default function PatientDetail() {
           <ImageGrid
             images={images}
             columns={gridColumns}
-            profileImageId={patient.profileImageId}
-            onSetProfile={handleSetProfile}
-            reorderablePatientId={patient.id}
+            profileImageId={moveMode ? undefined : patient.profileImageId}
+            onSetProfile={moveMode ? undefined : handleSetProfile}
+            reorderablePatientId={moveMode ? undefined : patient.id}
+            selectionMode={moveMode}
+            selectedIds={selectedMoveIds}
+            onToggleSelect={toggleMoveSelect}
           />
         ) : (
           <div className="flex flex-col items-center justify-center p-16 text-center border rounded-xl bg-card border-dashed">
@@ -731,15 +836,17 @@ export default function PatientDetail() {
               </span>
             )}
           </h2>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCephNewOpen(true)}
-            disabled={(images ?? []).length === 0}
-          >
-            <Plus className="mr-2 h-3.5 w-3.5" />
-            {t("ceph.newTracing")}
-          </Button>
+          {isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCephNewOpen(true)}
+              disabled={(images ?? []).length === 0}
+            >
+              <Plus className="mr-2 h-3.5 w-3.5" />
+              {t("ceph.newTracing")}
+            </Button>
+          )}
         </div>
 
         {cephTracings.length === 0 ? (
@@ -1132,6 +1239,98 @@ export default function PatientDetail() {
             <Button onClick={() => handleGenerateDisclosureReport("csv")} disabled={disclosureGenerating}>
               <FileDown className="mr-2 h-4 w-4" />
               CSV
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Move Photos to Patient Dialog */}
+      <Dialog open={moveOpen} onOpenChange={(o) => { if (!o) { setMoveOpen(false); setMoveDestId(null); setMoveSearch(""); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowRightLeft className="h-5 w-5 text-primary" />
+              {t("patients.moveToPatientTitle")}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {t("patients.moveToPatientDesc")}
+          </p>
+
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              placeholder={t("patients.moveToPatientSearch")}
+              value={moveSearch}
+              onChange={(e) => { setMoveSearch(e.target.value); setMoveDestId(null); }}
+              className="pl-8"
+              autoFocus
+            />
+          </div>
+
+          {/* Patient list */}
+          <div className="max-h-60 overflow-y-auto space-y-1 border rounded-md p-2 bg-muted/30">
+            {(() => {
+              const lower = moveSearch.toLowerCase();
+              const filtered = allPatients.filter(
+                (p) => p.id !== id && (
+                  p.name.toLowerCase().includes(lower) ||
+                  p.patientCode.toLowerCase().includes(lower)
+                )
+              );
+              if (filtered.length === 0) {
+                return (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    {t("patients.moveToPatientNone")}
+                  </p>
+                );
+              }
+              return filtered.map((p) => (
+                <button
+                  key={p.id}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded text-left text-sm transition-colors ${
+                    moveDestId === p.id
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-accent"
+                  }`}
+                  onClick={() => setMoveDestId(p.id)}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{p.name}</div>
+                    <div className={`text-xs truncate ${moveDestId === p.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                      {p.patientCode}
+                    </div>
+                  </div>
+                  {moveDestId === p.id && (
+                    <div className="shrink-0 h-4 w-4 rounded-full bg-primary-foreground/20 flex items-center justify-center">
+                      <div className="h-2 w-2 rounded-full bg-primary-foreground" />
+                    </div>
+                  )}
+                </button>
+              ));
+            })()}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMoveOpen(false)} disabled={moving}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              onClick={handleMove}
+              disabled={!moveDestId || moving}
+            >
+              {moving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t("patients.moveToPatientMoving")}
+                </>
+              ) : (
+                <>
+                  <ArrowRightLeft className="mr-2 h-4 w-4" />
+                  {t("patients.moveToPatientConfirm", { count: selectedMoveIds.size })}
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

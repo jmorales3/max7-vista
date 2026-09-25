@@ -29,6 +29,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -47,6 +48,9 @@ interface ImageGridProps {
   profileImageId?: number | null;
   onSetProfile?: (imageId: number) => void;
   reorderablePatientId?: number;
+  selectionMode?: boolean;
+  selectedIds?: Set<number>;
+  onToggleSelect?: (id: number) => void;
 }
 
 function SortableImageCard({
@@ -97,7 +101,7 @@ function SortableImageCard({
   );
 }
 
-export function ImageGrid({ images, columns, showPatientName = false, profileImageId, onSetProfile, reorderablePatientId }: ImageGridProps) {
+export function ImageGrid({ images, columns, showPatientName = false, profileImageId, onSetProfile, reorderablePatientId, selectionMode = false, selectedIds, onToggleSelect }: ImageGridProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const [editingImage, setEditingImage] = useState<Image | null>(null);
@@ -182,8 +186,16 @@ export function ImageGrid({ images, columns, showPatientName = false, profileIma
     );
   };
 
-  const renderCard = (image: Image, dragHandle?: React.ReactNode) => (
-    <Card className="group overflow-hidden cursor-pointer hover-elevate transition-all border-muted-foreground/20 hover:border-primary/50 relative">
+  const renderCard = (image: Image, dragHandle?: React.ReactNode) => {
+    const isSelected = selectedIds?.has(image.id) ?? false;
+    return (
+    <Card className={`group overflow-hidden cursor-pointer hover-elevate transition-all relative ${
+      selectionMode
+        ? isSelected
+          ? "border-primary ring-2 ring-primary/40"
+          : "border-muted-foreground/20 hover:border-primary/50"
+        : "border-muted-foreground/20 hover:border-primary/50"
+    }`}>
       <div className="aspect-square overflow-hidden relative">
         <img
           src={`/api/images/${image.id}/file`}
@@ -193,7 +205,17 @@ export function ImageGrid({ images, columns, showPatientName = false, profileIma
           draggable={false}
         />
         {dragHandle}
-        {onSetProfile && (
+        {selectionMode && (
+          <div className="absolute top-1.5 left-1.5 z-10">
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => onToggleSelect?.(image.id)}
+              className="h-5 w-5 border-2 border-white bg-black/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary shadow-sm"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        )}
+        {onSetProfile && !selectionMode && (
           <button
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onSetProfile(image.id); }}
             title={t("patients.setAsProfile")}
@@ -263,10 +285,11 @@ export function ImageGrid({ images, columns, showPatientName = false, profileIma
       )}
     </Card>
   );
+  };
 
   return (
     <>
-      {canReorder ? (
+      {canReorder && !selectionMode ? (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={orderedImages.map((img) => img.id)} strategy={rectSortingStrategy}>
             <div className={`grid ${getGridClass()} gap-4 transition-all duration-300`}>
@@ -278,6 +301,18 @@ export function ImageGrid({ images, columns, showPatientName = false, profileIma
             </div>
           </SortableContext>
         </DndContext>
+      ) : selectionMode ? (
+        <div className={`grid ${getGridClass()} gap-4 transition-all duration-300`}>
+          {(canReorder ? orderedImages : images).map((image) => (
+            <div
+              key={image.id}
+              className="cursor-pointer"
+              onClick={() => onToggleSelect?.(image.id)}
+            >
+              {renderCard(image)}
+            </div>
+          ))}
+        </div>
       ) : (
         <div className={`grid ${getGridClass()} gap-4 transition-all duration-300`}>
           {images.map((image) => (

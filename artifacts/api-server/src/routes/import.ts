@@ -8,13 +8,22 @@ import { db, imagesTable, patientsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { getStorageDirectory } from "../lib/storage";
 import { logAudit } from "../lib/audit";
-import { getSignedUploadUrl, uploadToGcs, toGcsPath, readFileAsBuffer } from "../lib/gcsStorage";
+import {
+  getSignedUploadUrl,
+  uploadToGcs,
+  toGcsPath,
+  readFileAsBuffer,
+} from "../lib/gcsStorage";
+import { requireRole } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
 function tid(req: { session?: { tenantId?: number } }): number {
   const t = req.session?.tenantId;
-  if (!t) throw Object.assign(new Error("No tenant associated with this session"), { status: 403 });
+  if (!t)
+    throw Object.assign(new Error("No tenant associated with this session"), {
+      status: 403,
+    });
   return t;
 }
 
@@ -24,7 +33,14 @@ const importUpload = multer({
 });
 
 const IMAGE_EXTENSIONS = new Set([
-  ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff", ".tif",
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".gif",
+  ".bmp",
+  ".webp",
+  ".tiff",
+  ".tif",
 ]);
 
 interface PatientInfo {
@@ -60,7 +76,12 @@ function parseCSV(csv: string): Map<string, PatientInfo> {
     h.toLowerCase().replace(/['"]/g, "").replace(/\s+/g, ""),
   );
   const idIdx = header.findIndex(
-    (h) => h === "id" || h === "patientid" || h === "patient_id" || h === "codigo" || h === "code",
+    (h) =>
+      h === "id" ||
+      h === "patientid" ||
+      h === "patient_id" ||
+      h === "codigo" ||
+      h === "code",
   );
   const nameIdx = header.findIndex(
     (h) =>
@@ -77,7 +98,11 @@ function parseCSV(csv: string): Map<string, PatientInfo> {
     (h) => h === "firstname" || h === "first_name",
   );
   const lastNameIdx = header.findIndex(
-    (h) => h === "lastname" || h === "last_name" || h === "apellido" || h === "apellidos",
+    (h) =>
+      h === "lastname" ||
+      h === "last_name" ||
+      h === "apellido" ||
+      h === "apellidos",
   );
   const dobIdx = header.findIndex(
     (h) =>
@@ -100,10 +125,11 @@ function parseCSV(csv: string): Map<string, PatientInfo> {
     if (!id) continue;
 
     let name: string;
-    const clean = (v: string | undefined) => v?.replace(/['"]/g, "").trim() ?? "";
+    const clean = (v: string | undefined) =>
+      v?.replace(/['"]/g, "").trim() ?? "";
     if (nameIdx >= 0 && clean(cols[nameIdx])) {
       name = clean(cols[nameIdx]);
-    } else if ((firstNameIdx >= 0 || lastNameIdx >= 0)) {
+    } else if (firstNameIdx >= 0 || lastNameIdx >= 0) {
       const first = firstNameIdx >= 0 ? clean(cols[firstNameIdx]) : "";
       const last = lastNameIdx >= 0 ? clean(cols[lastNameIdx]) : "";
       name = [first, last].filter(Boolean).join(" ") || id;
@@ -120,11 +146,17 @@ function parseCSV(csv: string): Map<string, PatientInfo> {
 async function extractExifDate(buffer: Buffer): Promise<Date | null> {
   try {
     const { parse } = await import("exifr");
-    const exif = await parse(buffer, ["DateTimeOriginal", "CreateDate", "DateTime"]);
+    const exif = await parse(buffer, [
+      "DateTimeOriginal",
+      "CreateDate",
+      "DateTime",
+    ]);
     const raw = exif?.DateTimeOriginal ?? exif?.CreateDate ?? exif?.DateTime;
     if (raw instanceof Date) return raw;
     if (typeof raw === "string") {
-      const parsed = new Date(raw.replace(/^(\d{4}):(\d{2}):(\d{2})/, "$1-$2-$3"));
+      const parsed = new Date(
+        raw.replace(/^(\d{4}):(\d{2}):(\d{2})/, "$1-$2-$3"),
+      );
       if (!isNaN(parsed.getTime())) return parsed;
     }
   } catch {
@@ -151,7 +183,12 @@ async function upsertPatient(
   const [existing] = await db
     .select({ id: patientsTable.id })
     .from(patientsTable)
-    .where(and(eq(patientsTable.tenantId, tenantId), eq(patientsTable.patientCode, patientCode)));
+    .where(
+      and(
+        eq(patientsTable.tenantId, tenantId),
+        eq(patientsTable.patientCode, patientCode),
+      ),
+    );
 
   if (existing) {
     summary.patientsMatched++;
@@ -181,21 +218,30 @@ async function upsertPatient(
     })
     .returning({ id: patientsTable.id });
   summary.patientsCreated++;
-  logAudit(req, "patient_create", "patient", created.id, { patientCode, source: "bulk-import" });
+  logAudit(req, "patient_create", "patient", created.id, {
+    patientCode,
+    source: "bulk-import",
+  });
   return created;
 }
 
 // Returns true if an image with the same content hash already exists for
 // this patient (duplicate import), false otherwise.
-async function isDuplicateImage(patientId: number, sha256: string): Promise<boolean> {
+async function isDuplicateImage(
+  patientId: number,
+  sha256: string,
+): Promise<boolean> {
   const [existing] = await db
     .select({ id: imagesTable.id })
     .from(imagesTable)
-    .where(and(eq(imagesTable.patientId, patientId), eq(imagesTable.sha256, sha256)));
+    .where(
+      and(eq(imagesTable.patientId, patientId), eq(imagesTable.sha256, sha256)),
+    );
   return !!existing;
 }
 
 async function saveImage(
+  tenantId: number,
   patientId: number,
   fileName: string,
   buffer: Buffer,
@@ -224,6 +270,7 @@ async function saveImage(
   // better-sqlite3 rejects Date objects and booleans — pass primitives that
   // both the SQLite (text) and PostgreSQL (timestamp) adapters accept.
   await db.insert(imagesTable).values({
+    tenantId,
     patientId,
     filePath,
     fileName,
@@ -238,6 +285,7 @@ async function saveImage(
 
 router.post(
   "/import/bulk",
+  requireRole("admin", "superadmin"),
   importUpload.fields([
     { name: "archive", maxCount: 1 },
     { name: "patients", maxCount: 1 },
@@ -306,7 +354,12 @@ router.post(
     }
 
     for (const [patientCode, entries] of byPatient) {
-      const dbPatient = await upsertPatient(req, patientCode, patientMap, summary);
+      const dbPatient = await upsertPatient(
+        req,
+        patientCode,
+        patientMap,
+        summary,
+      );
 
       for (const entry of entries) {
         const fileName = path.basename(entry.entryName);
@@ -316,14 +369,27 @@ router.post(
           if (!capturedAt) {
             const zipDate = entry.header.time;
             capturedAt =
-              zipDate instanceof Date && !isNaN(zipDate.getTime()) ? zipDate : new Date();
+              zipDate instanceof Date && !isNaN(zipDate.getTime())
+                ? zipDate
+                : new Date();
           }
           const before = summary.duplicatesSkipped;
-          await saveImage(dbPatient.id, fileName, buffer, capturedAt, storageDir, summary);
+          await saveImage(
+            tid(req),
+            dbPatient.id,
+            fileName,
+            buffer,
+            capturedAt,
+            storageDir,
+            summary,
+          );
           if (summary.duplicatesSkipped === before) summary.imagesImported++;
         } catch (err) {
           const reason = err instanceof Error ? err.message : String(err);
-          console.error(`[bulk-import/zip] failed to save ${entry.entryName}:`, reason);
+          console.error(
+            `[bulk-import/zip] failed to save ${entry.entryName}:`,
+            reason,
+          );
           summary.errors.push({ file: entry.entryName, reason });
         }
       }
@@ -349,163 +415,202 @@ router.post(
 //   2. Browser PUTs the ZIP directly to GCS (bypasses proxy)
 //   3. POST /import/bulk-from-gcs   → server reads ZIP from GCS, runs import
 
-router.post("/import/bulk-upload-url", async (req, res): Promise<void> => {
-  try {
-    const objectName = `imports/bulk/${Date.now()}_${Math.random().toString(36).slice(2, 7)}.zip`;
-    const signedUrl = await getSignedUploadUrl(objectName, 3600);
-    res.json({ signedUrl, objectName });
-  } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err);
-    res.status(500).json({ error: `Could not generate upload URL: ${reason}` });
-  }
-});
+router.post(
+  "/import/bulk-upload-url",
+  requireRole("admin", "superadmin"),
+  async (req, res): Promise<void> => {
+    try {
+      const objectName = `imports/bulk/${Date.now()}_${Math.random().toString(36).slice(2, 7)}.zip`;
+      const signedUrl = await getSignedUploadUrl(objectName, 3600);
+      res.json({ signedUrl, objectName });
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      res
+        .status(500)
+        .json({ error: `Could not generate upload URL: ${reason}` });
+    }
+  },
+);
 
-router.post("/import/bulk-from-gcs", async (req, res): Promise<void> => {
-  const { objectName, csvContent } = req.body as {
-    objectName?: string;
-    csvContent?: string;
-  };
+router.post(
+  "/import/bulk-from-gcs",
+  requireRole("admin", "superadmin"),
+  async (req, res): Promise<void> => {
+    const { objectName, csvContent } = req.body as {
+      objectName?: string;
+      csvContent?: string;
+    };
 
-  if (!objectName) {
-    res.status(400).json({ error: "objectName is required" });
-    return;
-  }
+    if (!objectName) {
+      res.status(400).json({ error: "objectName is required" });
+      return;
+    }
 
-  const summary: ImportSummary = {
-    patientsCreated: 0,
-    patientsMatched: 0,
-    imagesImported: 0,
-    duplicatesSkipped: 0,
-    errors: [],
-  };
+    const summary: ImportSummary = {
+      patientsCreated: 0,
+      patientsMatched: 0,
+      imagesImported: 0,
+      duplicatesSkipped: 0,
+      errors: [],
+    };
 
-  const patientMap = csvContent
-    ? parseCSV(csvContent)
-    : new Map<string, PatientInfo>();
+    const patientMap = csvContent
+      ? parseCSV(csvContent)
+      : new Map<string, PatientInfo>();
 
-  // Download the ZIP from GCS (server → GCS, no proxy involved)
-  let zipBuffer: Buffer | null;
-  try {
-    zipBuffer = await readFileAsBuffer(toGcsPath(objectName));
-    if (!zipBuffer) throw new Error("File not found in storage");
-  } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err);
-    res.status(400).json({ error: `Could not read ZIP from storage: ${reason}` });
-    return;
-  }
+    // Download the ZIP from GCS (server → GCS, no proxy involved)
+    let zipBuffer: Buffer | null;
+    try {
+      zipBuffer = await readFileAsBuffer(toGcsPath(objectName));
+      if (!zipBuffer) throw new Error("File not found in storage");
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      res
+        .status(400)
+        .json({ error: `Could not read ZIP from storage: ${reason}` });
+      return;
+    }
 
-  let zip: AdmZip;
-  try {
-    zip = new AdmZip(zipBuffer);
-  } catch {
-    res.status(400).json({ error: "Could not open ZIP archive" });
-    return;
-  }
+    let zip: AdmZip;
+    try {
+      zip = new AdmZip(zipBuffer);
+    } catch {
+      res.status(400).json({ error: "Could not open ZIP archive" });
+      return;
+    }
 
-  // From here on we stream NDJSON progress lines so the client can render a
-  // live progress bar instead of waiting silently for the whole import.
-  res.writeHead(200, {
-    "Content-Type": "application/x-ndjson",
-    "Cache-Control": "no-cache",
-    "X-Accel-Buffering": "no",
-  });
-  const emit = (event: Record<string, unknown>) => res.write(JSON.stringify(event) + "\n");
+    // From here on we stream NDJSON progress lines so the client can render a
+    // live progress bar instead of waiting silently for the whole import.
+    res.writeHead(200, {
+      "Content-Type": "application/x-ndjson",
+      "Cache-Control": "no-cache",
+      "X-Accel-Buffering": "no",
+    });
+    const emit = (event: Record<string, unknown>) =>
+      res.write(JSON.stringify(event) + "\n");
 
-  // Detect single root wrapper folder
-  const topLevelNames = new Set<string>();
-  for (const entry of zip.getEntries()) {
-    if (entry.isDirectory) continue;
-    const parts = entry.entryName.replace(/\\/g, "/").split("/");
-    if (parts.length < 2) continue;
-    const ext = path.extname(parts[parts.length - 1]).toLowerCase();
-    if (!IMAGE_EXTENSIONS.has(ext)) continue;
-    topLevelNames.add(parts[0]);
-  }
-  const patientDepth = topLevelNames.size === 1 ? 1 : 0;
+    // Detect single root wrapper folder
+    const topLevelNames = new Set<string>();
+    for (const entry of zip.getEntries()) {
+      if (entry.isDirectory) continue;
+      const parts = entry.entryName.replace(/\\/g, "/").split("/");
+      if (parts.length < 2) continue;
+      const ext = path.extname(parts[parts.length - 1]).toLowerCase();
+      if (!IMAGE_EXTENSIONS.has(ext)) continue;
+      topLevelNames.add(parts[0]);
+    }
+    const patientDepth = topLevelNames.size === 1 ? 1 : 0;
 
-  const byPatient = new Map<string, AdmZip.IZipEntry[]>();
-  for (const entry of zip.getEntries()) {
-    if (entry.isDirectory) continue;
-    const parts = entry.entryName.replace(/\\/g, "/").split("/");
-    if (parts.length < patientDepth + 2) continue;
-    const patientCode = parts[patientDepth];
-    const ext = path.extname(parts[parts.length - 1]).toLowerCase();
-    if (!IMAGE_EXTENSIONS.has(ext)) continue;
-    if (!byPatient.has(patientCode)) byPatient.set(patientCode, []);
-    byPatient.get(patientCode)!.push(entry);
-  }
+    const byPatient = new Map<string, AdmZip.IZipEntry[]>();
+    for (const entry of zip.getEntries()) {
+      if (entry.isDirectory) continue;
+      const parts = entry.entryName.replace(/\\/g, "/").split("/");
+      if (parts.length < patientDepth + 2) continue;
+      const patientCode = parts[patientDepth];
+      const ext = path.extname(parts[parts.length - 1]).toLowerCase();
+      if (!IMAGE_EXTENSIONS.has(ext)) continue;
+      if (!byPatient.has(patientCode)) byPatient.set(patientCode, []);
+      byPatient.get(patientCode)!.push(entry);
+    }
 
-  const totalFiles = Array.from(byPatient.values()).reduce((n, e) => n + e.length, 0);
-  emit({ type: "start", total: totalFiles });
-  let processed = 0;
+    const totalFiles = Array.from(byPatient.values()).reduce(
+      (n, e) => n + e.length,
+      0,
+    );
+    emit({ type: "start", total: totalFiles });
+    let processed = 0;
 
-  for (const [patientCode, entries] of byPatient) {
-    const dbPatient = await upsertPatient(req, patientCode, patientMap, summary);
+    for (const [patientCode, entries] of byPatient) {
+      const dbPatient = await upsertPatient(
+        req,
+        patientCode,
+        patientMap,
+        summary,
+      );
 
-    for (const entry of entries) {
-      const fileName = path.basename(entry.entryName);
-      try {
-        const buffer = entry.getData();
-        let capturedAt = await extractExifDate(buffer);
-        if (!capturedAt) {
-          const zipDate = entry.header.time;
-          capturedAt =
-            zipDate instanceof Date && !isNaN(zipDate.getTime()) ? zipDate : new Date();
+      for (const entry of entries) {
+        const fileName = path.basename(entry.entryName);
+        try {
+          const buffer = entry.getData();
+          let capturedAt = await extractExifDate(buffer);
+          if (!capturedAt) {
+            const zipDate = entry.header.time;
+            capturedAt =
+              zipDate instanceof Date && !isNaN(zipDate.getTime())
+                ? zipDate
+                : new Date();
+          }
+
+          const sha256 = createHash("sha256").update(buffer).digest("hex");
+          if (await isDuplicateImage(dbPatient.id, sha256)) {
+            summary.duplicatesSkipped++;
+            continue;
+          }
+
+          // Save to GCS (cloud path — persists across deployments)
+          const ext = path.extname(fileName) || ".jpg";
+          const dateStr = capturedAt.toISOString().split("T")[0];
+          const storedName = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}${ext}`;
+          const imgObjectName = `images/${dbPatient.id}/${dateStr}/${storedName}`;
+          const gcsPath = await uploadToGcs(
+            buffer,
+            imgObjectName,
+            `image/${ext.slice(1)}`,
+          );
+
+          const legend = path
+            .basename(fileName, ext)
+            .replace(/[_-]+/g, " ")
+            .trim();
+          await db.insert(imagesTable).values({
+            tenantId: tid(req),
+            patientId: dbPatient.id,
+            filePath: gcsPath,
+            fileName,
+            notes: legend || null,
+            capturedAt,
+            isUnassigned: 0 as unknown as boolean,
+            sha256,
+          });
+
+          summary.imagesImported++;
+        } catch (err) {
+          const reason = err instanceof Error ? err.message : String(err);
+          summary.errors.push({ file: entry.entryName, reason });
+        } finally {
+          processed++;
+          emit({
+            type: "progress",
+            current: processed,
+            total: totalFiles,
+            patientCode,
+            fileName,
+          });
         }
-
-        const sha256 = createHash("sha256").update(buffer).digest("hex");
-        if (await isDuplicateImage(dbPatient.id, sha256)) {
-          summary.duplicatesSkipped++;
-          continue;
-        }
-
-        // Save to GCS (cloud path — persists across deployments)
-        const ext = path.extname(fileName) || ".jpg";
-        const dateStr = capturedAt.toISOString().split("T")[0];
-        const storedName = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}${ext}`;
-        const imgObjectName = `images/${dbPatient.id}/${dateStr}/${storedName}`;
-        const gcsPath = await uploadToGcs(buffer, imgObjectName, `image/${ext.slice(1)}`);
-
-        const legend = path.basename(fileName, ext).replace(/[_-]+/g, " ").trim();
-        await db.insert(imagesTable).values({
-          patientId: dbPatient.id,
-          filePath: gcsPath,
-          fileName,
-          notes: legend || null,
-          capturedAt,
-          isUnassigned: 0 as unknown as boolean,
-          sha256,
-        });
-
-        summary.imagesImported++;
-      } catch (err) {
-        const reason = err instanceof Error ? err.message : String(err);
-        summary.errors.push({ file: entry.entryName, reason });
-      } finally {
-        processed++;
-        emit({ type: "progress", current: processed, total: totalFiles, patientCode, fileName });
       }
     }
-  }
 
-  // Clean up the temporary ZIP from GCS (best-effort)
-  try {
-    const { deleteFile } = await import("../lib/gcsStorage");
-    await deleteFile(toGcsPath(objectName));
-  } catch { /* ignore */ }
+    // Clean up the temporary ZIP from GCS (best-effort)
+    try {
+      const { deleteFile } = await import("../lib/gcsStorage");
+      await deleteFile(toGcsPath(objectName));
+    } catch {
+      /* ignore */
+    }
 
-  logAudit(req, "bulk_import", "image", 0, {
-    patientsCreated: summary.patientsCreated,
-    patientsMatched: summary.patientsMatched,
-    imagesImported: summary.imagesImported,
-    duplicatesSkipped: summary.duplicatesSkipped,
-    errors: summary.errors.length,
-    source: "zip-gcs",
-  });
+    logAudit(req, "bulk_import", "image", 0, {
+      patientsCreated: summary.patientsCreated,
+      patientsMatched: summary.patientsMatched,
+      imagesImported: summary.imagesImported,
+      duplicatesSkipped: summary.duplicatesSkipped,
+      errors: summary.errors.length,
+      source: "zip-gcs",
+    });
 
-  emit({ type: "done", summary });
-  res.end();
-});
+    emit({ type: "done", summary });
+    res.end();
+  },
+);
 
 // ─── Server-folder import ─────────────────────────────────────────────────────
 
@@ -530,6 +635,7 @@ function walkImageFiles(dir: string): string[] {
 
 router.post(
   "/import/folder",
+  requireRole("admin", "superadmin"),
   importUpload.fields([{ name: "patients", maxCount: 1 }]),
   async (req, res): Promise<void> => {
     const files = req.files as Record<string, Express.Multer.File[]>;
@@ -542,9 +648,13 @@ router.post(
     }
 
     // Accept both Unix (/data/photos) and Windows (C:\fotos) absolute paths
-    const isAbsolute = path.isAbsolute(folderPath) || /^[a-zA-Z]:[\\\/]/.test(folderPath);
+    const isAbsolute =
+      path.isAbsolute(folderPath) || /^[a-zA-Z]:[\\\/]/.test(folderPath);
     if (!isAbsolute) {
-      res.status(400).json({ error: "folderPath must be an absolute path (e.g. /data/photos or C:\\fotos)" });
+      res.status(400).json({
+        error:
+          "folderPath must be an absolute path (e.g. /data/photos or C:\\fotos)",
+      });
       return;
     }
 
@@ -555,7 +665,9 @@ router.post(
         return;
       }
     } catch {
-      res.status(400).json({ error: `Folder not found or not accessible by the server: ${folderPath}` });
+      res.status(400).json({
+        error: `Folder not found or not accessible by the server: ${folderPath}`,
+      });
       return;
     }
 
@@ -576,7 +688,12 @@ router.post(
       const allImagePaths = walkImageFiles(folderPath);
 
       if (allImagePaths.length === 0) {
-        res.json({ ...summary, errors: [{ file: folderPath, reason: "No image files found in this folder" }] });
+        res.json({
+          ...summary,
+          errors: [
+            { file: folderPath, reason: "No image files found in this folder" },
+          ],
+        });
         return;
       }
 
@@ -604,7 +721,16 @@ router.post(
       }
 
       if (byPatient.size === 0) {
-        res.json({ ...summary, errors: [{ file: folderPath, reason: "No patient subfolders found. Images must be inside subfolders named with the patient ID (e.g. C:\\fotos\\2116\\photo.jpg)" }] });
+        res.json({
+          ...summary,
+          errors: [
+            {
+              file: folderPath,
+              reason:
+                "No patient subfolders found. Images must be inside subfolders named with the patient ID (e.g. C:\\fotos\\2116\\photo.jpg)",
+            },
+          ],
+        });
         return;
       }
 
@@ -617,14 +743,23 @@ router.post(
         "Cache-Control": "no-cache",
         "X-Accel-Buffering": "no",
       });
-      const emit = (event: Record<string, unknown>) => res.write(JSON.stringify(event) + "\n");
+      const emit = (event: Record<string, unknown>) =>
+        res.write(JSON.stringify(event) + "\n");
 
-      const totalFiles = Array.from(byPatient.values()).reduce((n, p) => n + p.length, 0);
+      const totalFiles = Array.from(byPatient.values()).reduce(
+        (n, p) => n + p.length,
+        0,
+      );
       emit({ type: "start", total: totalFiles });
       let processed = 0;
 
       for (const [patientCode, filePaths] of byPatient) {
-        const dbPatient = await upsertPatient(req, patientCode, patientMap, summary);
+        const dbPatient = await upsertPatient(
+          req,
+          patientCode,
+          patientMap,
+          summary,
+        );
 
         for (const srcPath of filePaths) {
           const fileName = path.basename(srcPath);
@@ -636,7 +771,15 @@ router.post(
               capturedAt = stat.mtime ?? new Date();
             }
             const before = summary.duplicatesSkipped;
-            await saveImage(dbPatient.id, fileName, buffer, capturedAt, storageDir, summary);
+            await saveImage(
+              tid(req),
+              dbPatient.id,
+              fileName,
+              buffer,
+              capturedAt,
+              storageDir,
+              summary,
+            );
             if (summary.duplicatesSkipped === before) summary.imagesImported++;
           } catch (err) {
             summary.errors.push({
@@ -645,7 +788,13 @@ router.post(
             });
           } finally {
             processed++;
-            emit({ type: "progress", current: processed, total: totalFiles, patientCode, fileName });
+            emit({
+              type: "progress",
+              current: processed,
+              total: totalFiles,
+              patientCode,
+              fileName,
+            });
           }
         }
       }
@@ -669,7 +818,10 @@ router.post(
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (res.headersSent) {
-        res.write(JSON.stringify({ type: "error", error: `Import failed: ${msg}` }) + "\n");
+        res.write(
+          JSON.stringify({ type: "error", error: `Import failed: ${msg}` }) +
+            "\n",
+        );
         res.end();
       } else {
         res.status(500).json({ error: `Import failed: ${msg}` });

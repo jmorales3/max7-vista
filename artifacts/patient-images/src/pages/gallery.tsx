@@ -33,6 +33,7 @@ import {
 import { queryClient as globalQueryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { downloadImagesZip, downloadImagesIndividually } from "@/lib/imageExport";
+import { useAuth } from "@/contexts/AuthContext";
 import { type Slide } from "@/components/PresentationBuilder";
 import {
   LayoutGrid, ImageIcon, Camera, Tags as TagsIcon, Check, X, MonitorPlay,
@@ -88,6 +89,8 @@ interface GalleryItem {
 export default function Gallery() {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const canManageClinicalData = user?.role === "admin" || user?.role === "superadmin";
   const qc = useQueryClient();
 
   const [gridColumns, setGridColumns] = useState<1 | 2 | 4 | 8>(4);
@@ -375,33 +378,37 @@ export default function Gallery() {
       {selectionMode && selected.size > 0 && (
         <div className="flex items-center gap-2 flex-wrap bg-muted/50 border rounded-lg px-3 py-2">
           <Badge variant="secondary">{t("gallery.selectedCount", { count: selected.size })}</Badge>
-          <Button size="sm" onClick={() => setCreatePresentationOpen(true)}>
-            <MonitorPlay className="h-4 w-4 mr-1" />
-            {t("gallery.createPresentation")}
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="sm" variant="outline" disabled={exportingZip || exportingIndividually}>
-                {(exportingZip || exportingIndividually) ? (
-                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                ) : (
-                  <Download className="h-4 w-4 mr-1" />
-                )}
-                {t("gallery.export")}
-                <ChevronDown className="h-3.5 w-3.5 ml-1" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuItem onClick={handleExportZip} disabled={exportingZip}>
-                <FileArchive className="h-4 w-4 mr-2" />
-                {t("gallery.exportZip")}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportIndividually} disabled={exportingIndividually}>
-                <Files className="h-4 w-4 mr-2" />
-                {t("gallery.exportIndividually")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {canManageClinicalData && (
+            <Button size="sm" onClick={() => setCreatePresentationOpen(true)}>
+              <MonitorPlay className="h-4 w-4 mr-1" />
+              {t("gallery.createPresentation")}
+            </Button>
+          )}
+          {canManageClinicalData && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" disabled={exportingZip || exportingIndividually}>
+                  {(exportingZip || exportingIndividually) ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4 mr-1" />
+                  )}
+                  {t("gallery.export")}
+                  <ChevronDown className="h-3.5 w-3.5 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem onClick={handleExportZip} disabled={exportingZip}>
+                  <FileArchive className="h-4 w-4 mr-2" />
+                  {t("gallery.exportZip")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportIndividually} disabled={exportingIndividually}>
+                  <Files className="h-4 w-4 mr-2" />
+                  {t("gallery.exportIndividually")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
             {t("library.clearSelection")}
           </Button>

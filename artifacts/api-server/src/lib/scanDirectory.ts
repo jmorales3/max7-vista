@@ -3,7 +3,16 @@ import fs from "fs";
 import { db, imagesTable, patientsTable } from "@workspace/db";
 import { setSetting } from "./storage";
 
-const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff", ".tif"]);
+const IMAGE_EXTENSIONS = new Set([
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".gif",
+  ".bmp",
+  ".webp",
+  ".tiff",
+  ".tif",
+]);
 const DATE_DIR_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function walkDirectory(dir: string): string[] {
@@ -13,7 +22,10 @@ function walkDirectory(dir: string): string[] {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       results.push(...walkDirectory(fullPath));
-    } else if (entry.isFile() && IMAGE_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) {
+    } else if (
+      entry.isFile() &&
+      IMAGE_EXTENSIONS.has(path.extname(entry.name).toLowerCase())
+    ) {
       results.push(fullPath);
     }
   }
@@ -49,10 +61,15 @@ export interface ScanResult {
 
 export async function scanDirectory(storageDir: string): Promise<ScanResult> {
   const allFiles = walkDirectory(storageDir);
-  const existingImages = await db.select({ filePath: imagesTable.filePath }).from(imagesTable);
+  const existingImages = await db
+    .select({ filePath: imagesTable.filePath })
+    .from(imagesTable);
   const existingPaths = new Set(existingImages.map((img) => img.filePath));
-  const allPatients = await db.select({ id: patientsTable.id }).from(patientsTable);
+  const allPatients = await db
+    .select({ id: patientsTable.id, tenantId: patientsTable.tenantId })
+    .from(patientsTable);
   const validPatientIds = new Set(allPatients.map((p) => p.id));
+  const patientTenantIds = new Map(allPatients.map((p) => [p.id, p.tenantId]));
 
   let indexed = 0;
   let skipped = 0;
@@ -74,6 +91,10 @@ export async function scanDirectory(storageDir: string): Promise<ScanResult> {
           : null;
       const capturedAt = inferredDate ?? stat.mtime;
       await db.insert(imagesTable).values({
+        tenantId:
+          resolvedPatientId !== null
+            ? (patientTenantIds.get(resolvedPatientId) ?? null)
+            : null,
         filePath,
         fileName,
         patientId: resolvedPatientId,

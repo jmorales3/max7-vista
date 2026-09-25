@@ -21,6 +21,7 @@ import * as Haptics from "expo-haptics";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListPatients,
+  getListPatientsQueryKey,
   useListImages,
   getListImagesQueryKey,
   customFetch,
@@ -116,6 +117,7 @@ function AssignModal({
 
   const { data: patients, isLoading: patientsLoading } = useListPatients(
     debouncedSearch ? { search: debouncedSearch } : {},
+    { query: { queryKey: getListPatientsQueryKey(debouncedSearch ? { search: debouncedSearch } : {}), enabled: !!debouncedSearch } }
   );
 
   const handleClose = useCallback(() => {
@@ -311,11 +313,13 @@ function AssignModal({
             <View style={s.emptyBox}>
               <ActivityIndicator color={colors.primary} size="small" />
             </View>
+          ) : !debouncedSearch ? (
+            <View style={s.emptyBox}>
+              <Text style={s.emptyText}>{t("patients.searchPrompt")}</Text>
+            </View>
           ) : (patients ?? []).length === 0 ? (
             <View style={s.emptyBox}>
-              <Text style={s.emptyText}>
-                {debouncedSearch ? t("patients.notFound") : t("patients.noneYet")}
-              </Text>
+              <Text style={s.emptyText}>{t("patients.notFound")}</Text>
             </View>
           ) : (
             (patients ?? []).map((p) => {
@@ -408,7 +412,10 @@ function BatchAssignModal({
     debounceRef.current = setTimeout(() => setDebouncedSearch(text), 300);
   }, []);
 
-  const { data: patients } = useListPatients(debouncedSearch ? { search: debouncedSearch } : {});
+  const { data: patients } = useListPatients(
+    debouncedSearch ? { search: debouncedSearch } : {},
+    { query: { queryKey: getListPatientsQueryKey(debouncedSearch ? { search: debouncedSearch } : {}), enabled: !!debouncedSearch } }
+  );
 
   const handleClose = useCallback(() => {
     if (assigning) return;
@@ -502,6 +509,8 @@ function BatchAssignModal({
       borderColor: colors.border, alignItems: "center", justifyContent: "center",
     },
     cancelBtnText: { fontSize: 15, fontFamily: "Inter_500Medium", color: colors.foreground },
+    emptyHint: { padding: 24, alignItems: "center" },
+    emptyHintText: { fontSize: 14, fontFamily: "Inter_400Regular", color: colors.mutedForeground, textAlign: "center" },
   });
 
   return (
@@ -551,6 +560,13 @@ function BatchAssignModal({
             );
           }}
           keyboardShouldPersistTaps="handled"
+          ListEmptyComponent={
+            <View style={s.emptyHint}>
+              <Text style={s.emptyHintText}>
+                {debouncedSearch ? t("patients.notFound") : t("patients.searchPrompt")}
+              </Text>
+            </View>
+          }
         />
 
         <View style={s.footer}>
@@ -647,8 +663,8 @@ function UnassignedTab({ colors, insets }: { colors: ReturnType<typeof useColors
     });
   }, []);
 
-  const handleLongPress = useCallback(async (img: PatientImage) => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+  const handleLongPress = useCallback((img: PatientImage) => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     setSelectMode(true);
     setSelectedIds(new Set([img.id]));
   }, []);
@@ -749,18 +765,17 @@ function UnassignedTab({ colors, insets }: { colors: ReturnType<typeof useColors
       borderWidth: 2, borderColor: "#fff",
       backgroundColor: "rgba(0,0,0,0.2)",
     },
-    bottomBar: {
-      padding: 16,
-      paddingBottom: Platform.OS === "web" ? 16 : insets.bottom + 16,
-      borderTopWidth: 1, borderTopColor: colors.border,
-      backgroundColor: colors.background,
+    assignBar: {
+      paddingHorizontal: 16, paddingVertical: 10,
+      borderBottomWidth: 1, borderBottomColor: colors.border,
+      backgroundColor: colors.card,
     },
     assignSelectedBtn: {
-      height: 52, borderRadius: colors.radius,
+      height: 44, borderRadius: colors.radius,
       backgroundColor: colors.primary, alignItems: "center",
       justifyContent: "center", flexDirection: "row", gap: 8,
     },
-    assignSelectedBtnText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: colors.primaryForeground },
+    assignSelectedBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.primaryForeground },
   });
 
   if (isLoading) {
@@ -789,17 +804,33 @@ function UnassignedTab({ colors, insets }: { colors: ReturnType<typeof useColors
     <View style={s.flex1}>
       {/* Select mode toolbar */}
       {selectMode && (
-        <View style={s.selectBar}>
-          <Text style={s.selectBarCount}>
-            {t("unassigned.selectedCount", { count: selectedCount })}
-          </Text>
-          <TouchableOpacity style={s.selectBarBtn} onPress={selectAll}>
-            <Text style={s.selectBarBtnText}>{t("unassigned.selectAll")}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={s.cancelSelectBtn} onPress={exitSelectMode}>
-            <Text style={s.cancelSelectBtnText}>{t("unassigned.cancelSelect")}</Text>
-          </TouchableOpacity>
-        </View>
+        <>
+          <View style={s.selectBar}>
+            <Text style={s.selectBarCount}>
+              {t("unassigned.selectedCount", { count: selectedCount })}
+            </Text>
+            <TouchableOpacity style={s.selectBarBtn} onPress={selectAll}>
+              <Text style={s.selectBarBtnText}>{t("unassigned.selectAll")}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.cancelSelectBtn} onPress={exitSelectMode}>
+              <Text style={s.cancelSelectBtnText}>{t("unassigned.cancelSelect")}</Text>
+            </TouchableOpacity>
+          </View>
+          {selectedCount > 0 && (
+            <View style={s.assignBar}>
+              <TouchableOpacity
+                style={s.assignSelectedBtn}
+                onPress={() => setBatchAssignVisible(true)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="person-add" size={18} color={colors.primaryForeground} />
+                <Text style={s.assignSelectedBtnText}>
+                  {t("unassigned.assignSelected", { count: selectedCount })}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </>
       )}
 
       <ScrollView
@@ -854,21 +885,6 @@ function UnassignedTab({ colors, insets }: { colors: ReturnType<typeof useColors
         )}
       </ScrollView>
 
-      {/* Batch assign bottom bar — shown when images are selected */}
-      {selectMode && selectedCount > 0 && (
-        <View style={s.bottomBar}>
-          <TouchableOpacity
-            style={s.assignSelectedBtn}
-            onPress={() => setBatchAssignVisible(true)}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="person-add" size={20} color={colors.primaryForeground} />
-            <Text style={s.assignSelectedBtnText}>
-              {t("unassigned.assignSelected", { count: selectedCount })}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
 
       <AssignModal
         image={assignTarget}
@@ -908,6 +924,7 @@ export default function PatientsScreen() {
 
   const { data, isLoading, isError, refetch, isFetching } = useListPatients(
     debouncedSearch ? { search: debouncedSearch } : {},
+    { query: { queryKey: getListPatientsQueryKey(debouncedSearch ? { search: debouncedSearch } : {}), enabled: !!debouncedSearch } }
   );
 
   // Also fetch unassigned count for badge
@@ -1137,13 +1154,17 @@ export default function PatientsScreen() {
               scrollEnabled={!!patients.length}
               ListEmptyComponent={
                 <View style={s.emptyBox}>
-                  <Ionicons name="people-outline" size={48} color={colors.mutedForeground} />
+                  <Ionicons
+                    name={debouncedSearch ? "people-outline" : "search-outline"}
+                    size={48}
+                    color={colors.mutedForeground}
+                  />
                   <Text style={s.emptyText}>
-                    {debouncedSearch ? t("patients.notFound") : t("patients.noneYet")}
+                    {debouncedSearch ? t("patients.notFound") : t("patients.searchPrompt")}
                   </Text>
-                  {debouncedSearch ? (
+                  {debouncedSearch && (
                     <Text style={s.emptySubtext}>{t("patients.tryDifferent")}</Text>
-                  ) : null}
+                  )}
                 </View>
               }
             />

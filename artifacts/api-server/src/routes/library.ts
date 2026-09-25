@@ -5,8 +5,10 @@ import { db, imagesTable, tagsTable, libraryAssetTagsTable } from "@workspace/db
 import { streamFile, streamFileWithRange, deleteFile, isGcsPath, toGcsPath, getSignedUploadUrl } from "../lib/gcsStorage";
 import { logAudit } from "../lib/audit";
 import { findPresentationsReferencingImages, removeImagesFromPresentations } from "../lib/presentationRefs";
+import { requireRole } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
+router.use("/library-assets", requireRole("admin", "superadmin"));
 
 const ALLOWED_IMAGE_TYPES = [
   "image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml", "image/tiff",
@@ -29,7 +31,7 @@ function tid(req: any): number {
   return t;
 }
 
-async function getTagsForAssets(assetIds: number[]): Promise<Record<number, { id: number; name: string }[]>> {
+async function getTagsForAssets(assetIds: number[], tenantId: number): Promise<Record<number, { id: number; name: string }[]>> {
   if (!assetIds.length) return {};
   const rows = await db
     .select({
@@ -39,7 +41,10 @@ async function getTagsForAssets(assetIds: number[]): Promise<Record<number, { id
     })
     .from(libraryAssetTagsTable)
     .innerJoin(tagsTable, eq(tagsTable.id, libraryAssetTagsTable.tagId))
-    .where(inArray(libraryAssetTagsTable.assetId, assetIds));
+    .where(and(
+      inArray(libraryAssetTagsTable.assetId, assetIds),
+      eq(tagsTable.tenantId, tenantId),
+    ));
 
   const map: Record<number, { id: number; name: string }[]> = {};
   for (const row of rows) {
@@ -65,17 +70,22 @@ function buildLibraryRow(
   };
 }
 
-router.get("/library-assets", async (_req, res): Promise<void> => {
+router.get("/library-assets", async (req, res): Promise<void> => {
+  const tenantId = tid(req);
   const rows = await db
     .select()
     .from(imagesTable)
-    .where(eq(imagesTable.isLibraryAsset, true))
+    .where(and(
+      eq(imagesTable.isLibraryAsset, true),
+      eq(imagesTable.tenantId, tenantId),
+    ))
     .orderBy(imagesTable.createdAt);
-  const tagMap = await getTagsForAssets(rows.map((r) => r.id));
+  const tagMap = await getTagsForAssets(rows.map((r) => r.id), tenantId);
   res.json(rows.map((row) => buildLibraryRow(row, tagMap[row.id] ?? [])));
 });
 
 router.post("/library-assets/upload-url", async (req, res): Promise<void> => {
+  const tenantId = tid(req);
   const { fileName, mimeType } = req.body ?? {};
   if (!fileName || typeof fileName !== "string") {
     res.status(400).json({ error: "fileName is required" });
@@ -88,7 +98,7 @@ router.post("/library-assets/upload-url", async (req, res): Promise<void> => {
   const dateStr = new Date().toISOString().split("T")[0];
   const ext = path.extname(fileName) || ".bin";
   const folder = detectMediaType(mimeType) === "video" ? "library-video" : "library";
-  const objectName = `${folder}/${dateStr}/${Date.now()}${ext}`;
+  const objectName = `tenants/${tenantId}/${folder}/${dateStr}/${Date.now()}${ext}`;
   try {
     const signedUrl = await getSignedUploadUrl(objectName);
     res.json({ signedUrl, objectName });
@@ -99,6 +109,7 @@ router.post("/library-assets/upload-url", async (req, res): Promise<void> => {
 });
 
 router.post("/library-assets/register", async (req, res): Promise<void> => {
+  const tenantId = tid(req);
   const { objectName, fileName, mimeType, title, sha256: rawSha256 } = req.body ?? {};
   if (!objectName || typeof objectName !== "string") {
     res.status(400).json({ error: "objectName is required" });
@@ -108,6 +119,14 @@ router.post("/library-assets/register", async (req, res): Promise<void> => {
     res.status(400).json({ error: "fileName is required" });
     return;
   }
+  if (!mimeType || typeof mimeType !== "string" || !isAllowedMedia(mimeType)) {
+    res.status(400).json({ error: "mimeType must be an image or video type" });
+    return;
+  }
+  if (!objectName.startsWith(`tenants/${tenantId}/library/`) && !objectName.startsWith(`tenants/${tenantId}/library-video/`)) {
+    res.status(403).json({ error: "Invalid upload target" });
+    return;
+  }
   const mt = detectMediaType(mimeType ?? "image/jpeg");
   const filePath = toGcsPath(objectName);
   const sha256 = typeof rawSha256 === "string" && rawSha256.length === 64 ? rawSha256 : null;
@@ -115,6 +134,7 @@ router.post("/library-assets/register", async (req, res): Promise<void> => {
     .insert(imagesTable)
     .values({
       patientId: null,
+      tenantId,
       filePath,
       fileName,
       notes: title ?? null,
@@ -130,27 +150,36 @@ router.post("/library-assets/register", async (req, res): Promise<void> => {
 });
 
 router.patch("/library-assets/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
+  const tenantId = tid(req);
+  const id = parseInt(String(req.params.id), 10);
   const { title } = req.body ?? {};
   const [row] = await db
     .update(imagesTable)
     .set({ notes: title ?? null })
-    .where(eq(imagesTable.id, id))
+    .where(and(
+      eq(imagesTable.id, id),
+      eq(imagesTable.isLibraryAsset, true),
+      eq(imagesTable.tenantId, tenantId),
+    ))
     .returning();
   if (!row) { res.status(404).json({ error: "Not found" }); return; }
-  const tagMap = await getTagsForAssets([row.id]);
+  const tagMap = await getTagsForAssets([row.id], tenantId);
   res.json(buildLibraryRow(row, tagMap[row.id] ?? []));
 });
 
 router.delete("/library-assets/:id", async (req, res): Promise<void> => {
   try {
     const tenantId = tid(req);
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     const [row] = await db
       .select()
       .from(imagesTable)
-      .where(eq(imagesTable.id, id));
-    if (!row || !row.isLibraryAsset) {
+      .where(and(
+        eq(imagesTable.id, id),
+        eq(imagesTable.isLibraryAsset, true),
+        eq(imagesTable.tenantId, tenantId),
+      ));
+    if (!row) {
       res.status(404).json({ error: "Library asset not found" });
       return;
     }
@@ -168,7 +197,10 @@ router.delete("/library-assets/:id", async (req, res): Promise<void> => {
     if (isGcsPath(row.filePath)) {
       try { await deleteFile(row.filePath); } catch (e) { console.warn("Could not delete GCS object:", e); }
     }
-    await db.delete(imagesTable).where(eq(imagesTable.id, id));
+    await db.delete(imagesTable).where(and(
+      eq(imagesTable.id, id),
+      eq(imagesTable.tenantId, tenantId),
+    ));
     if (referencingPresentations.length > 0) {
       await removeImagesFromPresentations(tenantId, [id]);
     }
@@ -181,12 +213,17 @@ router.delete("/library-assets/:id", async (req, res): Promise<void> => {
 });
 
 router.get("/library-assets/:id/file", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
+  const tenantId = tid(req);
+  const id = parseInt(String(req.params.id), 10);
   const [row] = await db
     .select()
     .from(imagesTable)
-    .where(eq(imagesTable.id, id));
-  if (!row || !row.isLibraryAsset) {
+    .where(and(
+      eq(imagesTable.id, id),
+      eq(imagesTable.isLibraryAsset, true),
+      eq(imagesTable.tenantId, tenantId),
+    ));
+  if (!row) {
     res.status(404).json({ error: "Library asset not found" });
     return;
   }
@@ -203,9 +240,13 @@ router.get("/library-assets/:id/file", async (req, res): Promise<void> => {
 router.get("/library-assets/:id/tags", async (req, res): Promise<void> => {
   try {
     const tenantId = tid(req);
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     const [asset] = await db.select({ id: imagesTable.id })
-      .from(imagesTable).where(eq(imagesTable.id, id));
+      .from(imagesTable).where(and(
+        eq(imagesTable.id, id),
+        eq(imagesTable.isLibraryAsset, true),
+        eq(imagesTable.tenantId, tenantId),
+      ));
     if (!asset) { res.status(404).json({ error: "Not found" }); return; }
     const tags = await db
       .select({ id: tagsTable.id, name: tagsTable.name })
@@ -222,7 +263,7 @@ router.get("/library-assets/:id/tags", async (req, res): Promise<void> => {
 router.post("/library-assets/:id/tags", async (req, res): Promise<void> => {
   try {
     const tenantId = tid(req);
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     const { tagId } = req.body ?? {};
     if (!tagId || typeof tagId !== "number") {
       res.status(400).json({ error: "tagId (number) required" });
@@ -231,6 +272,13 @@ router.post("/library-assets/:id/tags", async (req, res): Promise<void> => {
     const [tag] = await db.select().from(tagsTable)
       .where(and(eq(tagsTable.id, tagId), eq(tagsTable.tenantId, tenantId)));
     if (!tag) { res.status(404).json({ error: "Tag not found" }); return; }
+    const [asset] = await db.select({ id: imagesTable.id }).from(imagesTable)
+      .where(and(
+        eq(imagesTable.id, id),
+        eq(imagesTable.isLibraryAsset, true),
+        eq(imagesTable.tenantId, tenantId),
+      ));
+    if (!asset) { res.status(404).json({ error: "Library asset not found" }); return; }
     const existing = await db.select().from(libraryAssetTagsTable)
       .where(and(eq(libraryAssetTagsTable.assetId, id), eq(libraryAssetTagsTable.tagId, tagId)));
     if (existing.length) { res.status(409).json({ error: "Already assigned" }); return; }
@@ -244,9 +292,19 @@ router.post("/library-assets/:id/tags", async (req, res): Promise<void> => {
 
 router.delete("/library-assets/:id/tags/:tagId", async (req, res): Promise<void> => {
   try {
-    tid(req);
-    const id = parseInt(req.params.id, 10);
-    const tagId = parseInt(req.params.tagId, 10);
+    const tenantId = tid(req);
+    const id = parseInt(String(req.params.id), 10);
+    const tagId = parseInt(String(req.params.tagId), 10);
+    const [asset, tag] = await Promise.all([
+      db.select({ id: imagesTable.id }).from(imagesTable).where(and(
+        eq(imagesTable.id, id),
+        eq(imagesTable.isLibraryAsset, true),
+        eq(imagesTable.tenantId, tenantId),
+      )).limit(1),
+      db.select({ id: tagsTable.id }).from(tagsTable)
+        .where(and(eq(tagsTable.id, tagId), eq(tagsTable.tenantId, tenantId))).limit(1),
+    ]);
+    if (!asset[0] || !tag[0]) { res.status(404).json({ error: "Library asset or tag not found" }); return; }
     const [deleted] = await db.delete(libraryAssetTagsTable)
       .where(and(eq(libraryAssetTagsTable.assetId, id), eq(libraryAssetTagsTable.tagId, tagId)))
       .returning();

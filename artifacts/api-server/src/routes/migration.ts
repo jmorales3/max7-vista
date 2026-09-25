@@ -4,7 +4,13 @@ import AdmZip from "adm-zip";
 import path from "path";
 import fs from "fs";
 import bcrypt from "bcryptjs";
-import { db, patientsTable, imagesTable, usersTable, settingsTable } from "@workspace/db";
+import {
+  db,
+  patientsTable,
+  imagesTable,
+  usersTable,
+  settingsTable,
+} from "@workspace/db";
 import { and, eq } from "drizzle-orm";
 import { requireRole } from "../middlewares/requireAuth";
 import { setSetting } from "../lib/storage";
@@ -13,11 +19,17 @@ import { logAudit } from "../lib/audit";
 
 const router: IRouter = Router();
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 * 1024 } });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 * 1024 },
+});
 
 function tid(req: { session?: { tenantId?: number } }): number {
   const t = req.session?.tenantId;
-  if (!t) throw Object.assign(new Error("No tenant associated with this session"), { status: 403 });
+  if (!t)
+    throw Object.assign(new Error("No tenant associated with this session"), {
+      status: 403,
+    });
   return t;
 }
 
@@ -33,13 +45,22 @@ router.get(
       // Superadministrator is single-tenant: export must never leak another
       // tenant's PHI (patients/images) or credentials (users/settings).
       const tenantId = tid(req);
-      const patients = await db.select().from(patientsTable)
+      const patients = await db
+        .select()
+        .from(patientsTable)
         .where(eq(patientsTable.tenantId, tenantId))
         .orderBy(patientsTable.id);
       const patientIds = new Set(patients.map((p) => p.id));
-      const imagesRaw  = await db.select().from(imagesTable).orderBy(imagesTable.id);
-      const images     = imagesRaw.filter((img) => img.patientId != null && patientIds.has(img.patientId));
-      const users    = await db.select().from(usersTable)
+      const imagesRaw = await db
+        .select()
+        .from(imagesTable)
+        .orderBy(imagesTable.id);
+      const images = imagesRaw.filter(
+        (img) => img.patientId != null && patientIds.has(img.patientId),
+      );
+      const users = await db
+        .select()
+        .from(usersTable)
         .where(eq(usersTable.tenantId, tenantId))
         .orderBy(usersTable.id);
       const settings = await db.select().from(settingsTable);
@@ -54,16 +75,17 @@ router.get(
         // Extract just the filename portion for the ZIP entry name.
         const rawPath = img.filePath ?? "";
         const baseName = rawPath.startsWith("gcs:")
-          ? path.basename(rawPath.slice(4))   // strip "gcs:" prefix before basename
+          ? path.basename(rawPath.slice(4)) // strip "gcs:" prefix before basename
           : path.basename(rawPath);
         return {
           patientCode: idToCode.get(img.patientId ?? -1) ?? null,
           fileName: img.fileName,
           mediaType: img.mediaType ?? "image",
           notes: img.notes ?? null,
-          capturedAt: img.capturedAt instanceof Date
-            ? img.capturedAt.toISOString()
-            : String(img.capturedAt),
+          capturedAt:
+            img.capturedAt instanceof Date
+              ? img.capturedAt.toISOString()
+              : String(img.capturedAt),
           isUnassigned: img.isUnassigned,
           // relative path inside the ZIP's files/ folder
           zipPath: rawPath
@@ -91,11 +113,26 @@ router.get(
         },
       };
 
-      zip.addFile("manifest.json",     Buffer.from(JSON.stringify(manifest,         null, 2)));
-      zip.addFile("data/patients.json", Buffer.from(JSON.stringify(patients,         null, 2)));
-      zip.addFile("data/images.json",   Buffer.from(JSON.stringify(exportedImages,   null, 2)));
-      zip.addFile("data/users.json",    Buffer.from(JSON.stringify(exportedUsers,    null, 2)));
-      zip.addFile("data/settings.json", Buffer.from(JSON.stringify(settings,         null, 2)));
+      zip.addFile(
+        "manifest.json",
+        Buffer.from(JSON.stringify(manifest, null, 2)),
+      );
+      zip.addFile(
+        "data/patients.json",
+        Buffer.from(JSON.stringify(patients, null, 2)),
+      );
+      zip.addFile(
+        "data/images.json",
+        Buffer.from(JSON.stringify(exportedImages, null, 2)),
+      );
+      zip.addFile(
+        "data/users.json",
+        Buffer.from(JSON.stringify(exportedUsers, null, 2)),
+      );
+      zip.addFile(
+        "data/settings.json",
+        Buffer.from(JSON.stringify(settings, null, 2)),
+      );
 
       // Embed the actual image files (handles both "gcs:" keys and legacy disk paths)
       let filesAdded = 0;
@@ -116,11 +153,17 @@ router.get(
       const dateSuffix = new Date().toISOString().slice(0, 10);
       const filename = `max7-vista-migration-${dateSuffix}.zip`;
 
-      logAudit(req, "migration_export", "system", null,
-        { patients: patients.length, images: images.length, filesAdded });
+      logAudit(req, "migration_export", "system", null, {
+        patients: patients.length,
+        images: images.length,
+        filesAdded,
+      });
 
       res.setHeader("Content-Type", "application/zip");
-      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${filename}"`,
+      );
       res.send(zip.toBuffer());
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -195,12 +238,17 @@ router.post(
       // ── Read manifest ──────────────────────────────────────────────────────
       const manifestEntry = zip.getEntry("manifest.json");
       if (!manifestEntry) {
-        res.status(400).json({ error: "Not a valid Max7 Vista migration archive (missing manifest.json)" });
+        res.status(400).json({
+          error:
+            "Not a valid Max7 Vista migration archive (missing manifest.json)",
+        });
         return;
       }
       const manifest = JSON.parse(manifestEntry.getData().toString("utf-8"));
       if (manifest.version !== MIGRATION_VERSION) {
-        res.status(400).json({ error: `Unsupported migration version: ${manifest.version}` });
+        res.status(400).json({
+          error: `Unsupported migration version: ${manifest.version}`,
+        });
         return;
       }
 
@@ -208,12 +256,20 @@ router.post(
       const tenantId = tid(req);
       const patientsEntry = zip.getEntry("data/patients.json");
       if (patientsEntry) {
-        const exportedPatients: ExportedPatient[] = JSON.parse(patientsEntry.getData().toString("utf-8"));
+        const exportedPatients: ExportedPatient[] = JSON.parse(
+          patientsEntry.getData().toString("utf-8"),
+        );
         for (const p of exportedPatients) {
           try {
-            const [existing] = await db.select({ id: patientsTable.id })
+            const [existing] = await db
+              .select({ id: patientsTable.id })
               .from(patientsTable)
-              .where(and(eq(patientsTable.tenantId, tenantId), eq(patientsTable.patientCode, p.patientCode)));
+              .where(
+                and(
+                  eq(patientsTable.tenantId, tenantId),
+                  eq(patientsTable.patientCode, p.patientCode),
+                ),
+              );
             if (existing) {
               summary.patientsSkipped++;
             } else {
@@ -227,13 +283,20 @@ router.post(
               summary.patientsImported++;
             }
           } catch (err) {
-            summary.errors.push({ item: `patient:${p.patientCode}`, reason: err instanceof Error ? err.message : String(err) });
+            summary.errors.push({
+              item: `patient:${p.patientCode}`,
+              reason: err instanceof Error ? err.message : String(err),
+            });
           }
         }
       }
 
       // Refresh patientCode → id map after import
-      const allPatients = await db.select({ id: patientsTable.id, patientCode: patientsTable.patientCode })
+      const allPatients = await db
+        .select({
+          id: patientsTable.id,
+          patientCode: patientsTable.patientCode,
+        })
         .from(patientsTable)
         .where(eq(patientsTable.tenantId, tenantId));
       const codeToId = new Map(allPatients.map((p) => [p.patientCode, p.id]));
@@ -241,19 +304,28 @@ router.post(
       // ── Images ─────────────────────────────────────────────────────────────
       const imagesEntry = zip.getEntry("data/images.json");
       if (imagesEntry) {
-        const exportedImages: ExportedImage[] = JSON.parse(imagesEntry.getData().toString("utf-8"));
+        const exportedImages: ExportedImage[] = JSON.parse(
+          imagesEntry.getData().toString("utf-8"),
+        );
         for (const img of exportedImages) {
           try {
-            const patientId = img.patientCode ? (codeToId.get(img.patientCode) ?? null) : null;
+            const patientId = img.patientCode
+              ? (codeToId.get(img.patientCode) ?? null)
+              : null;
             const capturedAt = new Date(img.capturedAt);
-            const dateStr = (!isNaN(capturedAt.getTime()) ? capturedAt : new Date()).toISOString().split("T")[0];
+            const dateStr = (
+              !isNaN(capturedAt.getTime()) ? capturedAt : new Date()
+            )
+              .toISOString()
+              .split("T")[0];
 
             const ext = path.extname(img.fileName) || ".jpg";
             const storedName = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}${ext}`;
             const objectName = patientId
               ? `images/${patientId}/${dateStr}/${storedName}`
               : `images/unassigned/${dateStr}/${storedName}`;
-            const mimeType = img.mediaType === "video" ? "video/mp4" : "image/jpeg";
+            const mimeType =
+              img.mediaType === "video" ? "video/mp4" : "image/jpeg";
 
             // Extract file from ZIP and store via the storage adapter
             // (uploadToGcs → GCS on cloud, local disk on Electron/LAN build)
@@ -261,11 +333,18 @@ router.post(
             if (img.zipPath) {
               const fileEntry = zip.getEntry(img.zipPath);
               if (fileEntry) {
-                storedFilePath = await uploadToGcs(fileEntry.getData(), objectName, mimeType);
+                storedFilePath = await uploadToGcs(
+                  fileEntry.getData(),
+                  objectName,
+                  mimeType,
+                );
               } else {
                 // File was expected in ZIP but not found — skip this record entirely
                 // to avoid inserting a broken image row with no usable file path.
-                summary.errors.push({ item: `image:${img.fileName}`, reason: "File entry not found in ZIP archive" });
+                summary.errors.push({
+                  item: `image:${img.fileName}`,
+                  reason: "File entry not found in ZIP archive",
+                });
                 summary.imagesSkipped++;
                 continue;
               }
@@ -273,6 +352,7 @@ router.post(
             // img.zipPath === null means the original record had no file (edge case); insert metadata only.
 
             await db.insert(imagesTable).values({
+              tenantId,
               patientId: patientId ?? undefined,
               filePath: storedFilePath ?? "",
               fileName: img.fileName,
@@ -283,7 +363,10 @@ router.post(
             });
             summary.imagesImported++;
           } catch (err) {
-            summary.errors.push({ item: `image:${img.fileName}`, reason: err instanceof Error ? err.message : String(err) });
+            summary.errors.push({
+              item: `image:${img.fileName}`,
+              reason: err instanceof Error ? err.message : String(err),
+            });
             summary.imagesSkipped++;
           }
         }
@@ -292,10 +375,13 @@ router.post(
       // ── Users ──────────────────────────────────────────────────────────────
       const usersEntry = zip.getEntry("data/users.json");
       if (usersEntry) {
-        const exportedUsers: ExportedUser[] = JSON.parse(usersEntry.getData().toString("utf-8"));
+        const exportedUsers: ExportedUser[] = JSON.parse(
+          usersEntry.getData().toString("utf-8"),
+        );
         for (const u of exportedUsers) {
           try {
-            const [existing] = await db.select({ id: usersTable.id })
+            const [existing] = await db
+              .select({ id: usersTable.id })
               .from(usersTable)
               .where(eq(usersTable.username, u.username));
             if (existing) {
@@ -312,13 +398,18 @@ router.post(
                 tenantId,
                 username: u.username,
                 passwordHash: u.passwordHash,
-                role: (["user", "admin", "superadmin"].includes(u.role) ? u.role : "user") as "user" | "admin" | "superadmin",
+                role: (["user", "admin", "superadmin"].includes(u.role)
+                  ? u.role
+                  : "user") as "user" | "admin" | "superadmin",
                 isActive: Boolean(u.isActive),
               });
               summary.usersImported++;
             }
           } catch (err) {
-            summary.errors.push({ item: `user:${u.username}`, reason: err instanceof Error ? err.message : String(err) });
+            summary.errors.push({
+              item: `user:${u.username}`,
+              reason: err instanceof Error ? err.message : String(err),
+            });
           }
         }
       }
@@ -326,7 +417,9 @@ router.post(
       // ── Settings ───────────────────────────────────────────────────────────
       const settingsEntry = zip.getEntry("data/settings.json");
       if (settingsEntry) {
-        const exportedSettings: ExportedSetting[] = JSON.parse(settingsEntry.getData().toString("utf-8"));
+        const exportedSettings: ExportedSetting[] = JSON.parse(
+          settingsEntry.getData().toString("utf-8"),
+        );
         const SKIP_KEYS = new Set(["storageDirectory"]); // keep target system's paths
         for (const s of exportedSettings) {
           if (SKIP_KEYS.has(s.key)) continue;
@@ -334,7 +427,10 @@ router.post(
             await setSetting(s.key, s.value);
             summary.settingsApplied++;
           } catch (err) {
-            summary.errors.push({ item: `setting:${s.key}`, reason: err instanceof Error ? err.message : String(err) });
+            summary.errors.push({
+              item: `setting:${s.key}`,
+              reason: err instanceof Error ? err.message : String(err),
+            });
           }
         }
       }

@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { db, tagsTable, patientTagsTable, patientsTable, libraryAssetTagsTable, imagesTable } from "@workspace/db";
 import { getAccessiblePatientIds, canAccessPatient } from "../lib/patientAccess";
+import { requireRole } from "../middlewares/requireAuth";
 import {
   ListPatientTagsParams,
   AddPatientTagParams,
@@ -111,7 +112,10 @@ router.delete("/tags/:id", async (req, res): Promise<void> => {
         .select({ id: imagesTable.id, title: imagesTable.fileName })
         .from(libraryAssetTagsTable)
         .innerJoin(imagesTable, eq(imagesTable.id, libraryAssetTagsTable.assetId))
-        .where(eq(libraryAssetTagsTable.tagId, params.data.id)),
+        .where(and(
+          eq(libraryAssetTagsTable.tagId, params.data.id),
+          eq(imagesTable.tenantId, tenantId),
+        )),
     ]);
 
     if ((taggedPatients.length > 0 || taggedAssets.length > 0) && !force) {
@@ -174,7 +178,10 @@ router.get("/patients/:id/tags", async (req, res): Promise<void> => {
       })
       .from(patientTagsTable)
       .innerJoin(tagsTable, eq(tagsTable.id, patientTagsTable.tagId))
-      .where(eq(patientTagsTable.patientId, params.data.id))
+       .where(and(
+         eq(patientTagsTable.patientId, params.data.id),
+         eq(tagsTable.tenantId, tenantId),
+       ))
       .orderBy(tagsTable.name);
 
     res.json(tags);
@@ -184,7 +191,7 @@ router.get("/patients/:id/tags", async (req, res): Promise<void> => {
   }
 });
 
-router.post("/patients/:id/tags", async (req, res): Promise<void> => {
+router.post("/patients/:id/tags", requireRole("admin", "superadmin"), async (req, res): Promise<void> => {
   try {
     const tenantId = tid(req);
     const params = AddPatientTagParams.safeParse(req.params);
@@ -246,7 +253,7 @@ router.post("/patients/:id/tags", async (req, res): Promise<void> => {
   }
 });
 
-router.delete("/patients/:id/tags/:tagId", async (req, res): Promise<void> => {
+router.delete("/patients/:id/tags/:tagId", requireRole("admin", "superadmin"), async (req, res): Promise<void> => {
   try {
     const tenantId = tid(req);
     const params = RemovePatientTagParams.safeParse(req.params);
@@ -269,6 +276,13 @@ router.delete("/patients/:id/tags/:tagId", async (req, res): Promise<void> => {
     const delTagsAccessibleIds = await getAccessiblePatientIds(req);
     if (!canAccessPatient(delTagsAccessibleIds, params.data.id)) {
       res.status(403).json({ error: "Access denied" });
+      return;
+    }
+    const [tag] = await db.select({ id: tagsTable.id }).from(tagsTable)
+      .where(and(eq(tagsTable.id, params.data.tagId), eq(tagsTable.tenantId, tenantId)))
+      .limit(1);
+    if (!tag) {
+      res.status(404).json({ error: "Tag not found" });
       return;
     }
 

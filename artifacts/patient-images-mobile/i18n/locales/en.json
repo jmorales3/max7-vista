@@ -11,6 +11,7 @@
     "retry": "Retry",
     "notFound": "No patients found",
     "noneYet": "No patients yet",
+    "searchPrompt": "Type a name or patient ID to search.",
     "tryDifferent": "Try a different search term"
   },
   "patient": {

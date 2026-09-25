@@ -36,6 +36,19 @@ _Describe the high-level user-facing capabilities of this app once they exist._
 
 - **Every new feature must be reflected in five places**: (1) the chatbot system prompt (`artifacts/api-server/src/routes/chat.ts`), (2) the in-app instruction manual (`manual.sections` + `manual.<section>` keys in all four locale files), (3) all four translation files (EN, ES, FR, PT) at `artifacts/patient-images/src/i18n/locales/`, (4) the GitHub build (the project's CI/release build pipeline), and (5) a set of instructions the user will hand off to the "Max7 agent" to carry out the equivalent change on the Max7 side. When wrapping up a feature, proactively remind the user of any of these five that haven't been addressed yet, and draft the Max7 agent instructions when the feature is otherwise complete.
 
+## Deployment & Distribution — READ FIRST BEFORE ANY TROUBLESHOOTING
+
+Each part of the system is delivered a different way. Never assume a code change has reached the user's device without checking which delivery method applies.
+
+| Artifact | How changes reach users | Command / action |
+|---|---|---|
+| **API server** (`artifacts/api-server`) | Replit Publish | Click Publish in Replit |
+| **Web app** (`artifacts/patient-images`) | Replit Publish | Click Publish in Replit |
+| **Phone app JS bundle** (`artifacts/patient-images-mobile`) | **Expo OTA update** (expo-updates) | `cd artifacts/patient-images-mobile && npx eas-cli@latest update --channel production --message "..." --non-interactive` |
+| **Phone app native shell** | EAS Build + APK install | Full rebuild required — only needed when native modules or app.json change |
+
+**Critical:** Replit Publish does NOT update the phone app's JavaScript. The installed native app (EAS build, `production` channel) fetches bundles from Expo's update servers (`https://u.expo.dev/d925dfed-65f1-4a09-a76a-7bf438eb8f17`). After `eas update`, the user force-closes and reopens the app — Expo downloads the new bundle automatically. The EXPO_TOKEN secret is available; EAS authenticates as `jmorales3`.
+
 ## Gotchas
 
 - **Release checklist**: before tagging any new release, ask the agent to run the GitHub sync check first. It compares this workspace's `main` against GitHub's `main` via the API (local `git fetch`/`merge`/ref-writes are blocked in this sandbox) and flags whether it's safe to tag, whether local is just behind (needs catching up before release), or genuinely diverged (needs reconciliation before release). Never tag a release without this check passing clean.

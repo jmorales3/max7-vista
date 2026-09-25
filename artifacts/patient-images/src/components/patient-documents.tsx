@@ -41,6 +41,7 @@ import {
   useDeleteDocument,
   getListPatientDocumentsQueryKey,
 } from "@/lib/documents-client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
   patientId: number;
@@ -55,7 +56,8 @@ interface ViewerState {
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
@@ -65,7 +67,11 @@ function DocIcon({ mimeType }: { mimeType: string }) {
     return <FileText className={`${cls} text-red-500`} />;
   if (mimeType.includes("word") || mimeType.includes("document"))
     return <FileText className={`${cls} text-blue-500`} />;
-  if (mimeType.includes("excel") || mimeType.includes("spreadsheet") || mimeType.includes("csv"))
+  if (
+    mimeType.includes("excel") ||
+    mimeType.includes("spreadsheet") ||
+    mimeType.includes("csv")
+  )
     return <FileSpreadsheet className={`${cls} text-green-600`} />;
   if (mimeType.includes("presentation") || mimeType.includes("powerpoint"))
     return <FileText className={`${cls} text-orange-500`} />;
@@ -131,6 +137,9 @@ const ACCEPTED = [
 export function PatientDocuments({ patientId }: Props) {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const canManageDocuments =
+    user?.role === "admin" || user?.role === "superadmin";
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -138,11 +147,14 @@ export function PatientDocuments({ patientId }: Props) {
   const [viewer, setViewer] = useState<ViewerState | null>(null);
   const [loadingId, setLoadingId] = useState<number | null>(null);
 
-  const { data: documents = [], isLoading } = useListPatientDocuments(patientId);
+  const { data: documents = [], isLoading } =
+    useListPatientDocuments(patientId);
 
   const upload = useUploadDocument({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: getListPatientDocumentsQueryKey(patientId) });
+      queryClient.invalidateQueries({
+        queryKey: getListPatientDocumentsQueryKey(patientId),
+      });
       toast({ title: t("documents.uploaded") });
     },
     onError: (e: unknown) => {
@@ -156,7 +168,9 @@ export function PatientDocuments({ patientId }: Props) {
 
   const deleteDoc = useDeleteDocument({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: getListPatientDocumentsQueryKey(patientId) });
+      queryClient.invalidateQueries({
+        queryKey: getListPatientDocumentsQueryKey(patientId),
+      });
       toast({ title: t("documents.deleted") });
       setDeleteId(null);
     },
@@ -210,39 +224,49 @@ export function PatientDocuments({ patientId }: Props) {
             {documents.length}
           </span>
         </h2>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={upload.isPending}
-        >
-          <Upload className="mr-2 h-4 w-4" />
-          {t("documents.upload")}
-        </Button>
+        {canManageDocuments && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={upload.isPending}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            {t("documents.upload")}
+          </Button>
+        )}
       </div>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept={ACCEPTED}
-        multiple
-        className="hidden"
-        onChange={(e) => handleFiles(e.target.files)}
-      />
+      {canManageDocuments && (
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={ACCEPTED}
+          multiple
+          className="hidden"
+          onChange={(e) => handleFiles(e.target.files)}
+        />
+      )}
 
       {isLoading ? (
         <div className="space-y-2">
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-14 w-full rounded-lg" />
+          ))}
         </div>
       ) : documents.length > 0 ? (
         <div className="rounded-xl border divide-y overflow-hidden">
           {documents.map((doc) => (
-            <div key={doc.id} className="flex items-center gap-3 px-4 py-3 bg-card hover:bg-muted/40 transition-colors">
+            <div
+              key={doc.id}
+              className="flex items-center gap-3 px-4 py-3 bg-card hover:bg-muted/40 transition-colors"
+            >
               <DocIcon mimeType={doc.fileType} />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{doc.fileName}</p>
                 <p className="text-xs text-muted-foreground">
-                  {formatBytes(doc.fileSize)} · {format(new Date(doc.uploadedAt), "MMM d, yyyy")}
+                  {formatBytes(doc.fileSize)} ·{" "}
+                  {format(new Date(doc.uploadedAt), "MMM d, yyyy")}
                   {doc.notes && ` · ${doc.notes}`}
                 </p>
               </div>
@@ -256,10 +280,11 @@ export function PatientDocuments({ patientId }: Props) {
                     disabled={loadingId === doc.id}
                     onClick={() => handleOpen(doc.id)}
                   >
-                    {loadingId === doc.id
-                      ? <Loader2 className="h-4 w-4 animate-spin" />
-                      : <Eye className="h-4 w-4" />
-                    }
+                    {loadingId === doc.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </Button>
                 )}
                 <Button
@@ -269,46 +294,75 @@ export function PatientDocuments({ patientId }: Props) {
                   title={t("documents.download")}
                   asChild
                 >
-                  <a href={`/api/documents/${doc.id}/file`} download={doc.fileName}>
+                  <a
+                    href={`/api/documents/${doc.id}/file`}
+                    download={doc.fileName}
+                  >
                     <Download className="h-4 w-4" />
                   </a>
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
-                  title={t("documents.delete") ?? "Delete"}
-                  onClick={() => setDeleteId(doc.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {canManageDocuments && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    title={t("documents.delete") ?? "Delete"}
+                    onClick={() => setDeleteId(doc.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
           ))}
         </div>
       ) : (
         <div
-          className={`flex flex-col items-center justify-center p-12 text-center border-2 border-dashed rounded-xl transition-colors cursor-pointer ${
-            isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/20 bg-card"
+          className={`flex flex-col items-center justify-center p-12 text-center border-2 border-dashed rounded-xl transition-colors ${
+            canManageDocuments ? "cursor-pointer " : ""
+          }${
+            isDragging
+              ? "border-primary bg-primary/5"
+              : "border-muted-foreground/20 bg-card"
           }`}
-          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-          onDragLeave={() => setIsDragging(false)}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
+          onDragOver={
+            canManageDocuments
+              ? (e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                }
+              : undefined
+          }
+          onDragLeave={
+            canManageDocuments ? () => setIsDragging(false) : undefined
+          }
+          onDrop={canManageDocuments ? handleDrop : undefined}
+          onClick={
+            canManageDocuments ? () => fileInputRef.current?.click() : undefined
+          }
         >
           <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
             <FolderOpen className="h-6 w-6 text-primary" />
           </div>
-          <p className="text-sm font-medium text-foreground">{t("documents.noDocuments")}</p>
-          <p className="text-xs text-muted-foreground mt-1">{t("documents.noDocumentsDesc")}</p>
+          <p className="text-sm font-medium text-foreground">
+            {t("documents.noDocuments")}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {t("documents.noDocumentsDesc")}
+          </p>
         </div>
       )}
 
       {upload.isPending && (
-        <p className="text-sm text-muted-foreground animate-pulse">{t("documents.uploading")}</p>
+        <p className="text-sm text-muted-foreground animate-pulse">
+          {t("documents.uploading")}
+        </p>
       )}
 
-      <Dialog open={viewer !== null} onOpenChange={(open) => !open && setViewer(null)}>
+      <Dialog
+        open={viewer !== null}
+        onOpenChange={(open) => !open && setViewer(null)}
+      >
         <DialogContent className="max-w-5xl w-full h-[90vh] flex flex-col p-0 gap-0">
           <DialogHeader className="px-4 py-3 border-b shrink-0">
             <DialogTitle className="text-sm font-medium truncate pr-8">
@@ -316,8 +370,8 @@ export function PatientDocuments({ patientId }: Props) {
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-hidden">
-            {viewer && (
-              viewer.fileType.startsWith("image/") ? (
+            {viewer &&
+              (viewer.fileType.startsWith("image/") ? (
                 <div className="h-full flex items-center justify-center bg-muted/30 p-4">
                   <img
                     src={viewer.url}
@@ -344,13 +398,15 @@ export function PatientDocuments({ patientId }: Props) {
                   className="w-full h-full border-0"
                   sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
                 />
-              )
-            )}
+              ))}
           </div>
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
+      <AlertDialog
+        open={deleteId !== null}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("documents.deleteTitle")}</AlertDialogTitle>

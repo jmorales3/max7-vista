@@ -210,7 +210,20 @@
     "disclosureFrom": "De",
     "disclosureTo": "Até",
     "disclosureGenerated": "Relatório de divulgações gerado",
-    "disclosureFailed": "Falha ao gerar o relatório de divulgações"
+    "disclosureFailed": "Falha ao gerar o relatório de divulgações",
+    "movePhotos": "Mover fotos",
+    "selectPhotos": "Selecionar",
+    "cancelSelect": "Cancelar",
+    "moveToPatient": "Mover para paciente",
+    "moveToPatientTitle": "Mover fotos para outro paciente",
+    "moveToPatientDesc": "Selecione um paciente de destino. Todas as fotos selecionadas serão reatribuídas a ele.",
+    "moveToPatientSearch": "Buscar pacientes…",
+    "moveToPatientNone": "Nenhum paciente encontrado.",
+    "moveToPatientConfirm": "Mover {{count}} foto(s)",
+    "moveToPatientMoving": "Movendo…",
+    "moveToPatientSuccess": "{{count}} foto(s) movida(s) com sucesso",
+    "moveToPatientError": "Falha ao mover algumas fotos",
+    "moveSelectedCount": "{{count}} selecionada(s)"
   },
   "capture": {
     "title": "Capturar Imagem",
@@ -351,6 +364,7 @@
   },
   "library": {
     "title": "Biblioteca de Imagens",
+    "patient": "Paciente",
     "subtitle": "Carregue e gerencie imagens decorativas para usar como slides em apresentações.",
     "upload": "Enviar Imagens",
     "uploadedCount": "{{count}} imagem(ns) enviada(s)",
@@ -763,7 +777,7 @@
     },
     "patients": {
       "heading": "Gerenciamento de Pacientes",
-      "body": "Navegue até a seção Pacientes para criar, pesquisar, editar ou excluir registros de pacientes. Cada paciente tem um nome, código de paciente, data de nascimento opcional e notas. Clique em um cartão de paciente para ver seu perfil completo e galeria de imagens."
+      "body": "Todas as funções podem pesquisar e abrir os registros de pacientes atribuídos a elas. Médicos e Superadministradores podem criar, editar ou excluir registros de pacientes. Cada paciente tem um nome, código de paciente, data de nascimento opcional e notas. Clique em um cartão de paciente para ver seu perfil completo e galeria de imagens."
     },
     "capture": {
       "heading": "Captura de Imagens",
@@ -791,7 +805,7 @@
     },
     "roles": {
       "heading": "Funções de Usuário",
-      "body": "O Max7 Vista suporta três funções, todas restritas a uma única organização: Usuário (pode visualizar, capturar e editar/excluir apenas as imagens que enviou, e pode criar — mas não editar ou excluir — traçados cefalométricos), Médico (pode gerenciar pacientes, registros clínicos, modelos, apresentações e documentos dentro de sua organização) e Superadministrador (acesso administrativo completo apenas dentro de sua própria organização, incluindo gerenciamento de usuários, registro de auditoria, controle de acesso por paciente e ferramentas de integridade do sistema). Funções entre organizações, como faturamento, assinaturas e ativação ou desativação de organizações, são reservadas para uma função separada de proprietário do sistema, não disponível ao Superadministrador de nenhuma organização."
+      "body": "O Max7 Vista suporta três funções, todas restritas a uma organização. Usuário: pode visualizar registros de pacientes atribuídos, capturar mídia e editar ou excluir apenas as próprias imagens enviadas. Usuários não podem criar ou alterar registros de pacientes, usar exportação ZIP de pacientes, gerenciar modelos, documentos, apresentações, importações em massa ou espaços de trabalho cefalométricos. Médico: inclui os recursos do Usuário e pode gerenciar dados clínicos na organização — registros de pacientes, documentos, apresentações, modelos, exportações de imagens, importações em massa e modelos e traçados cefalométricos. Superadministrador: inclui os recursos do Médico e administra usuários, acesso por paciente, registro de auditoria, ferramentas de integridade, política de retenção e fila de descarte, retenções legais, relatórios de divulgação e migração. Nenhuma função da organização pode acessar dados de outra organização; faturamento, assinaturas e ciclo de vida da organização permanecem funções do proprietário do sistema fora do aplicativo."
     },
     "tenants": {
       "heading": "Configuração Multitenant",
@@ -835,11 +849,11 @@
     },
     "patientRetention": {
       "heading": "Retenção de Dados de Pacientes e Retenção Legal",
-      "body": "Médicos e Superadministradores podem configurar por quanto tempo os registros de pacientes são mantidos antes de se tornarem elegíveis para exclusão, separadamente da política de retenção do registro de auditoria. Em Configurações → Retenção de Dados de Pacientes, escolha um período de retenção em anos e clique em 'Salvar Política'. Registros mais antigos que esse período aparecem na lista 'Elegíveis para Exclusão' abaixo — a exclusão nunca é automática; um Médico ou Superadministrador deve revisar a lista e clicar em 'Expurgar' em cada registro para removê-lo permanentemente junto com suas imagens. Para impedir que o registro de um paciente específico apareça nessa lista — por exemplo durante um litígio, uma intimação judicial ou uma disputa de seguro — abra a página de detalhes do paciente, clique no menu ⋮ (Mais) e escolha 'Aplicar Retenção Legal'. É necessário informar um motivo, que fica registrado para a auditoria. Um paciente sob retenção legal exibe um selo 'Retenção Legal' ao lado do nome e fica excluído da exclusão independentemente da idade do registro, até que um Médico ou Superadministrador libere a retenção pelo mesmo menu."
+      "body": "Somente Superadministradores podem configurar por quanto tempo os registros de pacientes são mantidos antes de se tornarem elegíveis para exclusão, separadamente da política de retenção do registro de auditoria. Em Configurações → Retenção de Dados de Pacientes, escolha um período de retenção em anos e clique em 'Salvar Política'. Registros mais antigos que esse período aparecem na lista 'Elegíveis para Exclusão' abaixo — a exclusão nunca é automática; um Superadministrador deve revisar a lista e clicar em 'Expurgar' em cada registro para removê-lo permanentemente junto com suas imagens. Para impedir que o registro de um paciente específico apareça nessa lista — por exemplo durante um litígio, uma intimação judicial ou uma disputa de seguro — um Superadministrador abre a página de detalhes do paciente, clica no menu ⋮ (Mais) e escolhe 'Aplicar Retenção Legal'. É necessário informar um motivo, que fica registrado para a auditoria. Um paciente sob retenção legal exibe um selo 'Retenção Legal' ao lado do nome e fica excluído da exclusão independentemente da idade do registro, até que um Superadministrador libere a retenção pelo mesmo menu."
     },
     "disclosures": {
       "heading": "Registro de Divulgações",
-      "body": "Qualquer usuário pode gerar um relatório de divulgações HIPAA para um paciente diretamente na página de detalhes desse paciente. Clique no menu ⋮ (Mais) e escolha 'Gerar Relatório de Divulgações'. O relatório compila quem acessou ou exportou o registro desse paciente e quando, usando o mesmo registro de auditoria utilizado no restante do sistema. Opcionalmente, defina uma data 'De' e/ou 'Até' para limitar o relatório a um intervalo de datas específico — deixe ambas em branco para incluir todo o histórico. Escolha 'JSON' ou 'CSV' para baixar o relatório no formato desejado, pronto para ser entregue em uma solicitação de conformidade."
+      "body": "Somente Superadministradores podem gerar um relatório de divulgações HIPAA para um paciente diretamente na página de detalhes desse paciente. Clique no menu ⋮ (Mais) e escolha 'Gerar Relatório de Divulgações'. O relatório compila quem acessou ou exportou o registro desse paciente e quando, usando o mesmo registro de auditoria utilizado no restante do sistema. Opcionalmente, defina uma data 'De' e/ou 'Até' para limitar o relatório a um intervalo de datas específico — deixe ambas em branco para incluir todo o histórico. Escolha 'JSON' ou 'CSV' para baixar o relatório no formato desejado, pronto para ser entregue em uma solicitação de conformidade."
     },
     "cephalometrics": {
       "heading": "Análise Cefalométrica",

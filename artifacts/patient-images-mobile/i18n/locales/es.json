@@ -10,6 +10,7 @@
     "loadError": "Error al cargar pacientes",
     "retry": "Reintentar",
     "notFound": "No se encontraron pacientes",
+    "searchPrompt": "Escriba un nombre o ID de paciente para buscar.",
     "noneYet": "Aún no hay pacientes",
     "tryDifferent": "Intenta con otro término de búsqueda"
   },

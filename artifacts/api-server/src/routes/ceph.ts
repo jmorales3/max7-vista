@@ -12,8 +12,10 @@ import {
   imagesTable,
 } from "@workspace/db";
 import { getAccessiblePatientIds, canAccessPatient } from "../lib/patientAccess";
+import { requireRole } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
+router.use(requireRole("admin", "superadmin"));
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 

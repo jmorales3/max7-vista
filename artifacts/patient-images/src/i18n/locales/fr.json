@@ -210,7 +210,20 @@
     "disclosureFrom": "Du",
     "disclosureTo": "Au",
     "disclosureGenerated": "Rapport de divulgation généré",
-    "disclosureFailed": "Échec de la génération du rapport de divulgation"
+    "disclosureFailed": "Échec de la génération du rapport de divulgation",
+    "movePhotos": "Déplacer des photos",
+    "selectPhotos": "Sélectionner",
+    "cancelSelect": "Annuler",
+    "moveToPatient": "Déplacer vers un patient",
+    "moveToPatientTitle": "Déplacer des photos vers un autre patient",
+    "moveToPatientDesc": "Sélectionnez un patient de destination. Toutes les photos sélectionnées lui seront réassignées.",
+    "moveToPatientSearch": "Rechercher des patients…",
+    "moveToPatientNone": "Aucun patient trouvé.",
+    "moveToPatientConfirm": "Déplacer {{count}} photo(s)",
+    "moveToPatientMoving": "Déplacement…",
+    "moveToPatientSuccess": "{{count}} photo(s) déplacée(s) avec succès",
+    "moveToPatientError": "Impossible de déplacer certaines photos",
+    "moveSelectedCount": "{{count}} sélectionnée(s)"
   },
   "capture": {
     "title": "Capturer une Image",
@@ -351,6 +364,7 @@
   },
   "library": {
     "title": "Bibliothèque d'Images",
+    "patient": "Patient",
     "subtitle": "Téléversez et gérez des images décoratives à utiliser comme diapositives.",
     "upload": "Téléverser des Images",
     "uploadedCount": "{{count}} image(s) téléversée(s)",
@@ -763,7 +777,7 @@
     },
     "patients": {
       "heading": "Gestion des Patients",
-      "body": "Accédez à la section Patients pour créer, rechercher, modifier ou supprimer des dossiers patients. Chaque patient a un nom, un code patient, une date de naissance optionnelle et des notes. Cliquez sur une carte patient pour voir son profil complet et sa galerie d'images."
+      "body": "Tous les rôles peuvent rechercher et ouvrir les dossiers des patients qui leur sont attribués. Les Docteurs et les Superadministrateurs peuvent créer, modifier ou supprimer des dossiers patients. Chaque patient a un nom, un code patient, une date de naissance optionnelle et des notes. Cliquez sur une carte patient pour voir son profil complet et sa galerie d'images."
     },
     "capture": {
       "heading": "Capture d'Images",
@@ -791,7 +805,7 @@
     },
     "roles": {
       "heading": "Rôles Utilisateur",
-      "body": "Max7 Vista prend en charge trois rôles, tous limités à une seule organisation : Utilisateur (peut voir, capturer et modifier/supprimer uniquement les images qu'il a téléversées, et peut créer — mais pas modifier ni supprimer — des tracés céphalométriques), Docteur (peut gérer les patients, les dossiers cliniques, les modèles, les présentations et les documents au sein de son organisation) et Super Administrateur (accès administratif complet uniquement au sein de sa propre organisation, y compris la gestion des utilisateurs, le journal d'audit, le contrôle d'accès par patient et les outils d'intégrité du système). Les fonctions inter-organisations, telles que la facturation, les abonnements et l'activation ou la désactivation d'organisations, sont réservées à un rôle distinct de propriétaire du système, non accessible au Super Administrateur d'une organisation quelconque."
+      "body": "Max7 Vista prend en charge trois rôles, tous limités à une organisation. Utilisateur : peut voir les dossiers patients attribués, capturer des médias et modifier ou supprimer uniquement ses propres images téléversées. Les Utilisateurs ne peuvent pas créer ou modifier des dossiers patients, utiliser l’export ZIP de patients, gérer les modèles, documents, présentations, importations en masse ou espaces de travail céphalométriques. Docteur : inclut les capacités de l’Utilisateur et peut gérer les données cliniques de l’organisation — dossiers patients, documents, présentations, modèles, exportations d’images, importations en masse, ainsi que modèles et tracés céphalométriques. Superadministrateur : inclut les capacités du Docteur et administre les utilisateurs, l’accès par patient, le journal d’audit, les outils d’intégrité, la politique de rétention et la file de purge, les blocages légaux, les rapports de divulgation et la migration. Aucun rôle d’organisation ne peut accéder aux données d’une autre organisation ; la facturation, les abonnements et le cycle de vie de l’organisation restent des fonctions du propriétaire du système hors de l’application."
     },
     "tenants": {
       "heading": "Configuration Multi-Organisation",
@@ -835,11 +849,11 @@
     },
     "patientRetention": {
       "heading": "Conservation des Données Patients et Blocage Légal",
-      "body": "Les Docteurs et Super Administrateurs peuvent configurer la durée de conservation des dossiers patients avant qu'ils ne deviennent éligibles à la suppression, indépendamment de la politique de conservation du journal d'audit. Dans Paramètres → Conservation des Données Patients, choisissez une période de conservation en années et cliquez sur 'Enregistrer la Politique'. Les dossiers plus anciens que cette période apparaissent dans la liste 'Éligibles à la Suppression' ci-dessous — la suppression n'est jamais automatique ; un Docteur ou Super Administrateur doit examiner la liste et cliquer sur 'Purger' pour chaque dossier afin de le supprimer définitivement avec ses images. Pour empêcher qu'un dossier patient spécifique n'apparaisse jamais dans cette liste — par exemple lors d'un litige, d'une assignation ou d'un litige d'assurance — ouvrez la page de détail du patient, cliquez sur le menu ⋮ (Plus) et choisissez 'Appliquer un Blocage Légal'. Un motif est requis et est consigné pour le registre d'audit. Un patient sous blocage légal affiche un badge 'Blocage Légal' à côté de son nom et est exclu de la suppression quel que soit son ancienneté, jusqu'à ce qu'un Docteur ou Super Administrateur lève le blocage depuis le même menu."
+      "body": "Seuls les Superadministrateurs peuvent configurer la durée de conservation des dossiers patients avant qu'ils ne deviennent éligibles à la suppression, indépendamment de la politique de conservation du journal d'audit. Dans Paramètres → Conservation des Données Patients, choisissez une période de conservation en années et cliquez sur 'Enregistrer la Politique'. Les dossiers plus anciens que cette période apparaissent dans la liste 'Éligibles à la Suppression' ci-dessous — la suppression n'est jamais automatique ; un Superadministrateur doit examiner la liste et cliquer sur 'Purger' pour chaque dossier afin de le supprimer définitivement avec ses images. Pour empêcher qu'un dossier patient spécifique n'apparaisse jamais dans cette liste — par exemple lors d'un litige, d'une assignation ou d'un litige d'assurance — un Superadministrateur ouvre la page de détail du patient, clique sur le menu ⋮ (Plus) et choisit 'Appliquer un Blocage Légal'. Un motif est requis et est consigné pour le registre d'audit. Un patient sous blocage légal affiche un badge 'Blocage Légal' à côté de son nom et est exclu de la suppression quel que soit son ancienneté, jusqu'à ce qu'un Superadministrateur lève le blocage depuis le même menu."
     },
     "disclosures": {
       "heading": "Registre des Divulgations",
-      "body": "Tout utilisateur peut générer un rapport de divulgation HIPAA pour un patient directement depuis la page de détail de ce patient. Cliquez sur le menu ⋮ (Plus) et choisissez 'Générer un Rapport de Divulgation'. Le rapport compile qui a consulté ou exporté le dossier de ce patient et quand, en s'appuyant sur le même journal d'audit utilisé ailleurs dans le système. Définissez éventuellement une date 'Du' et/ou 'Au' pour limiter le rapport à une plage de dates spécifique — laissez les deux vides pour inclure tout l'historique. Choisissez 'JSON' ou 'CSV' pour télécharger le rapport dans le format souhaité, prêt à être remis pour une demande de conformité."
+      "body": "Seuls les Superadministrateurs peuvent générer un rapport de divulgation HIPAA pour un patient depuis la page de détail de ce patient. Cliquez sur le menu ⋮ (Plus) et choisissez 'Générer un Rapport de Divulgation'. Le rapport compile qui a consulté ou exporté le dossier de ce patient et quand, en s'appuyant sur le même journal d'audit utilisé ailleurs dans le système. Définissez éventuellement une date 'Du' et/ou 'Au' pour limiter le rapport à une plage de dates spécifique — laissez les deux vides pour inclure tout l'historique. Choisissez 'JSON' ou 'CSV' pour télécharger le rapport dans le format souhaité, prêt à être remis pour une demande de conformité."
     },
     "cephalometrics": {
       "heading": "Analyse Céphalométrique",

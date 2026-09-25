@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -15,7 +15,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Upload, Trash2, Check, Library, MonitorPlay, PlusCircle, X, ImagePlus, Pencil,
-  Play, Tags as TagsIcon, Tag, Users,
+  Play, Tags as TagsIcon, Tag, Users, Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -163,6 +163,9 @@ export default function ImageLibrary() {
   const [selectedPresentation, setSelectedPresentation] = useState<string>("new");
   const [newPresentationTitle, setNewPresentationTitle] = useState("");
   const [dialogPatientId, setDialogPatientId] = useState<string>("all");
+  const [selectedPatientLabel, setSelectedPatientLabel] = useState("");
+  const [patientSearch, setPatientSearch] = useState("");
+  const [debouncedPatientSearch, setDebouncedPatientSearch] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [filterTagId, setFilterTagId] = useState<number | null>(null);
@@ -184,9 +187,19 @@ export default function ImageLibrary() {
     { query: { queryKey: getListPresentationsQueryKey({}) } },
   );
 
-  const { data: patients = [] } = useListPatients(
-    {},
-    { query: { queryKey: getListPatientsQueryKey({}) } },
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedPatientSearch(patientSearch.trim()), 250);
+    return () => clearTimeout(timer);
+  }, [patientSearch]);
+
+  const { data: patientResults = [], isFetching: isSearchingPatients, isError: patientSearchError } = useListPatients(
+    { search: debouncedPatientSearch },
+    {
+      query: {
+        enabled: addToPresentationOpen && debouncedPatientSearch.length > 0,
+        queryKey: getListPatientsQueryKey({ search: debouncedPatientSearch }),
+      },
+    },
   );
 
   const updatePresentation = useUpdatePresentation({
@@ -330,11 +343,21 @@ export default function ImageLibrary() {
 
   function handleAddToPresentation() {
     if (!selected.size) return;
+    setPatientSearch("");
+    setDebouncedPatientSearch("");
+    setSelectedPatientLabel("");
+    setDialogPatientId("all");
+    setSelectedPresentation("new");
     setAddToPresentationOpen(true);
   }
 
   function quickAddToPresentation(asset: LibraryAsset) {
     setSelected(new Set([asset.id]));
+    setPatientSearch("");
+    setDebouncedPatientSearch("");
+    setSelectedPatientLabel("");
+    setDialogPatientId("all");
+    setSelectedPresentation("new");
     setAddToPresentationOpen(true);
   }
 
@@ -711,24 +734,65 @@ export default function ImageLibrary() {
           </DialogHeader>
           {/* Patient filter */}
           <div className="space-y-1">
-            <p className="text-xs font-medium text-muted-foreground">Patient</p>
+            <p className="text-xs font-medium text-muted-foreground">{t("library.patient")}</p>
             <Select value={dialogPatientId} onValueChange={(v) => { setDialogPatientId(v); setSelectedPresentation("new"); }}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All patients</SelectItem>
+                <SelectItem value="all">{t("gallery.allPatients")}</SelectItem>
                 <SelectItem value="multi">
                   <span className="flex items-center gap-1.5">
                     <Users className="h-4 w-4" />
                     {t("presentation.crossPatient")}
                   </span>
                 </SelectItem>
-                {(patients as any[]).map((p: any) => (
-                  <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                ))}
+                {dialogPatientId !== "all" && dialogPatientId !== "multi" && (
+                  <SelectItem value={dialogPatientId}>{selectedPatientLabel}</SelectItem>
+                )}
               </SelectContent>
             </Select>
+            <div className="relative pt-2">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              <Input
+                aria-label={t("patients.searchPlaceholder")}
+                placeholder={t("patients.searchPlaceholder")}
+                className="pl-9"
+                value={patientSearch}
+                onChange={(e) => setPatientSearch(e.target.value)}
+              />
+            </div>
+            {patientSearch.trim() && (
+              <div className="max-h-44 overflow-y-auto rounded-md border" role="listbox" aria-label={t("library.patient")}>
+                {patientSearch.trim() !== debouncedPatientSearch || isSearchingPatients ? (
+                  <p className="px-3 py-2 text-sm text-muted-foreground">{t("common.loading")}</p>
+                ) : patientSearchError ? (
+                  <p className="px-3 py-2 text-sm text-destructive">{t("common.error")}</p>
+                ) : patientResults.length === 0 ? (
+                  <p className="px-3 py-2 text-sm text-muted-foreground">{t("patients.noResults")}</p>
+                ) : (
+                  patientResults.map((patient) => (
+                    <button
+                      key={patient.id}
+                      type="button"
+                      role="option"
+                      aria-selected={dialogPatientId === String(patient.id)}
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-accent focus:bg-accent focus:outline-none"
+                      onClick={() => {
+                        setDialogPatientId(String(patient.id));
+                        setSelectedPatientLabel(`${patient.name} · ${patient.patientCode}`);
+                        setSelectedPresentation("new");
+                        setPatientSearch("");
+                        setDebouncedPatientSearch("");
+                      }}
+                    >
+                      <span className="font-medium">{patient.name}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{patient.patientCode}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
           </div>
           {/* Presentation picker */}
           <div className="space-y-1">
